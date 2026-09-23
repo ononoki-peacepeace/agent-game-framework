@@ -46,8 +46,6 @@ it('Codex adapter rejects unexpected tools', async () => {
 });
 it('initializer compiles structured blueprint to independently portable save', async () => {
   const blueprint=JSON.parse(await readFile('content/worlds/town-blueprint.json','utf8'));
-  blueprint.locations.push({ id: 'test_park', name: 'Example Park', description: 'A public test location.' });
-  blueprint.routes.push({ from: 'square', to: 'test_park', travel_minutes: 5 }, { from: 'test_park', to: 'square', travel_minutes: 5 });
   const runtime=new AIRuntime(new MockAIAdapter(blueprint));
   const save=await runtime.initialize('tiny world',await readProfile('content/profiles/default.json'));
   expect(save.definition.meta.id).toBe(blueprint.id); expect(save.entities.length).toBe(7); expect(save.ai.threads.world_initializer).toBe('mock-initializer');
@@ -80,4 +78,20 @@ it('DeepSeek adapter uses server-side API key and structured Responses output', 
   expect(body.model).toBe('deepseek-flash');
   expect(body.text.format.type).toBe('json_schema');
   expect(body.text.format.schema.properties.ok.type).toBe('boolean');
+});
+
+it('LAN mode accepts private RFC1918 Host while default mode rejects it', async () => {
+  const service = new GameService(new MemoryStore(),new AIRuntime(new MockAIAdapter()),demo); await service.newGame();
+  const localServer=createApp(service).listen(0,'127.0.0.1'); await once(localServer,'listening');
+  const localBase='http://127.0.0.1:'+((localServer.address() as {port:number}).port);
+  try {
+    expect(await new Promise<number>(resolve => { const req=httpRequest(localBase+'/api/health',{headers:{Host:'192.168.1.20:3100'}},res=>{res.resume();resolve(res.statusCode!);});req.end(); })).toBe(403);
+  } finally { await new Promise<void>((resolve,reject)=>localServer.close(e=>e?reject(e):resolve())); }
+
+  const lanServer=createApp(service,undefined,undefined,undefined,{allowLan:true}).listen(0,'127.0.0.1'); await once(lanServer,'listening');
+  const lanBase='http://127.0.0.1:'+((lanServer.address() as {port:number}).port);
+  try {
+    expect(await new Promise<number>(resolve => { const req=httpRequest(lanBase+'/api/health',{headers:{Host:'192.168.1.20:3100'}},res=>{res.resume();resolve(res.statusCode!);});req.end(); })).toBe(200);
+    expect(await new Promise<number>(resolve => { const req=httpRequest(lanBase+'/api/health',{headers:{Host:'8.8.8.8:3100'}},res=>{res.resume();resolve(res.statusCode!);});req.end(); })).toBe(403);
+  } finally { await new Promise<void>((resolve,reject)=>lanServer.close(e=>e?reject(e):resolve())); }
 });

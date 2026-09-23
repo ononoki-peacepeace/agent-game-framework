@@ -7,16 +7,38 @@ import { providerConfigSchema, type AIProviderManager } from '../ai/providers.js
 import { z } from 'zod';
 import type { GameService } from './service.js';
 
-export function createApp(service: GameService, clientDirectory = resolve('dist/client'), providers?: AIProviderManager, assetDirectory = resolve('data/assets')) {
-  const app = express(), token = randomBytes(32).toString('hex');
+export interface AppNetworkOptions { allowLan?: boolean }
+
+function requestHostname(hostHeader: string) {
+  const host = hostHeader.trim().toLowerCase();
+  if (host.startsWith('[')) return host.slice(1, host.indexOf(']'));
+  return host.replace(/:\d+$/, '');
+}
+function privateLanIPv4(hostname: string) {
+  const parts = hostname.split('.').map(Number);
+  if (parts.length !== 4 || parts.some(x => !Number.isInteger(x) || x < 0 || x > 255)) return false;
+  return parts[0] === 10 || (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) || (parts[0] === 192 && parts[1] === 168);
+}
+function allowedHost(hostHeader: string, allowLan: boolean) {
+  const hostname = requestHostname(hostHeader);
+  return hostname === 'localhost' || hostname === '127.0.0.1' || (allowLan && privateLanIPv4(hostname));
+}
+
+export function createApp(service: GameService, clientDirectory = resolve('dist/client'), providers?: AIProviderManager, assetDirectory = resolve('data/assets'), network: AppNetworkOptions = {}) {
+  const app = express(), token = randomBytes(32).toString('hex'), allowLan = network.allowLan === true;
   app.disable('x-powered-by');
   app.use((req, res, next) => {
     const host = req.headers.host ?? '';
-    if (!/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)) return res.status(403).json({ error: '仅允许本机访问' });
+    if (!allowedHost(host, allowLan)) return res.status(403).json({ error: allowLan ? '仅允许本机或私有局域网地址访问' : '仅允许本机访问' });
     res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Referrer-Policy', 'no-referrer');
     if (req.path.startsWith('/api')) res.setHeader('Cache-Control', 'no-store');
     const origin = req.headers.origin;
-    if (origin && !/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) return res.status(403).json({ error: '来源不允许' });
+    if (origin) {
+      try {
+        const parsed = new URL(origin);
+        if (parsed.protocol !== 'http:' || parsed.host.toLowerCase() !== host.toLowerCase()) return res.status(403).json({ error: '来源不允许' });
+      } catch { return res.status(403).json({ error: '来源不允许' }); }
+    }
     if (req.method !== 'GET' && req.method !== 'HEAD' && req.headers['x-game-token'] !== token) return res.status(403).json({ error: '本地会话已失效，请刷新页面' });
     next();
   });
@@ -51,12 +73,23 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   app.use(express.json({ limit: '2mb' }));
   app.get('/api/session', (_req, res) => res.json({ token, engine: service.ai.adapter.name, provider: providers?.info() ?? null }));
   app.get('/api/ai/providers', (_req, res) => res.json({ current: providers?.info() ?? null, providers: providers?.list() ?? [] }));
-  app.post('/api/ai/provider', (req, res) => {
+  app.post('/api/ai/provider', async (req, res) => {
     if (!providers) throw new GameError('当前构建不支持运行时切换 AI Provider');
-    const config = safeParse(providerConfigSchema, req.body);
-    res.json(providers.configure(config));
+    const body = safeParse(z.strictObject({
+      provider: providerConfigSchema.shape.provider,
+      api_key: providerConfigSchema.shape.api_key,
+      model: providerConfigSchema.shape.model,
+      base_url: providerConfigSchema.shape.base_url,
+      persist: z.boolean().optional(),
+    }), req.body);
+    const { persist = false, ...config } = body;
+    res.json(await providers.configure(safeParse(providerConfigSchema, config), { persist }));
   });
-  app.get('/api/health', (_req, res) => res.json({ ok: true, version: '0.1.7' }));
+  app.post('/api/ai/provider/forget', async (_req, res) => {
+    if (!providers) throw new GameError('当前构建不支持运行时切换 AI Provider');
+    res.json(await providers.forgetPersisted());
+  });
+  app.get('/api/health', (_req, res) => res.json({ ok: true, version: '0.1.9' }));
   app.get('/api/state', async (_req, res) => res.json(await service.view()));
   app.post('/api/new', async (req, res) => {
     const body = safeParse(z.strictObject({ description: z.string().min(1).max(12000).optional(), prompt_text: z.string().min(1).max(100000).optional(), prompt_profile: profileSchema.optional() }), req.body);
@@ -66,6 +99,10 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   app.post('/api/save', async (_req, res) => res.json(await service.checkpoint()));
   app.post('/api/load', async (_req, res) => res.json(await service.load()));
   app.post('/api/import', async (req, res) => res.json(await service.import(req.body)));
+  app.post('/api/character-card/import', async (req, res) => {
+    const body = safeParse(z.strictObject({ game_id: z.string().uuid(), expected_revision: z.number().int().min(0), card: z.unknown() }), req.body);
+    res.json(await service.importCharacterCard(body.card, body.game_id, body.expected_revision));
+  });
   app.post('/api/export', async (_req, res) => { res.setHeader('Content-Disposition', 'attachment; filename="agent-game-save.json"'); res.type('json').send(await service.export()); });
   app.use(express.static(clientDirectory));
   app.use((_req, res) => res.status(404).json({ error: '接口不存在' }));

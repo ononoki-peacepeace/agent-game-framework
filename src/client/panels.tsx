@@ -4,7 +4,7 @@ import type { Entity, PublicLocation, PublicView, ActionInput } from '../shared/
 export const nameOf = (entity?: Entity) => String(entity?.components.identity?.name ?? entity?.id ?? '未知');
 export const playerOf = (view: PublicView) => view.entities.find(e => e.id === view.player_id)!;
 export const locationOf = (view: PublicView) => String(playerOf(view).components.location.location_id);
-export interface PanelProps { view: PublicView; act: (action: ActionInput) => void; busy: boolean; uploadAvatar?: (entity: Entity, file: File) => Promise<void> }
+export interface PanelProps { view: PublicView; act: (action: ActionInput) => void; busy: boolean; uploadAvatar?: (entity: Entity, file: File) => Promise<void>; importCharacterCard?: (file: File) => Promise<void> }
 const numbers = (value: unknown) => (value ?? {}) as Record<string, number>;
 const inventory = (e: Entity) => numbers(e.components.inventory?.items);
 const relLabels: Record<string,string> = { familiarity:'熟悉度', trust:'信任', affection:'亲近', dependence:'依赖', protectiveness:'保护欲', suspicion:'怀疑', fear:'恐惧', respect:'尊重', romantic_interest:'恋爱倾向', leverage:'影响力' };
@@ -55,7 +55,9 @@ function Status({ view, uploadAvatar, busy }: PanelProps) {
   const role = String(player.components.character?.role ?? '玩家角色');
   const attrs = numbers(player.components.attributes?.values), labels = (player.components.attributes?.labels ?? {}) as Record<string,string>;
   const traits = (player.components.traits?.entries ?? {}) as Record<string,{name?:string;status?:string}>;
+  const hh=Math.floor(view.time.minute/60).toString().padStart(2,'0'), mm=(view.time.minute%60).toString().padStart(2,'0');
   return <div className="status-stack">
+    <div className="world-status"><div><small>当前世界</small><strong>{view.title}</strong></div><div className="world-time"><span>第 {view.time.day} 天</span><b>{hh}:{mm}</b><small>第 {view.revision} 回合</small></div></div>
     <div className="status-hero"><div className="avatar-editor"><Avatar entity={player}/>{uploadAvatar&&<label className="avatar-upload">{player.components.identity?.avatar_id?'更换':'上传头像'}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={e=>{const f=e.target.files?.[0];e.target.value='';if(f)void uploadAvatar(player,f)}}/></label>}</div><div><h3>{nameOf(player)}</h3><p>{role}</p><small>{textSummary(player.components.identity?.description)}</small></div></div>
     <div className="status-grid">
       <div className="mini-card"><span>当前位置</span><strong>{view.locations.find(l => l.id === locationOf(view))?.name ?? '未知'}</strong></div>
@@ -65,16 +67,18 @@ function Status({ view, uploadAvatar, busy }: PanelProps) {
     {Object.keys(traits).length > 0 && <div className="chip-row">{Object.entries(traits).slice(0,8).map(([id,t]) => <span className="chip" key={id}>{t.name ?? id}{t.status && t.status !== 'active' ? ` · ${t.status}` : ''}</span>)}</div>}
   </div>;
 }
-function Characters({ view, uploadAvatar, busy }: PanelProps) {
+function Characters({ view, uploadAvatar, importCharacterCard, busy }: PanelProps) {
   const current = locationOf(view);
   const characters = view.entities.filter(e => e.components.character && e.id !== view.player_id);
-  return <div className="list">{characters.map(e => {
+  return <><div className="character-import"><div><strong>角色卡</strong><small>支持 Tavern/Character Card V1、V2、V3 JSON。导入到当前位置，不推进时间，也不调用 AI。</small></div>{importCharacterCard&&<label className="file-button">导入角色卡 JSON<input type="file" accept=".json,application/json" disabled={busy} onChange={ev=>{const f=ev.target.files?.[0];ev.target.value='';if(f)void importCharacterCard(f)}}/></label>}</div><div className="list">{characters.map(e => {
     const here = e.components.location?.location_id === current;
     const role = String(e.components.character?.role ?? '人物');
-    return <article className={`entity character-card ${here ? 'selected' : ''}`} key={e.id}><div className="person"><div className="avatar-editor compact-avatar"><Avatar entity={e}/>{uploadAvatar&&<label className="avatar-upload icon-only" title="上传 / 更换头像">＋<input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={ev=>{const f=ev.target.files?.[0];ev.target.value='';if(f)void uploadAvatar(e,f)}}/></label>}</div><div><h3>{nameOf(e)}</h3><small>{role} · {here ? '当前在场' : view.locations.find(l => l.id === e.components.location?.location_id)?.name ?? '位置未知'}</small></div></div>
+    const card = e.components.character_card as undefined|Record<string,unknown>;
+    return <article className={`entity character-card ${here ? 'selected' : ''}`} key={e.id}><div className="person"><div className="avatar-editor compact-avatar"><Avatar entity={e}/>{uploadAvatar&&<label className="avatar-upload icon-only" title="上传 / 更换头像">＋<input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={ev=>{const f=ev.target.files?.[0];ev.target.value='';if(f)void uploadAvatar(e,f)}}/></label>}</div><div><h3>{nameOf(e)}</h3><small>{role} · {here ? '当前在场' : view.locations.find(l => l.id === e.components.location?.location_id)?.name ?? '位置未知'}{card ? ` · CC${String(card.source_spec ?? '').replace('v','')}` : ''}</small></div></div>
       {textSummary(e.components.identity?.description) && <p>{textSummary(e.components.identity?.description)}</p>}
+      {card&&<details className="card-details"><summary>角色卡资料</summary>{String(card.personality??'').trim()&&<p><b>性格</b>{String(card.personality)}</p>}{String(card.scenario??'').trim()&&<p><b>场景设定</b>{String(card.scenario)}</p>}{Array.isArray(card.tags)&&card.tags.length>0&&<div className="chip-row">{(card.tags as string[]).slice(0,12).map(tag=><span className="chip" key={tag}>{tag}</span>)}</div>}</details>}
     </article>;
-  })}</div>;
+  })}</div></>;
 }
 function Relationships({ view }: PanelProps) {
   const entries = (playerOf(view).components.relationships?.entries ?? {}) as Record<string, Record<string, number>>;

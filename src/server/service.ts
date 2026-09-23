@@ -7,6 +7,7 @@ import { routineModule } from '../modules/routine.js';
 import type { SaveStorage } from '../storage/json-store.js';
 import type { AIRuntime } from '../ai/runtime.js';
 import type { WorldPackage } from '../core/schema.js';
+import { normalizeCharacterCard } from '../compat/character-card.js';
 
 export const requestSchema = z.strictObject({ request_id: z.string().uuid(), game_id: z.string().uuid(), expected_revision: z.number().int().min(0), action: z.unknown().optional(), input: z.string().min(1).max(2000).optional() }).refine(x => (x.action !== undefined) !== (x.input !== undefined), '必须提供 action 或 input 中的一项');
 export class GameService {
@@ -68,7 +69,7 @@ export class GameService {
       try {
         const result = await this.ai.narrate(next, turn.action, turn.facts);
         next = applyPatches(next, result.patches, turn.action, turn.registry);
-        next.last_turn = { narrative: result.narrative, speaker: result.speaker, dialogue: result.dialogue, choices: result.choices, context_actions: result.context_actions };
+        next.last_turn = { narrative: result.narrative, speaker: result.speaker, dialogue: result.dialogue, choices: result.choices, context_actions: result.context_actions }; 
       } catch {
         // A deterministic action remains valid even if its optional prose generation fails.
         delete next.ai.threads.narrator;
@@ -95,6 +96,37 @@ export class GameService {
     if (!save.last_turn) save.last_turn = { narrative: save.definition.meta.description, speaker: null, dialogue: null, choices: [], context_actions: [] };
     await this.storage.write(save); return publicView(save);
   }); }
+  async importCharacterCard(raw: unknown, gameId: string, expectedRevision: number) {
+    return this.exclusive(async () => {
+      const save = await this.current();
+      if (save.game_id !== gameId) throw new GameError('游戏已切换，请刷新后操作', 409);
+      if (save.state_revision !== expectedRevision) throw new GameError('状态已更新，请刷新后重试', 409);
+      assert(save.definition.enabled_modules.includes('characters'), '当前世界未启用 characters 模块');
+      assert(save.entities.length < 1000, '实体数量已达到存档上限');
+      const card = normalizeCharacterCard(raw);
+      const player = save.entities.find(e => e.id === save.player_state.entity_id)!;
+      const locationId = String(player.components.location?.location_id ?? '');
+      assert(locationId, '玩家当前位置无效，无法放置导入角色');
+      const entityId = `card_${randomUUID().replaceAll('-', '').slice(0, 24)}`;
+      const summary = (card.description || card.personality || '由角色卡导入的人物').slice(0, 2000);
+      save.entities.push({
+        id: entityId,
+        type: 'character',
+        components: {
+          identity: { name: card.name, description: summary, avatar_id: null },
+          location: { location_id: locationId },
+          character: { role: '导入角色卡人物', traits: [] },
+          character_card: structuredClone(card) as unknown as SavePackage['entities'][number]['components'][string],
+        },
+      });
+      save.state_revision++;
+      const next = validateSave(save);
+      await this.storage.write(next);
+      const view = publicView(next);
+      view.notices.push(`已导入角色卡：${card.name}。已放置在玩家当前位置；导入本身不推进时间，也不会调用 AI。`);
+      return view;
+    });
+  }
   async setAvatar(entityId: string, avatarId: string, gameId: string, expectedRevision: number) {
     return this.exclusive(async () => {
       const save = await this.current();

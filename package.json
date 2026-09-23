@@ -1,6 +1,6 @@
 {
   "name": "agent-game-framework",
-  "version": "0.1.7",
+  "version": "0.1.9",
   "private": true,
   "type": "module",
   "engines": {
@@ -14,8 +14,7 @@
     "smoke": "tsx scripts/smoke.ts",
     "smoke:codex": "tsx scripts/codex-smoke.ts",
     "smoke:browser": "tsx scripts/browser-smoke.ts",
-    "typecheck": "tsc --noEmit",
-    "audit:public": "node scripts/audit-public.mjs"
+    "start:lan": "node scripts/start-lan.mjs"
   },
   "dependencies": {
     "@openai/codex-sdk": "0.156.0",
@@ -36,6 +35,5 @@
     "typescript": "^5.9.3",
     "vite": "^7.3.0",
     "vitest": "^4.0.18"
-  },
-  "description": "An extensible AI-native persistent-world game framework."
+  }
 }
