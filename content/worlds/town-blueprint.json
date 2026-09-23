@@ -1,0 +1,26 @@
+{
+  "id": "harbor_town", "title": "港湾日常", "description": "初到港湾镇，在车站、广场和街角商店之间开始一段普通生活。",
+  "currency": { "id": "credit", "name": "点" },
+  "player": { "id": "player", "name": "新住民", "description": "刚刚搬到港湾镇，正在熟悉街区。", "location_id": "square", "cash": 100 },
+  "locations": [
+    { "id": "square", "name": "中央广场", "description": "树影落在石砖上，来往的居民在长椅旁停下脚步。" },
+    { "id": "station", "name": "河岸车站", "description": "列车沿河驶过，站台上的时刻表轻轻晃动。" },
+    { "id": "market", "name": "街角商店", "description": "门口挂着营业中的牌子，货架上摆着日常用品。" }
+  ],
+  "routes": [
+    { "from": "square", "to": "station", "travel_minutes": 18 }, { "from": "station", "to": "square", "travel_minutes": 18 },
+    { "from": "square", "to": "market", "travel_minutes": 6 }, { "from": "market", "to": "square", "travel_minutes": 6 }
+  ],
+  "characters": [
+    { "id": "npc_lin", "name": "林舟", "description": "正在广场整理社区公告的志愿者。", "location_id": "square", "role": "社区志愿者" },
+    { "id": "npc_qiao", "name": "乔宁", "description": "经营街角商店，喜欢与熟客聊天。", "location_id": "market", "role": "店主" }
+  ],
+  "items": [
+    { "id": "water", "name": "饮用水", "description": "一瓶便于携带的饮用水。", "weight": 0.5, "price": 6 },
+    { "id": "notebook", "name": "笔记本", "description": "用来记录新生活的小本子。", "weight": 0.2, "price": 12 },
+    { "id": "bread", "name": "面包", "description": "今日烘焙的软面包。", "weight": 0.15, "price": 8 }
+  ],
+  "shop": { "id": "corner_shop", "name": "街角杂货", "location_id": "market", "cash": 1000 },
+  "hidden_notes": "GM_PRIVATE_CANARY: 社区准备在下个月整修车站；这件事尚未向居民公开。",
+  "opening": "你在中央广场停下脚步。林舟正把一张活动通知贴到公告栏上。往河岸方向是车站，另一条街通向街角商店。今天可以从认识这座小镇开始。"
+}

@@ -1,0 +1,41 @@
+{
+  "name": "agent-game-framework",
+  "version": "0.1.7",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "concurrently -k \"tsx watch src/server/index.ts\" \"vite --host 127.0.0.1\"",
+    "build": "tsc --noEmit && vite build && tsc -p tsconfig.server.json",
+    "start": "node dist/server/server/index.js",
+    "test": "vitest run",
+    "smoke": "tsx scripts/smoke.ts",
+    "smoke:codex": "tsx scripts/codex-smoke.ts",
+    "smoke:browser": "tsx scripts/browser-smoke.ts",
+    "typecheck": "tsc --noEmit",
+    "audit:public": "node scripts/audit-public.mjs"
+  },
+  "dependencies": {
+    "@openai/codex-sdk": "0.156.0",
+    "express": "^5.2.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.1.0",
+    "concurrently": "^9.2.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.0",
+    "vitest": "^4.0.18"
+  },
+  "description": "An extensible AI-native persistent-world game framework."
+}

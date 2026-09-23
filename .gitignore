@@ -1,0 +1,49 @@
+# Dependencies and generated builds
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Private game state, migrations, uploads and local resources
+/data/
+/imports/
+/saves/
+/checkpoints/
+/exports/
+/assets/avatars/
+/assets/uploads/
+/public/avatars/
+runtime.lock
+*.tmp
+*.bak
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+.npmrc
+.codex/
+.agents/
+
+# Local test artifacts and logs
+.tmp/
+.tmp-*/
+tmp/
+temp/
+logs/
+*.log
+test-results/
+playwright-report/
+playwright/.cache/
+blob-report/
+
+# Local overlay instructions (not project documentation)
+/覆盖说明.txt
+
+# Editor / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp

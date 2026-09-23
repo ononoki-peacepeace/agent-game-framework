@@ -1,0 +1,288 @@
+{
+  "schema_version": 1,
+  "framework_version": "0.1.0",
+  "meta": {
+    "id": "harbor_town",
+    "title": "港湾日常",
+    "description": "初到港湾镇，在车站、广场和街角商店之间开始一段普通生活。"
+  },
+  "enabled_modules": [
+    "core",
+    "characters",
+    "relationships",
+    "inventory",
+    "commerce"
+  ],
+  "ruleset": {
+    "minutes_per_day": 1440,
+    "max_wait_minutes": 120,
+    "talk_minutes": 5,
+    "trade_minutes": 2,
+    "default_check": "2d6+1",
+    "currencies": {
+      "credit": "点"
+    },
+    "relationship_dimensions": {
+      "trust": {
+        "min": -100,
+        "max": 100,
+        "initial": 0
+      },
+      "familiarity": {
+        "min": 0,
+        "max": 100,
+        "initial": 0
+      }
+    }
+  },
+  "prompt_profile": {
+    "id": "persistent_world",
+    "version": "0.1.0",
+    "engine_policy": "你是持续世界框架的受限 AI 协作者。只返回指定 schema 的 JSON。禁止调用工具、访问文件、联网搜索。当前程序传入的事实优先于旧会话。玩家只控制自身；不替玩家做重要决定。NPC 可以拒绝玩家。不得伪造随机、时间、位置、金钱、库存、交易或未执行的行为。",
+    "world_initializer": "按用户描述生成一个小而连贯的新世界蓝图，用中文。至少两个地点，所有地点通过双向路线可达（双向分别列出），NPC 和玩家引用有效地点。所有实体 ID 全局唯一。包含少量物品与一个商店。hidden_notes 是不公开的世界事实；opening 不得泄漏它。不要使用任何已存在游戏的固定设定。",
+    "intent_interpreter": "把玩家意图转换为一个已注册动作。只允许 action_catalog 内的 type 与参数。parameters_json 是参数对象的 JSON 字符串，必须符合对应动作的 parameters schema，不增加其他字段。不要把模糊的一周生活转换为大跳跃；不明确时提供 clarification，type 返回 WAIT，parameters_json 为 {}。明确时 clarification 为 null。只使用 public_state 中 ID，去找人物时 MOVE 的 target_id 是地点 ID。",
+    "narrator": "用中文简短叙述程序已执行的 action 与 facts。正文不得改变机械事实。只有 action.type 为 TALK 时，speaker 可以是 action.target_id，dialogue 是该 NPC 的一句回应；其他动作 speaker/dialogue 为 null。给出 2-3 个下一步意图字符串。patches 默认空数组；仅在 TALK 且关系组件存在时可建议一项 relationship_delta，幅度最多 2，维度必须来自 relationship_dimensions。不得提前执行 choices。不要虚构不在场角色、秘密或未发生的交易。",
+    "npc_decision": "预留职责：依据可访问的个人知识与目标提出受控动作；不能直接修改存档。",
+    "gm_reasoning": "预留职责：隐藏世界事实与玩家视图分离；通过注册模块提案推进事件，不输出内部思维链。"
+  },
+  "world": {
+    "description": "初到港湾镇，在车站、广场和街角商店之间开始一段普通生活。"
+  },
+  "entities": [
+    {
+      "id": "player",
+      "type": "character",
+      "components": {
+        "identity": {
+          "name": "新住民",
+          "description": "刚刚搬到港湾镇，正在熟悉街区。",
+          "avatar_id": null
+        },
+        "location": {
+          "location_id": "square"
+        },
+        "character": {
+          "role": "player",
+          "traits": []
+        },
+        "inventory": {
+          "items": {}
+        },
+        "wallet": {
+          "balances": {
+            "credit": 100
+          }
+        },
+        "relationships": {
+          "entries": {}
+        }
+      }
+    },
+    {
+      "id": "npc_lin",
+      "type": "character",
+      "components": {
+        "identity": {
+          "name": "林舟",
+          "description": "正在广场整理社区公告的志愿者。",
+          "avatar_id": null
+        },
+        "character": {
+          "role": "社区志愿者",
+          "traits": []
+        },
+        "location": {
+          "location_id": "square"
+        }
+      }
+    },
+    {
+      "id": "npc_qiao",
+      "type": "character",
+      "components": {
+        "identity": {
+          "name": "乔宁",
+          "description": "经营街角商店，喜欢与熟客聊天。",
+          "avatar_id": null
+        },
+        "character": {
+          "role": "店主",
+          "traits": []
+        },
+        "location": {
+          "location_id": "market"
+        }
+      }
+    },
+    {
+      "id": "water",
+      "type": "item",
+      "components": {
+        "identity": {
+          "name": "饮用水",
+          "description": "一瓶便于携带的饮用水。",
+          "avatar_id": null
+        },
+        "item": {
+          "weight": 0.5,
+          "stackable": true
+        }
+      }
+    },
+    {
+      "id": "notebook",
+      "type": "item",
+      "components": {
+        "identity": {
+          "name": "笔记本",
+          "description": "用来记录新生活的小本子。",
+          "avatar_id": null
+        },
+        "item": {
+          "weight": 0.2,
+          "stackable": true
+        }
+      }
+    },
+    {
+      "id": "bread",
+      "type": "item",
+      "components": {
+        "identity": {
+          "name": "面包",
+          "description": "今日烘焙的软面包。",
+          "avatar_id": null
+        },
+        "item": {
+          "weight": 0.15,
+          "stackable": true
+        }
+      }
+    },
+    {
+      "id": "corner_shop",
+      "type": "shop",
+      "components": {
+        "identity": {
+          "name": "街角杂货",
+          "description": "",
+          "avatar_id": null
+        },
+        "location": {
+          "location_id": "market"
+        },
+        "wallet": {
+          "balances": {
+            "credit": 1000
+          }
+        },
+        "shop": {
+          "currency_id": "credit",
+          "stock": {
+            "water": 10,
+            "notebook": 10,
+            "bread": 10
+          },
+          "prices": {
+            "water": {
+              "buy": 6,
+              "sell": 3
+            },
+            "notebook": {
+              "buy": 12,
+              "sell": 6
+            },
+            "bread": {
+              "buy": 8,
+              "sell": 4
+            }
+          }
+        }
+      }
+    }
+  ],
+  "map": {
+    "locations": [
+      {
+        "id": "square",
+        "name": "中央广场",
+        "description": "树影落在石砖上，来往的居民在长椅旁停下脚步。",
+        "tags": [],
+        "position": {
+          "x": 50,
+          "y": 46
+        }
+      },
+      {
+        "id": "station",
+        "name": "河岸车站",
+        "description": "列车沿河驶过，站台上的时刻表轻轻晃动。",
+        "tags": [],
+        "position": {
+          "x": 22,
+          "y": 72
+        }
+      },
+      {
+        "id": "market",
+        "name": "街角商店",
+        "description": "门口挂着营业中的牌子，货架上摆着日常用品。",
+        "tags": [],
+        "position": {
+          "x": 80,
+          "y": 38
+        }
+      }
+    ],
+    "routes": [
+      {
+        "from": "square",
+        "to": "station",
+        "travel_minutes": 18,
+        "conditions": []
+      },
+      {
+        "from": "station",
+        "to": "square",
+        "travel_minutes": 18,
+        "conditions": []
+      },
+      {
+        "from": "square",
+        "to": "market",
+        "travel_minutes": 6,
+        "conditions": []
+      },
+      {
+        "from": "market",
+        "to": "square",
+        "travel_minutes": 6,
+        "conditions": []
+      }
+    ]
+  },
+  "events": [
+    {
+      "id": "station_arrival",
+      "hook": "on_location_enter",
+      "location_id": "station",
+      "probability": 1,
+      "once": true,
+      "public_text": "站台广播提醒旅客保管好随身物品。",
+      "set_flag": "heard_station_notice"
+    }
+  ],
+  "player": {
+    "entity_id": "player"
+  },
+  "gm_state": {
+    "notes": "GM_PRIVATE_CANARY: 社区准备在下个月整修车站；这件事尚未向居民公开。",
+    "flags": {}
+  },
+  "runtime": {
+    "time": {
+      "day": 1,
+      "minute": 540
+    }
+  }
+}
