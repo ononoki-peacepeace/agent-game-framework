@@ -5,7 +5,52 @@ import {createApp} from '../src/server/app.js';
 import {blankWorldIntent} from '../src/shared/world-intent.js';
 import {applyWorldModification,draftFromIdea,draftToDescription,inspirations,recommendDraft,worldDraftSchema,worldTemplates} from '../src/world/templates.js';
 
+it('adjusting a draft edits the preview and never creates a world',async()=>{
+  const env=await httpFixture();
+  try{
+    const before=await env.f.service.current();
+    const preview=await env.post('world/preview',{template_id:'small_town'});
+    expect(preview.status).toBe(200);
+    const adjusted=await env.post('world/preview',{preview_id:preview.body.preview_id,modify:'危险程度低一点，加一点隐藏异常'});
+    expect(adjusted.status).toBe(200);
+    expect(adjusted.body.preview.danger).toBe('low');
+    expect(adjusted.body.signature).not.toBe(preview.body.signature);
+    expect(await env.f.service.current()).toEqual(before);
+  }finally{await env.close();}
+});
+
+it('“换一个” keeps the player’s constraints and never repeats recent candidates',async()=>{
+  const env=await httpFixture();
+  try{
+    const idea='现代社会，人物很多，隐藏异常';
+    const first=await env.post('world/preview',{idea,inspiration_seed:1});
+    expect(first.status).toBe(200);
+    const signatures=[first.body.signature];
+    let flow=first.body.flow_id, current=first.body;
+    for(let round=0;round<5;round++){
+      const next=await env.post('world/preview',{idea,preview_session:flow,inspiration_seed:10+round});
+      expect(next.status).toBe(200);
+      flow=next.body.flow_id;current=next.body;
+      signatures.push(next.body.signature);
+      expect(next.body.preview.npc_density).toBe('high');
+      expect(next.body.preview.supernatural).not.toBe('none');
+    }
+    expect(new Set(signatures).size).toBe(signatures.length);
+  }finally{await env.close();}
+});
+
+it('inspiration chips come from the library and change between draws',async()=>{
+  const env=await httpFixture();
+  try{
+    const a=await fetch(`${env.base}/api/world/inspiration?seed=1`).then(response=>response.json()) as {chips:{id:string}[]};
+    const b=await fetch(`${env.base}/api/world/inspiration?seed=2`).then(response=>response.json()) as {chips:{id:string}[]};
+    expect(a.chips.length).toBeGreaterThanOrEqual(3);
+    expect(a.chips.map(chip=>chip.id).join()) .not.toBe(b.chips.map(chip=>chip.id).join());
+  }finally{await env.close();}
+});
+
 it('every template is valid program data and carries no mandatory plot',()=>{
+
   expect(worldTemplates.length).toBeGreaterThanOrEqual(6);
   for(const template of worldTemplates){
     expect(()=>worldDraftSchema.parse(template.draft)).not.toThrow();
@@ -76,12 +121,16 @@ it('“我什么都没想好” gives a playable recommendation, 换一个 diffe
   const env=await httpFixture();
   try{
     const first=await env.post('world/preview',{});
-    const second=await env.post('world/preview',{variant:1});
-    expect(first.body.preview.title).not.toBe(second.body.preview.title);
-    expect(first.body.inspiration.length).toBeGreaterThan(0);
+    const second=await env.post('world/preview',{preview_session:first.body.flow_id,inspiration_seed:2});
+    expect(second.body.signature).not.toBe(first.body.signature);
+
+
+    expect(first.body.chips.length).toBeGreaterThan(0);
+
     const refreshed=await env.post('world/preview',{inspiration_seed:5});
-    expect(refreshed.body.inspiration.length).toBeGreaterThan(0);
-    expect(inspirations(0,6)).not.toEqual(inspirations(1,6));
+    expect(refreshed.body.chips.length).toBeGreaterThan(0);
+    expect(new Set(refreshed.body.chips.map((chip:{id:string})=>chip.id)).size).toBe(refreshed.body.chips.length);
+
 
     const modified=await env.post('world/preview',{template_id:'arcane_academy',modify:'不要魔法，危险程度低一点'});
     expect(modified.body.preview.danger).toBe('low');

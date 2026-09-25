@@ -1,0 +1,32 @@
+/* World Creation UX v2: cards, grid and a preview card that reads like a product, not a debug panel. */
+.world-launcher { display: flex; flex-direction: column; gap: 14px; }
+.world-hero { display: flex; flex-direction: column; gap: 10px; }
+.world-hero h3 { margin: 0; font-size: 17px; }
+.world-hero p { margin: 0; color: var(--muted, #7c7c86); font-size: 13px; }
+.world-entries { display: flex; flex-wrap: wrap; gap: 8px; }
+.world-entries button { min-width: 130px; }
+.template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.template-card { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 12px 14px; text-align: left; border-radius: 12px; border: 1px solid var(--line, #dcdce4); background: var(--surface, #fff); cursor: pointer; }
+.template-card:hover { border-color: var(--accent, #4c6ef5); }
+.template-card strong { font-size: 14px; }
+.template-card small { color: var(--muted, #7c7c86); font-size: 12px; line-height: 1.45; }
+.template-card .template-tags { font-size: 11px; color: var(--muted, #7c7c86); }
+.world-idea textarea, .world-edit textarea { width: 100%; min-height: 66px; }
+.world-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.world-chip { border: 1px solid var(--line, #dcdce4); border-radius: 999px; padding: 4px 10px; font-size: 12px; background: transparent; cursor: pointer; }
+.world-chip.picked { border-color: var(--accent, #4c6ef5); color: var(--accent, #4c6ef5); }
+.world-preview { border: 1px solid var(--line, #dcdce4); border-radius: 14px; padding: 16px 18px; background: var(--surface, #fff); display: flex; flex-direction: column; gap: 10px; }
+.world-preview h3 { margin: 0; font-size: 18px; }
+.world-preview .preview-one-liner { margin: 0; font-size: 13px; line-height: 1.6; color: var(--text, #26262c); }
+.world-preview .preview-tags { font-size: 12px; color: var(--muted, #7c7c86); }
+.world-preview dl { display: grid; grid-template-columns: 84px 1fr; gap: 6px 10px; margin: 0; font-size: 13px; }
+.world-preview dt { color: var(--muted, #7c7c86); }
+.world-preview dd { margin: 0; }
+.world-preview .preview-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.world-preview .preview-actions .primary { border-color: var(--accent, #4c6ef5); }
+.world-note { font-size: 12px; color: var(--muted, #7c7c86); }
+.world-error { font-size: 12px; color: #c0392b; }
+/* The first screen is "continue" + "create". Import stays reachable from the save panel and the AI Provider
+   from the top bar, so neither needs to compete with world creation. */
+.launcher .launch-card:not(.continue-card):not(.create-card) { display: none; }
+@media (max-width: 900px) { .template-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }

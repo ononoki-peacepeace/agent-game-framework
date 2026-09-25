@@ -14,7 +14,8 @@ import {DevelopmentTasks} from '../extensions/tasks.js';
 import {ExtensionDevelopment} from '../extensions/development.js';
 import {extensionIntent} from '../extensions/intent.js';
 import {avatarCropSchema} from '../shared/avatar.js';
-import {applyWorldModification,draftFromIdea,draftToDescription,inspirations,previewOf,recommendDraft,templateById,worldDraftSchema,worldTemplates,type WorldDraft} from '../world/templates.js';
+import {applyWorldModification,draftFromIdea,draftToDescription,previewOf,templateById,worldDraftSchema,worldTemplates,type WorldDraft} from '../world/templates.js';
+import {WORLD_CANDIDATE_HISTORY,candidateSignature,distinctCandidate,inspirationChips,pickLabels,type InspirationPick} from '../world/inspiration.js';
 import {blankWorldIntent} from '../shared/world-intent.js';
 import {JsonStore} from '../storage/json-store.js';
 import express from 'express';
@@ -276,8 +277,17 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     res.json({ level: logger.level, file: logger.filePath(), entries, traces: logger.traces(20) });
   });
   app.get('/api/state', async (_req, res) => res.json(await service.view()));
-  const worldPreviews=new Map<string,{description:string;created_at:number}>();
-  async function worldDraftFromIdea(idea:string):Promise<WorldDraft>{
+  const worldPreviews=new Map<string,{description:string;draft:WorldDraft;created_at:number;signature:string}>();
+  // One creation flow = one candidate history. "换一个" must never repeat the current candidate, never cycle
+  // between two worlds, and never regenerate without bound.
+  const worldFlows=new Map<string,{recent:string[];picked:string[];idea:string|null;created_at:number}>();
+  const flowOf=(id:string|null|undefined)=>{
+    if(!id)return {flow_id:randomUUID(),flow:{recent:[] as string[],picked:[] as string[],idea:null as string|null,created_at:Date.now()}};
+    const existing=worldFlows.get(id);
+    if(existing)return {flow_id:id,flow:existing};
+    return {flow_id:id,flow:{recent:[] as string[],picked:[] as string[],idea:null as string|null,created_at:Date.now()}};
+  };
+  async function worldDraftFromIdea(idea:string,_recent:string[]=[]):Promise<WorldDraft>{
     const adapter=service.ai?.adapter as unknown as {name?:string;generate?:(request:unknown)=>Promise<unknown>};
     if(!adapter?.generate||adapter.name==='mock')return draftFromIdea(idea);
     try{
@@ -294,17 +304,44 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     }catch{return draftFromIdea(idea);}
   }
   app.get('/api/world/templates',(_req,res)=>res.json(worldTemplates.map(template=>({id:template.id,display_name:template.display_name,description:template.description,recommended_experience:template.recommended_experience,inspiration:template.starter_inspiration.slice(0,3)}))));
+  app.get('/api/world/inspiration',(req,res)=>{const seed=Number(req.query.seed??Date.now())||Date.now();res.json({seed,chips:inspirationChips(seed,6,[])});});
+
   app.post('/api/world/preview',async(req,res)=>{
-    const body=safeParse(z.strictObject({template_id:z.string().max(40).optional(),idea:z.string().max(600).optional(),modify:z.string().max(600).optional(),variant:z.number().int().min(0).max(20).optional(),inspiration_seed:z.number().int().optional()}),req.body);
-    let value:WorldDraft;const notes:string[]=[];
-    if(body.template_id){const template=templateById(body.template_id);assert(template,'找不到这个模板');value=template.draft;}
-    else if(body.idea&&body.idea.trim())value=await worldDraftFromIdea(body.idea.trim());
-    else value=recommendDraft(body.variant??0);
-    if(body.modify&&body.modify.trim()){value=applyWorldModification(value,body.modify);notes.push(body.modify.trim());}
+    const body=safeParse(z.strictObject({template_id:z.string().max(40).optional(),idea:z.string().max(600).optional(),modify:z.string().max(600).optional(),variant:z.number().int().min(0).max(9999).optional(),inspiration_seed:z.number().int().optional(),preview_id:z.string().uuid().optional(),preview_session:z.string().uuid().optional(),picked:z.array(z.string().max(40)).max(8).optional()}),req.body);
+    const {flow_id,flow}=flowOf(body.preview_session);
+    let value:WorldDraft;const notes:string[]=[];let pickLabelsOut:string[]=[];let pickRaw:InspirationPick|null=null;let attempts=1;
+    if(body.preview_id&&body.modify&&body.modify.trim()){
+      // "调整" edits the current draft and returns to preview; it never creates a world.
+      const current=worldPreviews.get(body.preview_id);assert(current,'这个预览已过期，请重新生成');
+      value=applyWorldModification(current.draft,body.modify.trim());notes.push(body.modify.trim());
+    }else if(body.template_id){
+      const template=templateById(body.template_id);assert(template,'找不到这个模板');value=template.draft;
+    }else if(body.idea&&body.idea.trim()){
+      flow.idea=body.idea.trim();
+      const drafted=await worldDraftFromIdea(flow.idea, flow.recent);
+      value=drafted;
+      if(flow.recent.includes(candidateSignature(value))){const fallback=distinctCandidate(body.inspiration_seed??Date.now(),flow.recent,flow.picked,flow.idea??undefined);value=applyWorldModification(fallback.draft,flow.idea);pickRaw=fallback.picks;pickLabelsOut=pickLabels(fallback.picks);attempts=fallback.attempts;}
+    }else{
+      const candidate=distinctCandidate(body.inspiration_seed??body.variant??Date.now(),flow.recent,flow.picked,flow.idea??undefined);
+      value=candidate.draft;pickRaw=candidate.picks;pickLabelsOut=pickLabels(candidate.picks);attempts=candidate.attempts;
+    }
+    // Template and idea previews also accept an adjustment; only the preview_id path already applied it above.
+    if(body.modify&&body.modify.trim()&&!body.preview_id){value=applyWorldModification(value,body.modify.trim());notes.push(body.modify.trim());}
+    if(body.picked?.length)flow.picked=[...new Set([...flow.picked,...body.picked])].slice(-6);
+    if(!pickRaw){
+      const derived=distinctCandidate(body.inspiration_seed??Date.now(),[],flow.picked,flow.idea??undefined);
+      pickRaw=derived.picks;pickLabelsOut=pickLabels(derived.picks);
+    }
     const description=draftToDescription(value,notes);
-    const preview_id=randomUUID();worldPreviews.set(preview_id,{description,created_at:Date.now()});
+    const signature=candidateSignature(value);
+    const preview_id=randomUUID();
+    worldPreviews.set(preview_id,{description,draft:value,created_at:Date.now(),signature});
+    flow.recent=[...flow.recent.filter(entry=>entry!==signature),signature].slice(-WORLD_CANDIDATE_HISTORY);
+    flow.created_at=Date.now();worldFlows.set(flow_id,flow);
     for(const [id,entry] of worldPreviews)if(Date.now()-entry.created_at>30*60*1000)worldPreviews.delete(id);
-    res.json({preview_id,preview:previewOf(value,{kind:body.template_id?'template':body.idea?'idea':'recommended',id:body.template_id}),description,blank:blankWorldIntent(description)!==null,inspiration:inspirations(body.inspiration_seed??Date.now())});
+    for(const [id,entry] of worldFlows)if(Date.now()-entry.created_at>60*60*1000)worldFlows.delete(id);
+    res.json({preview_id,flow_id,preview:previewOf(value,{kind:body.template_id?'template':body.idea?'idea':'recommended',id:body.template_id}),description,blank:blankWorldIntent(description)!==null,signature,attempts,picks:pickLabelsOut,features:value.special_rules,chips:inspirationChips(body.inspiration_seed??Date.now()+attempts,6,flow.picked)});
+
   });
   app.post('/api/world/confirm',async(req,res)=>{
     const body=safeParse(z.strictObject({preview_id:z.string().uuid()}),req.body);

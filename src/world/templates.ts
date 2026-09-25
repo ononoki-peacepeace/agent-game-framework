@@ -164,5 +164,8 @@ export function applyWorldModification(value: WorldDraft, text: string): WorldDr
   if (/(老师|教师)/.test(clean)) next.player_role = '新来的老师';
   else if (/(学生|新生)/.test(clean)) next.player_role = '新生';
   if (/(恐怖|惊悚|害怕)/.test(clean)) next.special_rules.push('带有恐怖元素');
+  if (/(不要(隐藏)?异常|没有异常|正常世界)/.test(clean)) { next.supernatural = 'none'; next.special_rules = next.special_rules.filter(rule => !/异常|秘密|扭曲/.test(rule)); }
+  else if (/(隐藏异常|有异常|超自然|诡异)/.test(clean)) { next.supernatural = 'subtle'; if (!next.special_rules.some(rule => /异常/.test(rule))) next.special_rules.push('看似正常但存在极少数异常'); }
+  if (/(小镇|不要大城市|换成小镇)/.test(clean)) next.initial_scope = '一座小镇及其周边';
   return worldDraftSchema.parse(next);
 }
