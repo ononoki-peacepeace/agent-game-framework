@@ -17,6 +17,7 @@ export class CodexAdapter implements AIAdapter {
     });
     this.options = { workingDirectory: directory, skipGitRepoCheck: true, sandboxMode: 'read-only', approvalPolicy: 'never', webSearchMode: 'disabled', networkAccessEnabled: false, model: process.env.CODEX_MODEL || undefined };
   }
+  providerInfo() { return { provider: this.name, model: this.options.model ?? null }; }
   async generate(request: AIRequest): Promise<AIResult> {
     await mkdir(this.directory, { recursive: true });
     const signal = request.signal ? AbortSignal.any([request.signal, AbortSignal.timeout(180000)]) : AbortSignal.timeout(180000);
@@ -24,7 +25,7 @@ export class CodexAdapter implements AIAdapter {
       const thread = resume ? this.codex.resumeThread(resume, this.options) : this.codex.startThread(this.options);
       const result = await thread.run(request.prompt, { outputSchema: request.schema, signal });
       if (result.items.some(i => ['command_execution','file_change','mcp_tool_call','web_search'].includes(i.type))) throw new Error('AI_TOOL_BOUNDARY: unexpected tool use');
-      return { data: JSON.parse(result.finalResponse), threadId: thread.id ?? undefined };
+      return { data: JSON.parse(result.finalResponse), threadId: thread.id ?? undefined, ...(result.usage?{usage:{input_tokens:result.usage.input_tokens,output_tokens:result.usage.output_tokens}}:{}) };
     };
     try { return await run(request.threadId); }
     catch (error) {

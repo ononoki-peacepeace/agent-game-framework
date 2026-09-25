@@ -1,3 +1,6 @@
+import {calendarSchema,routineRulesSchema,routineMetaSchema} from '../routine/schema.js';
+import {extensionEntriesSchema} from '../extensions/schema.js';
+import {futureIntentSchema} from '../agent/plan-schema.js';
 import { z } from 'zod';
 
 export const VERSION = '0.1.0';
@@ -36,9 +39,13 @@ export const rulesSchema = z.strictObject({
 export const worldSchema = z.strictObject({
   schema_version: z.literal(1), framework_version: z.literal(VERSION),
   meta: z.strictObject({ id, title: z.string().min(1).max(120), description: text }),
+  routine_rules: routineRulesSchema.optional(),
+  task_rules:z.array(z.strictObject({task_id:id,book:z.enum(['quests','opportunities']),location_id:id,start_at:integer,end_at:integer,steps:z.array(z.strictObject({action:id,target_id:id.nullable(),minimum_minutes:integer})).min(1).max(20)})).max(100).optional(),
+  calendar: calendarSchema.optional(),
   enabled_modules: z.array(id).min(1).max(30), ruleset: rulesSchema, prompt_profile: profileSchema,
   world: z.strictObject({ description: text }), entities: z.array(entitySchema).min(1).max(500),
-  map: z.strictObject({ locations: z.array(locationSchema).min(1).max(500), routes: z.array(routeSchema).max(2000) }),
+  // The map capability is optional: a world without map data is a legal world.
+  map: z.strictObject({ locations: z.array(locationSchema).min(1).max(500), routes: z.array(routeSchema).max(2000) }).optional(),
   events: z.array(eventSchema).max(500), player: z.strictObject({ entity_id: id }),
   gm_state: z.strictObject({ notes: text, flags: dictionary(z.boolean()) }),
   runtime: z.strictObject({ time: z.strictObject({ day: integer, minute: integer }) }),
@@ -52,7 +59,15 @@ export const mapStateSchema = z.strictObject({
   dynamic_routes: z.array(routeSchema).max(1200).default([]),
 });
 export const saveSchema = z.strictObject({
+  action_facts: z.array(z.strictObject({request_id:z.string().uuid(),actor_id:id,target_id:id.nullable(),input:z.string().max(10000),facts:z.array(z.string().max(300)).max(4),time:z.strictObject({day:integer,minute:integer})})).max(100).optional(),
+  future_intents:z.array(futureIntentSchema).max(500).optional(),
+  extensions:extensionEntriesSchema.optional(),
+  task_progress:dictionary(integer).optional(),
+  foreground:z.strictObject({blocker:z.enum(['choice','npc_reply','travel','task','danger','interrupt']).nullable(),reason:z.string().max(500)}).optional(),
+  calendar: calendarSchema.optional(),
+  routine_meta: routineMetaSchema.optional(),
   schema_version: z.literal(1), framework_version: z.literal(VERSION), module_versions: dictionary(z.string().max(30)),
+  modules: dictionary(z.strictObject({ installed: z.boolean(), enabled: z.boolean(), version: z.string().max(30), state_version: z.string().max(30) })).default({}),
   game_id: z.string().uuid(), state_revision: integer, definition: worldSchema,
   entities: z.array(entitySchema).min(1).max(1000), player_state: z.strictObject({ entity_id: id }),
   gm_state: z.strictObject({ notes: text, flags: dictionary(z.boolean()) }),

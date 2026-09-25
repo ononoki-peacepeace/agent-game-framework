@@ -7,6 +7,7 @@ export type Aptitudes = { entries: Record<string, AptitudeEntry> };
 
 export const aptitudesModule: Module = {
   id: 'aptitudes', version: '0.1.0', requires: ['core'],
+  manifest: { api_version:'1', provides:['character.aptitudes'], state_ownership:['components.aptitudes'], state_schema_version:'aptitudes.v1', migration_version:1, supports_enable_disable:true, supports_remove:true },
   components: {
     aptitudes: {
       schema: z.strictObject({ entries: dictionary(z.strictObject({
@@ -16,6 +17,6 @@ export const aptitudesModule: Module = {
       project: (d, e, s) => e.id === s.player_state.entity_id ? d : undefined,
     },
   },
-  panels: [{ id: 'aptitudes', label: '资质' }],
+  panels: [{ id: 'aptitudes', label: '资质', module: 'aptitudes', order: 90, mobile_group: 'secondary', presentation_type: 'panel' }],
   prompt: 'aptitudes 表示长期适性/学习效率，不等于当前技能等级。',
 };

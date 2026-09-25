@@ -1,9 +1,10 @@
 import { assert, safeParse, locationSchema, routeSchema, type SavePackage } from './schema.js';
 
 export function currentMap(save: SavePackage) {
+  const map = save.definition.map ?? { locations: [], routes: [] };
   return {
-    locations: [...save.definition.map.locations, ...save.map_state.dynamic_locations],
-    routes: [...save.definition.map.routes, ...save.map_state.dynamic_routes],
+    locations: [...map.locations, ...save.map_state.dynamic_locations],
+    routes: [...map.routes, ...save.map_state.dynamic_routes],
   };
 }
 
@@ -25,8 +26,10 @@ export function ancestorIds(save: SavePackage, locationId: string) {
 
 export function seedKnownLocations(save: SavePackage) {
   const map = currentMap(save);
+  if (!map.locations.length) { save.map_state.known_location_ids = []; return; }
   const known = new Set(save.map_state.known_location_ids);
   for (const location of map.locations) if (location.known_by_default !== false) known.add(location.id);
+
   const player = save.entities.find(entity => entity.id === save.player_state.entity_id);
   const current = String(player?.components.location?.location_id ?? '');
   if (current) for (const id of ancestorIds(save, current)) known.add(id);

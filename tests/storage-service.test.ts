@@ -40,10 +40,17 @@ it('serializes mutations while AI runs and degrades prose safely', async () => {
 });
 it('failed disk commit leaves authoritative state unchanged', async () => {
   const store = new MemoryStore(), service = new GameService(store,new AIRuntime(new MockAIAdapter()),demo), v=await service.newGame();
-  // Complete the existing lazy base-feature upgrade before simulating a turn commit failure.
-  await service.current();
-  const before = await store.read();
+  await service.current(); const before = await store.read();
   store.write = async () => { throw new Error('disk full'); };
   await expect(service.turn({request_id:randomUUID(),game_id:v.game_id,expected_revision:0,action:{type:'WAIT',parameters:{minutes:10}}})).rejects.toThrow('disk full');
   expect(await store.read()).toEqual(before);
+});
+it('stores extensible local visual asset references without changing avatar compatibility', async () => {
+  const service = make(), state = await service.newGame();
+  const target = state.entities.find(e => e.id !== state.player_id && e.components.identity)!;
+  const next = await service.setVisualAsset(target.id, 'fullbody', 'visual_test_asset', state.game_id, state.revision);
+  const updated = next.entities.find(e => e.id === target.id)!;
+  const visuals = updated.components.visual_assets as unknown as { images?: Record<string,string> };
+  expect(visuals.images?.fullbody).toBe('visual_test_asset');
+  expect(updated.components.identity?.avatar_id ?? null).toBe(target.components.identity?.avatar_id ?? null);
 });

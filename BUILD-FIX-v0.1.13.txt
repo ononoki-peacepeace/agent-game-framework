@@ -1,0 +1,14 @@
+Agent Game Framework v0.1.13 build hotfix
+
+Fixes TypeScript errors in src/client/App.tsx where the local variable named `location`
+(PublicLocation | undefined) shadowed the browser global `location` inside startVoice().
+
+Changed browser URL checks from:
+  location.protocol / location.hostname
+to:
+  window.location.protocol / window.location.hostname
+
+Extract this archive into the project root and overwrite existing files.
+Then run:
+  npm run build
+  npm start

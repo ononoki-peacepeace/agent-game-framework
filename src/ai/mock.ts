@@ -2,6 +2,7 @@ import type { AIAdapter, AIRequest } from './contracts.js';
 export class MockAIAdapter implements AIAdapter {
   readonly name = 'mock';
   constructor(private initializer?: unknown) {}
+  providerInfo() { return { provider: this.name, model: null }; }
   async generate(request: AIRequest) {
     const data = JSON.parse(request.prompt.split('\n\n').at(-1)!);
     if (request.role === 'world_initializer') {

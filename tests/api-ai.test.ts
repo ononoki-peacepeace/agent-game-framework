@@ -46,6 +46,8 @@ it('Codex adapter rejects unexpected tools', async () => {
 });
 it('initializer compiles structured blueprint to independently portable save', async () => {
   const blueprint=JSON.parse(await readFile('content/worlds/town-blueprint.json','utf8'));
+  blueprint.locations.push({id:'test_park',name:'公园',description:'公共绿地'});
+  blueprint.routes.push({from:blueprint.locations[0].id,to:'test_park',travel_minutes:5},{from:'test_park',to:blueprint.locations[0].id,travel_minutes:5});
   const runtime=new AIRuntime(new MockAIAdapter(blueprint));
   const save=await runtime.initialize('tiny world',await readProfile('content/profiles/default.json'));
   expect(save.definition.meta.id).toBe(blueprint.id); expect(save.entities.length).toBe(7); expect(save.ai.threads.world_initializer).toBe('mock-initializer');

@@ -1,10 +1,13 @@
 import { z } from 'zod';
-import { assert, text } from '../core/schema.js';
+import {avatarCropSchema} from '../shared/avatar.js';
+import { assert, id, text } from '../core/schema.js';
 import type { Module } from '../core/registry.js';
 export const charactersModule: Module = {
   id: 'characters', version: '0.1.0', requires: ['core'],
+  manifest: { api_version:'1', provides:['character.identity','character.profile','character.visuals'], state_ownership:['components.character','components.character_card','components.visual_assets'], state_schema_version:'characters.v1', migration_version:1, supports_enable_disable:false, supports_remove:false },
   components: {
     character: { schema: z.strictObject({ role: z.string().max(200), traits: z.array(z.string().max(100)).max(10) }), project: d => d },
+    visual_assets: { schema: z.strictObject({ images: z.record(id, id).default({}),avatar_crop:avatarCropSchema.optional() }), project: d => d },
     character_card: {
       schema: z.strictObject({
         source_spec: z.enum(['v1','v2','v3']), spec_version: z.string().max(30), name: z.string().min(1).max(120),
@@ -25,7 +28,7 @@ export const charactersModule: Module = {
       },
     },
   },
-  panels: [{ id: 'characters', label: '人物' }],
+  panels: [{ id: 'characters', label: '人物', module: 'characters', order: 40, mobile_group: 'primary', presentation_type: 'panel' }],
   actions: { TALK: { ui: { label: '交流', visibility: 'contextual', target_component: 'character', requires_text: true, text_parameter: 'topic' }, parameters: z.strictObject({ topic: z.string().min(1).max(2000) }), execute(c) {
     assert(c.action.target_id && c.action.target_id !== c.action.actor_id, '请选择另一位角色');
     c.store.component(c.action.target_id, 'character');

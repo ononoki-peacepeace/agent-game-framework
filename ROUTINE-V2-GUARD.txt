@@ -1,0 +1,11 @@
+Agent Game Framework v0.1.13 Routine Safety Guard
+
+1. START_ROUTINE / CONTINUE_ROUTINE server-side max batch: 1440 minutes.
+2. Routine batch is transactional: export snapshot -> execute -> validate settlement.
+3. If only time/routine metadata changed and there is no interrupt, restore snapshot automatically.
+4. No fake course/work/training/gambling/social rewards are invented when modules do not exist.
+5. Client refreshes latest state after action/input and retries with a fresh revision/request id.
+
+Apply: extract this ZIP directly over the project root, then run:
+  npm run build
+  npm start

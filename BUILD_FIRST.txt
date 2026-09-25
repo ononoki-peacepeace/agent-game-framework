@@ -1,0 +1,16 @@
+Agent Game Framework v0.1.10 overlay
+
+1. Stop the running server (Ctrl+C).
+2. Extract this ZIP over D:\game and allow overwrite.
+3. Rebuild before starting:
+
+   cd D:\game
+   npm run build
+
+4. Desktop only:
+   npm start
+
+   Desktop + phone on same private LAN:
+   npm run start:lan
+
+This update keeps existing saves and local assets. Do not delete data/.

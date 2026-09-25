@@ -4,8 +4,9 @@ import type { Module } from '../core/registry.js';
 type Relations = { entries: Record<string, Record<string, number>> };
 export const relationshipsModule: Module = {
   id: 'relationships', version: '0.1.0', requires: ['characters'],
+  manifest: { api_version:'1', provides:['relationship.graph'], state_ownership:['components.relationships'], state_schema_version:'relationships.v1', migration_version:1, supports_enable_disable:false, supports_remove:false },
   components: { relationships: { schema: z.strictObject({ entries: dictionary(dictionary(z.number().int())) }), project: (d, e, s) => e.id === s.player_state.entity_id ? d : undefined } },
-  panels: [{ id: 'relationships', label: '关系' }],
+  panels: [{ id: 'relationships', label: '关系', module: 'relationships', order: 50, mobile_group: 'secondary', presentation_type: 'panel' }],
   validate(save) {
     const dims = save.definition.ruleset.relationship_dimensions;
     for (const [name, d] of Object.entries(dims)) assert(d.min <= d.initial && d.initial <= d.max, `关系维度 ${name} 范围无效`);
@@ -18,7 +19,7 @@ export const relationshipsModule: Module = {
     }
   },
   patches: { relationship_delta(save, patch, action) {
-    assert(['TALK','SOCIAL_INTERACT'].includes(action.type) && action.actor_id === patch.entity_id && action.target_id === patch.target_id, '只允许更新本次人物互动的玩家关系');
+    assert(['TALK','SOCIAL_INTERACT','FREEFORM_ACTION'].includes(action.type) && action.actor_id === patch.entity_id && action.target_id === patch.target_id, '只允许更新本次人物互动的玩家关系');
     assert(Number.isInteger(patch.delta) && Math.abs(patch.delta) <= 2, '单回合关系变化最多 2');
     const d = save.definition.ruleset.relationship_dimensions[patch.dimension];
     assert(d, '未知关系维度');

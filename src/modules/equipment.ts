@@ -8,6 +8,7 @@ export type EquipmentItem = { allowed_slots: string[]; modifiers: Record<string,
 
 export const equipmentModule: Module = {
   id: 'equipment', version: '0.1.0', requires: ['inventory'],
+  manifest: { api_version:'1', provides:['equipment.slots'], state_ownership:['components.equipment','components.equipment_item'], state_schema_version:'equipment.v1', migration_version:1, supports_enable_disable:true, supports_remove:true },
   components: {
     equipment: {
       schema: z.strictObject({ slots: dictionary(id.nullable()), labels: dictionary(z.string().min(1).max(120)).default({}) }),
@@ -18,7 +19,7 @@ export const equipmentModule: Module = {
       project: d => d,
     },
   },
-  panels: [{ id: 'equipment', label: '装备' }],
+  panels: [{ id: 'equipment', label: '装备', module: 'equipment', order: 130, mobile_group: 'secondary', presentation_type: 'panel' }],
   actions: {
     EQUIP: {
       ui: { label: '装备', visibility: 'panel', target_component: 'equipment_item' },

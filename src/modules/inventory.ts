@@ -4,11 +4,12 @@ import type { Module } from '../core/registry.js';
 export type Inventory = { items: Record<string, number> };
 export const inventoryModule: Module = {
   id: 'inventory', version: '0.1.0', requires: ['core'],
+  manifest: { api_version:'1', provides:['inventory.storage','item.definition'], state_ownership:['components.inventory','components.item'], state_schema_version:'inventory.v1', migration_version:1, supports_enable_disable:false, supports_remove:false },
   components: {
     item: { schema: z.strictObject({ weight: z.number().min(0).max(100000), stackable: z.boolean() }), project: d => d },
     inventory: { schema: z.strictObject({ items: dictionary(integer) }), project: (d, e, s) => e.id === s.player_state.entity_id ? d : undefined },
   },
-  panels: [{ id: 'inventory', label: '背包' }],
+  panels: [{ id: 'inventory', label: '背包', module: 'inventory', order: 60, mobile_group: 'primary', presentation_type: 'panel' }],
   validate(save) {
     for (const e of save.entities) for (const [itemId, n] of Object.entries((e.components.inventory as Inventory | undefined)?.items ?? {})) {
       const item = save.entities.find(i => i.id === itemId)?.components.item;

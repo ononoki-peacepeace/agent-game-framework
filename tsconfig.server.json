@@ -1,5 +1,6 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": { "noEmit": false, "outDir": "dist/server", "rootDir": "src" },
-  "include": ["src/core", "src/modules", "src/ai", "src/storage", "src/server", "src/shared"]
+  "include": ["src/core", "src/modules", "src/ai", "src/storage", "src/server", "src/shared", "src/observability"]
+
 }

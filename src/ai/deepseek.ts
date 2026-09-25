@@ -1,3 +1,6 @@
+import { providerError } from './failures.js';
+import { normalizeStructuredSchema, schemaViolations } from './provider-schema.js';
+import { observe } from '../observability/index.js';
 import type { AIAdapter, AIRequest, AIResult } from './contracts.js';
 
 type FetchLike = typeof fetch;
@@ -14,6 +17,7 @@ type DeepSeekResponse = {
   status?: string;
   error?: { code?: string; message?: string } | null;
   incomplete_details?: { reason?: string } | null;
+  usage?: { input_tokens?: number; output_tokens?: number } | null;
   output?: Array<{
     type?: string;
     content?: Array<{ type?: string; text?: string }>;
@@ -41,14 +45,22 @@ export class DeepSeekAdapter implements AIAdapter {
     this.maxOutputTokens = options.maxOutputTokens ?? Number(process.env.DEEPSEEK_MAX_OUTPUT_TOKENS ?? 12000);
     this.fetchImpl = options.fetchImpl ?? fetch;
   }
+  providerInfo() { return { provider: this.name, model: this.model }; }
 
   async generate(request: AIRequest): Promise<AIResult> {
     if (!this.apiKey) throw new Error('DEEPSEEK_API_KEY 未设置');
     if (!Number.isInteger(this.maxOutputTokens) || this.maxOutputTokens < 1) throw new Error('DEEPSEEK_MAX_OUTPUT_TOKENS 必须是正整数');
+    // Per-role budgets let the routine compiler/GM ask for more room than a short narrator line.
+    const budget = request.maxOutputTokens ?? this.maxOutputTokens;
 
     const timeout = AbortSignal.timeout(180000);
     const signal = request.signal ? AbortSignal.any([request.signal, timeout]) : timeout;
-    const schema = request.schema && typeof request.schema === 'object' ? request.schema : {};
+    // Canonical Zod stays untouched; only the outgoing provider schema is normalized for strict mode.
+    const schema = normalizeStructuredSchema(request.schema && typeof request.schema === 'object' ? request.schema : {});
+    // Diagnostic: the formal product path must never send an object whose required != properties.
+    const violations = schemaViolations(schema);
+    if (violations.length) observe('error', 'provider.schema.invalid', { module: 'ai', metadata: { role: request.role, violations: violations.slice(0, 6) } });
+    else observe('debug', 'provider.schema.checked', { module: 'ai', metadata: { role: request.role, objects: 'ok' } });
 
     const response = await this.fetchImpl(`${this.baseUrl}/responses`, {
       method: 'POST',
@@ -59,7 +71,7 @@ export class DeepSeekAdapter implements AIAdapter {
       body: JSON.stringify({
         model: this.model,
         input: request.prompt,
-        max_output_tokens: this.maxOutputTokens,
+        max_output_tokens: budget,
         text: {
           format: {
             type: 'json_schema',
@@ -78,11 +90,13 @@ export class DeepSeekAdapter implements AIAdapter {
 
     if (!response.ok) {
       const detail = payload.error?.message || raw.slice(0, 500) || response.statusText;
-      throw new Error(`DeepSeek API ${response.status}: ${detail}`);
+      throw providerError(payload.error?.code ?? `http_${response.status}`, detail, 'DeepSeek 请求失败');
     }
     if (payload.status !== 'completed') {
+      const reason = payload.incomplete_details?.reason ?? payload.error?.code ?? payload.status ?? 'unknown';
       const detail = payload.error?.message || payload.incomplete_details?.reason || payload.status || 'unknown status';
-      throw new Error(`DeepSeek 响应未完成: ${detail}`);
+      // A truncated or filtered response is never parsed as data: half a JSON document must not reach the framework.
+      throw providerError(reason, detail, 'DeepSeek 响应未完成');
     }
 
     const text = payload.output
@@ -90,9 +104,11 @@ export class DeepSeekAdapter implements AIAdapter {
       .flatMap(item => item.content ?? [])
       .find(part => part.type === 'output_text')
       ?.text;
-    if (!text) throw new Error('DeepSeek 响应缺少 output_text');
+    if (!text) throw providerError('missing_output_text', 'output_text missing', 'DeepSeek 响应缺少内容');
 
-    try { return { data: JSON.parse(text) }; }
-    catch { throw new Error('DeepSeek structured output 不是合法 JSON'); }
+    const usage = typeof payload.usage?.input_tokens === 'number' && typeof payload.usage?.output_tokens === 'number'
+      ? { input_tokens: payload.usage.input_tokens, output_tokens: payload.usage.output_tokens } : undefined;
+    try { return { data: JSON.parse(text), ...(usage?{usage}:{}) }; }
+    catch { throw providerError('invalid_json', text.slice(0, 300), 'DeepSeek 结构化输出不是合法 JSON'); }
   }
 }

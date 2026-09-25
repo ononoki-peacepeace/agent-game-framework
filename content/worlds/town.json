@@ -8,10 +8,12 @@
   },
   "enabled_modules": [
     "core",
+    "map",
     "characters",
     "relationships",
     "inventory",
-    "commerce"
+    "commerce",
+    "routine"
   ],
   "ruleset": {
     "minutes_per_day": 1440,
@@ -75,6 +77,11 @@
         },
         "relationships": {
           "entries": {}
+        },
+        "condition": {
+          "hp": 100,
+          "stamina": 100,
+          "stress": 0
         }
       }
     },
@@ -284,5 +291,90 @@
       "day": 1,
       "minute": 540
     }
+  },
+  "calendar": {
+    "version": 1,
+    "anchor_day": 1,
+    "anchor_month": 1,
+    "anchor_date": 1,
+    "anchor_weekday": 1,
+    "month_lengths": [
+      31,
+      28,
+      31,
+      30,
+      31,
+      30,
+      31,
+      31,
+      30,
+      31,
+      30,
+      31
+    ],
+    "source": "demo world calendar anchor：第1天为1月1日周一，非闰年公历月长"
+  },
+  "routine_rules": {
+    "version": 1,
+    "activities": [
+      {
+        "id": "sleep",
+        "label": "夜间睡眠",
+        "kind": "sleep",
+        "duration": 480,
+        "location_id": "square",
+        "mode": "local",
+        "effects": [
+          {
+            "op": "condition_delta",
+            "key": "stamina",
+            "target_id": null,
+            "delta": 20,
+            "reason": "框架默认的整夜睡眠恢复"
+          }
+        ],
+        "source": "framework default activity catalog"
+      },
+      {
+        "id": "meal",
+        "label": "用餐",
+        "kind": "meal",
+        "duration": 60,
+        "location_id": "square",
+        "mode": "local",
+        "effects": [],
+        "source": "framework default activity catalog"
+      },
+      {
+        "id": "study",
+        "label": "学习与自习",
+        "kind": "study",
+        "duration": 120,
+        "location_id": "square",
+        "mode": "local",
+        "effects": [],
+        "source": "framework default activity catalog"
+      },
+      {
+        "id": "work",
+        "label": "普通工作",
+        "kind": "work",
+        "duration": 180,
+        "location_id": "square",
+        "mode": "local",
+        "effects": [],
+        "source": "framework default activity catalog"
+      },
+      {
+        "id": "social",
+        "label": "开放社交",
+        "kind": "social",
+        "duration": 120,
+        "location_id": "square",
+        "mode": "ai",
+        "effects": [],
+        "source": "framework default activity catalog"
+      }
+    ]
   }
 }

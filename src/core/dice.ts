@@ -1,5 +1,6 @@
 import { randomInt } from 'node:crypto';
 import { assert } from './schema.js';
+import { observe } from '../observability/index.js';
 export type RNG = () => number;
 export const secureRng: RNG = () => randomInt(0, 2 ** 32) / 2 ** 32;
 export function parseDice(expression: string) {
@@ -12,5 +13,8 @@ export function parseDice(expression: string) {
 export function rollDice(expression: string, rng: RNG = secureRng) {
   const { count, sides, modifier } = parseDice(expression);
   const rolls = Array.from({ length: count }, () => { const n = rng(); assert(n >= 0 && n < 1, 'RNG 必须返回 [0,1)'); return 1 + Math.floor(n * sides); });
-  return { expression, rolls, modifier, total: rolls.reduce((a, b) => a + b, modifier) };
+  const total = rolls.reduce((a, b) => a + b, modifier);
+  // Formal randomness is program-owned; the exact expression and result stay in the local trace.
+  observe('debug', 'rng.roll', { module: 'rng', metadata: { expression, rolls, modifier, total } });
+  return { expression, rolls, modifier, total };
 }

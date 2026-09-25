@@ -13,6 +13,7 @@ export type QuestBook = { entries: Record<string, QuestRecord> };
 
 export const questsModule: Module = {
   id: 'quests', version: '0.1.0', requires: ['core'],
+  manifest: { api_version:'1', provides:['quest.log'], state_ownership:['components.quests','components.opportunities','definition.task_rules','task_progress'], state_schema_version:'quests.v1', migration_version:1, supports_enable_disable:true, supports_remove:true },
   components: {
     quests: {
       schema: z.strictObject({ entries: dictionary(recordSchema) }),
@@ -23,6 +24,6 @@ export const questsModule: Module = {
       project: (d, e, s) => e.id === s.player_state.entity_id ? d : undefined,
     },
   },
-  panels: [{ id: 'quests', label: '任务' }],
+  panels: [{ id: 'quests', label: '任务', module: 'quests', order: 140, mobile_group: 'secondary', presentation_type: 'panel' }],
   prompt: 'quests/opportunities 保存任务与机会的 canonical 状态。不要因玩家提到一个计划就自动把它设为已接受/已完成。',
 };

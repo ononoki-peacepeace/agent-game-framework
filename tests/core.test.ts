@@ -70,7 +70,7 @@ describe('rpg extension modules', () => {
 describe('map discovery and routine automation', () => {
   it('initializes baseline map, hides discoverable places, and can add/reveal new locations without Core edits', () => {
     const s = fresh();
-    s.definition.map.locations.push({ id:'hidden_room', name:'隐藏房间', description:'尚未发现', tags:[], parent_id:null, known_by_default:false });
+    s.definition.map!.locations.push({ id:'hidden_room', name:'隐藏房间', description:'尚未发现', tags:[], parent_id:null, known_by_default:false });
     const validated = validateSave(s);
     expect(publicView(validated).locations.some(l => l.id === 'hidden_room')).toBe(false);
     revealLocation(validated, 'hidden_room');
@@ -78,20 +78,20 @@ describe('map discovery and routine automation', () => {
     addDynamicLocation(validated, { id:'new_lane', name:'新发现的小巷', description:'探索中发现', tags:[], parent_id:null, known_by_default:false }, [{ from:'market', to:'new_lane', travel_minutes:4, conditions:[] }, { from:'new_lane', to:'market', travel_minutes:4, conditions:[] }], true);
     expect(publicView(validateSave(validated)).locations.some(l => l.id === 'new_lane')).toBe(true);
   });
-  it('runs a generic routine until an interrupting world event fires', () => {
+  it('records routine intent without advancing unvalidated time', () => {
     const s = fresh();
-    s.definition.enabled_modules.push('routine'); s.module_versions.routine = '0.1.0';
+    s.module_versions.routine = '0.1.0';
     s.definition.events.push({ id:'routine_break', hook:'on_time_advance', location_id:null, probability:1, once:true, public_text:'有人敲门找你。', set_flag:null, interrupt_automation:true });
     const out = run(validateSave(s), 'START_ROUTINE', { label:'普通日常', pattern:'照常生活直到有事发生', activities:[], chunk_minutes:60, max_minutes:1440 });
     const routine = out.save.entities.find(e => e.id === 'player')!.components.routine as any;
-    expect(routine.active).toBe(false); expect(routine.interrupted).toBe(true); expect(routine.last_interrupt).toContain('敲门');
-    expect(out.action.time_cost).toBe(60);
+    expect(routine.active).toBe(true); expect(routine.interrupted).toBe(false);
+    expect(out.action.time_cost).toBe(0); expect(out.save.runtime.time).toEqual(s.runtime.time);
   });
 });
 
 describe('actions and canonical mechanics', () => {
   it('uses canonical route duration and emits hooks', () => { const s = fresh(), out = run(s, 'MOVE', {}, 'station'); expect(out.save.runtime.time.minute).toBe(558); expect(out.events.map(e => e.type)).toEqual(['on_action_start','on_location_leave','on_time_advance','on_entity_changed','on_travel_complete','on_location_enter','on_action_complete']); expect(out.save.event_state.fired).toContain('station_arrival'); expect(s.runtime.time.minute).toBe(540); });
-  it('rejects teleport and route condition bypass', () => { const s = fresh(); expect(() => run(s,'MOVE',{},'ghost')).toThrow(); s.definition.map.routes[0].conditions = [{ flag: 'locked', equals: true }]; expect(() => run(s,'MOVE',{},'station')).toThrow(); });
+  it('rejects teleport and route condition bypass', () => { const s = fresh(); expect(() => run(s,'MOVE',{},'ghost')).toThrow(); s.definition.map!.routes[0].conditions = [{ flag: 'locked', equals: true }]; expect(() => run(s,'MOVE',{},'station')).toThrow(); });
   it('bounds WAIT and emits day change', () => { const s = fresh(); s.runtime.time.minute = 1435; expect(run(s,'WAIT',{ minutes: 10 }).events.some(e => e.type === 'on_day_changed')).toBe(true); expect(() => run(s,'WAIT',{ minutes: 10080 })).toThrow(); });
   it('requires a present interlocutor', () => { expect(run(fresh(),'TALK',{ topic: '你好' },'npc_lin').action.time_cost).toBe(5); expect(() => run(fresh(),'TALK',{ topic: '你好' },'npc_qiao')).toThrow(); });
   it('trades atomically, conserves money and stock', () => {

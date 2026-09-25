@@ -10,6 +10,7 @@ export type Skills = { entries: Record<string, SkillEntry> };
 
 export const skillsModule: Module = {
   id: 'skills', version: '0.1.0', requires: ['aptitudes'],
+  manifest: { api_version:'1', provides:['character.skills'], state_ownership:['components.skills'], state_schema_version:'skills.v1', migration_version:1, supports_enable_disable:true, supports_remove:true },
   components: {
     skills: {
       schema: z.strictObject({ entries: dictionary(z.strictObject({
@@ -20,7 +21,7 @@ export const skillsModule: Module = {
       project: (d, e, s) => e.id === s.player_state.entity_id ? d : undefined,
     },
   },
-  panels: [{ id: 'skills', label: '技能' }],
+  panels: [{ id: 'skills', label: '技能', module: 'skills', order: 100, mobile_group: 'secondary', presentation_type: 'panel' }],
   validate(save) {
     for (const entity of save.entities) {
       const skills = entity.components.skills as Skills | undefined;

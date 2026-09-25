@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import {settleTaskObjectives} from './task-rules.js';
 import { actionSchema, assert, safeParse, type Action, type GameEvent, type SavePackage } from './schema.js';
 import { EntityStore, type ActionContext, type ModuleRegistry, type Patch } from './registry.js';
 import { createRegistry } from '../modules/index.js';
@@ -6,8 +7,9 @@ import { advanceTime } from './time.js';
 import { secureRng, type RNG } from './dice.js';
 import { validateSave } from './state.js';
 import { revealLocation } from './map.js';
+import { observe, errorText } from '../observability/index.js';
 
-export function executeAction(current: SavePackage, input: unknown, requestId: string, source: Action['source'] = 'player', rng: RNG = secureRng, registry: ModuleRegistry = createRegistry(current.definition.enabled_modules)) {
+export function executeAction(current: SavePackage, input: unknown, requestId: string, source: Action['source'] = 'player', rng: RNG = secureRng, registry: ModuleRegistry = createRegistry(current.definition.enabled_modules), lifecycle = true) {
   const save = structuredClone(current), actionInput = safeParse(actionSchema, input);
   const spec = registry.actions.get(actionInput.type);
   const action: Action = { ...actionInput, parameters: safeParse(spec.parameters, actionInput.parameters) as Action['parameters'], id: requestId, actor_id: save.player_state.entity_id, source, time_cost: 0 };
@@ -38,13 +40,24 @@ export function executeAction(current: SavePackage, input: unknown, requestId: s
       for (let d = oldDay; d < save.runtime.time.day; d++) ctx.emit({ type: 'on_day_changed' });
     },
   };
-  ctx.emit({ type: 'on_action_start' }); spec.execute(ctx); ctx.emit({ type: 'on_action_complete' });
+  const settings=['SAVE_ROUTINE','CLEAR_ROUTINE','CANCEL_ROUTINE','PAUSE_ROUTINE'].includes(action.type);
+  if (lifecycle&&!settings) ctx.emit({ type: 'on_action_start' });
+  spec.execute(ctx);
+  if (lifecycle&&!settings) ctx.emit({ type: 'on_action_complete' });
+  if(lifecycle&&!settings)settleTaskObjectives(save,action);
   return { save: validateSave(save, registry), action, facts, events, registry };
 }
 const patchSchema = z.strictObject({ op: z.string(), entity_id: z.string(), target_id: z.string(), dimension: z.string(), delta: z.number().int() });
 export function applyPatches(save: SavePackage, input: unknown, action: Action, registry = createRegistry(save.definition.enabled_modules)) {
   const patches = safeParse(z.array(patchSchema).max(1), input) as Patch[];
-  const candidate = structuredClone(save);
-  for (const patch of patches) registry.patches.get(patch.op)(candidate, patch, action);
-  return validateSave(candidate, registry);
+  const candidate = structuredClone(save), started = performance.now();
+  try {
+    for (const patch of patches) registry.patches.get(patch.op)(candidate, patch, action);
+    const next = validateSave(candidate, registry);
+    observe('debug', 'patch.validation.accepted', { module: 'framework', duration_ms: performance.now() - started, revision: next.state_revision, metadata: { patches: patches.length, operation: action.type } });
+    return next;
+  } catch (error) {
+    observe('warn', 'patch.validation.rejected', { module: 'framework', duration_ms: performance.now() - started, metadata: { patches: patches.length, operation: action.type, reason: errorText(error) } });
+    throw error;
+  }
 }

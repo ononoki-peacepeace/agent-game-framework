@@ -1,4 +1,6 @@
+import { normalizeStructuredSchema } from './provider-schema.js';
 import type { AIAdapter, AIRequest, AIResult } from './contracts.js';
+
 
 type FetchLike = typeof fetch;
 export type ResponsesCompatibleOptions = { apiKey: string; baseUrl: string; model: string; fetchImpl?: FetchLike; maxOutputTokens?: number };
@@ -10,6 +12,7 @@ export class ResponsesCompatibleAdapter implements AIAdapter {
   readonly name = 'responses-compatible';
   private fetchImpl: FetchLike;
   constructor(private options: ResponsesCompatibleOptions) { this.fetchImpl = options.fetchImpl ?? fetch; }
+  providerInfo() { return { provider: this.name, model: this.options.model }; }
   async generate(request: AIRequest): Promise<AIResult> {
     if (!this.options.apiKey) throw new Error('自定义 API Key 未设置');
     if (!this.options.baseUrl || !this.options.model) throw new Error('自定义 Responses API 需要 base_url 和 model');
@@ -17,8 +20,8 @@ export class ResponsesCompatibleAdapter implements AIAdapter {
     const response = await this.fetchImpl(`${this.options.baseUrl.replace(/\/+$/, '')}/responses`, {
       method: 'POST', signal,
       headers: { Authorization: `Bearer ${this.options.apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: this.options.model, input: request.prompt, max_output_tokens: this.options.maxOutputTokens ?? 12000,
-        text: { format: { type: 'json_schema', name: `agent_game_${request.role}`, schema: request.schema && typeof request.schema === 'object' ? request.schema : {} } } }),
+      body: JSON.stringify({ model: this.options.model, input: request.prompt, max_output_tokens: request.maxOutputTokens ?? this.options.maxOutputTokens ?? 12000,
+        text: { format: { type: 'json_schema', name: `agent_game_${request.role}`, schema: normalizeStructuredSchema(request.schema && typeof request.schema === 'object' ? request.schema : {}) } } }),
     });
     const raw = await response.text(); let payload: Payload;
     try { payload = raw ? JSON.parse(raw) as Payload : {}; } catch { throw new Error(`自定义 API 返回非 JSON（${response.status}）`); }

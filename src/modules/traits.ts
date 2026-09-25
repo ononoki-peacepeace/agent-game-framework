@@ -7,6 +7,7 @@ export type Traits = { entries: Record<string, TraitEntry> };
 
 export const traitsModule: Module = {
   id: 'traits', version: '0.1.0', requires: ['core'],
+  manifest: { api_version:'1', provides:['character.traits'], state_ownership:['components.traits'], state_schema_version:'traits.v1', migration_version:1, supports_enable_disable:true, supports_remove:true },
   components: {
     traits: {
       schema: z.strictObject({ entries: dictionary(z.strictObject({
@@ -16,6 +17,6 @@ export const traitsModule: Module = {
       project: (d, e, s) => e.id === s.player_state.entity_id ? d : undefined,
     },
   },
-  panels: [{ id: 'traits', label: '特质' }],
+  panels: [{ id: 'traits', label: '特质', module: 'traits', order: 110, mobile_group: 'secondary', presentation_type: 'panel' }],
   prompt: 'traits 是持续特征或状态标签；只有规则明确授权时才改变，不因叙事便利临时添加或移除。',
 };

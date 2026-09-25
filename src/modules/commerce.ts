@@ -29,11 +29,12 @@ function trade(c: ActionContext, buying: boolean) {
 }
 export const commerceModule: Module = {
   id: 'commerce', version: '0.1.0', requires: ['inventory'],
+  manifest: { api_version:'1', provides:['economy.wallet','commerce.shop'], state_ownership:['components.wallet','components.shop'], state_schema_version:'commerce.v1', migration_version:1, supports_enable_disable:true, supports_remove:true },
   components: {
     wallet: { schema: z.strictObject({ balances: dictionary(integer) }), project: (d, e, s) => e.id === s.player_state.entity_id ? d : undefined },
     shop: { schema: z.strictObject({ currency_id: id, stock: dictionary(integer), prices: dictionary(z.strictObject({ buy: integer.min(1), sell: integer })) }), project: d => d },
   },
-  panels: [{ id: 'commerce', label: '商店' }],
+  panels: [{ id: 'commerce', label: '商店', module: 'commerce', order: 70, mobile_group: 'secondary', presentation_type: 'panel' }],
   actions: Object.fromEntries(['BUY', 'SELL'].map(type => [type, { ui: { label: type === 'BUY' ? '买入' : '卖出', visibility: 'panel', target_component: 'shop' }, parameters: z.strictObject({ item_id: id, quantity: integer.min(1).max(100) }), execute: (c: ActionContext) => trade(c, type === 'BUY') }])),
   validate(save) {
     for (const e of save.entities) {

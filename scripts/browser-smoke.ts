@@ -16,7 +16,7 @@ try{
  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(base);await page.getByRole('button',{name:'选择 JSON 文件',exact:true}).waitFor();
  const importer=page.locator('input[type=file][accept=".json,application/json"]');
- await importer.setInputFiles(resolve('content/worlds/town.json'));await page.getByRole('heading',{name:'港湾日常',exact:true}).waitFor();
+ await importer.setInputFiles(resolve('content/worlds/town.json'));await page.locator('.world-status').getByText('港湾日常',{exact:true}).waitFor();
  await page.getByRole('button',{name:'地图',exact:true}).click();
  await page.locator('article.map-location-card').filter({hasText:'街角商店'}).getByRole('button',{name:'前往',exact:true}).click();
  await page.getByRole('heading',{name:'街角商店',exact:true}).first().waitFor();
@@ -26,13 +26,13 @@ try{
  const target=page.locator('article.context-entity').filter({hasText:'乔宁'});
  await target.getByRole('button',{name:'查看操作',exact:true}).click();await target.getByRole('button',{name:'交流',exact:true}).click();
  await page.locator('#action').fill('你好，今天店里怎么样？');await page.getByRole('button',{name:'确认并执行 →',exact:true}).click();
- await page.locator('blockquote').waitFor();await page.screenshot({path:directory+'/desktop.png'});
- await page.reload();await page.getByRole('button',{name:'继续当前世界',exact:true}).click();await page.locator('blockquote').waitFor();
+ await page.locator('.dialogue-card').waitFor();await page.screenshot({path:directory+'/desktop.png'});
+ await page.reload();await page.getByRole('button',{name:'继续当前世界',exact:true}).click();await page.locator('.dialogue-card').waitFor();
  await page.getByRole('button',{name:'存档',exact:true}).click();await page.getByRole('button',{name:'保存检查点',exact:true}).click();
  const downloadEvent=page.waitForEvent('download');await page.getByRole('button',{name:'导出存档 JSON',exact:true}).click();
  await (await downloadEvent).saveAs(directory+'/export.json');
- await page.getByRole('button',{name:'返回启动页',exact:true}).click();await importer.setInputFiles(directory+'/export.json');
- await page.getByRole('heading',{name:'港湾日常',exact:true}).waitFor();assert.deepEqual(errors,[]);
+ await page.locator('.save-actions').getByRole('button',{name:'返回启动页',exact:true}).click();await importer.setInputFiles(directory+'/export.json');
+ await page.locator('.world-status').getByText('港湾日常',{exact:true}).waitFor();assert.deepEqual(errors,[]);
  console.log('DESKTOP SMOKE PASS: public world import, MOVE/BUY/SELL/TALK, refresh, checkpoint and export/import. '+directory);
 }finally{
  await browser?.close();if(child.exitCode===null&&child.signalCode===null){const stopped=once(child,'exit');child.send('shutdown');await stopped;}

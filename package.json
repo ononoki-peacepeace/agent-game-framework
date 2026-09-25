@@ -1,6 +1,6 @@
 {
   "name": "agent-game-framework",
-  "version": "0.1.9",
+  "version": "0.1.16",
   "private": true,
   "type": "module",
   "engines": {

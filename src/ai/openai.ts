@@ -1,3 +1,5 @@
+import { providerError } from './failures.js';
+import { normalizeStructuredSchema } from './provider-schema.js';
 import type { AIAdapter, AIRequest, AIResult } from './contracts.js';
 
 type FetchLike = typeof fetch;
@@ -24,6 +26,7 @@ export class OpenAIAdapter implements AIAdapter {
     this.maxOutputTokens = options.maxOutputTokens ?? Number(process.env.OPENAI_MAX_OUTPUT_TOKENS ?? 12000);
     this.fetchImpl = options.fetchImpl ?? fetch;
   }
+  providerInfo() { return { provider: this.name, model: this.model }; }
   async generate(request: AIRequest): Promise<AIResult> {
     if (!this.apiKey) throw new Error('OPENAI_API_KEY 未设置');
     const signal = request.signal ? AbortSignal.any([request.signal, AbortSignal.timeout(180000)]) : AbortSignal.timeout(180000);
@@ -31,8 +34,8 @@ export class OpenAIAdapter implements AIAdapter {
       method: 'POST', signal,
       headers: { Authorization: `Bearer ${this.apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: this.model, input: request.prompt, max_output_tokens: this.maxOutputTokens,
-        text: { format: { type: 'json_schema', name: `agent_game_${request.role}`, strict: true, schema: request.schema && typeof request.schema === 'object' ? request.schema : {} } },
+        model: this.model, input: request.prompt, max_output_tokens: request.maxOutputTokens ?? this.maxOutputTokens,
+        text: { format: { type: 'json_schema', name: `agent_game_${request.role}`, strict: true, schema: normalizeStructuredSchema(request.schema && typeof request.schema === 'object' ? request.schema : {}) } },
       }),
     });
     const raw = await response.text();
@@ -40,7 +43,7 @@ export class OpenAIAdapter implements AIAdapter {
     try { payload = raw ? JSON.parse(raw) as ResponsePayload : {}; }
     catch { throw new Error(`OpenAI 返回了非 JSON HTTP 响应（${response.status}）`); }
     if (!response.ok) throw new Error(`OpenAI API ${response.status}: ${payload.error?.message || raw.slice(0, 500) || response.statusText}`);
-    if (payload.status && payload.status !== 'completed') throw new Error(`OpenAI 响应未完成: ${payload.error?.message || payload.incomplete_details?.reason || payload.status}`);
+    if (payload.status && payload.status !== 'completed') throw providerError(payload.incomplete_details?.reason ?? payload.error?.message ?? payload.status, payload.error?.message ?? payload.status, 'OpenAI 响应未完成');
     const text = payload.output_text ?? payload.output?.filter(x => x.type === 'message').flatMap(x => x.content ?? []).find(x => x.type === 'output_text')?.text;
     if (!text) throw new Error('OpenAI 响应缺少 output_text');
     try { return { data: JSON.parse(text) }; }

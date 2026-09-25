@@ -73,7 +73,9 @@ export class AIProviderManager implements AIAdapter {
   }
 
   get name() { return this.current.name; }
+  providerInfo() { return { provider: this.config.provider, model: this.config.model ?? this.defaultModel(this.config.provider) }; }
   async generate(request: AIRequest): Promise<AIResult> { return this.current.generate(request); }
+
   list() { return descriptors; }
   info(): ProviderInfo {
     return {
