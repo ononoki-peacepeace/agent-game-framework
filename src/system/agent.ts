@@ -10,6 +10,8 @@ import { applicationFor, behaviorSummary, detectBehaviorScopes, normalizeBehavio
 import { resolveEntities } from '../agent/entities.js';
 import { relationshipSummary } from '../shared/relationship.js';
 import { sanitizePlayerText } from './player-copy.js';
+import { advanceFeatureGuide, featureGuideMessage, featureRequirement, isGuideConfirmation, startFeatureGuide, type FeatureGuide } from './feature-guide.js';
+import { shallowUnderstanding } from './understanding.js';
 import {
   deterministicClarificationMerge, mediaCapabilityNote, scopeInText, understandSystemRequest,
   type ResolvedSystemRequest, type SystemUnderstanding, type SystemWorkflow,
@@ -27,7 +29,7 @@ export interface SystemResult {
   clarification?: string | null; view?: unknown;
   /** Structured state the session keeps, so a clarification only fills what is still missing. */
   understanding?: SystemUnderstanding | null; pending_field?: string | null; workflow?: SystemWorkflow | null;
-  resolved?: ResolvedSystemRequest | null; expression?: 'model' | 'template';
+  resolved?: ResolvedSystemRequest | null; expression?: 'model' | 'template'; guide?: FeatureGuide | null;
 }
 const result = (plan: MetaPlan, message: string, toolsList: ToolDescriptor[], extra: Partial<SystemResult> = {}): SystemResult => {
   const tool = toolsList.find(entry => entry.tool_id === plan.tool_id);
@@ -75,6 +77,10 @@ function needsUnderstanding(plan: MetaPlan, text: string, context: SystemExecuti
   if ((plan.tool_id ?? '').startsWith('module.') && !plan.args.module) return true;
   // "给伊芙琳生成…头像" (no quoted name) has no entity yet: the understanding layer resolves it and reports the real asset状态.
   if (plan.tool_id === 'media.generate_image' && !plan.args.name) return true;
+  // "加个赌博玩法" is already recognised as a development request, but a product idea still deserves the one
+  // experience question before any technical proposal. Concrete requests (naming a surface or existing data)
+  // keep going straight to the DevelopmentTask.
+  if (plan.tool_id === 'extension.create' && !/(好感|关系|属性|技能|资质|背包|物品|任务|商店|地图|面板|页面|状态)/.test(text)) return true;
   return false;
 }
 /** Deterministic reading of a correction such as "不是游戏助手，是故事的最后一句". */
@@ -170,7 +176,31 @@ async function resolveUnderstanding(service: GameService, view: ReturnType<typeo
   // "人物页显示好感度" already names one surface and existing data: the development workspace is the right place
   // to settle presentation details, so the Agent must not keep asking. Several surfaces still need one question.
   const actionableTask = understanding.likely_workflow === 'development_task' && understanding.target_surfaces.length === 1;
-  const missing = actionableTask ? undefined : understanding.unresolved[0];
+  // A vague development idea is shaped by one experience question before any technical work starts. An active
+  // guide owns the follow-up turns (delegate answer, adjustment, confirmation) and never writes canonical world.
+  const activeGuide = Boolean(session.guide && session.guide.status !== 'confirmed');
+  // Whatever the model called the open point, a development wish that names no surface is an idea to shape — the
+  // player must never receive the model's technical question (capability gaps, schemas, existing modules).
+  const answeringOtherField = context.answeringClarification === true && !['想法方向', '想法确认'].includes(session.pending_field ?? '');
+  // The deterministic read of the player's own sentence also counts: a real provider may file "我想加个潜力系统"
+  // as a module/capability question, and the player must still get the idea guide instead of a technical answer.
+  const wishIsDevelopment = understanding.likely_workflow === 'development_task'
+    || shallowUnderstanding(text, view).likely_workflow === 'development_task';
+  const guideForIdea = !answeringOtherField && (activeGuide || (wishIsDevelopment
+    && (understanding.unresolved.length > 0 || understanding.understood.length > 0))) && !surfacesFromText(text).length
+    ? (session.guide && session.guide.status !== 'confirmed'
+      ? (isGuideConfirmation(text) && session.guide.status === 'proposing' ? { ...session.guide, status: 'confirmed' as const } : advanceFeatureGuide(session.guide, text))
+      : { ...startFeatureGuide(text), understood: understanding.understood.length ? understanding.understood.slice(0, 3) : startFeatureGuide(text).understood })
+    : null;
+  const shownIdea = guideForIdea ? { ...guideForIdea, understood: guideForIdea.understood.map(line => sanitizePlayerText(line, '')).filter(Boolean) } : null;
+  if (shownIdea && shownIdea.status !== 'confirmed') return {
+    category: 'EXTENSION_REQUEST', tool_id: null, side_effect_level: 'none', needs_confirmation: false,
+    message: sanitizePlayerText(featureGuideMessage(shownIdea), '正在完善这个想法'), guide: shownIdea, clarification: 'feature_guide',
+    pending_field: shownIdea.status === 'proposing' ? '想法确认' : '想法方向',
+    workflow: 'development_task', understanding,
+  };
+  if (guideForIdea?.status === 'confirmed') understanding = { ...understanding, likely_workflow: 'development_task' };
+  const missing = guideForIdea ? undefined : actionableTask ? undefined : understanding.unresolved[0];
 
 
 
@@ -208,10 +238,23 @@ async function resolveUnderstanding(service: GameService, view: ReturnType<typeo
   if (understanding.likely_workflow === 'development_task') {
     const surfaces = understanding.target_surfaces.length ? understanding.target_surfaces : surfacesFromText(text);
     const requirement = [understanding.requested_change ?? text, surfaces.length ? `展示位置：${surfaces.join('、')}` : '', /好感|关系/.test(text) ? mediaCapabilityNote(save) : ''].filter(Boolean).join('\n');
+    // A concrete request goes straight to the DevelopmentTask; a vague product idea is shaped by the guide first.
+    const concrete = surfaces.length > 0 || /(好感|关系|属性|技能|资质|背包|物品|任务|商店|地图|面板|页面|状态)/.test(text);
+    let guide: FeatureGuide | null = session.guide && session.guide.status !== 'confirmed'
+      ? (isGuideConfirmation(text) && session.guide.status === 'proposing' ? { ...session.guide, status: 'confirmed' as const } : advanceFeatureGuide(session.guide, text))
+      : concrete ? null : startFeatureGuide(text);
+    if (guide && guide.status === 'confirmed') guide = { ...guide, status: 'confirmed' as const };
+    if (guide && guide.status !== 'confirmed') return {
+      category: 'EXTENSION_REQUEST', tool_id: null, side_effect_level: 'none', needs_confirmation: false,
+      message: sanitizePlayerText(featureGuideMessage(guide), '正在完善这个想法'), guide, clarification: 'feature_guide', pending_field: guide.status === 'proposing' ? '想法确认' : '想法方向',
+
+      workflow: 'development_task', understanding,
+    };
     return {
       category: 'EXTENSION_REQUEST', tool_id: 'extension.create', side_effect_level: 'development', needs_confirmation: false,
-      message: `我理解的是：${understanding.understood.join('；')}。${surfaces.length > 1 ? `展示位置我先按 ${surfaces.join('、')} 全部纳入需求。` : ''}我会建立开发任务整理需求、做候选并验证；确认前不会改动你的存档或框架源码。`,
-      directive: { kind: 'extension_development', request: requirement }, understanding, workflow: 'development_task',
+      message: guide ? '好的，我按这个最小版本准备候选；确认前不会改动你的存档或框架源码。' : `我理解的是：${understanding.understood.join('；')}。${surfaces.length > 1 ? `展示位置我先按 ${surfaces.join('、')} 全部纳入需求。` : ''}我会建立开发任务整理需求、做候选并验证；确认前不会改动你的存档或框架源码。`,
+      directive: { kind: 'extension_development', request: guide ? featureRequirement(guide) : requirement }, understanding, workflow: 'development_task', ...(guide ? { guide } : {}),
+
     };
   }
   // 5. Capability questions are answered from real state.
@@ -358,7 +401,7 @@ async function executeSystemInput(service: GameService, raw: unknown, context: S
   const planned = toolsList.find(tool => tool.tool_id === plan.tool_id);
   const writeLevels = ['configuration', 'canonical-management', 'canonical-state', 'development'];
   const ownClarificationFields = ['要调整的系统', '作用范围', '人物', '展示位置'];
-  const boundToCurrentRequest = body.input === latest || body.confirmed === true || context.behaviorScope !== undefined
+  const boundToCurrentRequest = body.input === latest || body.confirmed === true || context.behaviorScope !== undefined || Boolean(context.session.guide)
     || (context.answeringClarification === true && ownClarificationFields.includes(context.session.pending_field ?? ''));
   if (planned && writeLevels.includes(planned.side_effect_level) && !boundToCurrentRequest) {
     context.session.pending_confirmation = null;

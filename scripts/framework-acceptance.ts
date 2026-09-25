@@ -55,6 +55,12 @@ try{
  assert.deepEqual((await f.service.current()).entities.find(e=>e.id===archiveSave.player_state.entity_id)!.components.quests,archivePlayer.components.quests);
 
  await page.getByRole('button',{name:'系统',exact:true}).click();await page.getByLabel('系统请求',{exact:true}).fill('加入赌博小游戏');await page.getByRole('button',{name:'发送',exact:true}).click();
+ // A product idea is shaped by one experience question first; "我不知道，你帮我选" then produces the MVP plan.
+ await expect(page.locator('.feature-guide')).toContainText('正在完善这个想法');
+ await page.getByRole('button',{name:'我不知道，你帮我选',exact:true}).click();
+ await expect(page.locator('.feature-guide')).toContainText('开始制作');
+ await page.getByRole('button',{name:'开始制作',exact:true}).click();
+
  await expect(page.locator('.development-panel')).toContainText('等待补充需求');let tasks=await api('development/tasks'),t=tasks.at(-1);assert.equal(t.status,'waiting_for_user');assert.equal(t.artifacts.length,0);
  await page.getByLabel('系统请求',{exact:true}).fill('第一版太简单，继续改');await page.getByRole('button',{name:'发送',exact:true}).click();
  await expect.poll(async()=>(await api('development/tasks/'+t.id)).revision).toBe(2);const revision=await waitTask(t.id);assert.equal(revision.workspace,t.workspace);assert.equal(revision.extension_id,t.extension_id);

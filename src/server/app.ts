@@ -14,12 +14,15 @@ import {DevelopmentTasks} from '../extensions/tasks.js';
 import {ExtensionDevelopment} from '../extensions/development.js';
 import {extensionIntent} from '../extensions/intent.js';
 import {avatarCropSchema} from '../shared/avatar.js';
+import {applyWorldModification,draftFromIdea,draftToDescription,inspirations,previewOf,recommendDraft,templateById,worldDraftSchema,worldTemplates,type WorldDraft} from '../world/templates.js';
+import {blankWorldIntent} from '../shared/world-intent.js';
 import {JsonStore} from '../storage/json-store.js';
 import express from 'express';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { resolve, join } from 'node:path';
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
-import { GameError, id, profileSchema, safeParse } from '../core/schema.js';
+import { GameError, assert, id, profileSchema, safeParse } from '../core/schema.js';
+
 import { providerConfigSchema, type AIProviderManager } from '../ai/providers.js';
 import { z } from 'zod';
 import type { GameService } from './service.js';
@@ -273,6 +276,55 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     res.json({ level: logger.level, file: logger.filePath(), entries, traces: logger.traces(20) });
   });
   app.get('/api/state', async (_req, res) => res.json(await service.view()));
+  const worldPreviews=new Map<string,{description:string;created_at:number}>();
+  async function worldDraftFromIdea(idea:string):Promise<WorldDraft>{
+    const adapter=service.ai?.adapter as unknown as {name?:string;generate?:(request:unknown)=>Promise<unknown>};
+    if(!adapter?.generate||adapter.name==='mock')return draftFromIdea(idea);
+    try{
+      const save=await service.current().catch(()=>null);
+      const raw=await adapter.generate({role:'gm_reasoning',schema:z.toJSONSchema(worldDraftSchema),prompt:[
+        '你是世界创建引导器。只输出 JSON 世界草稿，只描述体验层：世界名称、一句话介绍、时代、玩家身份、初始范围、危险程度(low/medium/high)、超自然程度(none/subtle/open)、NPC 密度(low/medium/high)、主要体验、特殊规则、建议玩法系统。',
+        '不要写具体剧情，不要写强制主线，不要预设反派，不要替玩家安排必然发生的事件。不符合的角色/地点请交给后续世界创作流程处理。',
+        `玩家想要：${idea}`,
+      ].join('\n')});
+      const candidate=(raw&&typeof raw==='object'&&'data' in raw)?(raw as {data:unknown}).data:raw;
+      const parsed=worldDraftSchema.safeParse(candidate);
+      void save;
+      return parsed.success?parsed.data:draftFromIdea(idea);
+    }catch{return draftFromIdea(idea);}
+  }
+  app.get('/api/world/templates',(_req,res)=>res.json(worldTemplates.map(template=>({id:template.id,display_name:template.display_name,description:template.description,recommended_experience:template.recommended_experience,inspiration:template.starter_inspiration.slice(0,3)}))));
+  app.post('/api/world/preview',async(req,res)=>{
+    const body=safeParse(z.strictObject({template_id:z.string().max(40).optional(),idea:z.string().max(600).optional(),modify:z.string().max(600).optional(),variant:z.number().int().min(0).max(20).optional(),inspiration_seed:z.number().int().optional()}),req.body);
+    let value:WorldDraft;const notes:string[]=[];
+    if(body.template_id){const template=templateById(body.template_id);assert(template,'找不到这个模板');value=template.draft;}
+    else if(body.idea&&body.idea.trim())value=await worldDraftFromIdea(body.idea.trim());
+    else value=recommendDraft(body.variant??0);
+    if(body.modify&&body.modify.trim()){value=applyWorldModification(value,body.modify);notes.push(body.modify.trim());}
+    const description=draftToDescription(value,notes);
+    const preview_id=randomUUID();worldPreviews.set(preview_id,{description,created_at:Date.now()});
+    for(const [id,entry] of worldPreviews)if(Date.now()-entry.created_at>30*60*1000)worldPreviews.delete(id);
+    res.json({preview_id,preview:previewOf(value,{kind:body.template_id?'template':body.idea?'idea':'recommended',id:body.template_id}),description,blank:blankWorldIntent(description)!==null,inspiration:inspirations(body.inspiration_seed??Date.now())});
+  });
+  app.post('/api/world/confirm',async(req,res)=>{
+    const body=safeParse(z.strictObject({preview_id:z.string().uuid()}),req.body);
+    const entry=worldPreviews.get(body.preview_id);assert(entry,'这个预览已过期，请重新生成');
+    // Authoring is a model call: an occasional attempt fails validation (invalid or truncated structure). One
+    // bounded retry keeps a preview the player already confirmed from turning into a normal, frequent 400,
+    // while a persistent failure still reports naturally and leaves the preview reusable.
+    let created;
+    for(let attempt=0;attempt<2&&!created;attempt++){
+      try{created=await service.newGame(entry.description);}
+      catch(error){
+        service.logger.warn('world.create.failed',{module:'world',metadata:{attempt:attempt+1,reason:displayText(error instanceof Error?error.message:'未知原因',[],[])}});
+        if(attempt===1)throw new GameError(`这个世界草稿没有通过创建校验（${displayText(error instanceof Error?error.message:'未知原因',[],[])}）。你可以换一个草稿，或做一点调整后重新生成。`);
+      }
+    }
+    worldPreviews.delete(body.preview_id);
+    res.json(created);
+
+
+  });
   app.post('/api/new', async (req, res) => {
     const body = safeParse(z.strictObject({ description: z.string().min(1).max(12000).optional(), prompt_text: z.string().min(1).max(100000).optional(), prompt_profile: profileSchema.optional() }), req.body);
     res.json(await service.newGame(body.description, body.prompt_text, body.prompt_profile));
@@ -349,6 +401,8 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
 
   app.post('/api/system',async(req,res)=>{
     const body=req.body,input=safeParse(z.string().min(1).max(2000),body.input);
+    // A message sent from the development workspace already belongs to that task; it must not be re-routed.
+    if(body.development_task_id)return res.json(await processSystem({...body,input}));
     const gate=await routeContext(service,input,'system_input');
     if(gate.destination==='AMBIGUOUS')return res.json({category:'UNKNOWN',tool_id:null,side_effect_level:'none',needs_confirmation:false,message:gate.clarification,clarification:gate.clarification,session:await routingClarification(service,input,gate.clarification!)});
     if(gate.destination==='WORLD_INTENT'){

@@ -6,6 +6,7 @@ import { DevelopmentPanel } from './DevelopmentPanel.js';
 import { request,clientRequestId } from './api.js';
 import { clearSystemError, initialSystemInput, submitFailed, submitStarted, submitSucceeded, type SystemInputState } from './system-input.js';
 import { behaviorSummary, type BehaviorRule } from '../ai/behavior.js';
+import { sanitizePlayerText } from '../system/player-copy.js';
 
 
 import type { PublicView } from '../shared/contracts.js';
@@ -15,6 +16,8 @@ type SystemResult = {
   session?:import('../system/session.js').SystemSession; category: string; tool_id: string | null; side_effect_level: string; needs_confirmation: boolean;
   view?:PublicView; message: string; directive?: { kind: string } & Record<string, unknown>; advanced?: Record<string, unknown>;
   clarification?: string | null; workflow?: string | null; pending_field?: string | null; expression?: 'model' | 'template'; understanding?: SystemUnderstandingView;
+  guide?: { status: 'asking' | 'proposing' | 'confirmed'; understood: string[]; draft: string[]; current_question: string | null; options: { id: string; label: string; detail: string }[] } | null;
+
 };
 
 /**
@@ -62,6 +65,13 @@ export function SystemPanel({ handoff, view, onView, onOpenLogs, onExport, onOpe
       {mediaEntity&&<p className="system-hint">{String(mediaEntity.components.identity?.name??mediaEntity.id)}：{Boolean((mediaEntity.components.visual_assets as {images?:Record<string,string>}|undefined)?.images?.fullbody)?'已有全身图，可以直接裁剪头像。':'还没有全身图，只能上传或接入图像生成能力。'}{result.advanced?.capability_gap?' 当前缺少能力：图像生成 Provider。':''}</p>}
       {mediaEntity&&Boolean((mediaEntity.components.visual_assets as {images?:Record<string,string>}|undefined)?.images?.fullbody)&&<div className="button-row compact"><button disabled={sending} onClick={()=>onOpenCharacterCrop?.(mediaEntity.id)}>打开头像裁剪</button></div>}
     </article>}
+    {result?.guide&&result.guide.status!=='confirmed'&&<section className="feature-guide" aria-label="正在完善这个想法"><strong>正在完善这个想法</strong>
+      {result.guide.understood.length>0&&<ul>{result.guide.understood.map((line,index)=><li key={index}>{sanitizePlayerText(line, '')}</li>)}</ul>}
+      {result.guide.draft.length>0&&<ul>{result.guide.draft.map((line,index)=><li key={index}>{sanitizePlayerText(line, '')}</li>)}</ul>}
+
+      {result.guide.current_question&&<p>{result.guide.current_question}</p>}
+      <div className="button-row compact">{result.guide.options.map(option=><button key={option.id} type="button" className="quiet" title={option.detail} disabled={sending} onClick={()=>void send(false,option.label)}>{option.label}</button>)}</div>
+    </section>}
     {devVisible&&<DevelopmentPanel view={view} onView={onView} taskId={taskId} onSelect={setTaskId}/>}
     {devVisible&&<button className="quiet" onClick={()=>{setTaskId(null);setDevRequest(null);setDevOpen(false);setResult(null);}}>结束当前开发对话</button>}
     <details><summary>已安装功能</summary><ExtensionPanel view={view} intent={null} onView={v=>onView?.(v)} showDevelopment={false}/></details>

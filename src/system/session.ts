@@ -6,12 +6,15 @@ import {planMeta} from './router.js';
 import type {SystemResult} from './agent.js';
 import type {BehaviorApplication, BehaviorScope} from '../ai/behavior.js';
 import type {ResolvedSystemRequest, SystemUnderstanding} from './understanding.js';
+import type {FeatureGuide} from './feature-guide.js';
 export interface SystemSession {
  session_id:string;game_id:string;current_goal:string;current_intent:string;clarifications:{question:string;answer:string|null}[];
  resolved_entities:string[];selected_tools:string[];pending_confirmation:string|null;development_job_id:string|null;
  status:'active'|'waiting_for_clarification'|'waiting_for_confirmation'|'running'|'completed'|'cancelled'|'failed';
  /** Partial understanding kept across turns: a clarification only fills what is still missing. */
  understanding:SystemUnderstanding|null;pending_field:string|null;workflow:string|null;resolved_request:ResolvedSystemRequest|null;
+ /** Feature Idea Guide state: an idea being shaped before any development work starts. */
+ guide:FeatureGuide|null;
 }
 /** Everything the executor may need that was resolved by the session (entity, scope, module, previous request). */
 export interface SystemExecutionContext {
@@ -29,7 +32,7 @@ export function systemSessionContext(service:GameService,gameId:string){const se
 const lastResolved=new WeakMap<GameService,ResolvedSystemRequest>();
 const queues=new WeakMap<GameService,Promise<unknown>>();
 function freshSession(gameId:string,text:string,currentIntent:string,toolId:string|null):SystemSession{
- return {session_id:randomUUID(),game_id:gameId,current_goal:text,current_intent:currentIntent,clarifications:[],resolved_entities:[],selected_tools:toolId?[toolId]:[],pending_confirmation:null,development_job_id:null,status:'active',understanding:null,pending_field:null,workflow:null,resolved_request:null};
+ return {session_id:randomUUID(),game_id:gameId,current_goal:text,current_intent:currentIntent,clarifications:[],resolved_entities:[],selected_tools:toolId?[toolId]:[],pending_confirmation:null,development_job_id:null,status:'active',understanding:null,pending_field:null,workflow:null,resolved_request:null,guide:null};
 }
 export function sessionInput(service:GameService,body:{input:string;confirmed:boolean;session_id?:string|null},execute:(input:string,confirmed:boolean,context:SystemExecutionContext)=>Promise<SystemResult>):Promise<SystemResult>{
  const run=(queues.get(service)??Promise.resolve()).catch(()=>undefined).then(async()=>{
@@ -43,8 +46,9 @@ export function sessionInput(service:GameService,body:{input:string;confirmed:bo
   if(!live||independent){current=freshSession(save.game_id,text,newPlan.category,newPlan.tool_id);sessions.set(service,current);}
   let session=current!;
   const reply=(message:string,needs_confirmation=false):SystemResult=>({category:session.current_intent,tool_id:session.selected_tools[0]??null,side_effect_level:'none',needs_confirmation,message,session:structuredClone(session)});
-  const isCancellation=(value:string)=>/^(取消|算了|不弄了)[。！!]?$/u.test(value);
-  if(isCancellation(text)){session.status='cancelled';session.pending_confirmation=null;session.pending_field=null;return reply('已取消当前系统任务。');}
+  const isCancellation=(value:string)=>/^(取消|算了|不做了|不弄了)([，,。！!、\s].*)?$/u.test(value);
+
+  if(isCancellation(text)){session.status='cancelled';session.pending_confirmation=null;session.pending_field=null;session.guide=null;return reply('已取消当前系统任务。');}
   let input=session.current_goal,confirmed=false,entityId:string|undefined,behaviorScope:BehaviorScope|undefined;
   const confirming=body.confirmed||/^(确认|确认执行|是的|好|可以)[。！!]?$/u.test(text);
   // A pending write belongs to the request that planned it. If the player instead starts a substantial new
@@ -88,6 +92,7 @@ export function sessionInput(service:GameService,body:{input:string;confirmed:bo
    if(result.understanding!==undefined)session.understanding=result.understanding;
    if(result.pending_field!==undefined)session.pending_field=result.pending_field;
    if(result.workflow!==undefined)session.workflow=result.workflow;
+   if(result.guide!==undefined)session.guide=result.guide;
    if(result.resolved!==undefined&&result.resolved)lastResolved.set(service,result.resolved);
    if(result.resolved!==undefined)session.resolved_request=result.resolved;
    if(result.needs_confirmation){session.status='waiting_for_confirmation';session.pending_confirmation=input;}

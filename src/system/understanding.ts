@@ -94,7 +94,9 @@ export function shallowUnderstanding(text: string, view: PublicView): SystemUnde
   const question = /(有哪些|为什么|怎么回事|是不是|有没有|清单|列表)/.test(clean);
   // "把地图上的人物卡加上好感度" mentions a module word but is a UI change; a module intent needs a real module verb.
   const moduleVerb = /(启用|开启|打开|恢复|重新启用|需要|加入|不需要|不用|关闭|停用|禁用|隐藏|移除|删除|不要)/.test(clean);
-  const likely: SystemWorkflow = media ? 'media_asset' : styleLike ? 'behavior_config' : uiChange || development ? 'development_task'
+  // "我想加个潜力系统" names no surface and no existing data source, but it is clearly a development wish.
+  const concept = /(系统|玩法|功能|机制|模式|小游戏)/.test(clean) && /(加|增加|新增|添加|想要|希望|来个|做|玩)/.test(clean);
+  const likely: SystemWorkflow = media ? 'media_asset' : styleLike ? 'behavior_config' : uiChange || development || concept ? 'development_task'
     : moduleId && moduleVerb ? 'module_management' : diagnostic ? 'diagnostic' : feedback ? 'feedback' : question ? 'capability_question' : 'unclear';
   const understood: string[] = [];
   if (media) understood.push(/(裁|调整)/.test(clean) ? '你希望调整人物的图片/头像' : '你希望为人物的图片/头像生成或替换资源');
