@@ -1,0 +1,22 @@
+/* World Creation UX v2 · readability and hierarchy fixes (loaded after styles.css). */
+.launcher .launch-card.create-card { gap: 12px; }
+.launcher .template-card {
+  color: #1f3548; display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  padding: 14px 16px; text-align: left; border-radius: 12px; border: 1px solid #cfd9e2;
+  background: #fff; box-shadow: 0 1px 2px #0b1c2f0d; cursor: pointer;
+}
+.launcher .template-card:hover:not(:disabled) { border-color: #4ba1a6; background: #f6fbfb; box-shadow: 0 4px 14px #0b1c2f1f; }
+.launcher .template-card:disabled { opacity: .6; cursor: not-allowed; background: #f7f9fb; }
+.launcher .template-card.selected { border-color: #176b72; background: #eef7f7; box-shadow: inset 0 0 0 1px #176b7220; }
+.launcher .template-card strong { font-size: 15px; font-weight: 650; color: #16273a; }
+.launcher .template-card small { color: #556579; font-size: 12.5px; line-height: 1.5; }
+.launcher .template-card .template-tags { font-size: 11.5px; color: #6b7d90; }
+.world-launcher .world-preview dl { grid-template-columns: 92px 1fr; gap: 7px 12px; font-size: 13.5px; }
+.world-launcher .world-preview dt { color: #5d6f82; }
+.world-launcher .world-preview dd { color: #16273a; }
+.world-launcher .world-preview .preview-tags { color: #4d6076; font-weight: 600; }
+.world-launcher .world-chip { background: #fff; color: #23425c; }
+.world-launcher .world-chip.picked { background: #eef7f7; border-color: #176b72; color: #10525b; }
+.world-launcher .loading-note { font-size: 12px; color: #176b72; }
+.world-launcher .preview-actions { align-items: center; }
+.world-launcher .entry-hint { font-size: 12px; color: #5d6f82; }

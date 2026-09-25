@@ -1,9 +1,42 @@
 import {it,expect} from 'vitest';
 import {once} from 'node:events';
+import {createElement} from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {WorldLauncher} from '../src/client/WorldLauncher.js';
+
 import {sparseSetup} from './sparse-fixture.js';
 import {createApp} from '../src/server/app.js';
 import {blankWorldIntent} from '../src/shared/world-intent.js';
 import {applyWorldModification,draftFromIdea,draftToDescription,inspirations,recommendDraft,worldDraftSchema,worldTemplates} from '../src/world/templates.js';
+
+it('the creation home shows only the three entries',()=>{
+  const html=renderToStaticMarkup(createElement(WorldLauncher,{busy:false,onCreated:()=>{},onCustom:()=>{}}));
+  expect(html).toContain('从模板开始');
+  expect(html).toContain('让 AI 帮我想');
+  expect(html).toContain('自己创建');
+  expect(html).not.toContain('世界灵感');
+  expect(html).not.toContain('template-card');
+  expect(html).not.toContain('world-preview');
+});
+
+it('“换一个” returns a visibly different candidate and never creates a world',async()=>{
+  const env=await httpFixture();
+  try{
+    const before=await env.f.service.current();
+    const core=(body:{preview:{title:string;one_liner:string;initial_scope:string;player_role:string}})=>[body.preview.title,body.preview.one_liner,body.preview.initial_scope,body.preview.player_role].join('|');
+    const first=await env.post('world/preview',{template_id:'small_town'});
+    expect(first.status).toBe(200);
+    const seen=new Set([core(first.body)]);
+    for(let round=0;round<3;round++){
+      const next=await env.post('world/preview',{another:true,preview_id:first.body.preview_id,preview_session:first.body.flow_id,inspiration_seed:20+round});
+      expect(next.status).toBe(200);
+      expect(next.body.signature).not.toBe(first.body.signature);
+      seen.add(core(next.body));
+      expect(await env.f.service.current()).toEqual(before);
+    }
+    expect(seen.size).toBeGreaterThan(1);
+  }finally{await env.close();}
+});
 
 it('adjusting a draft edits the preview and never creates a world',async()=>{
   const env=await httpFixture();

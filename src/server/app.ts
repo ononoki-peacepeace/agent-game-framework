@@ -277,6 +277,8 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     res.json({ level: logger.level, file: logger.filePath(), entries, traces: logger.traces(20) });
   });
   app.get('/api/state', async (_req, res) => res.json(await service.view()));
+  const visibleFields=(value:WorldDraft)=>[value.title,value.one_liner,value.initial_scope,value.player_role,value.special_rules.join('|')];
+  const visibleOverlap=(a:WorldDraft,b:WorldDraft)=>{const left=visibleFields(a),right=visibleFields(b);return left.filter((field,index)=>field===right[index]).length;};
   const worldPreviews=new Map<string,{description:string;draft:WorldDraft;created_at:number;signature:string}>();
   // One creation flow = one candidate history. "换一个" must never repeat the current candidate, never cycle
   // between two worlds, and never regenerate without bound.
@@ -307,16 +309,25 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   app.get('/api/world/inspiration',(req,res)=>{const seed=Number(req.query.seed??Date.now())||Date.now();res.json({seed,chips:inspirationChips(seed,6,[])});});
 
   app.post('/api/world/preview',async(req,res)=>{
-    const body=safeParse(z.strictObject({template_id:z.string().max(40).optional(),idea:z.string().max(600).optional(),modify:z.string().max(600).optional(),variant:z.number().int().min(0).max(9999).optional(),inspiration_seed:z.number().int().optional(),preview_id:z.string().uuid().optional(),preview_session:z.string().uuid().optional(),picked:z.array(z.string().max(40)).max(8).optional()}),req.body);
+    const body=safeParse(z.strictObject({template_id:z.string().max(40).optional(),idea:z.string().max(600).optional(),modify:z.string().max(600).optional(),variant:z.number().int().min(0).max(9999).optional(),inspiration_seed:z.number().int().optional(),preview_id:z.string().uuid().optional(),preview_session:z.string().uuid().optional(),picked:z.array(z.string().max(40)).max(8).optional(),another:z.boolean().optional()}),req.body);
     const {flow_id,flow}=flowOf(body.preview_session);
     let value:WorldDraft;const notes:string[]=[];let pickLabelsOut:string[]=[];let pickRaw:InspirationPick|null=null;let attempts=1;
     if(body.preview_id&&body.modify&&body.modify.trim()){
       // "调整" edits the current draft and returns to preview; it never creates a world.
       const current=worldPreviews.get(body.preview_id);assert(current,'这个预览已过期，请重新生成');
       value=applyWorldModification(current.draft,body.modify.trim());notes.push(body.modify.trim());
+    }else if(body.another){
+      const previous=body.preview_id?worldPreviews.get(body.preview_id)?.draft??null:null;
+      const recent=previous?[...new Set([...flow.recent,candidateSignature(previous)])]:flow.recent;
+      let candidate=distinctCandidate(body.inspiration_seed??Date.now(),recent,flow.picked,flow.idea??undefined);
+      if(previous&&visibleOverlap(previous,candidate.draft)>=4){
+        candidate=distinctCandidate((body.inspiration_seed??Date.now())+7919,[...recent,candidateSignature(candidate.draft)],flow.picked,flow.idea??undefined);
+      }
+      value=candidate.draft;pickRaw=candidate.picks;pickLabelsOut=pickLabels(candidate.picks);attempts=candidate.attempts;
     }else if(body.template_id){
       const template=templateById(body.template_id);assert(template,'找不到这个模板');value=template.draft;
     }else if(body.idea&&body.idea.trim()){
+
       flow.idea=body.idea.trim();
       const drafted=await worldDraftFromIdea(flow.idea, flow.recent);
       value=drafted;
