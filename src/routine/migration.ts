@@ -98,7 +98,10 @@ function applyMigrations(save:SavePackage,installed:InstalledWorld[]){
    if(!save.definition.routine_rules && pack.world.routine_rules)save.definition.routine_rules=structuredClone(pack.world.routine_rules);
    if(!save.definition.calendar && pack.world.calendar)save.definition.calendar=structuredClone(pack.world.calendar);
  }
- save.calendar??=save.definition.calendar ? structuredClone(save.definition.calendar) : undefined;
+ // An own key whose value is `undefined` is not JSON: it would validate at the top level (calendarSchema.optional())
+ // but poison the world snapshot stored in turn_checkpoint/turn_audit (z.record(z.string(), z.json())).
+ if(save.definition.calendar)save.calendar??=structuredClone(save.definition.calendar);
+ else if(save.calendar===undefined)delete save.calendar;
  save.routine_meta??={version:1,calendar_issue:null,scheduled_tasks:[],migration_ids:[]};
  save.routine_meta.calendar_issue=save.calendar?null:'缺少可信的日历锚点。请确认当前日期、星期及月长后再运行生活模式；不会猜测或回算时间。';
  if(pack && !save.routine_meta.migration_ids.includes('installed-map-v1'))save.routine_meta.migration_ids.push('installed-map-v1');

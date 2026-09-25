@@ -13,7 +13,7 @@ export const intentResultSchema = z.strictObject({
   parameters_json: z.string().max(5000),
   clarification: z.string().nullable(),
 });
-export const narrativeResultSchema = narrativeSchema.extend({ patches: z.array(z.strictObject({
+export const narrativeResultSchema = narrativeSchema.extend({ interaction:z.strictObject({target_id:id,status:z.enum(['active','ended'])}).nullable().default(null), patches: z.array(z.strictObject({
   op: z.literal('relationship_delta'), entity_id: id, target_id: id, dimension: id, delta: z.number().int().min(-2).max(2),
 })).max(1) });
 // A bounded authoring blueprint is compiled into a fully validated World Package.
@@ -35,4 +35,3 @@ export const worldInitializationSchema = z.strictObject({
 
   hidden_notes: z.string().max(2000), opening: z.string().max(2000),
 });
-

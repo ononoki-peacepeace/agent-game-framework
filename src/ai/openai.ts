@@ -44,6 +44,7 @@ export class OpenAIAdapter implements AIAdapter {
     catch { throw new Error(`OpenAI 返回了非 JSON HTTP 响应（${response.status}）`); }
     if (!response.ok) throw new Error(`OpenAI API ${response.status}: ${payload.error?.message || raw.slice(0, 500) || response.statusText}`);
     if (payload.status && payload.status !== 'completed') throw providerError(payload.incomplete_details?.reason ?? payload.error?.message ?? payload.status, payload.error?.message ?? payload.status, 'OpenAI 响应未完成');
+    if(payload.output?.some(item=>item.content?.some(part=>part.type==='refusal')))throw providerError('refusal','Provider declined this content','本段描写需要安全降级');
     const text = payload.output_text ?? payload.output?.filter(x => x.type === 'message').flatMap(x => x.content ?? []).find(x => x.type === 'output_text')?.text;
     if (!text) throw new Error('OpenAI 响应缺少 output_text');
     try { return { data: JSON.parse(text) }; }

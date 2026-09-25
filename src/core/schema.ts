@@ -59,6 +59,12 @@ export const mapStateSchema = z.strictObject({
   dynamic_routes: z.array(routeSchema).max(1200).default([]),
 });
 export const saveSchema = z.strictObject({
+  interaction_context: z.strictObject({ mode:z.literal('conversation'), target_entity_id:id, started_turn:integer, last_interaction_turn:integer, scene_anchor:z.string().max(500), status:z.enum(['active','ended']) }).optional(),
+  narrative_history: z.array(z.strictObject({ request_id:z.string().uuid(), narrative:text, dialogue:text.nullable(), speaker:id.nullable(), facts:z.array(z.string().max(2000)).max(12) })).max(8).optional(),
+  // A non-recursive before image travels in the same atomic file as the committed turn.
+  turn_checkpoint: z.strictObject({ turn_id:z.string().uuid(), before:z.record(z.string(),z.json()), after_hash:z.string(), parent_turn_id:z.string().uuid().nullable() }).optional(),
+  turn_audit: z.array(z.strictObject({ turn_id:z.string().uuid(), parent_turn_id:z.string().uuid().nullable(), reverted_at:integer, before:z.record(z.string(),z.json()), after:z.record(z.string(),z.json()) })).optional(),
+  active_turn_id:z.string().uuid().nullable().optional(),
   action_facts: z.array(z.strictObject({request_id:z.string().uuid(),actor_id:id,target_id:id.nullable(),input:z.string().max(10000),facts:z.array(z.string().max(300)).max(4),time:z.strictObject({day:integer,minute:integer})})).max(100).optional(),
   future_intents:z.array(futureIntentSchema).max(500).optional(),
   extensions:extensionEntriesSchema.optional(),
@@ -66,6 +72,15 @@ export const saveSchema = z.strictObject({
   foreground:z.strictObject({blocker:z.enum(['choice','npc_reply','travel','task','danger','interrupt']).nullable(),reason:z.string().max(500)}).optional(),
   calendar: calendarSchema.optional(),
   routine_meta: routineMetaSchema.optional(),
+  // Runtime style configuration: structured, bounded, per scope. Never raw system prompt text.
+  behavior_config: z.array(z.strictObject({
+    scope: z.enum(['narration','dialogue','assistant']),
+    op: z.enum(['suffix','prefix','tone','constraint']),
+    application: z.enum(['per_sentence','per_paragraph','per_message','final_sentence']).default('per_message'),
+
+    value: z.string().min(1).max(120), raw: z.string().min(1).max(200),
+    enabled: z.boolean().default(true), created_at: z.string().max(40),
+  })).max(20).default([]),
   schema_version: z.literal(1), framework_version: z.literal(VERSION), module_versions: dictionary(z.string().max(30)),
   modules: dictionary(z.strictObject({ installed: z.boolean(), enabled: z.boolean(), version: z.string().max(30), state_version: z.string().max(30) })).default({}),
   game_id: z.string().uuid(), state_revision: integer, definition: worldSchema,

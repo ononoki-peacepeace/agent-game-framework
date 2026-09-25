@@ -1,3 +1,4 @@
+import {providerError} from './failures.js';
 import { normalizeStructuredSchema } from './provider-schema.js';
 import type { AIAdapter, AIRequest, AIResult } from './contracts.js';
 
@@ -18,6 +19,7 @@ export class ResponsesCompatibleAdapter implements AIAdapter {
     if (!this.options.baseUrl || !this.options.model) throw new Error('自定义 Responses API 需要 base_url 和 model');
     const signal = request.signal ? AbortSignal.any([request.signal, AbortSignal.timeout(180000)]) : AbortSignal.timeout(180000);
     const response = await this.fetchImpl(`${this.options.baseUrl.replace(/\/+$/, '')}/responses`, {
+
       method: 'POST', signal,
       headers: { Authorization: `Bearer ${this.options.apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: this.options.model, input: request.prompt, max_output_tokens: request.maxOutputTokens ?? this.options.maxOutputTokens ?? 12000,
@@ -26,6 +28,7 @@ export class ResponsesCompatibleAdapter implements AIAdapter {
     const raw = await response.text(); let payload: Payload;
     try { payload = raw ? JSON.parse(raw) as Payload : {}; } catch { throw new Error(`自定义 API 返回非 JSON（${response.status}）`); }
     if (!response.ok) throw new Error(`自定义 API ${response.status}: ${payload.error?.message || raw.slice(0, 500) || response.statusText}`);
+    if(payload.output?.some(item=>item.content?.some(part=>part.type==='refusal')))throw providerError('refusal','Provider declined this content','本段描写需要安全降级');
     const text = payload.output_text ?? payload.output?.filter(x => x.type === 'message').flatMap(x => x.content ?? []).find(x => x.type === 'output_text')?.text;
     if (!text) throw new Error('自定义 Responses API 缺少 output_text');
     try { return { data: JSON.parse(text) }; } catch { throw new Error('自定义 Responses API structured output 不是合法 JSON'); }

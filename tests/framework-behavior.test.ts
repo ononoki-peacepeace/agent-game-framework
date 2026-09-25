@@ -88,5 +88,18 @@ it('queries stay in assistant and cached UI arrays are detached',async()=>{
 
 it('freeform uses no GM memory thread or hidden state',async()=>{const f=await setup();f.save.gm_state.notes='PRIVATE_CANARY';f.save.ai.threads.gm_reasoning='private-thread';const spy=vi.spyOn(f.ai.adapter,'generate').mockResolvedValue({data:outcome(f.npc.id)});await f.ai.freeform(f.save,'揍梅芙一拳');expect(spy.mock.calls[0][0].threadId).toBeUndefined();expect(spy.mock.calls[0][0].prompt).not.toContain('PRIVATE_CANARY');});
 it.each(['EMPTY_WORLD','FRAMEWORK_TEST'])('explicit %s creates a semantic shell',async(mode)=>{const f=await setup();const spy=vi.spyOn(f.ai.adapter,'generate');const save=await f.ai.initialize(mode,f.save.definition.prompt_profile);expect(save.definition.enabled_modules).toEqual(['core']);expect(save.entities).toHaveLength(1);expect(spy).not.toHaveBeenCalled();});
-it('invalid relationship proposal rolls back time and facts',async()=>{const f=await setup();vi.spyOn(f.ai,'freeform').mockResolvedValue({...outcome(f.npc.id),relationship:{dimension:'unknown',delta:2}});const before=await f.service.current();await input(f,'揍梅芙一拳');expect(await f.service.current()).toEqual(before);});
+// Product decision (browser acceptance round): a relationship change proposed by the model is optional enrichment.
+// A dimension this world does not track is dropped with a structured log; the otherwise valid action still commits.
+// Genuine action-level violations (missing target, remote target, illegal mutation) still roll back — see the other cases.
+it('unknown relationship dimension is dropped instead of rolling back the action',async()=>{
+ const f=await setup();vi.spyOn(f.ai,'freeform').mockResolvedValue({...outcome(f.npc.id),relationship:{dimension:'unknown',delta:2}});
+ const before=await f.service.current(),dimensions=JSON.stringify(before.definition.ruleset.relationship_dimensions);
+ const result=await input(f,'揍梅芙一拳'),next=await f.service.current();
+ expect(result.time_advanced).toBe(1);expect(next.state_revision).toBeGreaterThan(before.state_revision);
+ expect(next.last_turn!.narrative).toContain('一拳');expect(next.action_facts).toHaveLength(1);
+ expect(next.entities.find(e=>e.id===f.player.id)!.components.relationships?.entries??{}).toEqual({});
+ expect(JSON.stringify(next.definition.ruleset.relationship_dimensions)).toBe(dimensions);
+ expect(result.message).not.toContain('unknown');expect(result.message).not.toContain('关系维度');
+});
+
 it('each request owns its navigation and a following action has no stale panels',async()=>{const f=await setup();const query=await input(f,'我和梅芙是什么关系？');expect(query.ui_actions.length).toBeGreaterThan(0);vi.spyOn(f.ai,'freeform').mockResolvedValue(outcome(f.npc.id));const action=await input(f,'揍梅芙一拳');expect(action.ui_actions).toEqual([]);expect(action.presentation).toBe('story');});

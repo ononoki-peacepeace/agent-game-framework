@@ -2,13 +2,15 @@ import {displayText} from '../shared/display.js';
 import {createHash} from 'node:crypto';
 import type {GameService} from '../server/service.js';
 import {publicView} from '../core/state.js';
-import {assert} from '../core/schema.js';
+import {assert,GameError} from '../core/schema.js';
 import {agentResult,type AgentResult,type UIAction} from './contracts.js';
 import {createAgentPlan} from './planner.js';
 import type {AgentPlan,AtomicGoal,FutureIntent} from './plan-schema.js';
 import {planGameRequest} from './game.js';
+import {applyAssistantStyle} from '../ai/behavior.js';
 import {relationshipCondition} from '../shared/relationship.js';
 import {dueAssessment} from './future.js';
+import {recentReferent} from '../core/recent-referent.js';
 
 function childId(request:string,goal:string){const hex=createHash('sha256').update(request+':'+goal).digest('hex');return hex.slice(0,8)+'-'+hex.slice(8,12)+'-4'+hex.slice(13,16)+'-a'+hex.slice(17,20)+'-'+hex.slice(20,32);}
 export function oneNavigation(actions:UIAction[]):UIAction[]{
@@ -19,9 +21,18 @@ export function oneNavigation(actions:UIAction[]):UIAction[]{
  const focus=actions.find(a=>a.kind==='focus_entity'&&a.panel===primary.panel);
  return [primary,...(focus?[focus,...actions.filter(a=>(a.kind==='scroll_to_entity'||a.kind==='highlight_entity')&&a.entity_id===(focus as any).entity_id)]:[])];
 }
+/** Goals that only read state. A plan made of these can be replayed safely after a revision conflict. */
+const readOnlyGoalTypes=new Set(['WORLD_QUERY','WORLD_LOOKUP','UI_NAVIGATION','LIST_FUTURE']);
+export function readOnlyPlan(goals:{type:string}[]){return goals.length>0&&goals.every(goal=>readOnlyGoalTypes.has(goal.type));}
 export interface PlanRequest {request_id:string;game_id:string;expected_revision:number;input:string}
 export async function executePlan(service:GameService,body:PlanRequest,plan:AgentPlan,startRoutine?:(body:any)=>Promise<any>):Promise<AgentResult>{
- let save=await service.current();assert(save.game_id===body.game_id&&save.state_revision===body.expected_revision,'状态已更新，请重新规划');
+ let save=await service.current();
+ if(save.game_id!==body.game_id||save.state_revision!==body.expected_revision){
+  // Nothing was applied yet, so a plan that only reads may be replayed once by the client. A plan that could
+  // write stays manual. The classification travels with the error instead of being re-guessed from the text.
+  const conflict=new GameError('状态已更新，请重新规划',409) as GameError&{retry_policy?:'safe'|'manual'};
+  conflict.retry_policy=readOnlyPlan(plan.goals)?'safe':'manual';throw conflict;
+ }
  const initialTime=save.runtime.time.day*save.definition.ruleset.minutes_per_day+save.runtime.time.minute;
  plan.plan_id=body.request_id;plan.status='running';let clarification:string|null=null;const ui:UIAction[]=[],changes:string[]=[],calls:AgentResult['tool_calls']=[],futures:FutureIntent[]=[];
  for(const id of plan.execution_order){const goal=plan.goals.find(g=>g.goal_id===id)!;
@@ -79,12 +90,12 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
  const results=plan.goals.map(g=>({goal_id:g.goal_id,summary:g.result?.summary??'',related_entity:g.target_entities[0]??null,status:g.status}));
  const message=results.filter(r=>r.status!=='skipped').map(r=>r.summary).filter(Boolean).join('\n')+(delta===0?'\n当前世界时间没有推进。':'');
  const storyOnly=plan.status==='completed'&&plan.goals.every(g=>['WORLD_ACTION','WORLD_SPEECH'].includes(g.type));
- return agentResult(plan.goals.length===1?plan.goals[0].type:'MULTI_GOAL',message,{presentation:storyOnly?'story':'assistant',clarification,plan_id:plan.plan_id,plan,results,future_intents:futures,ui_actions:storyOnly?[]:oneNavigation(ui),canonical_changes:changes,tool_calls:calls,time_advanced:delta,view:publicView(save)});
+ return agentResult(plan.goals.length===1?plan.goals[0].type:'MULTI_GOAL',storyOnly||plan.goals.every(g=>g.type==='WORLD_ACTION')?message:applyAssistantStyle(save,message),{presentation:storyOnly?'story':'assistant',clarification,plan_id:plan.plan_id,plan,results,future_intents:futures,ui_actions:storyOnly?[]:oneNavigation(ui),canonical_changes:changes,tool_calls:calls,time_advanced:delta,view:publicView(save)});
 }
 const requests=new WeakMap<GameService,Map<string,{input:string;result:Promise<AgentResult>}>>();
 export async function handleAgentInput(service:GameService,body:PlanRequest,startRoutine?:(body:any)=>Promise<any>):Promise<AgentResult>{
  const cache=requests.get(service)??new Map();requests.set(service,cache);const key=body.game_id+':'+body.request_id,old=cache.get(key);
  if(old){assert(old.input===body.input,'请求 ID 已用于不同输入');return structuredClone(await old.result);}
- const promise=(async()=>{const view=await service.view();assert(view&&view.game_id===body.game_id,'游戏已切换');const plan=await createAgentPlan(service.ai,view,body.input);return executePlan(service,body,plan,startRoutine);})();
+ const promise=(async()=>{const view=await service.view();assert(view&&view.game_id===body.game_id,'游戏已切换');const save=await service.current();const plan=await createAgentPlan(service.ai,view,body.input,{recent_referent:recentReferent(save),recent_turns:(save.narrative_history??[]).slice(-2).map(entry=>({narrative:String(entry.narrative??'').slice(0,240),dialogue:entry.dialogue??null,speaker:entry.speaker??null})),recent_actions:(save.action_facts??[]).slice(-3).map(entry=>({input:String(entry.input??'').slice(0,160),facts:entry.facts,target_id:entry.target_id}))});return executePlan(service,body,plan,startRoutine);})();
  cache.set(key,{input:body.input,result:promise});if(cache.size>100)cache.delete(cache.keys().next().value!);try{return structuredClone(await promise);}catch(e){cache.delete(key);throw e;}
 }

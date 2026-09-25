@@ -42,6 +42,8 @@ export interface PublicActionMeta {
   module?: string;
 }
 export interface PublicView {
+  interaction_context?:import('../core/schema.js').SavePackage['interaction_context'];
+  can_undo?:boolean;
   future_intents?:import("../agent/plan-schema.js").FutureIntent[];
   calendar?:import('../routine/schema.js').Calendar;calendar_issue?:string|null;time_label?:string;
   scheduled_tasks?:{id:string;label:string;at:number;window:import('../routine/schema.js').ScheduleWindow;end_at?:number;duration_label?:string;status:'accepted'|'completed'|'cancelled';resolved:boolean}[];

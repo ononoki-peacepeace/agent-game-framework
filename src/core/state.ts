@@ -1,4 +1,6 @@
 import {futureStatus} from '../agent/future.js';
+import {activeFocus} from './interaction.js';
+import {canUndo} from './turn-history.js';
 import {resolvePresentation} from '../shared/display.js';
 import {calendarText} from '../routine/calendar.js';
 import {defaultCalendar} from '../routine/schema.js';
@@ -26,7 +28,7 @@ export function newSave(input: unknown): SavePackage {
     calendar: definition.calendar ? structuredClone(definition.calendar) : defaultCalendar(),
     map_state: { known_location_ids: [], dynamic_locations: [], dynamic_routes: [] },
     ai: { threads: {} }, last_turn: null,
-    modules: {},
+    modules: {}, behavior_config: [],
   };
   for (const [id, module] of registry.modules.all()) save.modules[id] = { installed: true, enabled: true, version: module.version, state_version: module.manifest?.state_schema_version ?? 'v1' };
   // A brand new world runs the same setup hook an ENABLE_MODULE action would use.
@@ -66,6 +68,7 @@ export function validateSave(input: unknown, suppliedRegistry?: ModuleRegistry):
   for (const key of [...save.event_state.fired, ...Object.keys(save.event_state.counts)]) assert(save.definition.events.some(e => e.id === key), '存档引用未知事件');
   assert(new Set(save.runtime.receipts.map(r => r.id)).size === save.runtime.receipts.length && save.runtime.receipts.every(r => r.revision <= save.state_revision), '请求记录不一致');
   registry.validate(save);
+  if(save.interaction_context&&!activeFocus(save))save.interaction_context.status='ended';
   // Validate the embedded initial world as well; imports must remain self-contained and valid.
   registry.validate({ ...save, entities: save.definition.entities, gm_state: save.definition.gm_state, runtime: { ...save.runtime, time: save.definition.runtime.time }, map_state: { known_location_ids: (save.definition.map?.locations ?? []).filter(l => l.known_by_default !== false).map(l => l.id), dynamic_locations: [], dynamic_routes: [] } });
   for(const intent of save.future_intents??[])intent.status=futureStatus(intent,save.runtime.time);
@@ -89,6 +92,7 @@ export function publicView(save: SavePackage, registry = createRegistry(save.def
   const visibleLocations = map.locations.filter(location => known.has(location.id));
   const visibleIds = new Set(visibleLocations.map(location => location.id));
   return resolvePresentation({
+    interaction_context:structuredClone(activeFocus(save)),can_undo:canUndo(save),
     future_intents:structuredClone(save.future_intents??[]),
     game_id: save.game_id, revision: save.state_revision, title: save.definition.meta.title,
     description: save.definition.meta.description, player_id: save.player_state.entity_id,

@@ -44,9 +44,9 @@ export function fastPlan(view:PublicView,text:string):AgentPlan|null {
  if(!conditional&&!future&&!/而且|然后|并且|同时|顺便|[；;]/.test(text)&&/^(我)?(现在)?(狠狠|轻轻|用力|去|找|向|对|和|跟|等待|等|观察|检查|买|卖|邀请|训练|说|揍|打|踢|抱|拥抱|扔|丢|爬|喊|大叫|出门|走|移动|靠近)/.test(text)){add(/说|告诉/.test(text)?'WORLD_SPEECH':'WORLD_ACTION',text);return validatePlan({goals});}
  return null;
 }
-export async function createAgentPlan(ai:AIRuntime,view:PublicView,text:string){
+export async function createAgentPlan(ai:AIRuntime,view:PublicView,text:string,recentScene?:unknown){
  const quick=fastPlan(view,text);if(quick)return quick;
- const plan=validatePlan(await ai.planGoals(view,text,blueprintSchema));
+ const plan=validatePlan(await ai.planGoals(view,text,blueprintSchema,recentScene));
  if(!hasUserCondition(text)&&plan.goals.some(g=>g.type==='CONDITIONAL_INTENT')){
  const removed=new Set(plan.goals.filter(g=>g.type==='CONDITIONAL_INTENT'||g.branch==='else').map(g=>g.goal_id));
  const goals=plan.goals.filter(g=>!removed.has(g.goal_id)).map(({status,side_effect_level,requires_confirmation,...g})=>({...g,depends_on:g.depends_on.filter(id=>!removed.has(id)),branch:null,condition:null}));

@@ -50,6 +50,28 @@ export function normalizeStructuredSchema(schema: unknown): unknown {
   return normalizeNode(schema as JsonObject);
 }
 
+/**
+ * Drops keys the schema does not know about, guided by the same JSON Schema that was sent to the model.
+ * Strict validation still runs afterwards, so this never widens what may enter canonical state — it only
+ * keeps a stray field invented by a model from failing an otherwise valid result.
+ */
+export function pruneUnknownKeys(value: unknown, schema: unknown, path = 'root', dropped: string[] = []): unknown {
+  if (!schema || typeof schema !== 'object' || value === null || typeof value !== 'object') return value;
+  const node = schema as JsonObject;
+  if (Array.isArray(value)) {
+    const items = node.items as JsonObject | undefined;
+    return items ? value.map((entry, index) => pruneUnknownKeys(entry, items, path + '[' + index + ']', dropped)) : value;
+  }
+  const properties = node.properties as JsonObject | undefined;
+  if (!properties) return value;
+  const source = value as JsonObject, out: JsonObject = {};
+  for (const [key, entry] of Object.entries(source)) {
+    if (Object.hasOwn(properties, key)) out[key] = pruneUnknownKeys(entry, properties[key], path + '.' + key, dropped);
+    else dropped.push(path + '.' + key);
+  }
+  return out;
+}
+
 /** Every object node must list exactly its own properties in `required` (strict provider rule). */
 export function schemaViolations(schema: unknown, path = '$', found: string[] = []): string[] {
   if (!schema || typeof schema !== 'object') return found;

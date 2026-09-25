@@ -9,7 +9,8 @@ export function DevelopmentPanel({view,onView,taskId,onSelect,extensionId}:{view
  useEffect(()=>{let live=true,inFlight=false;const refresh=async()=>{if(inFlight)return;inFlight=true;try{const rows=await request<DevelopmentTask[]>('development/tasks');if(live)setTasks(rows);}catch(e){if(live)setError((e as Error).message);}finally{inFlight=false;}};void refresh();const timer=setInterval(()=>void refresh(),1200);return()=>{live=false;clearInterval(timer);};},[view.game_id]);
  const task=tasks.find(t=>t.id===selected),preview=task?.preview;
  async function command(path:string,body:unknown){setBusy(true);setError('');try{const result=await request<DevelopmentTask|PublicView>(path,body);if('revision' in result&&'entities' in result)onView?.(result);else{const t=result as DevelopmentTask;setSelected(t.id);onSelect?.(t.id);}setTasks(await request<DevelopmentTask[]>('development/tasks'));setInput('');}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
- return <section className="development-panel"><h3>功能开发</h3><p>描述目标；系统会整理需求、验证候选，再由你确认安装。</p>
+ return <section className="development-panel"><h3>功能开发</h3><p>描述目标，确认后再安装。</p>
+
  <label>开发任务<select aria-label="开发任务" value={selected} onChange={e=>{setSelected(e.target.value);if(e.target.value)onSelect?.(e.target.value);}}><option value="">创建新任务</option>{tasks.map(t=><option key={t.id} value={t.id}>{t.preview?.name??t.original_request.slice(0,45)} · {labels[t.status]}</option>)}</select></label>
  <label>{task?'补充要求或继续修改':'你希望增加或修改什么？'}<textarea aria-label="开发要求" value={input} onChange={e=>setInput(e.target.value)} maxLength={3000}/></label>
  <button disabled={busy||!input.trim()} onClick={()=>void command(task?'development/tasks/'+task.id+'/revise':'development/tasks',task?{request:input}:{request:input,request_id:clientRequestId(),...(extensionId?{extension_id:extensionId}:{})})}>{task?'提交修改要求':'开始开发'}</button>

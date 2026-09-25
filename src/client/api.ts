@@ -8,7 +8,7 @@ export async function session() {
 export async function request<T>(path: string, body?: unknown): Promise<T> {
   const response = await fetch(`/api/${path}`, { method: body === undefined ? 'GET' : 'POST', headers: { 'Content-Type': 'application/json', 'X-Game-Token': token }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
   const result = await response.json();
-  if (!response.ok) throw new Error(result.error ?? '请求失败');
+  if (!response.ok) throw Object.assign(new Error(result.error ?? '请求失败'), { payload: result });
   return result as T;
 }
 

@@ -1,4 +1,4 @@
-import { providerError } from './failures.js';
+import { ProviderError, providerError } from './failures.js';
 import { normalizeStructuredSchema, schemaViolations } from './provider-schema.js';
 import { observe } from '../observability/index.js';
 import type { AIAdapter, AIRequest, AIResult } from './contracts.js';
@@ -46,6 +46,14 @@ export class DeepSeekAdapter implements AIAdapter {
     this.fetchImpl = options.fetchImpl ?? fetch;
   }
   providerInfo() { return { provider: this.name, model: this.model }; }
+  /** A transport failure is a provider failure like any other: readable to the player, detailed in the log. */
+  private async request(url: string, init: RequestInit) {
+    try { return await this.fetchImpl(url, init); }
+    catch (error) {
+      if (init.signal?.aborted) throw error;
+      throw new ProviderError('network', String((error as Error)?.message ?? error), 'DeepSeek 连接失败：请检查本机网络或代理设置后重试。');
+    }
+  }
 
   async generate(request: AIRequest): Promise<AIResult> {
     if (!this.apiKey) throw new Error('DEEPSEEK_API_KEY 未设置');
@@ -62,7 +70,7 @@ export class DeepSeekAdapter implements AIAdapter {
     if (violations.length) observe('error', 'provider.schema.invalid', { module: 'ai', metadata: { role: request.role, violations: violations.slice(0, 6) } });
     else observe('debug', 'provider.schema.checked', { module: 'ai', metadata: { role: request.role, objects: 'ok' } });
 
-    const response = await this.fetchImpl(`${this.baseUrl}/responses`, {
+    const response = await this.request(`${this.baseUrl}/responses`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
@@ -99,6 +107,7 @@ export class DeepSeekAdapter implements AIAdapter {
       throw providerError(reason, detail, 'DeepSeek 响应未完成');
     }
 
+    if(payload.output?.some(item=>item.content?.some(part=>part.type==='refusal')))throw providerError('refusal','Provider declined this content','本段描写需要安全降级');
     const text = payload.output
       ?.filter(item => item.type === 'message')
       .flatMap(item => item.content ?? [])

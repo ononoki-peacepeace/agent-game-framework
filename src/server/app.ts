@@ -1,8 +1,12 @@
 import {displayDiagnostic,displayText} from '../shared/display.js';
 import {getLogger,isLogLevel} from '../observability/index.js';
+import {routingClarification} from '../system/session.js';
+import {routeContext,readContextView} from '../system/context-router.js';
+import {agentResult} from '../agent/contracts.js';
 import {handleSystemInput} from '../system/agent.js';
 import {planMeta} from '../system/router.js';
 import {handleAgentInput} from '../agent/executor.js';
+import {planGameRequest} from '../agent/game.js';
 import {toolAvailability} from '../system/tools.js';
 import {RoutineJobs} from '../routine/jobs.js';
 import {ExtensionHost} from '../extensions/host.js';
@@ -23,6 +27,21 @@ import type { GameService } from './service.js';
 export interface AppNetworkOptions { allowLan?: boolean }
 // Build/process marker: lets anyone confirm which dist a running 3100 server actually loaded.
 const STARTED_AT = new Date().toISOString();
+/**
+ * Player-facing error text. GameError and readable provider failures keep their wording; raw Zod/JSON
+ * issue dumps, stack frames and internal action names are replaced with an actionable sentence while the
+ * detailed cause stays in the local log.
+ */
+export function playerFacingError(error: unknown, malformed = false) {
+  if (error instanceof GameError) return error.message;
+  if (malformed) return 'JSON 无效或文件超过 2 MB';
+  const internal = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+  const zod = error instanceof Error && error.name === 'ZodError';
+  const leaks = zod || !/^[^[{]*$/.test(internal) || /invalid_type|too_big|too_small|unrecognized_keys|expected .*received|at .*\(.*:\d+:\d+\)|FREEFORM_ACTION/.test(internal);
+  if (leaks) return '这次操作没有通过框架校验，世界状态没有改变；详情见「日志」面板。';
+  return error instanceof Error && error.message ? error.message : '操作未完成';
+}
+
 
 
 const unifiedInputSchema = z.strictObject({
@@ -260,6 +279,16 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   });
   app.post('/api/input', async (req, res) => {
     const body = safeParse(unifiedInputSchema, req.body);
+    const gate=await routeContext(service,body.input,'world_input');
+    if(gate.destination==='AMBIGUOUS'){res.json(agentResult('CLARIFICATION',gate.clarification!,{clarification:gate.clarification,view:await readContextView(service)}));return;}
+    if(gate.destination==='SYSTEM_META_INTENT'){
+      const result=await processSystem({input:body.input,confirmed:false});
+      res.json({...agentResult('SYSTEM_META_INTENT','已按系统请求处理。'+result.message,{view:await service.view(),ui_actions:[{kind:'open_panel',panel:'system'}]}),system_handoff:{input:body.input,result}});return;
+    }
+    if(gate.speech_target_id){
+      const view=await service.turn({request_id:body.request_id,game_id:body.game_id,expected_revision:body.expected_revision,end_conversation:gate.end_conversation,action:{type:'TALK',target_id:gate.speech_target_id,parameters:{topic:gate.world_input??body.input}}});
+      res.json(agentResult('WORLD_SPEECH',view.last_turn?.narrative??'',{presentation:'story',view}));return;
+    }
     const ext=extensionIntent(body.input);if(ext){if(ext.kind==='extension_open'){const installed=(await extensions.list()).find(e=>e.manifest.template===ext.template&&e.can_open);if(installed){res.json({...ext,extension_id:installed.id});return;}throw new GameError('此场景没有已启用的对应扩展；请先开发安装，并到适用地点游玩');}res.json(ext);return;}
     const routineText=body.input.trim();
     if(!/而且|然后|并且|同时|顺便/.test(routineText)&&/^(?:继续(?:按.*(?:计划|安排))?(?:生活|日常)|继续按计划生活|就这样正常生活下去|按照原来的安排继续)/.test(routineText)){
@@ -267,12 +296,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
       if(!routine?.pattern||routine.pattern==='未设置'){const view=await service.view();res.json({...view,notices:['尚未设置生活模式；可以先在右侧保存长期计划，也可以正常逐回合游戏。']});return;}
       res.status(202).json(await jobView(await jobs.start({request_id:body.request_id,game_id:body.game_id,expected_revision:body.expected_revision,action:{type:'CONTINUE_ROUTINE',parameters:{}}})));return;
     }
-    // Meta requests never run as world actions: point the player at the System surface instead.
-    {const current=await service.view();
-     const meta=current?planMeta(body.input,current.capabilities):null;
-     if(meta&&meta.category!=='UNKNOWN'&&meta.category!=='IN_WORLD_INPUT'){current!.notices.push('这看起来是游戏外请求，请在右侧「系统」面板中提交；它不会推进世界，也不会被当作角色台词。');res.json(current);return;}
-     // In-world agent: queries and navigation are answered read-only (no turn, no time, no event RNG).
-     if(current&&!wantsCharacterGeneration(body.input)){res.json(await handleAgentInput(service,body,(request)=>jobs.start(request)));return;}}
+    if (!wantsCharacterGeneration(body.input)) { res.json(await handleAgentInput(service,body,(request)=>jobs.start(request)));return; }
     if (!wantsCharacterGeneration(body.input)) { res.json(await service.turn(body)); return; }
     const view = await service.view();
     if (!view) throw new GameError('当前没有已载入的世界');
@@ -295,20 +319,47 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     if(['START_ROUTINE','CONTINUE_ROUTINE'].includes(req.body?.action?.type)){res.status(202).json(await jobs.start(req.body));return;}
     res.json(await service.turn(req.body));
   });
+  app.post('/api/undo',async(req,res)=>res.json(await service.undo(req.body)));
   app.get('/api/modules',async(_req,res)=>res.json(await service.modules()));
   app.get('/api/system/tools',async(_req,res)=>{const info=await service.modules();res.json(toolAvailability(info.capabilities));});
-  app.post('/api/system',async(req,res)=>{
-    if(req.body.development_task_id){
-      const task=await developmentTasks.revise(String(req.body.development_task_id),String(req.body.input??''));
-      return res.json({category:'EXTENSION_REQUEST',tool_id:'extension.create',side_effect_level:'development',needs_confirmation:false,message:task.message,directive:{kind:'extension_development',task_id:task.id,request:task.original_request}});
+  app.get('/api/system/behavior',async(_req,res)=>res.json(await service.behaviorConfig()));
+  async function processSystem(body:any){
+    if(body.development_task_id){
+      const task=await developmentTasks.revise(String(body.development_task_id),String(body.input??''));
+      return ({category:'EXTENSION_REQUEST',tool_id:'extension.create',side_effect_level:'development',needs_confirmation:false,message:task.message,directive:{kind:'extension_development',task_id:task.id,request:task.original_request}});
     }
-    const result=await handleSystemInput(service,req.body);
+    const result=await handleSystemInput(service,body);
     if(result.directive?.kind==='extension_development'){
-      const task=await developmentTasks.start({request_id:randomUUID(),request:String(result.directive.request)});
-      result.directive.task_id=task.id;result.message=task.message;
-      if(result.session)result.session.development_job_id=task.id;
+      const running=(await developmentTasks.list()).find(task=>['planning','developing','testing','repairing'].includes(task.status));
+      if(running){
+        // One development workspace at a time: say so in the player's language instead of failing the request.
+        result.directive.task_id=running.id;
+        result.message=`已经有一个开发任务在进行中。你可以先看它的进度、补充要求，或先取消它再提交新的需求。`;
+      } else try{
+        const task=await developmentTasks.start({request_id:randomUUID(),request:String(result.directive.request)});
+        result.directive.task_id=task.id;result.message=task.message;
+        if(result.session)result.session.development_job_id=task.id;
+      }catch(error){
+        result.message=`这次的开发请求没有提交成功：${(error as Error).message}。你可以先处理正在进行的任务，或者稍后再试。`;
+      }
     }
-    res.json(result);
+
+    return result;
+  }
+
+  app.post('/api/system',async(req,res)=>{
+    const body=req.body,input=safeParse(z.string().min(1).max(2000),body.input);
+    const gate=await routeContext(service,input,'system_input');
+    if(gate.destination==='AMBIGUOUS')return res.json({category:'UNKNOWN',tool_id:null,side_effect_level:'none',needs_confirmation:false,message:gate.clarification,clarification:gate.clarification,session:await routingClarification(service,input,gate.clarification!)});
+    if(gate.destination==='WORLD_INTENT'){
+      const view=await service.view();if(!view)throw new GameError('请先载入世界');
+      const tx={input,request_id:body.request_id??randomUUID(),game_id:body.game_id??view.game_id,expected_revision:body.expected_revision??view.revision};
+      const result=gate.speech_target_id
+        ? {view:await service.turn({request_id:tx.request_id,game_id:tx.game_id,expected_revision:tx.expected_revision,end_conversation:gate.end_conversation,action:{type:'TALK',target_id:gate.speech_target_id,parameters:{topic:gate.world_input??input}}})}
+        : await handleAgentInput(service,tx,(request)=>jobs.start(request));
+      return res.json({category:'IN_WORLD_INPUT',tool_id:null,side_effect_level:'canonical',needs_confirmation:false,message:'已按世界内行动处理。',view:result.view});
+    }
+    return res.json(await processSystem({input,confirmed:body.confirmed??false,...(body.session_id?{session_id:body.session_id}:{}),...(body.development_task_id?{development_task_id:body.development_task_id}:{})}));
   });
   app.get('/api/development/tasks',async(_req,res)=>res.json(await developmentTasks.list()));
   app.post('/api/development/tasks',async(req,res)=>res.status(202).json(await developmentTasks.start(req.body)));
@@ -336,12 +387,24 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   app.post('/api/export', async (_req, res) => { res.setHeader('Content-Disposition', 'attachment; filename="agent-game-save.json"'); res.type('json').send(await service.export()); });
   app.use(express.static(clientDirectory));
   app.use((_req, res) => res.status(404).json({ error: '接口不存在' }));
-  app.use(async (error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  app.use(async (error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const malformed = error instanceof SyntaxError || (error as { type?: string })?.type === 'entity.too.large';
     const status = error instanceof GameError ? error.status : malformed ? 400 : 503;
     const publicState=await service.view().catch(()=>null);
     const human=(text:string)=>displayDiagnostic(text,publicState?.entities??[],publicState?.locations??[]);
-    res.status(status).json({ error: human( error instanceof GameError ? error.message : malformed ? 'JSON 无效或文件超过 2 MB' : (error instanceof Error ? error.message : '操作未完成')) });
+    if(!(error instanceof GameError)) service.logger.warn('http.error',{module:'framework',metadata:{status,detail:(error instanceof Error?`${error.name}: ${error.message}`:String(error)).slice(0,300)}});
+    // A revision conflict on a reliably classified read-only request may be retried automatically by the client;
+    // anything that could write state stays manual. Unclassifiable input is manual on purpose.
+    const conflictPolicy = () => {
+      const input = String((req.body as { input?: unknown } | undefined)?.input ?? '');
+      if (!input || !publicState) return 'manual';
+      const plan = planGameRequest(publicState, input);
+      return plan && plan.time_advanced === 0 && plan.canonical_changes.length === 0 ? 'safe' : 'manual';
+    };
+    // The executor classifies a conflict from the real plan when it has one; the text-based check is the fallback
+    // for conflicts raised before a plan exists (routine jobs, module management, direct turn requests).
+    const retryPolicy = status === 409 ? ((error as { retry_policy?: string }).retry_policy ?? conflictPolicy()) : null;
+    res.status(status).json({ error: human(playerFacingError(error, malformed)), ...(retryPolicy ? { retry_policy: retryPolicy } : {}) });
   });
   return app;
 }

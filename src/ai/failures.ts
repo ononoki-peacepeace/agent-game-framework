@@ -23,7 +23,8 @@ export function failureReason(error: unknown) {
   return match ? match[1] : 'unknown';
 }
 export function isTruncationFailure(error: unknown) {
-  return ['max_output_tokens','length','content_filter'].includes(failureReason(error));
+  // Truncated output is the main case; a provider-level malformed/empty JSON body is equally transient.
+  return ['max_output_tokens','length','invalid_json','missing_output_text'].includes(failureReason(error));
 }
 export function readableFailureMessage(error: unknown) {
   if (error instanceof ProviderError) return error.message;

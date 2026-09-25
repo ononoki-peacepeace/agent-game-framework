@@ -15,7 +15,7 @@ export function ExtensionPanel({view,intent,onView,showDevelopment=true}:{view:P
  useEffect(()=>{if(intent?.extension_id)setSelected(intent.extension_id);},[intent]);
  async function change(path:string,body:unknown){setBusy(true);setError('');try{onView(await request<PublicView>(path,body));await refresh();}catch(e){setError((e as Error).message);onView(await request<PublicView>('state'));}finally{setBusy(false);}}
  const current=items.find(x=>x.id===selected),playing=current?.state?.phase==='playing';
- return <div className="extension-panel"><h3>功能扩展</h3><p>描述你希望游戏本身发生的变化，系统会判断如何处理。</p>
+ return <div className="extension-panel">{showDevelopment&&<><h3>功能扩展</h3><p>描述你希望游戏本身发生的变化，系统会判断如何处理。</p></>}
  {(showDevelopment||editing)&&<DevelopmentPanel key={editing??'new'} view={view} onView={onView} extensionId={editing??selected??undefined}/>}
  {error&&<p role="alert">{error}</p>}
  {items.map(e=><article className="entity" key={e.id}><strong>{e.name} {e.version}</strong><button className="quiet" onClick={()=>setEditing(e.id)}>修改这个功能</button><p>{e.warning??(e.enabled&&e.installed?'已启用':'已停用 / 休眠')}</p><div className="button-row"><button disabled={!e.can_open} onClick={()=>setSelected(e.id)}>查看玩法</button>{(['enable','disable','rollback','uninstall'] as const).map(command=><button className="quiet" disabled={busy} key={command} onClick={()=>void change('extensions/'+e.id+'/'+command,tx())}>{({enable:'启用',disable:'禁用',rollback:'回滚',uninstall:'卸载并保留状态'})[command]}</button>)}</div>{!e.can_open&&e.enabled&&<small>当前场景不符合此功能的启用条件。</small>}</article>)}
