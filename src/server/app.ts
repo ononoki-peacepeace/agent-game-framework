@@ -1,9 +1,10 @@
 import {displayDiagnostic,displayText} from '../shared/display.js';
 import {getLogger,isLogLevel} from '../observability/index.js';
-import {routingClarification} from '../system/session.js';
+import {bindDevelopmentTask,routingClarification} from '../system/session.js';
+import {developmentProjection} from '../system/development-status.js';
 import {routeContext,readContextView} from '../system/context-router.js';
 import {agentResult} from '../agent/contracts.js';
-import {handleSystemInput} from '../system/agent.js';
+import {handleSystemAction,handleSystemInput} from '../system/agent.js';
 import {planMeta} from '../system/router.js';
 import {handleAgentInput} from '../agent/executor.js';
 import {planGameRequest} from '../agent/game.js';
@@ -282,12 +283,13 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   const worldPreviews=new Map<string,{description:string;draft:WorldDraft;created_at:number;signature:string}>();
   // One creation flow = one candidate history. "换一个" must never repeat the current candidate, never cycle
   // between two worlds, and never regenerate without bound.
-  const worldFlows=new Map<string,{recent:string[];picked:string[];idea:string|null;created_at:number}>();
+  const categoryOf=(id?:string|null)=>({arcane_academy:'academy',space_colony:'space',modern_city:'city',small_town:'town',school_life:'school',crime_city:'crime',medieval_adventure:'medieval',post_apocalypse:'apocalypse'} as Record<string,string>)[id??'']??null;
+  const worldFlows=new Map<string,{recent:string[];picked:string[];idea:string|null;category:string|null;created_at:number}>();
   const flowOf=(id:string|null|undefined)=>{
-    if(!id)return {flow_id:randomUUID(),flow:{recent:[] as string[],picked:[] as string[],idea:null as string|null,created_at:Date.now()}};
+    const fresh={recent:[] as string[],picked:[] as string[],idea:null as string|null,category:null as string|null,created_at:Date.now()};
+    if(!id)return {flow_id:randomUUID(),flow:fresh};
     const existing=worldFlows.get(id);
-    if(existing)return {flow_id:id,flow:existing};
-    return {flow_id:id,flow:{recent:[] as string[],picked:[] as string[],idea:null as string|null,created_at:Date.now()}};
+    return existing?{flow_id:id,flow:existing}:{flow_id:id,flow:fresh};
   };
   async function worldDraftFromIdea(idea:string,_recent:string[]=[]):Promise<WorldDraft>{
     const adapter=service.ai?.adapter as unknown as {name?:string;generate?:(request:unknown)=>Promise<unknown>};
@@ -306,10 +308,15 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     }catch{return draftFromIdea(idea);}
   }
   app.get('/api/world/templates',(_req,res)=>res.json(worldTemplates.map(template=>({id:template.id,display_name:template.display_name,description:template.description,recommended_experience:template.recommended_experience,inspiration:template.starter_inspiration.slice(0,3)}))));
-  app.get('/api/world/inspiration',(req,res)=>{const seed=Number(req.query.seed??Date.now())||Date.now();res.json({seed,chips:inspirationChips(seed,6,[])});});
+  app.get('/api/world/inspiration',(req,res)=>{
+    const seed=Number(req.query.seed??Date.now())||Date.now();
+    const list=(value:unknown)=>String(value??'').split(',').map(entry=>entry.trim()).filter(Boolean).slice(0,8);
+    res.json({seed,chips:inspirationChips(seed,6,list(req.query.exclude),list(req.query.picked))});
+  });
 
   app.post('/api/world/preview',async(req,res)=>{
-    const body=safeParse(z.strictObject({template_id:z.string().max(40).optional(),idea:z.string().max(600).optional(),modify:z.string().max(600).optional(),variant:z.number().int().min(0).max(9999).optional(),inspiration_seed:z.number().int().optional(),preview_id:z.string().uuid().optional(),preview_session:z.string().uuid().optional(),picked:z.array(z.string().max(40)).max(8).optional(),another:z.boolean().optional()}),req.body);
+    const body=safeParse(z.strictObject({template_id:z.string().max(40).optional(),idea:z.string().max(600).optional(),modify:z.string().max(600).optional(),variant:z.number().int().min(0).max(9999).optional(),inspiration_seed:z.number().int().optional(),preview_id:z.string().uuid().optional(),preview_session:z.string().uuid().optional(),picked:z.array(z.string().max(40)).max(8).optional(),exclude:z.array(z.string().max(40)).max(8).optional(),another:z.boolean().optional()}),req.body);
+
     const {flow_id,flow}=flowOf(body.preview_session);
     let value:WorldDraft;const notes:string[]=[];let pickLabelsOut:string[]=[];let pickRaw:InspirationPick|null=null;let attempts=1;
     if(body.preview_id&&body.modify&&body.modify.trim()){
@@ -319,13 +326,20 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     }else if(body.another){
       const previous=body.preview_id?worldPreviews.get(body.preview_id)?.draft??null:null;
       const recent=previous?[...new Set([...flow.recent,candidateSignature(previous)])]:flow.recent;
-      let candidate=distinctCandidate(body.inspiration_seed??Date.now(),recent,flow.picked,flow.idea??undefined);
-      if(previous&&visibleOverlap(previous,candidate.draft)>=4){
-        candidate=distinctCandidate((body.inspiration_seed??Date.now())+7919,[...recent,candidateSignature(candidate.draft)],flow.picked,flow.idea??undefined);
+      const category=flow.category??categoryOf(body.template_id)??undefined;
+      let candidate=distinctCandidate(body.inspiration_seed??Date.now(),recent,flow.picked,flow.idea??undefined,category);
+      // The player must see a different world, not the same place with new fields: a candidate that keeps the
+      // title, scope and premise is retried once, then replaced by another archetype of the same class.
+      const sameWorld=(next:WorldDraft)=>previous?[next.title===previous.title,next.initial_scope===previous.initial_scope,next.one_liner===previous.one_liner].filter(Boolean).length>=2:false;
+      if(sameWorld(candidate.draft)){
+        candidate=distinctCandidate((body.inspiration_seed??Date.now())+7919,[...recent,candidateSignature(candidate.draft)],flow.picked,flow.idea??undefined,category);
+      }
+      if(sameWorld(candidate.draft)){
+        candidate=distinctCandidate((body.inspiration_seed??Date.now())+104729,[...recent,candidateSignature(candidate.draft)],flow.picked,flow.idea??undefined,category);
       }
       value=candidate.draft;pickRaw=candidate.picks;pickLabelsOut=pickLabels(candidate.picks);attempts=candidate.attempts;
     }else if(body.template_id){
-      const template=templateById(body.template_id);assert(template,'找不到这个模板');value=template.draft;
+      const template=templateById(body.template_id);assert(template,'找不到这个模板');value=template.draft;flow.category=categoryOf(body.template_id);
     }else if(body.idea&&body.idea.trim()){
 
       flow.idea=body.idea.trim();
@@ -351,7 +365,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     flow.created_at=Date.now();worldFlows.set(flow_id,flow);
     for(const [id,entry] of worldPreviews)if(Date.now()-entry.created_at>30*60*1000)worldPreviews.delete(id);
     for(const [id,entry] of worldFlows)if(Date.now()-entry.created_at>60*60*1000)worldFlows.delete(id);
-    res.json({preview_id,flow_id,preview:previewOf(value,{kind:body.template_id?'template':body.idea?'idea':'recommended',id:body.template_id}),description,blank:blankWorldIntent(description)!==null,signature,attempts,picks:pickLabelsOut,features:value.special_rules,chips:inspirationChips(body.inspiration_seed??Date.now()+attempts,6,flow.picked)});
+    res.json({preview_id,flow_id,category:flow.category,preview:previewOf(value,{kind:body.template_id?'template':body.idea?'idea':'recommended',id:body.template_id}),description,blank:blankWorldIntent(description)!==null,signature,attempts,picks:pickLabelsOut,features:value.special_rules,chips:inspirationChips(body.inspiration_seed??Date.now()+attempts,6,body.exclude??[],flow.picked)});
 
   });
   app.post('/api/world/confirm',async(req,res)=>{
@@ -382,7 +396,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     const gate=await routeContext(service,body.input,'world_input');
     if(gate.destination==='AMBIGUOUS'){res.json(agentResult('CLARIFICATION',gate.clarification!,{clarification:gate.clarification,view:await readContextView(service)}));return;}
     if(gate.destination==='SYSTEM_META_INTENT'){
-      const result=await processSystem({input:body.input,confirmed:false});
+      const result=await processSystem({input:body.input,confirmed:false,request_id:body.request_id,game_id:body.game_id,expected_revision:body.expected_revision});
       res.json({...agentResult('SYSTEM_META_INTENT','已按系统请求处理。'+result.message,{view:await service.view(),ui_actions:[{kind:'open_panel',panel:'system'}]}),system_handoff:{input:body.input,result}});return;
     }
     if(gate.speech_target_id){
@@ -420,6 +434,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     res.json(await service.turn(req.body));
   });
   app.post('/api/undo',async(req,res)=>res.json(await service.undo(req.body)));
+  app.post('/api/history/:turnId/restore',async(req,res)=>res.json(await service.restoreTurn({...req.body,turn_id:req.params.turnId})));
   app.get('/api/modules',async(_req,res)=>res.json(await service.modules()));
   app.get('/api/system/tools',async(_req,res)=>{const info=await service.modules();res.json(toolAvailability(info.capabilities));});
   app.get('/api/system/behavior',async(_req,res)=>res.json(await service.behaviorConfig()));
@@ -428,17 +443,18 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
       const task=await developmentTasks.revise(String(body.development_task_id),String(body.input??''));
       return ({category:'EXTENSION_REQUEST',tool_id:'extension.create',side_effect_level:'development',needs_confirmation:false,message:task.message,directive:{kind:'extension_development',task_id:task.id,request:task.original_request}});
     }
-    const result=await handleSystemInput(service,body);
+    const result=body.action?await handleSystemAction(service,body.action):await handleSystemInput(service,body);
     if(result.directive?.kind==='extension_development'){
       const running=(await developmentTasks.list()).find(task=>['planning','developing','testing','repairing'].includes(task.status));
       if(running){
         // One development workspace at a time: say so in the player's language instead of failing the request.
         result.directive.task_id=running.id;
         result.message=`已经有一个开发任务在进行中。你可以先看它的进度、补充要求，或先取消它再提交新的需求。`;
+        result.development=developmentProjection(running);result.session=bindDevelopmentTask(service,running.id)??result.session;
       } else try{
         const task=await developmentTasks.start({request_id:randomUUID(),request:String(result.directive.request)});
         result.directive.task_id=task.id;result.message=task.message;
-        if(result.session)result.session.development_job_id=task.id;
+        result.development=developmentProjection(task);result.session=bindDevelopmentTask(service,task.id)??result.session;
       }catch(error){
         result.message=`这次的开发请求没有提交成功：${(error as Error).message}。你可以先处理正在进行的任务，或者稍后再试。`;
       }
@@ -461,8 +477,9 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
         : await handleAgentInput(service,tx,(request)=>jobs.start(request));
       return res.json({category:'IN_WORLD_INPUT',tool_id:null,side_effect_level:'canonical',needs_confirmation:false,message:'已按世界内行动处理。',view:result.view});
     }
-    return res.json(await processSystem({input,confirmed:body.confirmed??false,...(body.session_id?{session_id:body.session_id}:{}),...(body.development_task_id?{development_task_id:body.development_task_id}:{})}));
+    return res.json(await processSystem({input,confirmed:body.confirmed??false,request_id:body.request_id??randomUUID(),game_id:body.game_id,expected_revision:body.expected_revision,...(body.session_id?{session_id:body.session_id}:{}),...(body.development_task_id?{development_task_id:body.development_task_id}:{})}));
   });
+  app.post('/api/system/action',async(req,res)=>res.json(await processSystem({action:req.body})));
   app.get('/api/development/tasks',async(_req,res)=>res.json(await developmentTasks.list()));
   app.post('/api/development/tasks',async(req,res)=>res.status(202).json(await developmentTasks.start(req.body)));
   app.get('/api/development/tasks/:id',async(req,res)=>res.json(await developmentTasks.get(req.params.id)));

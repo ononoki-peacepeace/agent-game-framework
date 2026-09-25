@@ -8,6 +8,48 @@ import {sparseSetup} from './sparse-fixture.js';
 import {createApp} from '../src/server/app.js';
 import {blankWorldIntent} from '../src/shared/world-intent.js';
 import {applyWorldModification,draftFromIdea,draftToDescription,inspirations,recommendDraft,worldDraftSchema,worldTemplates} from '../src/world/templates.js';
+import {inspirationChips} from '../src/world/inspiration.js';
+
+it('a new chip batch drops the previous unpicked chips and keeps the player’s picks',()=>{
+  const first=inspirationChips(11,6,[],[]);
+  const second=inspirationChips(12,6,first.map(chip=>chip.id),[]);
+  expect(first.length).toBeGreaterThanOrEqual(3);
+  expect(second.map(chip=>chip.id)).not.toEqual(first.map(chip=>chip.id));
+  // no single unpicked chip may survive five consecutive batches
+  let batch=first, seen=new Map<string,number>();
+  for(let round=0;round<5;round+=1){
+    for(const chip of batch)seen.set(chip.id,(seen.get(chip.id)??0)+1);
+    const next=inspirationChips(100+round,6,batch.map(chip=>chip.id),[]);
+    expect(next.map(chip=>chip.id)).not.toEqual(batch.map(chip=>chip.id));
+    batch=next;
+  }
+  expect(Math.max(...seen.values())).toBeLessThan(5);
+  const locked=inspirationChips(21,6,[],['anomaly_identity']);
+  expect(locked[0]).toMatchObject({id:'anomaly_identity',picked:true});
+});
+
+it('a template “换一个” produces a different place, not the same world with new fields',async()=>{
+  const env=await httpFixture();
+  try{
+    const before=await env.f.service.current();
+    const first=await env.post('world/preview',{template_id:'space_colony'});
+    const firstScope=String(first.body.preview.initial_scope),firstTitle=String(first.body.preview.title);
+    const scopes=new Set([firstScope]),anotherTitles:string[]=[];
+    for(let round=0;round<4;round+=1){
+      const next=await env.post('world/preview',{another:true,preview_id:first.body.preview_id,preview_session:first.body.flow_id,inspiration_seed:50+round});
+      expect(next.status).toBe(200);
+      expect(next.body.category).toBe('space');
+      scopes.add(String(next.body.preview.initial_scope));
+      anotherTitles.push(String(next.body.preview.title));
+      expect(await env.f.service.current()).toEqual(before);
+    }
+    expect(scopes.size).toBeGreaterThan(1);
+    // The starter template may be called 赫利俄斯站, but no 换一个 candidate may keep that concrete place.
+    expect(anotherTitles.every(title=>title!==firstTitle)).toBe(true);
+    expect(anotherTitles.some(title=>title.includes('赫利俄斯'))).toBe(false);
+
+  }finally{await env.close();}
+});
 
 it('the creation home shows only the three entries',()=>{
   const html=renderToStaticMarkup(createElement(WorldLauncher,{busy:false,onCreated:()=>{},onCustom:()=>{}}));

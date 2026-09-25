@@ -26,7 +26,8 @@
 .world-preview .preview-actions .primary { border-color: var(--accent, #4c6ef5); }
 .world-note { font-size: 12px; color: var(--muted, #7c7c86); }
 .world-error { font-size: 12px; color: #c0392b; }
-/* The first screen is "continue" + "create". Import stays reachable from the save panel and the AI Provider
-   from the top bar, so neither needs to compete with world creation. */
-.launcher .launch-card:not(.continue-card):not(.create-card) { display: none; }
+/* Four equal launcher entries; world creation becomes a separate second-level workspace. */
+.launcher-primary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.launcher-primary-grid .launch-card{min-height:230px}.launcher-primary-grid .launch-card>strong{font-size:18px;color:var(--ink,#20364a)}.launcher-create-workspace{display:grid;gap:14px}.launcher-back{justify-self:start}
+@media(max-width:700px){.launcher-primary-grid{grid-template-columns:1fr}.launcher-primary-grid .launch-card{min-height:auto}}
+
 @media (max-width: 900px) { .template-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }

@@ -1,9 +1,9 @@
 import {it,expect} from 'vitest';
 import {sparseSetup} from './sparse-fixture.js';
-import {handleSystemInput} from '../src/system/agent.js';
+import {handleSystemAction,handleSystemInput} from '../src/system/agent.js';
 import {startFeatureGuide,advanceFeatureGuide,featureRequirement,featureGuideMessage} from '../src/system/feature-guide.js';
 
-const guideOf=(result:{guide?:unknown})=>result.guide as {status:string;subject:string;options:{label:string}[];draft:string[];understood:string[]}|null|undefined;
+const guideOf=(result:{guide?:unknown})=>result.guide as {proposal_id:string;revision:number;status:string;subject:string;options:{label:string;action?:{type:'FEATURE_GUIDE_OPTION'|'CONFIRM_FEATURE_PROPOSAL'|'CANCEL_FEATURE_PROPOSAL';proposal_id:string;proposal_revision:number;option_id:string}}[];draft:string[];understood:string[]}|null|undefined;
 
 it('a vague development wish asks exactly one experience question and offers a delegate option',async()=>{
   const f=await sparseSetup();
@@ -40,6 +40,25 @@ it('confirmation hands the minimal plan to a real development request',async()=>
   expect(request).toContain('只做最小可用版本');
   expect(guideOf(third as never)?.status).toBe('confirmed');
   expect(third.session?.status).toBe('completed');
+});
+
+it('a bound proposal action bypasses general NLU and stale replay cannot confirm anything',async()=>{
+  const f=await sparseSetup();
+  const first=await handleSystemInput(f.service,{input:'我想加个潜力系统'});
+  const second=await handleSystemInput(f.service,{input:'我不知道，你帮我选',session_id:first.session!.session_id});
+  const guide=guideOf(second as never)!,option=guide.options.find(entry=>entry.action?.type==='CONFIRM_FEATURE_PROPOSAL')!;
+  const callsBefore=f.calls.length;
+  const action={...option.action!,session_id:second.session!.session_id};
+  const confirmed=await handleSystemAction(f.service,action);
+  expect(f.calls).toHaveLength(callsBefore);
+  expect(confirmed.directive).toMatchObject({kind:'extension_development'});
+  expect(String(confirmed.directive?.request)).toContain('第一版就做这些');
+  expect(String(confirmed.message)).not.toContain('制作什么');
+  const stale=await handleSystemAction(f.service,action);
+  expect(stale.category).toBe('STALE_ACTION');
+  expect(stale.directive).toBeUndefined();
+  expect(stale.message).toContain('方案已经变化');
+  expect(f.calls).toHaveLength(callsBefore);
 });
 
 it('a concrete request that reuses existing data skips the guide entirely',async()=>{

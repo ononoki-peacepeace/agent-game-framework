@@ -10,6 +10,7 @@ import {DevelopmentTasks} from '../src/extensions/tasks.js';
 import {manifestFrom,type ExtensionSpec} from '../src/extensions/schema.js';
 import {taskGroups} from '../src/client/task-visibility.js';
 import type {AIRequest} from '../src/ai/contracts.js';
+import {developmentProjection} from '../src/system/development-status.js';
 const plan={normalized_requirements:['提供一个自有开关并展示当前值'],complexity:'LOW',clarification:null,milestones:[{id:'switch',title:'开关功能与界面',kind:'ui',acceptance:['点击切换且状态保留']}],capability_gaps:[]};
 const gap={required_capability:'input.subscription',why_needed:'用户目标需要连续输入',affected_modules:['extension host'],current_limitation:'仅支持离散动作',proposed_generic_capability:'可取消且限频的输入订阅',risk:'事件泄漏和并发事务'};
 function spec(id:string):ExtensionSpec{return {extension_id:id,name:'状态开关',description:'切换本功能自身状态',template:'declarative',allow_betting:false,max_stake:0,healing_item_id:null,fields:[{key:'enabled',type:'flag',initial:false}],declarative_actions:[{id:'toggle',label:'切换',op:'toggle',field:'enabled'}],surfaces:[{id:'switch_panel',kind:'panel',title:'状态开关',visibility:'always'}]};}
@@ -91,6 +92,13 @@ it('restart pauses active work and reconciles an already committed installation'
  const ready=await f.tasks.get(t.id);await f.tasks.install(t.id,{...await tx(f),confirmed:true,candidate_version:ready.current_version});const committed=JSON.parse(await readFile(path,'utf8'));committed.tasks[0].status='ready_for_preview';committed.tasks[0].installed_version=null;await writeFile(path,JSON.stringify(committed));
  const recovered=new DevelopmentTasks(f.builder,()=>f.adapter);expect((await recovered.get(t.id)).status).toBe('installed');expect((await recovered.get(t.id)).installed_version).toBe(ready.current_version);
 },20000);
+it('projects only canonical DevelopmentTask status and never calls pending work completed',()=>{
+ const paused=developmentProjection({id:'task',status:'paused'}),approval=developmentProjection({id:'task',status:'waiting_for_core_approval'}),waiting=developmentProjection({id:'task',status:'waiting_for_user'}),installed=developmentProjection({id:'task',status:'installed'});
+ expect(paused).toMatchObject({lifecycle:'paused',terminal:false,completed:false,label:'已暂停'});
+ expect(approval).toMatchObject({lifecycle:'waiting_for_core_approval',terminal:false,completed:false,label:'等待审阅'});
+ expect(waiting).toMatchObject({lifecycle:'waiting_for_clarification',terminal:false,completed:false});
+ expect(installed).toMatchObject({lifecycle:'installed',terminal:true,completed:true,label:'已完成'});
+});
 it('cancelled task remains durable with candidate artifacts',async()=>{
  const f=await setup(),t=await start(f);await f.tasks.wait(t.id);const cancelled=await f.tasks.cancel(t.id);expect(cancelled.status).toBe('cancelled');expect(cancelled.artifacts).toHaveLength(1);
 },20000);
@@ -131,3 +139,11 @@ it('concurrent task starts cannot share the builder workspace',async()=>{
  const f=await setup(r=>(r.schema as any).properties.normalized_requirements?{...plan,clarification:'请补充规则'}:undefined);
  const results=await Promise.allSettled([start(f),start(f)]);expect(results.filter(r=>r.status==='fulfilled')).toHaveLength(1);for(const t of await f.tasks.list())await f.tasks.wait(t.id);
 });
+it('a paused task remains intact while a different task becomes active',async()=>{
+ let fail=true;const f=await setup(r=>(r.schema as any).properties.spec&&fail?{spec:null,capability_gaps:[]}:undefined);
+ const first=await start(f,'开发潜力系统'),paused=await f.tasks.wait(first.id);expect(paused.status).toBe('paused');
+ fail=false;const second=await start(f,'开发角色改名能力');expect(second.id).not.toBe(first.id);expect(second.workspace).not.toBe(first.workspace);
+ const active=await f.tasks.wait(second.id),tasks=await f.tasks.list();expect(active.status).toBe('ready_for_preview');expect(tasks).toHaveLength(2);
+ expect(tasks.find(task=>task.id===first.id)).toMatchObject({status:'paused',workspace:first.workspace,requirement_history:['开发潜力系统']});
+ expect(tasks.find(task=>task.id===second.id)).toMatchObject({status:'ready_for_preview',workspace:second.workspace,requirement_history:['开发角色改名能力']});
+},30000);

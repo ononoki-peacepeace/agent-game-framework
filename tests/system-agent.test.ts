@@ -31,7 +31,7 @@ it('system requests never advance the world, and missing image generation is rep
   expect(inWorld.message).toContain('左侧输入');
   expect(inWorld.tool_id).toBeNull();
   const generation = await handleSystemInput(service, { input: '给「林舟」生成一个新头像。' });
-  expect(generation.message).toContain('未配置图像生成能力');
+  expect(generation.message).toContain('没有可用的图片生成功能');
   const crop = await handleSystemInput(service, { input: '重新裁一下「林舟」的头像。' });
   expect(crop.message).toContain('还没有全身图');
   const after = await service.current();

@@ -5,13 +5,13 @@ import './world.css';
 import './world-v2.css';
 
 type TemplateSummary = { id: string; display_name: string; description: string; recommended_experience: string[]; inspiration: string[] };
-type Chip = { id: string; label: string; dimension: string };
+type Chip = { id: string; label: string; dimension: string; picked?: boolean };
 type Preview = {
   source: { kind: string; id?: string }; title: string; one_liner: string; era: string; player_role: string;
   initial_scope: string; danger: string; supernatural: string; npc_density: string;
   experiences: string[]; special_rules: string[]; recommended_modules: string[];
 };
-type PreviewResponse = { preview_id: string; flow_id: string; preview: Preview; description: string; blank: boolean; signature: string; picks: string[]; features: string[]; chips: Chip[] };
+type PreviewResponse = { preview_id: string; flow_id: string; category?: string | null; preview: Preview; description: string; blank: boolean; signature: string; picks: string[]; features: string[]; chips: Chip[] };
 type View = 'home' | 'templates' | 'ai' | 'custom' | 'preview' | 'editing';
 const dangerLabel: Record<string, string> = { low: '低危险', medium: '中等危险', high: '高危险' };
 const supernaturalLabel: Record<string, string> = { none: '无超自然', subtle: '轻微隐藏异常', open: '超自然公开' };
@@ -21,7 +21,7 @@ const viewTitles: Record<Exclude<View, 'home'>, string> = { templates: '从模�
  * Three strictly separated entries (templates / AI idea / custom), then a preview card. Only "开始这个世界"
  * creates a world; 调整 and 换一个 never do. Each entry owns its own screen, so nothing is mixed together.
  */
-export function WorldLauncher({ busy, onCreated, onCustom }: { busy: boolean; onCreated: (view: PublicView) => void; onCustom: (description: string) => void }) {
+export function WorldLauncher({ busy, onCreated, onCustom, promptName, onImportPrompt, onRemovePrompt }: { busy: boolean; onCreated: (view: PublicView) => void; onCustom: (description: string) => void; promptName?: string; onImportPrompt?: () => void; onRemovePrompt?: () => void }) {
   const [view, setView] = useState<View>('home');
   const [origin, setOrigin] = useState<Exclude<View, 'home' | 'preview' | 'editing'>>('templates');
   const [templates, setTemplates] = useState<TemplateSummary[]>([]);
@@ -36,7 +36,21 @@ export function WorldLauncher({ busy, onCreated, onCustom }: { busy: boolean; on
   const [note, setNote] = useState('');
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 100000));
   useEffect(() => { void (async () => { try { setTemplates(await request<TemplateSummary[]>('world/templates')); } catch { /* entries stay usable */ } })(); }, []);
-  useEffect(() => { void (async () => { try { const result = await request<{ chips: Chip[] }>(`world/inspiration?seed=${seed}`); setChips(result.chips); } catch { /* optional */ } })(); }, [seed]);
+  const refreshChips = async (nextSeed: number, exclude: string[] = [], locked: string[] = picked) => {
+    try {
+      const query = [`seed=${nextSeed}`, `exclude=${encodeURIComponent(exclude.join(','))}`, `picked=${encodeURIComponent(locked.join(','))}`].join('&');
+      const result = await request<{ chips: Chip[] }>(`world/inspiration?${query}`);
+      setChips(result.chips);
+    } catch { /* chips are optional */ }
+  };
+  // Only the first load is automatic: a later 换一批 refreshes explicitly, otherwise the seed effect would race
+  // it and drop the chips the player had locked in.
+  useEffect(() => { void refreshChips(seed, [], []); }, []);
+
+  const rewriteChips = () => {
+    const next = seed + 1; setSeed(next);
+    void refreshChips(next, chips.filter(chip => !chip.picked).map(chip => chip.id), picked);
+  };
   const openEntry = (next: Exclude<View, 'home' | 'preview' | 'editing'>) => { setOrigin(next); setPreview(null); setNote(''); setView(next); };
   const call = async (kind: 'preview' | 'another' | 'adjust', body: Record<string, unknown>) => {
     setPending(kind); setNote('');
@@ -49,7 +63,7 @@ export function WorldLauncher({ busy, onCreated, onCustom }: { busy: boolean; on
   };
   const another = () => {
     const next = seed + 1; setSeed(next);
-    void call('another', { another: true, preview_id: preview?.preview_id, preview_session: preview?.flow_id, picked, inspiration_seed: next, ...(idea.trim() ? { idea: idea.trim() } : {}) });
+    void call('another', { another: true, preview_id: preview?.preview_id, preview_session: preview?.flow_id, picked, inspiration_seed: next, ...(preview?.category ? { template_id: preview.category === 'space' ? 'space_colony' : preview.category === 'academy' ? 'arcane_academy' : preview.category === 'city' ? 'modern_city' : preview.category === 'town' ? 'small_town' : preview.category === 'school' ? 'school_life' : preview.category === 'crime' ? 'crime_city' : preview.category === 'medieval' ? 'medieval_adventure' : 'post_apocalypse' } : {}), ...(idea.trim() ? { idea: idea.trim() } : {}) });
   };
   const start = async () => {
     if (!preview) return;
@@ -82,8 +96,8 @@ export function WorldLauncher({ busy, onCreated, onCustom }: { busy: boolean; on
     {view === 'ai' && <div className="world-idea">
       <textarea aria-label="世界灵感" value={idea} maxLength={500} onChange={event => setIdea(event.target.value)} placeholder="例如：现代社会，人物很多，但存在极少数隐藏异常。" />
       <div className="world-chips">
-        {chips.map(chip => <button key={chip.id} type="button" className={picked.includes(chip.id) ? 'world-chip picked' : 'world-chip'} disabled={busyAll} onClick={() => setPicked(current => current.includes(chip.id) ? current.filter(id => id !== chip.id) : [...current, chip.id])}>{chip.label}</button>)}
-        <button type="button" className="quiet" disabled={busyAll} onClick={() => setSeed(seed + 1)}>🎲 换一批</button>
+        {chips.map(chip => <button key={chip.id} type="button" aria-pressed={picked.includes(chip.id)} className={picked.includes(chip.id) ? 'world-chip picked' : 'world-chip'} disabled={busyAll} onClick={() => setPicked(current => current.includes(chip.id) ? current.filter(id => id !== chip.id) : [...current, chip.id])}>{chip.label}</button>)}
+        <button type="button" className="quiet" disabled={busyAll} onClick={rewriteChips}>🎲 换一批</button>
       </div>
       <div className="button-row compact">
         <button type="button" disabled={busyAll} onClick={() => void call('preview', { idea: idea.trim(), picked, inspiration_seed: seed })}>看看会是怎样的世界</button>
@@ -92,7 +106,9 @@ export function WorldLauncher({ busy, onCreated, onCustom }: { busy: boolean; on
     </div>}
     {view === 'custom' && <div className="world-idea">
       <textarea aria-label="自己描述世界" value={custom} maxLength={12000} onChange={event => setCustom(event.target.value)} placeholder="例如：现代城市背景，以社会关系、学习和职业为核心。玩家刚刚搬入一座陌生城市。" />
+      {onImportPrompt&&<div className="prompt-slot"><div><strong>{promptName??'可选：导入 Prompt'}</strong><small>{promptName?promptName:'支持 .txt / .md / Prompt Profile .json；它会随新世界保存。'}</small></div><div className="button-row compact"><button type="button" className="quiet" disabled={busyAll} onClick={()=>onImportPrompt()}>导入提示词</button>{promptName&&<button type="button" className="quiet" disabled={busyAll} onClick={()=>onRemovePrompt?.()}>移除</button>}</div></div>}
       <div className="button-row compact"><button type="button" disabled={busyAll || !custom.trim()} onClick={() => onCustom(custom.trim())}>用这段描述创建</button></div>
+
     </div>}
     {(view === 'preview' || view === 'editing') && preview && <article className="world-preview">
       <h3>{preview.preview.title}</h3>

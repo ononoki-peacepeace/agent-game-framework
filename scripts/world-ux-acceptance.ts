@@ -14,17 +14,34 @@ try{
   browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
   const page=await browser.newPage({viewport:{width:1680,height:1000}});
   page.setDefaultTimeout(15000);
+  // Two levels have a back affordance ("← 返回" inside the creation workspace, "← 返回启动页" on it).
+  const goBack=async()=>{await page.locator('.launcher-back').click();
+  await page.getByRole('button',{name:'创建新世界',exact:true}).click();};
   await page.goto(base);
   await expect(page.locator('.launch-card.continue-card')).toBeVisible();
-  await expect(page.locator('.launcher .launch-card:visible')).toHaveCount(2);
-  // HOME only offers the three entries: no idea textarea, no template cards, no preview
-  await page.getByRole('button',{name:'创建新世界',exact:false}).first().click().catch(()=>undefined);
+  await expect(page.locator('.launcher .launch-card:visible')).toHaveCount(4);
+  for(const label of ['当前世界','创建新世界','读取存档','模型 / API'])await expect(page.locator('.launch-card').filter({hasText:label})).toBeVisible();
+  // All four primary entries are actionable before entering the clean creation workspace.
+  const chooserPromise=page.waitForEvent('filechooser');
+  await page.getByRole('button',{name:'选择存档',exact:true}).click();
+  const chooser=await chooserPromise;
+  expect(chooser).toBeTruthy();
+  await chooser.setFiles([]);
+  await page.getByRole('button',{name:'切换模型 / API',exact:true}).click();
+  await expect(page.locator('.provider-modal')).toBeVisible();
+  await page.screenshot({path:join(directory,'1c-provider-modal.png')});
+  await page.locator('.provider-modal').getByRole('button',{name:'关闭'}).click();
+  await expect(page.locator('.provider-modal')).toHaveCount(0);
+  await page.screenshot({path:join(directory,'1b-home-entries.png')});
+  // Creation is a second-level workspace and initially offers only the three creation entries.
+  await page.getByRole('button',{name:'创建新世界',exact:true}).click();
   await expect(page.getByLabel('世界灵感')).toHaveCount(0);
   await expect(page.locator('.template-card')).toHaveCount(0);
   await expect(page.locator('.world-preview')).toHaveCount(0);
   await expect(page.getByRole('button',{name:'自己创建'})).toBeVisible();
   await page.screenshot({path:join(directory,'1-home.png')});
   // templates: readable without hovering
+
   await page.getByRole('button',{name:'从模板开始'}).click();
   await expect(page.locator('.template-card').first()).toBeVisible();
   const cardColor=await page.locator('.template-card strong').first().evaluate(element=>getComputedStyle(element).color);
@@ -59,8 +76,50 @@ try{
   await page.getByRole('button',{name:/改好了|正在调整/}).click();
   await expect(page.locator('.world-preview')).toBeVisible();
   await page.screenshot({path:join(directory,'6-adjusted.png')});
+  // The card returns to its preview actions only once the adjustment finished (the 返回 button is disabled
+  // while a request is in flight).
+  await expect(page.getByRole('button',{name:'调整'})).toBeVisible();
+  // AI mode: chips live only here; 换一批 changes the batch and keeps a locked chip
+  await page.locator('.launcher-back').click();
+  await page.getByRole('button',{name:'创建新世界',exact:true}).click();
+
+  await page.getByRole('button',{name:/返回/}).first().click().catch(()=>undefined);
+  await page.getByRole('button',{name:'让 AI 帮我想'}).click();
+  await expect(page.getByLabel('世界灵感')).toBeVisible();
+  const firstBatch=await page.locator('.world-chip').allTextContents();
+  await page.locator('.world-chip').first().click();
+  const locked=(await page.locator('.world-chip').first().textContent())??'';
+  await page.getByRole('button',{name:'🎲 换一批'}).click();
+  await expect(page.locator('.world-chip').first()).toHaveText(locked);
+  const secondBatch=await page.locator('.world-chip').allTextContents();
+  expect(secondBatch.join('|')).not.toBe(firstBatch.join('|'));
+  await page.screenshot({path:join(directory,'8-ai-chips.png')});
+  // templates: 换一个 must change the place, not just the fields
+  await page.locator('.launcher-back').click();
+  await page.getByRole('button',{name:'创建新世界',exact:true}).click();
+  await page.getByRole('button',{name:'从模板开始'}).click();
+  await page.getByRole('button',{name:'查看更多'}).click().catch(()=>undefined);
+  await page.locator('.template-card').filter({hasText:'太空殖民地'}).click();
+  const scopeOne=await page.locator('.world-preview dd').last().textContent();
+
+  await page.getByRole('button',{name:'换一个'}).click();
+  await expect(page.locator('.world-preview')).toBeVisible();
+  const scopeTwo=await page.locator('.world-preview dd').last().textContent();
+  expect(scopeOne).not.toBe(scopeTwo);
+  await page.screenshot({path:join(directory,'9-another-place.png')});
+  // custom mode owns the prompt import
+  await page.locator('.launcher-back').click();
+  await page.getByRole('button',{name:'创建新世界',exact:true}).click();
+  await goBack().catch(()=>undefined);
+  await page.getByRole('button',{name:'自己创建'}).click();
+
+  await expect(page.getByRole('button',{name:'导入提示词'})).toBeVisible();
+  await page.screenshot({path:join(directory,'10-custom.png')});
+  await page.locator('.launcher-back').click();
+  await page.getByRole('button',{name:'创建新世界',exact:true}).click();
+  await page.getByRole('button',{name:'从模板开始'}).click();
   // only "开始这个世界" enters the world
-  await page.getByRole('button',{name:'← 返回'}).click();
+
   await expect(page.locator('.template-card').first()).toBeVisible();
   await page.getByRole('button',{name:'查看更多'}).click().catch(()=>undefined);
 

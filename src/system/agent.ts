@@ -1,4 +1,4 @@
-import {sessionInput,type SystemExecutionContext,type SystemSession} from './session.js';
+import {applyFeatureGuideAction,sessionInput,type SystemExecutionContext,type SystemSession} from './session.js';
 import { z } from 'zod';
 import { safeParse } from '../core/schema.js';
 import { publicView } from '../core/state.js';
@@ -12,6 +12,8 @@ import { relationshipSummary } from '../shared/relationship.js';
 import { sanitizePlayerText } from './player-copy.js';
 import { advanceFeatureGuide, featureGuideMessage, featureRequirement, isGuideConfirmation, startFeatureGuide, type FeatureGuide } from './feature-guide.js';
 import { shallowUnderstanding } from './understanding.js';
+import { resolveUniversalGoal, type UniversalResolution } from './resolver.js';
+import type { DevelopmentProjection } from './development-status.js';
 import {
   deterministicClarificationMerge, mediaCapabilityNote, scopeInText, understandSystemRequest,
   type ResolvedSystemRequest, type SystemUnderstanding, type SystemWorkflow,
@@ -30,6 +32,7 @@ export interface SystemResult {
   /** Structured state the session keeps, so a clarification only fills what is still missing. */
   understanding?: SystemUnderstanding | null; pending_field?: string | null; workflow?: SystemWorkflow | null;
   resolved?: ResolvedSystemRequest | null; expression?: 'model' | 'template'; guide?: FeatureGuide | null;
+  development?: DevelopmentProjection | null;
 }
 const result = (plan: MetaPlan, message: string, toolsList: ToolDescriptor[], extra: Partial<SystemResult> = {}): SystemResult => {
   const tool = toolsList.find(entry => entry.tool_id === plan.tool_id);
@@ -38,8 +41,23 @@ const result = (plan: MetaPlan, message: string, toolsList: ToolDescriptor[], ex
 
 /** The System Agent: deterministic capability/tool layer first, model understanding where it adds real value. */
 export async function handleSystemInput(service:GameService,raw:unknown):Promise<SystemResult>{
- const body=safeParse(z.strictObject({input:z.string().min(1).max(2000),confirmed:z.boolean().default(false),session_id:z.string().uuid().nullish()}),raw);
- return sessionInput(service,body,(input,confirmed,context)=>executeSystemInput(service,{input,confirmed},context));
+ const body=safeParse(z.strictObject({input:z.string().min(1).max(2000),confirmed:z.boolean().default(false),session_id:z.string().uuid().nullish(),request_id:z.string().uuid().optional(),game_id:z.string().optional(),expected_revision:z.number().int().nonnegative().optional()}),raw);
+ const value=await sessionInput(service,body,(input,confirmed,context)=>executeSystemInput(service,{input,confirmed,request_id:body.request_id,expected_revision:body.expected_revision},context));
+ return playerFacingSystemResult(value);
+}
+/** Only ordinary copy is cleaned; structured diagnostics stay intact under advanced/debug surfaces. */
+export function playerFacingSystemResult(value:SystemResult):SystemResult{
+ const guide=value.guide?{...value.guide,understood:value.guide.understood.map(line=>sanitizePlayerText(line,'')).filter(Boolean),draft:value.guide.draft.map(line=>sanitizePlayerText(line,'')).filter(Boolean),current_question:value.guide.current_question?sanitizePlayerText(value.guide.current_question,''):null,options:value.guide.options.map(option=>({...option,label:sanitizePlayerText(option.label,'继续'),detail:sanitizePlayerText(option.detail,'')}))}:value.guide;
+ return {...value,message:sanitizePlayerText(value.message),...(guide?{guide}:{})};
+}
+const featureActionSchema=z.strictObject({type:z.enum(['FEATURE_GUIDE_OPTION','CONFIRM_FEATURE_PROPOSAL','CANCEL_FEATURE_PROPOSAL']),session_id:z.string().uuid(),proposal_id:z.string().uuid(),proposal_revision:z.number().int().positive(),option_id:z.string().min(1).max(60)});
+/** Structured proposal actions bypass context routing and natural-language understanding. */
+export async function handleSystemAction(service:GameService,raw:unknown):Promise<SystemResult>{
+ const action=safeParse(featureActionSchema,raw),applied=applyFeatureGuideAction(service,action);
+ if(applied.kind==='stale')return {category:'STALE_ACTION',tool_id:null,side_effect_level:'none',needs_confirmation:false,message:'这个方案已经变化，请使用当前方案。',...(applied.session?{session:applied.session}:{}),...(applied.guide?{guide:applied.guide}:{})};
+ if(applied.kind==='cancelled')return {category:'EXTENSION_REQUEST',tool_id:null,side_effect_level:'none',needs_confirmation:false,message:'已取消这个开发想法。',session:applied.session!};
+ if(applied.kind==='updated')return {category:'EXTENSION_REQUEST',tool_id:null,side_effect_level:'none',needs_confirmation:false,message:featureGuideMessage(applied.guide!),clarification:'feature_guide',pending_field:'想法方向',workflow:'development_task',session:applied.session!,guide:applied.guide};
+ return {category:'EXTENSION_REQUEST',tool_id:'extension.create',side_effect_level:'development',needs_confirmation:false,message:'好的，我按这个最小版本准备候选；确认前不会改动你的存档或框架源码。',directive:{kind:'extension_development',request:featureRequirement(applied.guide!)},workflow:'development_task',session:applied.session!,guide:applied.guide};
 }
 /** Clarification fields the session can merge without a second model call, mapped to their wire codes. */
 const clarificationCodes: Record<string, string> = { 作用范围: 'behavior_scope', 展示位置: 'which_surface', 要调整的系统: 'which_module', 人物: 'which_entity', 具体目标: 'unspecified_subject' };
@@ -166,7 +184,7 @@ async function resolveUnderstanding(service: GameService, view: ReturnType<typeo
     const fullbody = visuals.images?.fullbody ?? null;
     return {
       category: 'MEDIA_OPERATION', tool_id: 'media.generate_image', side_effect_level: 'none', needs_confirmation: false,
-      message: `我读懂了：你想为 ${String(resolvedEntity.components.identity?.name ?? resolvedEntity.id)} 准备人物头像。当前未配置图像生成能力（缺少 media.image_generation），所以我不会假装已经生成。可以先用已有的全身图裁剪头像、上传图片，或在框架开发侧接入图像 Provider。${fullbody ? '该人物已有全身图，可以直接裁剪头像。' : '（该人物目前没有可用的全身图。）'}`,
+      message: `我读懂了：你想为 ${String(resolvedEntity.components.identity?.name ?? resolvedEntity.id)} 准备人物头像。当前没有可用的图片生成功能，所以我不会假装已经生成。可以先用已有的全身图裁剪头像、上传图片，或接入图片生成服务。${fullbody ? '该人物已有全身图，可以直接裁剪头像。' : '（该人物目前没有可用的全身图。）'}`,
       advanced: { entity_id: resolvedEntity.id, has_fullbody: Boolean(fullbody), generation_available: false, capability_gap: 'media.image_generation' },
       directive: fullbody ? { kind: 'open_crop_editor', entity_id: resolvedEntity.id, source_asset_id: fullbody, current_avatar: resolvedEntity.components.identity?.avatar_id ?? null, crop: visuals.avatar_crop ?? null } : { kind: 'open_character_media', entity_id: resolvedEntity.id },
       understanding, workflow: 'media_asset',
@@ -224,8 +242,8 @@ async function resolveUnderstanding(service: GameService, view: ReturnType<typeo
     if (wantsCrop) return { category: 'MEDIA_OPERATION', tool_id: 'avatar.crop', side_effect_level: 'none', needs_confirmation: false, message: `${String(entity.components.identity?.name ?? entity.id)} 还没有全身图，无法裁剪头像。请先上传全身图，或接入图像生成能力。`, advanced: { entity_id: entity.id }, understanding, workflow: 'media_asset' };
     const generationAvailable = toolsList.find(tool => tool.tool_id === 'media.generate_image')?.available === true;
     const message = generationAvailable
-      ? `我读懂了：要为 ${String(entity.components.identity?.name ?? entity.id)} 生成人物图片。图像生成能力已接入，这一步需要你确认后才会真正调用 Provider。`
-      : `我读懂了：你想为 ${String(entity.components.identity?.name ?? entity.id)} 准备人物头像。当前未配置图像生成能力（缺少 media.image_generation），所以我不会假装已经生成。可以先用已有的全身图裁剪头像、上传图片，或在框架开发侧接入图像 Provider。${fullbody ? '' : '（该人物目前没有可用的全身图。）'}`;
+      ? `我读懂了：要为 ${String(entity.components.identity?.name ?? entity.id)} 生成人物图片。图片生成服务已接入，这一步需要你确认后才会真正调用。`
+      : `我读懂了：你想为 ${String(entity.components.identity?.name ?? entity.id)} 准备人物头像。当前没有可用的图片生成功能，所以我不会假装已经生成。可以先用已有的全身图裁剪头像、上传图片，或接入图片生成服务。${fullbody ? '' : '（该人物目前没有可用的全身图。）'}`;
 
     return {
       category: generationAvailable ? 'MEDIA_GENERATION' : 'MEDIA_OPERATION', tool_id: 'media.generate_image', side_effect_level: 'canonical-state', needs_confirmation: generationAvailable,
@@ -328,7 +346,7 @@ async function executeTool(service: GameService, plan: MetaPlan, body: { input: 
       const visuals = (target.components.visual_assets ?? {}) as { images?: Record<string, string>; avatar_crop?: unknown };
       const fullbody = visuals.images?.fullbody ?? null, avatar = target.components.identity?.avatar_id ?? null;
       if (plan.category === 'MEDIA_GENERATION') {
-        return result(plan, `当前未配置图像生成服务。我不会假装已经生成图片；可以改用已有的全身图裁剪头像，或在框架开发侧接入图像 Provider。`, toolsList, { advanced: { entity_id: target.id, has_fullbody: Boolean(fullbody) } });
+        return result(plan, `当前未配置图片生成服务。我不会假装已经生成图片；可以改用已有的全身图裁剪头像，或接入图片生成服务。`, toolsList, { advanced: { entity_id: target.id, has_fullbody: Boolean(fullbody) } });
       }
       if (!fullbody) return result(plan, `${String(target.components.identity?.name ?? '这个人物')} 还没有全身图，无法裁剪头像。请先上传全身图，或接入图像生成能力。`, toolsList, { advanced: { entity_id: target.id } });
       return result(plan, `已为 ${String(target.components.identity?.name ?? target.id)} 打开头像裁剪器：拖动图片、滚轮/双指缩放，确认后保存头像裁剪设置（原图不变）。`, toolsList, {
@@ -389,12 +407,18 @@ function resolvedFrom(workflow: SystemWorkflow, rule: { op?: string; value?: str
   return { workflow, at: new Date().toISOString(), summary, scope: rule?.scope ?? null, application: rule?.application ?? null, value: rule?.value ?? null, op: (rule?.op as 'suffix' | 'prefix' | 'tone' | 'constraint' | undefined) ?? null, module: null, entity_id: null };
 }
 async function executeSystemInput(service: GameService, raw: unknown, context: SystemExecutionContext): Promise<SystemResult> {
-  const body = safeParse(z.strictObject({ input: z.string().min(1).max(2000), confirmed: z.boolean().default(false) }), raw);
+  const body = safeParse(z.strictObject({ input: z.string().min(1).max(2000), confirmed: z.boolean().default(false), request_id: z.string().uuid().optional(), expected_revision: z.number().int().nonnegative().optional() }), raw);
   const save = await service.current(), view = publicView(save), toolsList = toolAvailability(view.capabilities);
   const plan = planMeta(body.input, view.capabilities);
   const entityId = context.entityId;
   // The session goal is what the tool layer executes; understanding always reads what the player just said.
   const latest = context.latest ?? body.input;
+  const universal = await resolveUniversalGoal(service, latest, { request_id: body.request_id, expected_revision: body.expected_revision });
+  // Existing local media fallbacks (for example cropping an already stored full-body image) remain usable even
+  // when the requested generation chain reports a missing provider capability.
+  const mediaGap = universal.handled && universal.kind === 'CAPABILITY_GAP'
+    && universal.goal.desired_outputs.some(output => output.kind === 'media_asset');
+  if (universal.handled && !mediaGap) return universalSystemResult(universal);
   // A System write may only run for the sentence the player just sent, for a confirmation of it, or as the answer
   // to a clarification that the write itself asked for. A planned write left over from an earlier request is
   // never replayed because a later, unrelated message kept the session alive.
@@ -419,6 +443,13 @@ async function executeSystemInput(service: GameService, raw: unknown, context: S
   const executed = await executeTool(service, plan, body, context, toolsList, entityId);
   // Optional second call: only to phrase a real execution result, never to change its semantics.
   return express(service, view, save, body.input, executed, context);
+}
+
+function universalSystemResult(resolution: Exclude<UniversalResolution, { handled: false }>): SystemResult {
+  if (resolution.kind === 'EXECUTED') return { category: 'UNIVERSAL_GOAL', tool_id: resolution.plan.steps.at(-1)?.capability_id ?? null, side_effect_level: 'canonical-state', needs_confirmation: false, message: resolution.message, view: resolution.view, advanced: { resolution_kind: resolution.kind, goal: resolution.goal, plan: resolution.plan } };
+  if (resolution.kind === 'USER_AMBIGUITY') return { category: 'USER_AMBIGUITY', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: resolution.candidates.length ? `${resolution.question}\n${resolution.candidates.join('、')}` : resolution.question, clarification: 'universal_goal', pending_field: '具体目标', advanced: { resolution_kind: resolution.kind } };
+  if (resolution.kind === 'CAPABILITY_GAP') return { category: 'CAPABILITY_GAP', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: resolution.message, advanced: { resolution_kind: resolution.kind, missing: resolution.missing, goal: resolution.goal, plan: resolution.plan } };
+  return { category: 'EXECUTION_FAILURE', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: resolution.message, advanced: { resolution_kind: resolution.kind, retryable: resolution.retryable, goal: resolution.goal } };
 }
 const expressionSchema = z.strictObject({ message: z.string().min(1).max(800) });
 async function express(service: GameService, view: ReturnType<typeof publicView>, save: Awaited<ReturnType<GameService['current']>>, text: string, executed: SystemResult, context: SystemExecutionContext): Promise<SystemResult> {

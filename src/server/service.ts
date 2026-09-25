@@ -1,7 +1,7 @@
 import {failureReason} from '../ai/failures.js';
 import {sparseStep} from '../routine/scheduler.js';
 import {updateInteraction} from '../core/interaction.js';
-import {checkpointTurn,canUndo,worldImage,worldKeys} from '../core/turn-history.js';
+import {checkpointTurn,canUndo,historyAvailable,imageHash,worldImage,worldKeys} from '../core/turn-history.js';
 import {avatarCropSchema,type AvatarCropMetadata} from '../shared/avatar.js';
 import {calendarSchema} from '../routine/schema.js';
 import {migrateInstalledWorld,type InstalledWorld} from '../routine/migration.js';
@@ -224,10 +224,31 @@ export class GameService {
       next.state_revision=current.state_revision+1;next.ai={threads:{}};
       preservePresentation(current,next);
       next.turn_audit=[...(current.turn_audit??[]),{turn_id:cp.turn_id,parent_turn_id:cp.parent_turn_id,reverted_at:next.state_revision,before:cp.before,after:worldImage(current)}];
+      next.turn_history=(current.turn_history??[]).filter(entry=>entry.turn_id!==cp.turn_id);
       next.active_turn_id=cp.parent_turn_id;delete next.turn_checkpoint;
       const validated=validateSave(next);await this.storage.write(validated);
       this.logger.info('turn.reverted',{module:'turn',request_id:req.request_id,revision:validated.state_revision,metadata:{turn_id:cp.turn_id}});
       return publicView(validated);
+    }));
+  }
+  async restoreTurn(raw:unknown){
+    const req=safeParse(z.strictObject({request_id:z.string().uuid(),game_id:z.string().uuid(),expected_revision:z.number().int().min(0),turn_id:z.string().uuid()}),raw);
+    return this.exclusive(()=>this.media(async()=>{
+      const current=await this.current(),fingerprint='history:'+req.turn_id;
+      assert(req.game_id===current.game_id,'游戏已切换，请刷新');
+      const receipt=current.runtime.receipts.find(r=>r.id===req.request_id);if(receipt){assert(receipt.fingerprint===fingerprint,'请求 ID 已用于另一操作');return publicView(current);}
+      if(req.expected_revision!==current.state_revision)throw new GameError('状态已更新，请刷新后重试',409);
+      assert(historyAvailable(current),'当前历史之后已有其他世界状态修改，不能安全回溯');
+      const history=current.turn_history!,index=history.findIndex(entry=>entry.turn_id===req.turn_id);
+      assert(index>=0&&index<history.length-1,'请选择当前回合之前的历史');
+      const target=history[index],snapshot=history[index+1].before,next=structuredClone(current);
+      assert(snapshot.game_id===current.game_id&&Object.keys(snapshot).every(key=>(worldKeys as readonly string[]).includes(key)),'历史快照边界校验失败');
+      for(const key of Object.keys(worldImage(next)))delete (next as any)[key];Object.assign(next,structuredClone(snapshot));
+      next.turn_history=structuredClone(history.slice(0,index+1));next.active_turn_id=target.turn_id;delete next.turn_checkpoint;
+      next.runtime.receipts=[...current.runtime.receipts,{id:req.request_id,fingerprint,revision:current.state_revision+1}].slice(-100);next.state_revision=current.state_revision+1;next.ai={threads:{}};preservePresentation(current,next);
+      assert(imageHash(next)===target.after_hash,'历史快照完整性校验失败');
+      next.turn_audit=[...(current.turn_audit??[]),{turn_id:current.active_turn_id!,parent_turn_id:target.turn_id,reverted_at:next.state_revision,before:snapshot,after:worldImage(current)}];
+      const validated=validateSave(next);await this.storage.write(validated);this.logger.info('turn.history_restored',{module:'turn',request_id:req.request_id,revision:validated.state_revision,metadata:{turn_id:target.turn_id,discarded:history.length-index-1}});return publicView(validated);
     }));
   }
   async load() { return this.exclusive(async () => {

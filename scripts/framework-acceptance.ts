@@ -61,11 +61,11 @@ try{
  await expect(page.locator('.feature-guide')).toContainText('开始制作');
  await page.getByRole('button',{name:'开始制作',exact:true}).click();
 
- await expect(page.locator('.development-panel')).toContainText('等待补充需求');let tasks=await api('development/tasks'),t=tasks.at(-1);assert.equal(t.status,'waiting_for_user');assert.equal(t.artifacts.length,0);
+ await expect(page.locator('.development-panel')).toContainText('等待你补充');let tasks=await api('development/tasks'),t=tasks.at(-1);assert.equal(t.status,'waiting_for_user');assert.equal(t.artifacts.length,0);
  await page.getByLabel('系统请求',{exact:true}).fill('第一版太简单，继续改');await page.getByRole('button',{name:'发送',exact:true}).click();
  await expect.poll(async()=>(await api('development/tasks/'+t.id)).revision).toBe(2);const revision=await waitTask(t.id);assert.equal(revision.workspace,t.workspace);assert.equal(revision.extension_id,t.extension_id);
  await page.getByRole('button',{name:'结束当前开发对话',exact:true}).click();await page.getByLabel('系统请求',{exact:true}).fill('希望通过键盘在地图上移动角色');await page.getByRole('button',{name:'发送',exact:true}).click();
- await expect(page.locator('.development-panel')).toContainText('等待审阅核心提案');tasks=await api('development/tasks');const high=await waitTask(tasks.at(-1).id);
+ await expect(page.locator('.development-panel')).toContainText('等待审阅');tasks=await api('development/tasks');const high=await waitTask(tasks.at(-1).id);
  assert.equal(high.complexity,'HIGH');assert(high.milestones.length>=2);assert(high.test_results.some((r:any)=>!r.passed));assert.equal(high.status,'waiting_for_core_approval');
  await page.getByRole('button',{name:'批准核心开发提案',exact:true}).click();await expect(page.locator('.development-panel')).toContainText('核心接口仍需单独开发');
  await page.screenshot({path:join(directory,'development.png')});

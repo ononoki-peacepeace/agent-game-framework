@@ -199,4 +199,6 @@ it('P2-2: internal vocabulary never reaches the player',()=>{
   expect(cleaned).not.toMatch(/pending|interaction_context|public_state|canonical/);
   expect(sanitizePlayerText('')).toBeTruthy();
   expect(sanitizePlayerText('你是指刚才的伊芙琳吗？')).toContain('伊芙琳');
+  const all=sanitizePlayerText('capability_digest.tools / trust/familiarity / EXTENSION_REQUEST / development_task / schema / media.generate_image');
+  expect(all).not.toMatch(/capability_digest|trust|familiarity|EXTENSION_REQUEST|development_task|schema|media\.generate_image/i);
 });

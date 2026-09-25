@@ -6,9 +6,15 @@
  * said, ask at most one question about *experience* (never about hooks, schemas, migrations or capability
  * gaps), and let "我不知道" be a first-class answer that produces a safe, small, reversible MVP.
  */
-export interface GuideOption { id: string; label: string; detail: string }
+import { randomUUID } from 'node:crypto';
+
+export type FeatureGuideActionType = 'FEATURE_GUIDE_OPTION' | 'CONFIRM_FEATURE_PROPOSAL' | 'CANCEL_FEATURE_PROPOSAL';
+export interface FeatureGuideAction { type: FeatureGuideActionType; proposal_id: string; proposal_revision: number; option_id: string }
+export interface GuideOption { id: string; label: string; detail: string; action?: FeatureGuideAction }
 export interface FeatureGuide {
   guide_type: 'feature';
+  proposal_id: string;
+  revision: number;
   request: string;
   subject: string;
   understood: string[];
@@ -20,6 +26,9 @@ export interface FeatureGuide {
   draft: string[];
   status: 'asking' | 'proposing' | 'confirmed';
   rounds: number;
+}
+function bindActions(guide: FeatureGuide): FeatureGuide {
+  return { ...guide, options: guide.options.map(option => ({ ...option, action: { type: option.id === 'confirm' ? 'CONFIRM_FEATURE_PROPOSAL' : option.id === 'cancel' ? 'CANCEL_FEATURE_PROPOSAL' : 'FEATURE_GUIDE_OPTION', proposal_id: guide.proposal_id, proposal_revision: guide.revision, option_id: option.id } })) };
 }
 const delegateIntent = /^(我不知道|不知道|不懂|我什么都不懂|你帮我选|你决定|你看着办|随便|都行|都可以|按正常|按默认|简单一?(点|些)|简单点|你觉得|给我推荐|推荐一个|没有想法|无所谓)/;
 const confirmationIntent = /^(开始制作|开始吧|开始|就这样|这样做|可以|好|好的|行|确认|没问题|ok|OK)/;
@@ -66,59 +75,59 @@ export function featureMvpDraft(subject: string, axis: 'display' | 'mechanics' |
   return [`「${subject}」只作为成长参考展示，不限制玩家继续提升`, ...shared.slice(1)];
 }
 export function startFeatureGuide(request: string): FeatureGuide {
-  const text = String(request ?? '').trim(), subject = featureSubject(text);
+  const text = String(request ?? '').trim(), subject = featureSubject(text), proposal_id = randomUUID();
   if (wantsIdeas(text)) {
-    return {
-      guide_type: 'feature', request: text, subject,
+    return bindActions({
+      guide_type: 'feature', proposal_id, revision: 1, request: text, subject,
       understood: [`你希望增加新的玩法，但还没有决定具体是什么`], unresolved: ['大致方向'],
       current_question: '你想要哪种大致方向？', options: directionOptions, recommended_default: 'social',
       user_can_delegate: true, draft: [], status: 'asking', rounds: 1,
-    };
+    });
   }
-  return {
-    guide_type: 'feature', request: text, subject,
+  return bindActions({
+    guide_type: 'feature', proposal_id, revision: 1, request: text, subject,
     understood: [`你想增加一个「${subject}」`], unresolved: [`「${subject}」应该带来什么体验`],
     current_question: `你希望「${subject}」主要给玩家带来什么？`, options: experienceOptions(subject),
     recommended_default: 'display', user_can_delegate: true, draft: [], status: 'asking', rounds: 1,
-  };
+  });
 }
 /** One question per round at most: merge the answer and only ask again if it truly changes the outcome. */
 export function advanceFeatureGuide(guide: FeatureGuide, answer: string): FeatureGuide {
   const text = String(answer ?? '').trim();
   if (isDelegateAnswer(text)) {
     const axis = (guide.recommended_default === 'mechanics' || guide.recommended_default === 'world' ? guide.recommended_default : 'display') as 'display' | 'mechanics' | 'world';
-    return {
-      ...guide, status: 'proposing', draft: featureMvpDraft(guide.subject, axis), unresolved: [],
+    return bindActions({
+      ...guide, revision: guide.revision + 1, status: 'proposing', draft: featureMvpDraft(guide.subject, axis), unresolved: [],
       understood: [...guide.understood, `剩下交给我：先按${axis === 'display' ? '只做展示' : axis === 'mechanics' ? '影响数值' : '由世界剧情体现'}的简单版本做`],
       current_question: '这样做吗？', options: [
         { id: 'confirm', label: '开始制作', detail: '按这个最小版本准备候选' },
         { id: 'adjust', label: '继续调整', detail: '还可以补充或改方向' },
         { id: 'cancel', label: '算了', detail: '不做了' },
       ], recommended_default: null, rounds: guide.rounds + 1,
-    };
+    });
   }
   const axis = axisFor(text);
   if (axis) {
-    return {
-      ...guide, status: 'proposing', draft: featureMvpDraft(guide.subject, axis), unresolved: [],
+    return bindActions({
+      ...guide, revision: guide.revision + 1, status: 'proposing', draft: featureMvpDraft(guide.subject, axis), unresolved: [],
       understood: [...guide.understood, `方向：${axis === 'display' ? '只做展示' : axis === 'mechanics' ? '影响数值与成长' : '由世界与剧情体现'}`],
       current_question: '这样做吗？', options: [
         { id: 'confirm', label: '开始制作', detail: '按这个最小版本准备候选' },
         { id: 'adjust', label: '继续调整', detail: '还可以补充或改方向' },
         { id: 'cancel', label: '算了', detail: '不做了' },
       ], recommended_default: null, rounds: guide.rounds + 1,
-    };
+    });
   }
   // Free text that does not decide the experience: keep it, and ask the one question once more.
   const asked = [...guide.understood, text.slice(0, 60)];
   if (guide.rounds >= 2) {
     const axis2 = (guide.recommended_default ?? 'display') as 'display' | 'mechanics' | 'world';
-    return { ...guide, status: 'proposing', understood: asked, draft: featureMvpDraft(guide.subject, axis2), unresolved: [], current_question: '我先按最简单的方式做，可以吗？', options: [
+    return bindActions({ ...guide, revision: guide.revision + 1, status: 'proposing', understood: asked, draft: featureMvpDraft(guide.subject, axis2), unresolved: [], current_question: '我先按最简单的方式做，可以吗？', options: [
       { id: 'confirm', label: '开始制作', detail: '按这个最小版本准备候选' },
       { id: 'cancel', label: '算了', detail: '不做了' },
-    ], rounds: guide.rounds + 1 };
+    ], rounds: guide.rounds + 1 });
   }
-  return { ...guide, understood: asked, unresolved: guide.unresolved, current_question: guide.current_question, options: guide.options, rounds: guide.rounds + 1 };
+  return bindActions({ ...guide, revision: guide.revision + 1, understood: asked, unresolved: guide.unresolved, current_question: guide.current_question, options: guide.options, rounds: guide.rounds + 1 });
 }
 export function featureGuideMessage(guide: FeatureGuide) {
   const lines: string[] = [];

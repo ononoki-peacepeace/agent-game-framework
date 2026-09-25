@@ -104,6 +104,7 @@ export function publicView(save: SavePackage, registry = createRegistry(save.def
     panels: panelMeta(registry),
     modules: moduleStatuses(save),
     capabilities: capabilityList(registry),
+    world_history:(save.turn_history??[]).map((entry,index,all)=>({turn_id:entry.turn_id,label:entry.label,time:structuredClone(entry.time),current:index===all.length-1})),
     actions: registry.actions.all().map(([type, spec]) => ({ type, label: spec.ui?.label ?? type, visibility: spec.ui?.visibility ?? 'internal', target_component: spec.ui?.target_component, requires_text: spec.ui?.requires_text, text_parameter: spec.ui?.text_parameter, module: registry.modules.all().find(([, module]) => Object.hasOwn(module.actions ?? {}, type))?.[0] ?? 'framework' })),
     currencies: structuredClone(rules.currencies),
     last_turn: structuredClone(save.last_turn), notices: (save.future_intents??[]).filter(i=>i.status==='due').map(i=>'你的打算已到期：'+i.goal+'。尚未自动执行；请先处理当前场景，再决定是否尝试。'),

@@ -21,5 +21,10 @@ export function imageHash(save:SavePackage){return createHash('sha256').update(J
 export function canUndo(save:SavePackage){return Boolean(save.turn_checkpoint&&save.turn_checkpoint.after_hash===imageHash(save));}
 export function checkpointTurn(before:SavePackage,after:SavePackage,turnId:string){
   after.active_turn_id=turnId;
-  after.turn_checkpoint={turn_id:turnId,parent_turn_id:before.active_turn_id??null,before:worldImage(before),after_hash:imageHash(after)};
+  const checkpoint={turn_id:turnId,parent_turn_id:before.active_turn_id??null,before:worldImage(before),after_hash:imageHash(after)};
+  after.turn_checkpoint=checkpoint;
+  const spoken=after.last_turn?.speaker&&after.last_turn.dialogue?`与${String(after.entities.find(entity=>entity.id===after.last_turn!.speaker)?.components.identity?.name??'人物')}交谈`:'';
+  const label=(spoken||after.last_turn?.narrative||'世界继续推进').replace(/\s+/g,' ').slice(0,160);
+  after.turn_history=[...(before.turn_history??[]),{...checkpoint,label,time:structuredClone(after.runtime.time)}].slice(-20);
 }
+export function historyAvailable(save:SavePackage){const history=save.turn_history??[];return history.length>1&&history.at(-1)?.after_hash===imageHash(save);}

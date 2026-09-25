@@ -12,6 +12,7 @@ import {createApp} from '../src/server/app.js';
 import {JsonStore} from '../src/storage/json-store.js';
 import {routeContext} from '../src/system/context-router.js';
 import {worldImage,checkpointTurn} from '../src/core/turn-history.js';
+import type {SavePackage} from '../src/core/schema.js';
 import {publicView,validateSave} from '../src/core/state.js';
 import {fresh,MemoryStore} from './helpers.js';
 import type {AIRequest} from '../src/ai/contracts.js';
@@ -125,6 +126,24 @@ describe('persistent focus and atomic world undo',()=>{
   const f=await setup(),stale=await f.tx();await f.talk();await expect(f.service.undo(stale)).rejects.toThrow('状态已更新');
   const s=await f.service.current();s.gm_state.flags.later=true;s.state_revision++;await f.store.write(s);
   await expect(f.service.undo(await f.tx())).rejects.toThrow('没有可安全撤回');expect(await f.service.current()).toEqual(s);
+ });
+ it('keeps bounded world turns, undoes T5 to T4, then restores T4 to T2 and truncates the future',async()=>{
+  const f=await setup(),states:SavePackage[]=[];
+  for(let index=1;index<=5;index++){
+   const before=await f.service.current(),after=structuredClone(before),player=after.entities.find(e=>e.id===after.player_state.entity_id)!,npc=after.entities.find(e=>e.id===f.npc.id)!;
+   after.runtime.time.minute+=index;player.components.location.location_id=index%2?'station':'square';player.components.scene_position={label:'位置'+index};
+   npc.components.identity.description='记忆'+index;(player.components.relationships.entries as any)[npc.id]={trust:index};
+   const item=after.entities.find(e=>e.components.item?.stackable);expect(item).toBeTruthy();(player.components.inventory.items as any)[item!.id]=index;
+   after.last_turn={narrative:'回合 '+index,speaker:null,dialogue:null,choices:[],context_actions:[]};after.state_revision++;
+   checkpointTurn(before,after,randomUUID());await f.store.write(validateSave(after));states.push(structuredClone(after));
+  }
+  expect((await f.service.current()).turn_history).toHaveLength(5);
+  await f.service.undo(await f.tx());const t4=await f.service.current();expect(worldImage(t4)).toEqual(worldImage(states[3]));expect(t4.turn_history).toHaveLength(4);
+  const t2Id=t4.turn_history![1].turn_id;await f.service.restoreTurn({...await f.tx(),turn_id:t2Id});const restored=await f.service.current();
+  expect(worldImage(restored)).toEqual(worldImage(states[1]));expect(restored.turn_history).toHaveLength(2);expect(restored.active_turn_id).toBe(t2Id);
+  expect(restored.runtime.time).toEqual(states[1].runtime.time);expect(restored.last_turn).toEqual(states[1].last_turn);
+  expect(restored.entities.find(e=>e.id===f.player.id)!.components).toEqual(states[1].entities.find(e=>e.id===f.player.id)!.components);
+  expect(restored.entities.find(e=>e.id===f.npc.id)!.components).toEqual(states[1].entities.find(e=>e.id===f.npc.id)!.components);
  });
 });
 

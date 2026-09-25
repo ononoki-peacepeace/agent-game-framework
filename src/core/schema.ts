@@ -58,11 +58,13 @@ export const mapStateSchema = z.strictObject({
   dynamic_locations: z.array(locationSchema).max(300).default([]),
   dynamic_routes: z.array(routeSchema).max(1200).default([]),
 });
+const turnHistoryEntrySchema=z.strictObject({turn_id:z.string().uuid(),parent_turn_id:z.string().uuid().nullable(),before:z.record(z.string(),z.json()),after_hash:z.string(),label:z.string().min(1).max(160),time:z.strictObject({day:integer,minute:integer})});
 export const saveSchema = z.strictObject({
   interaction_context: z.strictObject({ mode:z.literal('conversation'), target_entity_id:id, started_turn:integer, last_interaction_turn:integer, scene_anchor:z.string().max(500), status:z.enum(['active','ended']) }).optional(),
   narrative_history: z.array(z.strictObject({ request_id:z.string().uuid(), narrative:text, dialogue:text.nullable(), speaker:id.nullable(), facts:z.array(z.string().max(2000)).max(12) })).max(8).optional(),
   // A non-recursive before image travels in the same atomic file as the committed turn.
   turn_checkpoint: z.strictObject({ turn_id:z.string().uuid(), before:z.record(z.string(),z.json()), after_hash:z.string(), parent_turn_id:z.string().uuid().nullable() }).optional(),
+  turn_history:z.array(turnHistoryEntrySchema).max(20).optional(),
   turn_audit: z.array(z.strictObject({ turn_id:z.string().uuid(), parent_turn_id:z.string().uuid().nullable(), reverted_at:integer, before:z.record(z.string(),z.json()), after:z.record(z.string(),z.json()) })).optional(),
   active_turn_id:z.string().uuid().nullable().optional(),
   action_facts: z.array(z.strictObject({request_id:z.string().uuid(),actor_id:id,target_id:id.nullable(),input:z.string().max(10000),facts:z.array(z.string().max(300)).max(4),time:z.strictObject({day:integer,minute:integer})})).max(100).optional(),

@@ -145,7 +145,7 @@ describe('System Agent: partial understanding, workflow routing and precise clar
     expect(r.workflow).toBe('media_asset');
     expect(r.directive?.kind).toBe('open_crop_editor');
     expect(r.advanced).toMatchObject({ entity_id: f.npcId, capability_gap: 'media.image_generation' });
-    expect(String(r.message)).toContain('未配置图像生成能力');
+    expect(String(r.message)).toContain('没有可用的图片生成功能');
 
     expect(String(r.message)).toContain('不会假装');
     expect(String(r.message)).not.toContain('已经生成好了');

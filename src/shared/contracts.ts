@@ -56,5 +56,6 @@ export interface PublicView {
   /** Installed/enabled module lifecycle, so the UI only shows capabilities that really exist. */
   modules: ModuleStatus[];
   capabilities: string[];
+  world_history?:{turn_id:string;label:string;time:{day:number;minute:number};current:boolean}[];
   last_turn: Narrative | null; notices: string[];
 }

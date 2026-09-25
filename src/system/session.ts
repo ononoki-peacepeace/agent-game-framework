@@ -6,7 +6,7 @@ import {planMeta} from './router.js';
 import type {SystemResult} from './agent.js';
 import type {BehaviorApplication, BehaviorScope} from '../ai/behavior.js';
 import type {ResolvedSystemRequest, SystemUnderstanding} from './understanding.js';
-import type {FeatureGuide} from './feature-guide.js';
+import {advanceFeatureGuide,type FeatureGuide,type FeatureGuideActionType} from './feature-guide.js';
 export interface SystemSession {
  session_id:string;game_id:string;current_goal:string;current_intent:string;clarifications:{question:string;answer:string|null}[];
  resolved_entities:string[];selected_tools:string[];pending_confirmation:string|null;development_job_id:string|null;
@@ -28,9 +28,34 @@ export interface SystemExecutionContext {
 const sessions=new WeakMap<GameService,SystemSession>();
 export async function routingClarification(service:GameService,input:string,question:string){const save=await service.storage.read();if(!save)throw Error('请先载入世界');const session=freshSession(save.game_id,input,'UNKNOWN',null);session.status='waiting_for_clarification';session.pending_field='输入语境';session.clarifications.push({question,answer:null});sessions.set(service,session);return structuredClone(session);}
 export function systemSessionContext(service:GameService,gameId:string){const session=sessions.get(service);return session?.game_id===gameId?structuredClone(session):null;}
+export function bindDevelopmentTask(service:GameService,taskId:string){const session=sessions.get(service);if(!session)return null;session.development_job_id=taskId;return structuredClone(session);}
 /** The last request the System Agent actually executed. Contextual corrections may refer to it even after the session closed. */
 const lastResolved=new WeakMap<GameService,ResolvedSystemRequest>();
 const queues=new WeakMap<GameService,Promise<unknown>>();
+export interface BoundFeatureGuideAction { type:FeatureGuideActionType;session_id:string;proposal_id:string;proposal_revision:number;option_id:string }
+export type FeatureActionResult={kind:'stale'|'confirmed'|'updated'|'cancelled';session:SystemSession|null;guide:FeatureGuide|null};
+
+/** Deterministic proposal action reducer. No button label is interpreted as a new user request. */
+export function applyFeatureGuideAction(service:GameService,action:BoundFeatureGuideAction):FeatureActionResult{
+ const session=sessions.get(service),guide=session?.guide??null;
+ const stale=!session||session.session_id!==action.session_id||!guide||guide.proposal_id!==action.proposal_id||guide.revision!==action.proposal_revision;
+ if(stale)return {kind:'stale',session:session?structuredClone(session):null,guide:guide?structuredClone(guide):null};
+ const option=guide.options.find(item=>item.id===action.option_id);
+ if(!option||option.action?.type!==action.type)return {kind:'stale',session:structuredClone(session),guide:structuredClone(guide)};
+ if(action.type==='CANCEL_FEATURE_PROPOSAL'){
+  session.status='cancelled';session.pending_field=null;session.guide=null;
+  return {kind:'cancelled',session:structuredClone(session),guide:null};
+ }
+ if(action.type==='CONFIRM_FEATURE_PROPOSAL'){
+  if(guide.status!=='proposing')return {kind:'stale',session:structuredClone(session),guide:structuredClone(guide)};
+  session.guide={...guide,status:'confirmed',revision:guide.revision+1,options:[]};session.status='completed';session.pending_field=null;
+  return {kind:'confirmed',session:structuredClone(session),guide:structuredClone(session.guide)};
+ }
+ if(option.id==='adjust')session.guide={...guide,revision:guide.revision+1,status:'asking',current_question:'你想调整哪一部分？',options:[],rounds:guide.rounds+1};
+ else session.guide=advanceFeatureGuide(guide,option.label);
+ session.status='waiting_for_clarification';session.pending_field='想法方向';
+ return {kind:'updated',session:structuredClone(session),guide:structuredClone(session.guide)};
+}
 function freshSession(gameId:string,text:string,currentIntent:string,toolId:string|null):SystemSession{
  return {session_id:randomUUID(),game_id:gameId,current_goal:text,current_intent:currentIntent,clarifications:[],resolved_entities:[],selected_tools:toolId?[toolId]:[],pending_confirmation:null,development_job_id:null,status:'active',understanding:null,pending_field:null,workflow:null,resolved_request:null,guide:null};
 }

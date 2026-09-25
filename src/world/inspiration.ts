@@ -8,22 +8,50 @@ import { worldDraftSchema, worldTemplates, type WorldDraft } from './templates.j
  * Everything here is deterministic program data: seeds pick the combination, the model only writes it naturally.
  */
 export type InspirationDimension = 'setting' | 'tone' | 'social' | 'anomaly' | 'role' | 'experience' | 'hook';
-export interface InspirationOption { id: string; label: string; dimension: InspirationDimension; incompatible?: string[]; tags?: Partial<Record<'era' | 'danger' | 'supernatural' | 'npc_density', string>> }
+export interface InspirationOption { id: string; label: string; dimension: InspirationDimension; incompatible?: string[]; category?: string; tags?: Partial<Record<'era' | 'danger' | 'supernatural' | 'npc_density', string>> }
 const option = (id: string, label: string, dimension: InspirationDimension, extra: Partial<InspirationOption> = {}): InspirationOption => ({ id, label, dimension, ...extra });
 
 export const inspirationLibrary: InspirationOption[] = [
-  option('city_modern', '现代大都市', 'setting', { tags: { era: '当代都市' } }),
-  option('city_coastal', '沿海工业城', 'setting', { tags: { era: '当代工业城市' } }),
-  option('university_town', '大学城', 'setting', { tags: { era: '当代' } }),
-  option('border_town', '边境小镇', 'setting', { tags: { era: '近现代' } }),
-  option('remote_island', '偏远岛屿', 'setting', { tags: { era: '当代' } }),
-  option('mountain_settlement', '山区聚落', 'setting', { tags: { era: '近现代' } }),
-  option('underground_city', '地下城市', 'setting', { tags: { era: '近未来' } }),
-  option('space_station', '太空站', 'setting', { tags: { era: '远未来' } }),
-  option('colony', '殖民地', 'setting', { tags: { era: '远未来' } }),
-  option('magic_academy', '魔法学院', 'setting', { tags: { era: '类近代', supernatural: 'open' }, incompatible: ['realism_strict'] }),
-  option('ancient_kingdom', '古代王国', 'setting', { tags: { era: '前工业时代' }, incompatible: ['tech_modern'] }),
-  option('wasteland', '荒原聚落', 'setting', { tags: { era: '灾后' }, incompatible: ['tech_modern'] }),
+  // A template locks a *category*, not a concrete place: within 太空殖民地 the sampler may produce a lunar city,
+  // a Martian canyon settlement, a Europa research cluster, an asteroid mining town, a generation ship quarter…
+  option('city_modern', '现代大都市', 'setting', { tags: { era: '当代都市' }, category: 'city' }),
+  option('city_coastal', '沿海工业城', 'setting', { tags: { era: '当代工业城市' }, category: 'city' }),
+  option('city_satellite', '新区卫星城', 'setting', { tags: { era: '当代' }, category: 'city' }),
+  option('city_old_ring', '内环老城', 'setting', { tags: { era: '当代' }, category: 'city' }),
+  option('city_port', '港口商贸城', 'setting', { tags: { era: '当代' }, category: 'city' }),
+  option('city_megalopolis', '巨型都会带', 'setting', { tags: { era: '近未来' }, category: 'city' }),
+  option('university_town', '大学城', 'setting', { tags: { era: '当代' }, category: 'school' }),
+  option('school_campus', '城郊寄宿学园', 'setting', { tags: { era: '当代' }, category: 'school' }),
+  option('school_seaside', '海滨中学', 'setting', { tags: { era: '当代' }, category: 'school' }),
+  option('academy_mountain', '山间学院', 'setting', { tags: { era: '类近代', supernatural: 'open' }, incompatible: ['realism_strict'], category: 'academy' }),
+  option('academy_city', '都会学舍', 'setting', { tags: { era: '类近代', supernatural: 'open' }, incompatible: ['realism_strict'], category: 'academy' }),
+  option('academy_border', '边境学舍', 'setting', { tags: { era: '类近代', supernatural: 'subtle' }, category: 'academy' }),
+  option('academy_lake', '湖畔学院', 'setting', { tags: { era: '类近代', supernatural: 'open' }, incompatible: ['realism_strict'], category: 'academy' }),
+  option('space_lunar', '月球地下殖民城', 'setting', { tags: { era: '远未来' }, category: 'space' }),
+  option('space_mars', '火星峡谷定居点', 'setting', { tags: { era: '远未来' }, category: 'space' }),
+  option('space_europa', '木卫二冰下研究聚落', 'setting', { tags: { era: '远未来' }, category: 'space' }),
+  option('space_asteroid', '小行星采矿城', 'setting', { tags: { era: '远未来' }, category: 'space' }),
+  option('space_generation', '世代飞船居民区', 'setting', { tags: { era: '远未来' }, category: 'space' }),
+  option('space_ring', '轨道环城市', 'setting', { tags: { era: '远未来' }, category: 'space' }),
+  option('space_hulk', '废弃殖民舰改造聚落', 'setting', { tags: { era: '远未来' }, category: 'space' }),
+  option('space_depot', '深空补给站', 'setting', { tags: { era: '远未来' }, category: 'space' }),
+  option('space_frontier', '行星表面边境城', 'setting', { tags: { era: '远未来' }, category: 'space' }),
+  option('town_river', '河谷小镇', 'setting', { tags: { era: '当代' }, category: 'town' }),
+  option('town_fishing', '沿海渔镇', 'setting', { tags: { era: '当代' }, category: 'town' }),
+  option('town_mining', '矿区小镇', 'setting', { tags: { era: '近现代' }, category: 'town' }),
+  option('town_border', '边境小镇', 'setting', { tags: { era: '近现代' }, category: 'town' }),
+  option('town_mountain', '山区聚落', 'setting', { tags: { era: '近现代' }, category: 'town' }),
+  option('isle_remote', '偏远岛屿', 'setting', { tags: { era: '当代' }, category: 'town' }),
+  option('crime_harbor', '旧港区', 'setting', { tags: { era: '近当代' }, category: 'crime' }),
+  option('crime_nightlife', '夜生活街区', 'setting', { tags: { era: '近当代' }, category: 'crime' }),
+  option('crime_industrial', '工业带边缘城', 'setting', { tags: { era: '近当代' }, category: 'crime' }),
+  option('medieval_border', '边境要塞镇', 'setting', { tags: { era: '前工业时代' }, incompatible: ['tech_modern'], category: 'medieval' }),
+  option('medieval_kingdom', '王国都城', 'setting', { tags: { era: '前工业时代' }, incompatible: ['tech_modern'], category: 'medieval' }),
+  option('medieval_road', '商路驿站', 'setting', { tags: { era: '前工业时代' }, incompatible: ['tech_modern'], category: 'medieval' }),
+  option('waste_ruins', '废墟定居点', 'setting', { tags: { era: '灾后' }, incompatible: ['tech_modern'], category: 'apocalypse' }),
+  option('waste_bunker', '避难所聚落', 'setting', { tags: { era: '灾后' }, incompatible: ['tech_modern'], category: 'apocalypse' }),
+  option('waste_underground', '地下城市', 'setting', { tags: { era: '近未来' }, category: 'apocalypse' }),
+
   option('warm', '温馨', 'tone'),
   option('realism_strict', '完全现实', 'tone', { incompatible: ['anomaly_open_magic'] }),
   option('mysterious', '神秘', 'tone'),
@@ -67,8 +95,17 @@ export const inspirationLibrary: InspirationOption[] = [
 ];
 export const byDimension = (dimension: InspirationDimension) => inspirationLibrary.filter(entry => entry.dimension === dimension);
 const find = (id: string) => inspirationLibrary.find(entry => entry.id === id) ?? null;
-/** Tiny deterministic PRNG so a seed always answers the same way. */
-function rng(seed: number) { let state = (Math.abs(Math.floor(seed)) || 1) % 2147483647; return () => { state = (state * 48271) % 2147483647; return state / 2147483647; }; }
+/**
+ * Deterministic xorshift PRNG with a mixing step. The previous LCG mapped neighbouring seeds to almost the same
+ * first draw, which is why the same chip ("身份异常") kept coming back on every 换一批.
+ */
+function rng(seed: number) {
+  let state = (Math.imul(Math.abs(Math.floor(seed)) || 1, 2654435761) ^ 0x9e3779b9) >>> 0;
+  if (state === 0) state = 0x9e3779b9;
+  return () => { state ^= state << 13; state >>>= 0; state ^= state >>> 17; state ^= state << 5; state >>>= 0; return state / 4294967296; };
+}
+function shuffled<T>(items: T[], random: () => number) { const copy = [...items]; for (let index = copy.length - 1; index > 0; index -= 1) { const swap = Math.floor(random() * (index + 1)) % (index + 1); [copy[index], copy[swap]] = [copy[swap], copy[index]]; } return copy; }
+
 function pick<T>(items: T[], random: () => number, used: Set<string>, key: (item: T) => string): T { const free = items.filter(item => !used.has(key(item))); const pool = free.length ? free : items; return pool[Math.floor(random() * pool.length) % pool.length]; }
 /** Light compatibility: an option is excluded when anything already chosen declares it incompatible. */
 function compatible(option: InspirationOption, chosen: InspirationOption[]) {
@@ -77,7 +114,7 @@ function compatible(option: InspirationOption, chosen: InspirationOption[]) {
   return true;
 }
 export interface InspirationPick { setting: string; tone: string; social: string; anomaly: string; role: string; experiences: string[]; hook: string }
-export function sampleInspiration(seed: number, required: string[] = [], recent: string[] = [], allowConflicts = false): InspirationPick {
+export function sampleInspiration(seed: number, required: string[] = [], recent: string[] = [], category?: string, allowConflicts = false): InspirationPick {
   const random = rng(seed + 7);
   const chosen: InspirationOption[] = [];
   const takeById = (id: string) => { const entry = find(id); if (!entry) return null; if (!allowConflicts && !compatible(entry, chosen)) return null; chosen.push(entry); return entry; };
@@ -89,7 +126,12 @@ export function sampleInspiration(seed: number, required: string[] = [], recent:
     if (entry) { used.add(entry.id); chosen.push(entry); }
     return entry;
   };
-  const setting = chosen.find(entry => entry.dimension === 'setting') ?? dimensionPick('setting');
+  let setting = chosen.find(entry => entry.dimension === 'setting') ?? dimensionPick('setting');
+  // A template locks the category (太空殖民地), never one concrete place: swap in another archetype of the same class.
+  if (category && setting?.category && setting.category !== category && !allowConflicts) {
+    const allowed = byDimension('setting').filter(entry => entry.category === category && compatible(entry, chosen.filter(item => item.id !== setting!.id)));
+    if (allowed.length) setting = allowed[Math.floor(random() * allowed.length) % allowed.length];
+  }
   const tone = chosen.find(entry => entry.dimension === 'tone') ?? dimensionPick('tone');
   const social = chosen.find(entry => entry.dimension === 'social') ?? dimensionPick('social');
   const anomaly = chosen.find(entry => entry.dimension === 'anomaly') ?? dimensionPick('anomaly');
@@ -104,19 +146,36 @@ export function sampleInspiration(seed: number, required: string[] = [], recent:
 }
 export const pickLabels = (inspiration: InspirationPick) => [inspiration.setting, inspiration.tone, inspiration.social, inspiration.anomaly, inspiration.role, ...inspiration.experiences, inspiration.hook].map(id => find(id)?.label ?? id);
 /** The library's chips: a few light inspirations the player may pick, or ignore entirely. */
-export function inspirationChips(seed: number, count = 6, recent: string[] = []) {
-  const random = rng(seed + 31), chosen: InspirationOption[] = [];
-  const dimensions: InspirationDimension[] = ['anomaly', 'hook', 'social', 'tone', 'setting', 'role'];
-  for (const dimension of dimensions) {
-    const candidates = byDimension(dimension).filter(entry => compatible(entry, chosen) && !recent.includes(entry.id));
-    const entry = candidates[Math.floor(random() * candidates.length) % Math.max(candidates.length, 1)];
-    if (entry) chosen.push(entry);
+export interface InspirationChip { id: string; label: string; dimension: InspirationDimension; picked: boolean }
+/**
+ * A batch of suggestions. `exclude` is the previous batch's *unpicked* chips, so nothing the player did not
+ * choose keeps coming back; `picked` are the chips the player locked in and they are always shown first.
+ * The dimension order is shuffled and a random subset is used, so two batches do not share a fixed skeleton.
+ */
+export function inspirationChips(seed: number, count = 6, exclude: string[] = [], picked: string[] = []) {
+  const random = rng(seed * 131 + 31), chosen: InspirationOption[] = [];
+  const locked = picked.map(id => find(id)).filter((entry): entry is InspirationOption => Boolean(entry));
+  chosen.push(...locked);
+  const dimensions: InspirationDimension[] = ['anomaly', 'hook', 'social', 'tone', 'setting', 'role', 'experience'];
+  for (const dimension of shuffled(dimensions, random)) {
+    if (chosen.length >= count) break;
+    if (chosen.some(entry => entry.dimension === dimension) && random() > 0.25) continue;
+    const candidates = byDimension(dimension).filter(entry => compatible(entry, chosen) && !exclude.includes(entry.id) && !chosen.some(chosenEntry => chosenEntry.id === entry.id));
+    if (!candidates.length) continue;
+    chosen.push(candidates[Math.floor(random() * candidates.length) % candidates.length]);
   }
-  return chosen.slice(0, count).map(entry => ({ id: entry.id, label: entry.label, dimension: entry.dimension }));
+  return chosen.slice(0, count).map(entry => ({ id: entry.id, label: entry.label, dimension: entry.dimension, picked: picked.includes(entry.id) }));
 }
 const dangerFrom = (chosen: InspirationOption[]): WorldDraft['danger'] => chosen.some(entry => ['wasteland', 'border_town'].includes(entry.id)) ? 'high' : chosen.some(entry => ['city_coastal', 'underground_city'].includes(entry.id)) ? 'medium' : 'low';
-export function draftFromInspiration(seed: number, required: string[] = [], recent: string[] = [], idea?: string): { draft: WorldDraft; picks: InspirationPick } {
-  const inspiration = sampleInspiration(seed, required, recent);
+const categoryModules: Record<string, string[]> = {
+  city: ['map', 'characters', 'relationships', 'inventory', 'commerce'], school: ['map', 'characters', 'relationships', 'routine', 'attributes'],
+  academy: ['map', 'characters', 'relationships', 'inventory', 'routine'], space: ['map', 'characters', 'relationships', 'inventory', 'commerce', 'skills'],
+  town: ['map', 'characters', 'relationships', 'commerce', 'routine'], crime: ['map', 'characters', 'relationships', 'inventory', 'commerce'],
+  medieval: ['map', 'characters', 'relationships', 'inventory', 'commerce', 'attributes'], apocalypse: ['map', 'characters', 'relationships', 'inventory'],
+};
+const categorySettings = (category: string) => byDimension('setting').filter(entry => !entry.category || entry.category === category);
+export function draftFromInspiration(seed: number, required: string[] = [], recent: string[] = [], idea?: string, category?: string): { draft: WorldDraft; picks: InspirationPick } {
+  const inspiration = sampleInspiration(seed, required, recent, category);
   const chosen = [...new Set([inspiration.setting, inspiration.tone, inspiration.social, inspiration.anomaly, inspiration.role, ...inspiration.experiences, inspiration.hook])].map(id => find(id)).filter((entry): entry is InspirationOption => Boolean(entry));
   const settingLabel = find(inspiration.setting)?.label ?? '一座城市';
   const roleLabel = find(inspiration.role)?.label ?? '新来的人';
@@ -128,17 +187,19 @@ export function draftFromInspiration(seed: number, required: string[] = [], rece
     : settingLabel.includes('地下城市') ? '近未来'
     : settingLabel.includes('学院') || settingLabel.includes('王国') ? '类近代'
     : settingLabel.includes('边疆') ? '近现代' : '当代';
-  const template = worldTemplates.find(entry => entry.id === (settingLabel.includes('学院') ? 'arcane_academy' : settingLabel.includes('小镇') ? 'small_town' : settingLabel.includes('太空') ? 'space_colony' : 'modern_city'));
+  const template = worldTemplates.find(entry => entry.id === (settingLabel.includes('学院') || settingLabel.includes('学舍') ? 'arcane_academy' : settingLabel.includes('学园') || settingLabel.includes('中学') || settingLabel.includes('大学城') ? 'school_life' : settingLabel.includes('小镇') || settingLabel.includes('渔镇') || settingLabel.includes('矿区') || settingLabel.includes('岛屿') ? 'small_town' : settingLabel.includes('港') && settingLabel.includes('旧') ? 'crime_city' : settingLabel.includes('城') && !category ? 'modern_city' : settingLabel.includes('要塞') || settingLabel.includes('都城') || settingLabel.includes('驿站') ? 'medieval_adventure' : settingLabel.includes('废墟') || settingLabel.includes('避难所') ? 'post_apocalypse' : 'space_colony'));
+  const premise = idea && idea.trim() ? String(idea).trim().replace(/[。！？!?]+$/u, '') : null;
   const draft = worldDraftSchema.parse({
-    title: template ? `${template.draft.title}·${settingLabel.slice(0, 4)}` : `${settingLabel}的日常`,
-    one_liner: idea && idea.trim() ? `${String(idea).trim().replace(/[。！？!?]+$/u, '')}。` : `一座${toneLabel}气息的${settingLabel}，${socialLabel}，${anomalyLabel}。`,
+    title: settingLabel,
+    one_liner: premise ? `${premise}（${settingLabel}）` : `${toneLabel}基调的${settingLabel}，${socialLabel}，${anomalyLabel}。`,
     era, player_role: roleLabel, initial_scope: `${settingLabel}及其周边`,
     danger: dangerFrom(chosen),
     supernatural: chosen.some(entry => entry.tags?.supernatural === 'open') ? 'open' : chosen.some(entry => entry.tags?.supernatural === 'subtle') ? 'subtle' : 'none',
     npc_density: chosen.some(entry => entry.tags?.npc_density === 'high') ? 'high' : settingLabel.includes('聚落') || settingLabel.includes('岛屿') ? 'low' : 'medium',
     experiences: inspiration.experiences.map(id => find(id)?.label ?? '日常').slice(0, 4),
     special_rules: [hookLabel, `${toneLabel}基调`].slice(0, 3),
-    recommended_modules: template ? template.draft.recommended_modules : ['map', 'characters', 'relationships', 'inventory'],
+    recommended_modules: categoryModules[category ?? ''] ?? (template ? template.draft.recommended_modules : ['map', 'characters', 'relationships', 'inventory']),
+
   });
   return { draft, picks: inspiration };
 }
@@ -153,15 +214,16 @@ export function candidateSignature(draft: WorldDraft) {
  * Produce a candidate whose signature has not been seen in `recent`. Up to three seeded attempts, then a
  * library-assembled fallback that is guaranteed to differ (no unbounded regeneration).
  */
-export function distinctCandidate(seed: number, recent: string[], required: string[] = [], idea?: string) {
+export function distinctCandidate(seed: number, recent: string[], required: string[] = [], idea?: string, category?: string) {
   const attempted: string[] = [];
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const candidate = draftFromInspiration(seed + attempt * 977, required, recent, idea);
+    const candidate = draftFromInspiration(seed + attempt * 977, required, recent, idea, category);
     const signature = candidateSignature(candidate.draft);
     attempted.push(signature);
     if (!recent.includes(signature)) return { ...candidate, signature, attempts: attempt + 1 };
   }
-  const variant = draftFromInspiration(seed + 5_003 + recent.length * 131, required, [...recent, ...attempted], idea);
+  const variant = draftFromInspiration(seed + 5_003 + recent.length * 131, required, [...recent, ...attempted], idea, category);
+
   const signature = `${candidateSignature(variant.draft)}::${recent.length}`;
   return { ...variant, signature, attempts: 4 };
 }

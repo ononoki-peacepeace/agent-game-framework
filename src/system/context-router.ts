@@ -8,6 +8,7 @@ import {planMeta} from './router.js';
 import {fastPlan} from '../agent/planner.js';
 import {recentReferent} from '../core/recent-referent.js';
 import {sanitizePlayerText} from './player-copy.js';
+import {isUniversalGoalCandidate} from './resolver.js';
 /** A clarification answer belongs to the message right after the question; older entries are forgotten. */
 const pendingTtlMs=10*60*1000;
 
@@ -44,6 +45,7 @@ export async function routeContext(service:GameService,input:string,source:Sourc
   };
   const fixed=(destination:ContextRoute['destination']):ContextRoute=>({destination,confidence:1,clarification:null,speech_target_id:null,world_input:null,resolved_input:null,end_conversation:false});
   if(!previous){
+    if(isUniversalGoalCandidate(input))return fixed('SYSTEM_META_INTENT');
     const systemKnown=!['UNKNOWN','IN_WORLD_INPUT'].includes(metaPlan.category);
     const writingWorld=quick?.goals.some(g=>['WORLD_ACTION','WORLD_SPEECH','CONTINUE_ROUTINE','EXECUTE_FUTURE'].includes(g.type));
     if(source==='system_input'&&session&&['waiting_for_clarification','waiting_for_confirmation'].includes(session.status)&&!writingWorld)return fixed('SYSTEM_META_INTENT');
@@ -58,7 +60,7 @@ export async function routeContext(service:GameService,input:string,source:Sourc
   if(!result){
     const meta=planMeta(input,view.capabilities),shallow=shallowUnderstanding(input,view),world=fastPlan(view,input);
     const knownMeta=!['UNKNOWN','IN_WORLD_INPUT'].includes(meta.category);
-    const explicitMeta=knownMeta||shallow.likely_workflow!=='unclear'&&['behavior_config','media_asset','development_task','module_management','diagnostic'].includes(shallow.likely_workflow);
+    const explicitMeta=isUniversalGoalCandidate(input)||knownMeta||shallow.likely_workflow!=='unclear'&&['behavior_config','media_asset','development_task','module_management','diagnostic'].includes(shallow.likely_workflow);
     // Existing recognizers are an offline fallback only. Conflicting interpretations remain unresolved.
     const worldOnly=world&&!explicitMeta;
     result={destination:explicitMeta?'SYSTEM_META_INTENT':worldOnly?'WORLD_INTENT':'AMBIGUOUS',confidence:worldOnly||explicitMeta?0.85:0,
