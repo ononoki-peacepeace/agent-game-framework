@@ -6,6 +6,7 @@ import { resolveEntities } from '../agent/entities.js';
 import { moduleFromText } from './router.js';
 import { toolAvailability } from './tools.js';
 import { behaviorSummary, cleanBehaviorInstruction, detectBehaviorScope, normalizeBehaviorScope } from '../ai/behavior.js';
+import { classifyFrameworkChange } from '../change/classifier.js';
 
 /**
  * System Agent understanding layer.
@@ -88,15 +89,14 @@ export function shallowUnderstanding(text: string, view: PublicView): SystemUnde
   const styleLike = /(文风|风格|语气|口吻|旁白|叙述|叙事|描写|每句|每段|结尾|最后一句|简洁|简短|啰嗦|口语|文学|修辞|第一人称|第三人称|心理)/.test(clean);
   const moduleId = moduleFromText(clean);
   const media = /(头像|立绘|全身图|人物图|图片|照片|插画)/.test(clean) && /(生成|画|绘制|制作|做一张|来一张|补一张|换|替换|调整|裁|重裁|重新裁|修改|做)/.test(clean);
-  const development = /(新玩法|一种新玩法|新系统|小游戏|赌场|赌博|增加一个|新增一个|加一个|新的功能|功能开发|扩展)/.test(clean);
+  const changeClassification = classifyFrameworkChange(clean);
+  const development = Boolean(changeClassification && changeClassification.level >= 2);
   const diagnostic = /(日志|报错|出错|打不开|点了没有反应|卡住|异常|bug)/i.test(clean);
   const feedback = /(界面|按钮|布局|排版|太挤|难看|不直观|建议|反馈|吐槽)/.test(clean);
   const question = /(有哪些|为什么|怎么回事|是不是|有没有|清单|列表)/.test(clean);
   // "把地图上的人物卡加上好感度" mentions a module word but is a UI change; a module intent needs a real module verb.
   const moduleVerb = /(启用|开启|打开|恢复|重新启用|需要|加入|不需要|不用|关闭|停用|禁用|隐藏|移除|删除|不要)/.test(clean);
-  // "我想加个潜力系统" names no surface and no existing data source, but it is clearly a development wish.
-  const concept = /(系统|玩法|功能|机制|模式|小游戏)/.test(clean) && /(加|增加|新增|添加|想要|希望|来个|做|玩)/.test(clean);
-  const likely: SystemWorkflow = media ? 'media_asset' : styleLike ? 'behavior_config' : uiChange || development || concept ? 'development_task'
+  const likely: SystemWorkflow = media ? 'media_asset' : styleLike ? 'behavior_config' : uiChange || development ? 'development_task'
     : moduleId && moduleVerb ? 'module_management' : diagnostic ? 'diagnostic' : feedback ? 'feedback' : question ? 'capability_question' : 'unclear';
   const understood: string[] = [];
   if (media) understood.push(/(裁|调整)/.test(clean) ? '你希望调整人物的图片/头像' : '你希望为人物的图片/头像生成或替换资源');

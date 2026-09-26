@@ -1,5 +1,6 @@
 import { toolAvailability, type ToolDescriptor } from './tools.js';
 import { detectBehaviorScope } from '../ai/behavior.js';
+import { changeRouteForText } from '../change/classifier.js';
 
 
 export type MetaCategory = 'PRODUCT_FEEDBACK' | 'BUG_REPORT' | 'MODULE_MANAGEMENT' | 'SETTING' | 'MEDIA_OPERATION' | 'MEDIA_GENERATION' | 'EXTENSION_REQUEST' | 'FRAMEWORK_DEVELOPMENT' | 'BEHAVIOR_CONFIGURATION' | 'IN_WORLD_INPUT' | 'UNKNOWN';
@@ -16,9 +17,7 @@ export interface MetaPlan {
 // it does not hard-code one branch per sentence.
 const vocabulary: { category: MetaCategory; patterns: RegExp[] }[] = [
   { category: 'IN_WORLD_INPUT', patterns: [/继续(按|原)?(现在)?的?生活|继续日常|继续生活模式/, /^(我)?(去|移动到|前往|走到)/, /^(我)?(和|跟|向).{0,8}(说|聊|问)/, /^(我)?(等待|等)\s*(一|几|两|\d)/, /^(我)?(检查|观察|调查)/] },
-  { category: 'FRAMEWORK_DEVELOPMENT', patterns: [/(修改|重写|重构|改).{0,6}(存档机制|框架|核心|架构|引擎本身)/, /framework.{0,6}(development|源码|核心)/i] },
   { category: 'MEDIA_GENERATION', patterns: [/(生成|画|绘制|做一张|创建).{0,8}(头像|立绘|全身图|图片)/, /重新生成.{0,6}(头像|立绘)/] },
-  { category: 'EXTENSION_REQUEST', patterns: [/(开发|制作|设计).{0,30}(功能|系统|玩法|界面|扩展)/, /(希望|想要).{0,40}(键盘|交互|控制|功能)/, /(增加|新增|加|添加|想要|希望).{0,10}(新玩法|一种新玩法|新系统|小游戏|玩法)/, /framework.{0,8}(没有|不存在).{0,6}玩法/] },
   { category: 'MODULE_MANAGEMENT', patterns: [/(启用|开启|打开|恢复|重新启用|需要|加入|增加|添加).{0,8}(地图|商店|背包|装备|任务|生活模式|属性|资质|技能|特质|关系系统)/, /(不需要|不用|关闭|停用|禁用|隐藏|移除|删除|不要).{0,8}(地图|商店|背包|装备|任务|生活模式|属性|资质|技能|特质|关系系统)/] },
   { category: 'MEDIA_OPERATION', patterns: [/(调整|裁|重裁|重新裁|剪).{0,8}(头像|立绘)/, /(换|设置|改用|修改|改).{0,8}(头像|立绘|全身图)/, /(头像|立绘).{0,6}(不好|太远|太小|调整)/] },
   { category: 'BEHAVIOR_CONFIGURATION', patterns: [/(每句|每句话|结尾|句尾|末尾|口癖|口吻|语气|文风|风格|称呼|旁白|叙述|叙事|描写|文学|修辞|第一人称|第三人称|第三人称|简洁|简短|精炼|啰嗦|口语化|自然一点|正式一点|别太正式|降低文学|不要那么文学|别写|不要写|不要替|不要描写)/] },
@@ -48,6 +47,8 @@ const categoryTools: Record<MetaCategory, string[]> = {
 export function classifyMeta(input: string): MetaCategory {
   const text = input.trim();
   for (const entry of vocabulary) if (entry.patterns.some(pattern => pattern.test(text))) return entry.category;
+  const changeRoute = changeRouteForText(text);
+  if (changeRoute) return changeRoute;
   return 'UNKNOWN';
 }
 export function moduleFromText(input: string) {

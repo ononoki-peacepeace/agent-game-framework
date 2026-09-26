@@ -11,6 +11,7 @@ import {specSchema,type ExtensionManifest} from './schema.js';
 import {ExtensionDevelopment} from './development.js';
 import type {CodingAgentExecutor,CoreDevelopmentReport} from '../development/coding-agent.js';
 import {capabilityRegistry,type CapabilityDescriptor} from '../system/capabilities.js';
+import {changePlanSchema,type ChangePlan} from '../change/contracts.js';
 const runCommand=promisify(execFile);
 export const capabilityGapSchema=z.strictObject({required_capability:z.string().max(150),why_needed:z.string().max(600),affected_modules:z.array(z.string()).max(10),current_limitation:z.string().max(600),proposed_generic_capability:z.string().max(600),risk:z.string().max(600)});
 export const developmentPlanSchema=z.strictObject({
@@ -34,8 +35,9 @@ export interface DevelopmentTask {
  preview:null|{name:string;requirements:string[];usage:string;rules:string[];ui:string[];world_integration:string;canonical_writes:string[];own_state:string[];permissions:string[];risk:string;version:string;migration:string[]};
  core_execution?:CoreDevelopmentReport|null;
  capability_artifacts?:{version:string;path:string;capability_ids:string[];hash:string}[];
+ change_plan?:ChangePlan|null;
 }
-const inputSchema=z.strictObject({request:z.string().min(1).max(3000),request_id:z.string().uuid(),extension_id:z.string().regex(/^[a-z][a-z0-9_]{0,63}$/).refine(x=>!['constructor','prototype','__proto__'].includes(x)).optional()});
+const inputSchema=z.strictObject({request:z.string().min(1).max(3000),request_id:z.string().uuid(),extension_id:z.string().regex(/^[a-z][a-z0-9_]{0,63}$/).refine(x=>!['constructor','prototype','__proto__'].includes(x)).optional(),change_plan:changePlanSchema.optional()});
 const sdk='SDK 只支持扩展自有 number/flag/text 字段，increment/decrement/set/toggle 动作和静态 panel/modal/contextual_panel。不支持任意代码、连续输入、随机游戏规则、世界状态写入。只能开发 SDK 可表达的需求。';
 export class DevelopmentTasks {
  private tasks:DevelopmentTask[]=[];private receipts:Record<string,{id:string;request:string}>={};private writes:Promise<void>=Promise.resolve();
@@ -59,7 +61,7 @@ export class DevelopmentTasks {
  const id=randomUUID(),extension_id=input.extension_id??'extension_'+id.replaceAll('-','').slice(0,16),installed=save.extensions?.[extension_id];
  assert(!input.extension_id||installed,'找不到要更新的已安装功能');
  const version=await this.builder.host.nextVersion(extension_id,installed?.version);
- const t:DevelopmentTask={id,game_id:save.game_id,extension_id,original_request:input.request,normalized_requirements:[input.request],requirement_history:[input.request],complexity:'MEDIUM',status:'planning',workspace:resolve(this.builder.host.directory,'tasks',id),current_version:version,installed_version:installed?.version??null,revision:1,attempts:0,budget:{max_attempts:3},milestones:[],capability_gaps:[],core_proposal:null,artifacts:[],test_results:[],history:[],message:'正在整理需求及开发阶段。',candidate_job_id:null,preview:null};
+ const t:DevelopmentTask={id,game_id:save.game_id,extension_id,original_request:input.request,normalized_requirements:[input.request],requirement_history:[input.request],complexity:'MEDIUM',status:'planning',workspace:resolve(this.builder.host.directory,'tasks',id),current_version:version,installed_version:installed?.version??null,revision:1,attempts:0,budget:{max_attempts:3},milestones:[],capability_gaps:[],core_proposal:null,artifacts:[],test_results:[],history:[],message:'正在整理需求及开发阶段。',candidate_job_id:null,preview:null,change_plan:input.change_plan??null};
  if(installed)t.artifacts.push({version:installed.version,milestone:'installed',path:'',job_id:'',manifest:installed.manifest});
  this.tasks.push(t);this.receipts[input.request_id]={id,request:JSON.stringify(input)};this.history(t,'created',input.request);await mkdir(t.workspace,{recursive:true});await this.persist();this.launch(t);return structuredClone(t);}finally{this.starting=false;}}
  async startCapability(input:{request_id:string;request:string;capability_ids:string[]}){
@@ -96,7 +98,7 @@ export class DevelopmentTasks {
  try{
  while((t.replan_required||!t.milestones.length)&&t.attempts<t.budget.max_attempts){
   signal.throwIfAborted();t.attempts++;t.status='planning';await this.persist();
-  try{const reply=await this.adapter().generate({role:'gm_reasoning',signal,maxOutputTokens:5000,schema:z.toJSONSchema(developmentPlanSchema),prompt:sdk+' 只规划用户目标，不默认生成参考游戏或计数器。玩家说的是产品概念时先给最小可用版本：只有需求明确要求某个高级行为（例如达到上限后真的不能继续成长）时才引入对应规则、迁移或额外能力；不要把 hook、可见性框架、数据迁移、额外核心能力当作默认。规则缺失用 clarification 询问；给玩家的问题只用自然语言，不包含内部标识。超出 SDK 必须产生 capability_gaps，不降级冒充实现。每个 milestone 为可实现/构建/测试/检查点的纵向功能切片；高复杂任务需要多个阶段。修改现有需求时，affected_milestone_ids 必须明确指出受影响的已有阶段；不受影响的阶段保持 id、验收标准和标题不变。'+JSON.stringify({requirements:t.requirement_history,previous_milestones:t.milestones,previous:t.artifacts.at(-1)?.manifest,diagnostics:t.test_results.slice(-2)})});
+  try{const reply=await this.adapter().generate({role:'gm_reasoning',signal,maxOutputTokens:5000,schema:z.toJSONSchema(developmentPlanSchema),prompt:sdk+' 只规划用户目标，不默认生成参考游戏或计数器。玩家说的是产品概念时先给最小可用版本：只有需求明确要求某个高级行为（例如达到上限后真的不能继续成长）时才引入对应规则、迁移或额外能力；不要把 hook、可见性框架、数据迁移、额外核心能力当作默认。规则缺失用 clarification 询问；给玩家的问题只用自然语言，不包含内部标识。超出 SDK 必须产生 capability_gaps，不降级冒充实现。每个 milestone 为可实现/构建/测试/检查点的纵向功能切片；高复杂任务需要多个阶段。修改现有需求时，affected_milestone_ids 必须明确指出受影响的已有阶段；不受影响的阶段保持 id、验收标准和标题不变。'+JSON.stringify({requirements:t.requirement_history,previous_milestones:t.milestones,previous:t.artifacts.at(-1)?.manifest,diagnostics:t.test_results.slice(-2),change_plan:t.change_plan})});
    signal.throwIfAborted();const p=developmentPlanSchema.parse(reply.data);assert(new Set(p.milestones.map(m=>m.id)).size===p.milestones.length,'阶段标识重复');assert(!['HIGH','VERY_HIGH'].includes(p.complexity)||p.milestones.length>=2,'复杂需求必须拆分多个阶段');t.normalized_requirements=p.normalized_requirements;t.complexity=p.complexity;let affected=false;const old=t.milestones;
    t.milestones=p.milestones.map(m=>{const previous=old.find(x=>x.id===m.id);if(!p.affected_milestone_ids.length||p.affected_milestone_ids.includes(m.id)||!previous||previous.title!==m.title||JSON.stringify(previous.acceptance)!==JSON.stringify(m.acceptance))affected=true;return {...m,status:!affected&&previous?.status==='passed'?'passed':'pending',...(!affected&&previous?.checkpoint?{checkpoint:previous.checkpoint}:{})};});t.replan_required=false;t.budget.max_attempts=Math.max(t.budget.max_attempts,t.attempts+p.milestones.length*2);
    if(p.capability_gaps.length)this.gap(t,p.capability_gaps);else if(p.clarification){t.status='waiting_for_user';t.message=p.clarification;}

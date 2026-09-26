@@ -26,6 +26,13 @@ export interface CapabilityAvailability extends CapabilityDescriptor {
   available: boolean;
   missing: string[];
 }
+export interface CapabilityAssessment {
+  requested: string[];
+  available: CapabilityAvailability[];
+  missing_capabilities: string[];
+  external_prerequisites: string[];
+  safe_local_builder: boolean;
+}
 
 const definitions: CapabilityDescriptor[] = [
   { id: 'entity.lookup', description: 'Resolve one public world entity from a player-facing reference without guessing between duplicates.', accepted_inputs: { reference: 'string', entity_id: 'string?' }, output: 'entity', access: 'read', side_effect: 'none', affected_surfaces: ['entities'], permissions: ['read public state'], dependencies: [], provider_requirements: ['character.identity'], version: '1.0.0', retry: 'safe', idempotency: 'read-only', implemented: true },
@@ -64,6 +71,26 @@ export class CapabilityRegistry {
       if (!entry.implemented) missing.push(`implementation:${entry.id}`);
       return { ...entry, available: missing.length === 0, missing };
     });
+  }
+  /** One source of truth for gap ownership and local-development eligibility. */
+  assess(ids: string[], capabilities: string[]): CapabilityAssessment {
+    const requested = [...new Set(ids)], installed = new Set(capabilities);
+    const availability = new Map(this.availability(capabilities).map(item => [item.id, item]));
+    const selected = requested.map(id => availability.get(id)).filter((item): item is CapabilityAvailability => Boolean(item));
+    const external = new Set<string>();
+    for (const item of selected) if (item.access === 'external') {
+      for (const requirement of item.provider_requirements) if (!installed.has(requirement)) external.add(requirement);
+    }
+    return {
+      requested,
+      available: selected,
+      missing_capabilities: requested.filter(id => availability.get(id)?.available !== true),
+      external_prerequisites: [...external],
+      safe_local_builder: requested.length > 0 && requested.every(id => {
+        const item = availability.get(id);
+        return Boolean(item?.implemented && item.access !== 'external' && item.provider_requirements.every(requirement => installed.has(requirement)));
+      }),
+    };
   }
   digest(capabilities: string[]) {
     return this.availability(capabilities).map(({ implemented: _implemented, ...entry }) => entry);

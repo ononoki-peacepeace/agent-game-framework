@@ -14,8 +14,9 @@ import { advanceFeatureGuide, featureGuideMessage, featureRequirement, isGuideCo
 import { shallowUnderstanding } from './understanding.js';
 import { resolveUniversalGoal, type UniversalResolution } from './resolver.js';
 import type { DevelopmentProjection } from './development-status.js';
+import { planFrameworkChange } from '../change/planner.js';
 import {
-  deterministicClarificationMerge, mediaCapabilityNote, scopeInText, understandSystemRequest,
+  deterministicClarificationMerge, mediaCapabilityNote, scopeInText, surfacesIn, understandSystemRequest,
   type ResolvedSystemRequest, type SystemUnderstanding, type SystemWorkflow,
 } from './understanding.js';
 
@@ -45,7 +46,9 @@ const result = (plan: MetaPlan, message: string, toolsList: ToolDescriptor[], ex
 export async function handleSystemInput(service:GameService,raw:unknown):Promise<SystemResult>{
  const body=safeParse(z.strictObject({input:z.string().min(1).max(2000),confirmed:z.boolean().default(false),session_id:z.string().uuid().nullish(),request_id:z.string().uuid().optional(),game_id:z.string().optional(),expected_revision:z.number().int().nonnegative().optional()}),raw);
  const value=await sessionInput(service,body,(input,confirmed,context)=>executeSystemInput(service,{input,confirmed,request_id:body.request_id,expected_revision:body.expected_revision},context));
- return playerFacingSystemResult(value);
+ const changePlan=planFrameworkChange(body.input,{surface:'system'},body.request_id);
+ const enriched=changePlan?{...value,advanced:{...value.advanced,change_plan:changePlan},...(value.directive?.kind==='extension_development'?{directive:{...value.directive,change_plan:changePlan}}:{})}:value;
+ return playerFacingSystemResult(enriched);
 }
 /** Only ordinary copy is cleaned; structured diagnostics stay intact under advanced/debug surfaces. */
 export function playerFacingSystemResult(value:SystemResult):SystemResult{
@@ -59,7 +62,8 @@ export async function handleSystemAction(service:GameService,raw:unknown):Promis
  if(applied.kind==='stale')return {category:'STALE_ACTION',tool_id:null,side_effect_level:'none',needs_confirmation:false,message:'这个方案已经变化，请使用当前方案。',...(applied.session?{session:applied.session}:{}),...(applied.guide?{guide:applied.guide}:{})};
  if(applied.kind==='cancelled')return {category:'EXTENSION_REQUEST',tool_id:null,side_effect_level:'none',needs_confirmation:false,message:'已取消这个开发想法。',session:applied.session!};
  if(applied.kind==='updated')return {category:'EXTENSION_REQUEST',tool_id:null,side_effect_level:'none',needs_confirmation:false,message:featureGuideMessage(applied.guide!),clarification:'feature_guide',pending_field:'想法方向',workflow:'development_task',session:applied.session!,guide:applied.guide};
- return {category:'EXTENSION_REQUEST',tool_id:'extension.create',side_effect_level:'development',needs_confirmation:false,message:'好的，我按这个最小版本准备候选；确认前不会改动你的存档或框架源码。',directive:{kind:'extension_development',request:featureRequirement(applied.guide!)},workflow:'development_task',session:applied.session!,guide:applied.guide};
+ const request=featureRequirement(applied.guide!),changePlan=planFrameworkChange(request,{surface:'system'});
+ return {category:'EXTENSION_REQUEST',tool_id:'extension.create',side_effect_level:'development',needs_confirmation:false,message:'好的，我按这个最小版本准备候选；确认前不会改动你的存档或框架源码。',directive:{kind:'extension_development',request,...(changePlan?{change_plan:changePlan}:{})},advanced:changePlan?{change_plan:changePlan}:undefined,workflow:'development_task',session:applied.session!,guide:applied.guide};
 }
 /** Clarification fields the session can merge without a second model call, mapped to their wire codes. */
 const clarificationCodes: Record<string, string> = { 作用范围: 'behavior_scope', 展示位置: 'which_surface', 要调整的系统: 'which_module', 人物: 'which_entity', 具体目标: 'unspecified_subject' };
@@ -91,6 +95,7 @@ function isCorrection(text: string, context: SystemExecutionContext) {
   return /^(不是|不对|我说的是|改成|应该是|其实是|我是说)/.test(text) && (context.previous ?? context.session.resolved_request)?.workflow === 'behavior_config';
 }
 function needsUnderstanding(plan: MetaPlan, text: string, context: SystemExecutionContext) {
+  if (context.answeringClarification === true && context.session.workflow === 'development_task') return true;
   if (plan.category === 'UNKNOWN') return true;
   if (isCorrection(text, context)) return true;
   if (plan.tool_id === 'behavior.configure' && !context.behaviorScope && !plan.args.scope) return true;
@@ -100,6 +105,7 @@ function needsUnderstanding(plan: MetaPlan, text: string, context: SystemExecuti
   // "加个赌博玩法" is already recognised as a development request, but a product idea still deserves the one
   // experience question before any technical proposal. Concrete requests (naming a surface or existing data)
   // keep going straight to the DevelopmentTask.
+  if (plan.tool_id === 'extension.create' && surfacesIn(text).length > 1) return true;
   if (plan.tool_id === 'extension.create' && !/(好感|关系|属性|技能|资质|背包|物品|任务|商店|地图|面板|页面|状态)/.test(text)) return true;
   return false;
 }
@@ -231,7 +237,7 @@ async function resolveUnderstanding(service: GameService, view: ReturnType<typeo
   const wishIsDevelopment = understanding.likely_workflow === 'development_task'
     || shallowUnderstanding(text, view).likely_workflow === 'development_task';
   const guideForIdea = !answeringOtherField && (activeGuide || (wishIsDevelopment
-    && (understanding.unresolved.length > 0 || understanding.understood.length > 0))) && !surfacesFromText(text).length
+    && (understanding.unresolved.length > 0 || understanding.understood.length > 0))) && !surfacesIn(text).length
     ? (session.guide && session.guide.status !== 'confirmed'
       ? (isGuideConfirmation(text) && session.guide.status === 'proposing' ? { ...session.guide, status: 'confirmed' as const } : advanceFeatureGuide(session.guide, text))
       : { ...startFeatureGuide(text), understood: understanding.understood.length ? understanding.understood.slice(0, 3) : startFeatureGuide(text).understood })
@@ -280,7 +286,7 @@ async function resolveUnderstanding(service: GameService, view: ReturnType<typeo
   }
   // 4. UI / product changes and brand-new gameplay become real development work, not a second input box.
   if (understanding.likely_workflow === 'development_task') {
-    const surfaces = understanding.target_surfaces.length ? understanding.target_surfaces : surfacesFromText(text);
+    const surfaces = understanding.target_surfaces.length ? understanding.target_surfaces : surfacesIn(text);
     const requirement = [understanding.requested_change ?? text, surfaces.length ? `展示位置：${surfaces.join('、')}` : '', /好感|关系/.test(text) ? mediaCapabilityNote(save) : ''].filter(Boolean).join('\n');
     // A concrete request goes straight to the DevelopmentTask; a vague product idea is shaped by the guide first.
     const concrete = surfaces.length > 0 || /(好感|关系|属性|技能|资质|背包|物品|任务|商店|地图|面板|页面|状态)/.test(text);
@@ -315,11 +321,6 @@ async function resolveUnderstanding(service: GameService, view: ReturnType<typeo
     };
   }
   return null;
-}
-function surfacesFromText(text: string) {
-  const found: string[] = [];
-  for (const [word, value] of [['人物页', 'character_page'], ['人物卡', 'character_page'], ['状态页', 'status_page'], ['地图', 'map'], ['关系页', 'relationships_panel'], ['背包', 'inventory'], ['任务', 'quests']] as [string, string][]) if (text.includes(word) && !found.includes(value)) found.push(value);
-  return found;
 }
 function entityFor(view: ReturnType<typeof publicView>, text: string, context: SystemExecutionContext) {
   const names = context.preferredNames ?? [];
@@ -471,7 +472,8 @@ async function executeSystemInput(service: GameService, raw: unknown, context: S
   const writeLevels = ['configuration', 'canonical-management', 'canonical-state', 'development'];
   const ownClarificationFields = ['要调整的系统', '作用范围', '人物', '展示位置'];
   const boundToCurrentRequest = body.input === latest || body.confirmed === true || context.behaviorScope !== undefined || Boolean(context.session.guide)
-    || (context.answeringClarification === true && ownClarificationFields.includes(context.session.pending_field ?? ''));
+    || (context.answeringClarification === true && ownClarificationFields.includes(context.session.pending_field ?? ''))
+    || (context.answeringClarification === true && context.session.workflow === 'development_task' && plan.tool_id === 'extension.create');
   if (planned && writeLevels.includes(planned.side_effect_level) && !boundToCurrentRequest) {
     context.session.pending_confirmation = null;
     context.session.pending_field = null;

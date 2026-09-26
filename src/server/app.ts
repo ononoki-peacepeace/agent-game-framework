@@ -497,9 +497,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
         if(current.status==='waiting_for_auto_extension'&&!current.development_task_id){
           try{
             const request=`为一个已挂起的用户目标实现以下可复用能力：${current.missing_capabilities.join('、')}。原始目标：${current.goal.objective}`.slice(0,3000);
-            const available=new Set(view.capabilities);
-            const localDescriptors=current.missing_capabilities.map(id=>capabilityRegistry.get(id));
-            const canUseSafeLocalBuilder=localDescriptors.every(descriptor=>descriptor?.implemented&&descriptor.access!=='external'&&descriptor.provider_requirements.every(requirement=>available.has(requirement)));
+            const canUseSafeLocalBuilder=capabilityRegistry.assess(current.missing_capabilities,view.capabilities).safe_local_builder;
             const task=canUseSafeLocalBuilder
               ?await developmentTasks.startCapability({request_id:randomUUID(),request,capability_ids:current.missing_capabilities})
               :await developmentTasks.start({request_id:randomUUID(),request});
@@ -519,7 +517,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
         result.message=`已经有一个开发任务在进行中。你可以先看它的进度、补充要求，或先取消它再提交新的需求。`;
         result.development=developmentProjection(running);result.session=bindDevelopmentTask(service,running.id)??result.session;
       } else try{
-        const task=await developmentTasks.start({request_id:randomUUID(),request:String(result.directive.request)});
+        const task=await developmentTasks.start({request_id:randomUUID(),request:String(result.directive.request),...(result.directive.change_plan?{change_plan:result.directive.change_plan}:{})});
         result.directive.task_id=task.id;result.message=task.message;
         result.development=developmentProjection(task);result.session=bindDevelopmentTask(service,task.id)??result.session;
       }catch(error){

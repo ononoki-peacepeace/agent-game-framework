@@ -63,12 +63,8 @@ export class SuspendedGoalStore {
     this.writeQueue = this.writeQueue.then(write, write); await this.writeQueue;
   }
   private classification(input: SuspendGoalInput) {
-    const installed = new Set(input.installed_capabilities), external = new Set<string>();
-    for (const capabilityId of input.missing_capabilities) {
-      const descriptor = capabilityRegistry.get(capabilityId); if (!descriptor || descriptor.access !== 'external') continue;
-      for (const requirement of descriptor.provider_requirements) if (!installed.has(requirement)) external.add(requirement);
-    }
-    return { external_prerequisites: [...external], status: external.size ? 'waiting_for_external_prerequisite' as const : 'waiting_for_auto_extension' as const };
+    const assessment = capabilityRegistry.assess(input.missing_capabilities, input.installed_capabilities);
+    return { external_prerequisites: assessment.external_prerequisites, status: assessment.external_prerequisites.length ? 'waiting_for_external_prerequisite' as const : 'waiting_for_auto_extension' as const };
   }
   async suspend(input: SuspendGoalInput): Promise<SuspendedGoal> {
     await this.ready;
