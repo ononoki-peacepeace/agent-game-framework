@@ -27,7 +27,11 @@
 .world-note { font-size: 12px; color: var(--muted, #7c7c86); }
 .world-error { font-size: 12px; color: #c0392b; }
 /* Four equal launcher entries; world creation becomes a separate second-level workspace. */
-.launcher-primary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.launcher-primary-grid .launch-card{min-height:230px}.launcher-primary-grid .launch-card>strong{font-size:18px;color:var(--ink,#20364a)}.launcher-create-workspace{display:grid;gap:14px}.launcher-back{justify-self:start}
+.launcher-primary-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}.launcher-primary-grid .launch-card{min-height:210px}
+/* The legacy rule made the create card span two rows; all four entries are peers now (2×2, equal weight). */
+.launcher-primary-grid .launch-card.create-card{grid-row:auto}
+.launcher-primary-grid .launch-card>strong{display:block}
+.launcher-primary-grid .launch-card>strong{font-size:18px;color:var(--ink,#20364a)}.launcher-create-workspace{display:grid;gap:14px}.launcher-back{justify-self:start}
 @media(max-width:700px){.launcher-primary-grid{grid-template-columns:1fr}.launcher-primary-grid .launch-card{min-height:auto}}
 
 @media (max-width: 900px) { .template-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }

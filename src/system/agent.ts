@@ -32,7 +32,9 @@ export interface SystemResult {
   /** Structured state the session keeps, so a clarification only fills what is still missing. */
   understanding?: SystemUnderstanding | null; pending_field?: string | null; workflow?: SystemWorkflow | null;
   resolved?: ResolvedSystemRequest | null; expression?: 'model' | 'template'; guide?: FeatureGuide | null;
+  pending_goal?: {goal_id:string;original_input:string;clarifications:string[];question:string|null;created_revision:number} | null;
   development?: DevelopmentProjection | null;
+  suspended_goal?: { goal_id: string; status: string; external_blocked: boolean } | null;
 }
 const result = (plan: MetaPlan, message: string, toolsList: ToolDescriptor[], extra: Partial<SystemResult> = {}): SystemResult => {
   const tool = toolsList.find(entry => entry.tool_id === plan.tool_id);
@@ -109,6 +111,17 @@ function deterministicCorrection(text: string, prior: ResolvedSystemRequest | nu
   const application = applicationFor(tail) !== 'per_message' ? applicationFor(tail) : prior.application;
   if (!scope) return null;
   return { scope, application, value: prior.value };
+}
+/**
+ * A follow-up while a goal waits for a clarification is an *answer*: short, terse, often a bare value
+ * ("给角色", "上午", "3000", "随便"). An explicit new instruction ("算了，先打开地图") is allowed to interrupt.
+ */
+function isClarificationReply(text: string) {
+  const clean = String(text ?? '').trim();
+  if (!clean) return false;
+  if (/(打开|关闭|启用|停用|开始|取消|算了|去商店|去看看)/.test(clean)) return false;
+  if (clean.length <= 18) return true;
+  return /^(随便|你决定|你看着办|都可以|帮我选|默认|是|对|好|行|不要|否|就那个|那个|第[一二三四五1-9]|\d+)/.test(clean);
 }
 /** The player-visible clarification always states what was understood, what is missing, why, and how to answer. */
 function clarificationMessage(understanding: SystemUnderstanding, fallback: string, prior?: ResolvedSystemRequest | null) {
@@ -196,7 +209,20 @@ async function resolveUnderstanding(service: GameService, view: ReturnType<typeo
   const actionableTask = understanding.likely_workflow === 'development_task' && understanding.target_surfaces.length === 1;
   // A vague development idea is shaped by one experience question before any technical work starts. An active
   // guide owns the follow-up turns (delegate answer, adjustment, confirmation) and never writes canonical world.
-  const activeGuide = Boolean(session.guide && session.guide.status !== 'confirmed');
+  // A clear, side-effect-free request is answered immediately: no guide, no development task, no question form.
+  if (understanding) {
+
+    const literal = text.match(/[“"「『]([^”"」』]{1,60})[”"」』]/)?.[1]?.trim() ?? null;
+    const settled = understanding;
+    const direct = (message: string) => ({ category: 'SYSTEM_ANSWER', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message, understanding: settled, workflow: settled.likely_workflow, expression: 'template' as const });
+    if (literal && /(只回复|只回|回复我|回我|说出|照着说)/.test(text)) return direct(literal);
+    if (/(道歉|道个歉|对不起)/.test(text) && /(说|给|来|道|要)/.test(text)) return direct('对不起。');
+    if (/(打个?招呼|问个好|问声好|问好)/.test(text)) return direct('你好。');
+    if (settled.side_effect_class === 'none' && !settled.unresolved.length && settled.response_hint) return direct(settled.response_hint);
+  }
+  const activeGuide
+ = Boolean(session.guide && session.guide.status !== 'confirmed');
+
   // Whatever the model called the open point, a development wish that names no surface is an idea to shape — the
   // player must never receive the model's technical question (capability gaps, schemas, existing modules).
   const answeringOtherField = context.answeringClarification === true && !['想法方向', '想法确认'].includes(session.pending_field ?? '');
@@ -342,7 +368,8 @@ async function executeTool(service: GameService, plan: MetaPlan, body: { input: 
     case 'media.generate_image': {
       const byName = view.entities.filter(entity => entityId ? entity.id === entityId : entity.components.identity?.name && body.input.includes(String(entity.components.identity.name)));
       if (byName.length > 1) return result(plan, `有多个人物匹配这个名字：${byName.map(entity => String(entity.components.identity!.name)).join('、')}。请指定是谁。`, toolsList);
-      const target = byName[0] ?? save.entities.find(entity => entity.id === save.player_state.entity_id)!;
+      const target = byName[0];
+      if(!target)return result(plan,'没有找到你明确指定的人物；请核对名字，或明确说“我的角色”。',toolsList,{clarification:'which_entity'});
       const visuals = (target.components.visual_assets ?? {}) as { images?: Record<string, string>; avatar_crop?: unknown };
       const fullbody = visuals.images?.fullbody ?? null, avatar = target.components.identity?.avatar_id ?? null;
       if (plan.category === 'MEDIA_GENERATION') {
@@ -413,12 +440,30 @@ async function executeSystemInput(service: GameService, raw: unknown, context: S
   const entityId = context.entityId;
   // The session goal is what the tool layer executes; understanding always reads what the player just said.
   const latest = context.latest ?? body.input;
-  const universal = await resolveUniversalGoal(service, latest, { request_id: body.request_id, expected_revision: body.expected_revision });
+  // A goal that is still waiting for a clarification keeps its original request: short answers fill it in,
+  // they are not understood again from zero (and never become a different goal).
+  const pendingGoal = context.session.pending_goal;
+  const answersPending = Boolean(pendingGoal) && isClarificationReply(latest);
+  const universalInput = pendingGoal && answersPending ? [pendingGoal.original_input, ...pendingGoal.clarifications, latest].join('；') : latest;
+  const universal = await resolveUniversalGoal(service, universalInput, { request_id: body.request_id, expected_revision: body.expected_revision });
   // Existing local media fallbacks (for example cropping an already stored full-body image) remain usable even
   // when the requested generation chain reports a missing provider capability.
   const mediaGap = universal.handled && universal.kind === 'CAPABILITY_GAP'
     && universal.goal.desired_outputs.some(output => output.kind === 'media_asset');
-  if (universal.handled && !mediaGap) return universalSystemResult(universal);
+  if (universal.handled && !mediaGap) {
+    const base = universalSystemResult(universal);
+    const revision = (await service.current()).state_revision;
+    const nextPending = universal.kind === 'USER_AMBIGUITY'
+      ? {
+        goal_id: pendingGoal?.goal_id ?? crypto.randomUUID(),
+        original_input: pendingGoal?.original_input ?? latest,
+        clarifications: [...(pendingGoal?.clarifications ?? []), latest].slice(-6),
+        question: universal.question,
+        created_revision: pendingGoal?.created_revision ?? revision,
+      }
+      : null;
+    return { ...base, pending_goal: nextPending };
+  }
   // A System write may only run for the sentence the player just sent, for a confirmation of it, or as the answer
   // to a clarification that the write itself asked for. A planned write left over from an earlier request is
   // never replayed because a later, unrelated message kept the session alive.
@@ -446,7 +491,7 @@ async function executeSystemInput(service: GameService, raw: unknown, context: S
 }
 
 function universalSystemResult(resolution: Exclude<UniversalResolution, { handled: false }>): SystemResult {
-  if (resolution.kind === 'EXECUTED') return { category: 'UNIVERSAL_GOAL', tool_id: resolution.plan.steps.at(-1)?.capability_id ?? null, side_effect_level: 'canonical-state', needs_confirmation: false, message: resolution.message, view: resolution.view, advanced: { resolution_kind: resolution.kind, goal: resolution.goal, plan: resolution.plan } };
+  if (resolution.kind === 'EXECUTED') return { category: 'UNIVERSAL_GOAL', tool_id: resolution.plan.steps.at(-1)?.capability_id ?? null, side_effect_level: 'canonical-state', needs_confirmation: false, message: resolution.message, view: resolution.view, resolved: resolvedFrom('capability_question',null,resolution.goal.objective), advanced: { resolution_kind: resolution.kind, goal: resolution.goal, plan: resolution.plan } };
   if (resolution.kind === 'USER_AMBIGUITY') return { category: 'USER_AMBIGUITY', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: resolution.candidates.length ? `${resolution.question}\n${resolution.candidates.join('、')}` : resolution.question, clarification: 'universal_goal', pending_field: '具体目标', advanced: { resolution_kind: resolution.kind } };
   if (resolution.kind === 'CAPABILITY_GAP') return { category: 'CAPABILITY_GAP', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: resolution.message, advanced: { resolution_kind: resolution.kind, missing: resolution.missing, goal: resolution.goal, plan: resolution.plan } };
   return { category: 'EXECUTION_FAILURE', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: resolution.message, advanced: { resolution_kind: resolution.kind, retryable: resolution.retryable, goal: resolution.goal } };

@@ -49,6 +49,7 @@ export interface PublicView {
   scheduled_tasks?:{id:string;label:string;at:number;window:import('../routine/schema.js').ScheduleWindow;end_at?:number;duration_label?:string;status:'accepted'|'completed'|'cancelled';resolved:boolean}[];
   routine_activities?:{id:string;label:string;kind:string;duration:number;mode:string}[];
   game_id: string; revision: number; title: string; description: string; player_id: string;
+  world_provenance?: import('../core/schema.js').WorldCreationProvenance;
   time: { day: number; minute: number }; minutes_per_day: number;
   entities: Entity[]; locations: PublicLocation[];
   routes: { from: string; to: string; travel_minutes: number }[];

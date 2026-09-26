@@ -11,16 +11,17 @@ import {manifestFrom,type ExtensionSpec} from '../src/extensions/schema.js';
 import {taskGroups} from '../src/client/task-visibility.js';
 import type {AIRequest} from '../src/ai/contracts.js';
 import {developmentProjection} from '../src/system/development-status.js';
+import type {CodingAgentExecutor} from '../src/development/coding-agent.js';
 const plan={normalized_requirements:['提供一个自有开关并展示当前值'],complexity:'LOW',clarification:null,milestones:[{id:'switch',title:'开关功能与界面',kind:'ui',acceptance:['点击切换且状态保留']}],capability_gaps:[]};
 const gap={required_capability:'input.subscription',why_needed:'用户目标需要连续输入',affected_modules:['extension host'],current_limitation:'仅支持离散动作',proposed_generic_capability:'可取消且限频的输入订阅',risk:'事件泄漏和并发事务'};
 function spec(id:string):ExtensionSpec{return {extension_id:id,name:'状态开关',description:'切换本功能自身状态',template:'declarative',allow_betting:false,max_stake:0,healing_item_id:null,fields:[{key:'enabled',type:'flag',initial:false}],declarative_actions:[{id:'toggle',label:'切换',op:'toggle',field:'enabled'}],surfaces:[{id:'switch_panel',kind:'panel',title:'状态开关',visibility:'always'}]};}
-async function setup(override?:(r:AIRequest)=>unknown|Promise<unknown>){
+async function setup(override?:(r:AIRequest)=>unknown|Promise<unknown>,coreExecutor?:CodingAgentExecutor,onInstalled?:(task:any)=>Promise<void>){
  const f=await sparseSetup(),dir=await mkdtemp(join(tmpdir(),'agf-devtasks-')),host=new ExtensionHost(f.service,dir),builder=new ExtensionDevelopment(host);
  const calls:AIRequest[]=[];
  const adapter={name:'task-fixture',async generate(r:AIRequest){calls.push(r);if(override){const data=await override(r);if(data!==undefined)return {data};}
  if((r.schema as any).properties.normalized_requirements)return {data:plan};
  const context=JSON.parse(r.prompt.slice(r.prompt.indexOf('{"extension_id"')));return {data:{spec:spec(context.extension_id),capability_gaps:[]}};}};
- const tasks=new DevelopmentTasks(builder,()=>adapter);return {...f,dir,host,builder,tasks,calls,adapter};
+ const tasks=new DevelopmentTasks(builder,()=>adapter,coreExecutor,onInstalled);return {...f,dir,host,builder,tasks,calls,adapter};
 }
 const start=async(f:Awaited<ReturnType<typeof setup>>,request='增加一个我可以切换的状态开关')=>f.tasks.start({request,request_id:randomUUID()});
 const tx=async(f:Awaited<ReturnType<typeof setup>>)=>{const s=await f.service.current();return {game_id:s.game_id,expected_revision:s.state_revision,request_id:randomUUID()};};
@@ -46,6 +47,16 @@ it('capability gap stops retries and approval never edits Core or grants executi
  await expect(f.tasks.approveCore(t.id,false)).rejects.toThrow();expect((await f.tasks.approveCore(t.id,true)).core_proposal!.status).toBe('approved');
  await expect(f.tasks.resume(t.id)).rejects.toThrow('核心能力');expect(out.artifacts).toEqual([]);
 });
+it('approved core work uses the configured executor but cannot become installed without install and registration gates',async()=>{
+ const execute=vi.fn(async(request:any)=>({status:'candidate_ready' as const,provider:'fixture',workspace:request.workspace,base_revision:'base',changed_files:['src/example.ts'],commands:[],patch_path:join(request.workspace,'candidate.patch'),tests_passed:true,build_passed:true,acceptance_passed:true,installed:false,registered:false,restart_required:true,message:'candidate ready'}));
+ const executor:CodingAgentExecutor={availability:async()=>({available:true,provider:'fixture',reason:null}),execute};
+ const f=await setup(r=>(r.schema as any).properties.normalized_requirements?{...plan,complexity:'HIGH',milestones:[...plan.milestones,{id:'integration',title:'验证世界接入',kind:'integration',acceptance:['只提交合法事务']}],capability_gaps:[gap]}:undefined,executor);
+ const t=await start(f,'增加一个 SDK 无法表达的通用输入能力');await f.tasks.wait(t.id);
+ const approved=await f.tasks.approveCore(t.id,true);expect(approved.status).toBe('developing');
+ const finished=await f.tasks.wait(t.id);expect(execute).toHaveBeenCalledOnce();
+ expect(finished).toMatchObject({status:'paused',core_execution:{status:'candidate_ready',tests_passed:true,build_passed:true,installed:false,registered:false}});
+ expect(finished.message).toContain('尚未安装、注册');
+});
 it('underspecified request asks rules instead of generating a reference game',async()=>{
  const f=await setup(r=>(r.schema as any).properties.normalized_requirements?{...plan,clarification:'请说明一局的规则和结束条件。'}:undefined);
  const t=await start(f,'加入赌博小游戏'),out=await f.tasks.wait(t.id);expect(out.status).toBe('waiting_for_user');expect(out.candidate_job_id).toBeNull();expect(f.calls).toHaveLength(1);
@@ -68,6 +79,11 @@ it('installed update and rollback retain stable state; stale preview cannot inst
  await f.tasks.install(t.id,{...await tx(f),confirmed:true,candidate_version:updated.current_version});
  await f.host.manage(t.extension_id,await tx(f),'rollback');expect((await f.service.current()).extensions![t.extension_id].state).toEqual(stable.state);expect((await f.service.current()).extensions![t.extension_id].version).toBe(stable.version);
 },30000);
+it('a committed installation emits its durable task to the goal-resume callback exactly once',async()=>{
+ const onInstalled=vi.fn(async(_task:any)=>undefined),f=await setup(undefined,undefined,onInstalled),t=await start(f),ready=await f.tasks.wait(t.id);
+ await f.tasks.install(t.id,{...await tx(f),confirmed:true,candidate_version:ready.current_version});
+ expect(onInstalled).toHaveBeenCalledOnce();expect(onInstalled.mock.calls[0][0]).toMatchObject({id:t.id,status:'installed',installed_version:ready.current_version});
+});
 it('schema migration requires confirmation and rollback restores the exact old schema/state',async()=>{
  const f=await setup(),v1=manifestFrom(spec('switch'),'0.1.0','fixture');await f.host.approve(v1);await f.host.install(await tx(f),v1);await f.host.act('switch',{...await tx(f),action:{type:'toggle'}});
  const before=(await f.service.current()).extensions!.switch;

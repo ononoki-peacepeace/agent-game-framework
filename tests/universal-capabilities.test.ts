@@ -103,6 +103,14 @@ describe('universal goal to capability resolution', () => {
     expect((await f.service.current()).state_revision).toBe(revision);
   });
 
+  it('composes wallet assignment by desired state rather than one sentence shape', () => {
+    for(const text of ['把我身上的钱从30改成3000','将我的余额设置为 275']){
+      const goal=deterministicGoal(text)!;expect(goal.desired_state).toContainEqual(expect.objectContaining({path:'wallet.balance'}));
+      expect(composeCapabilityPlan(goal)?.steps.map(step=>step.capability_id)).toEqual(['entity.lookup','entity.wallet.balance.set']);
+    }
+    expect(deterministicGoal('我有多少钱？')).toBeNull();
+  });
+
   it('hands a rename from World input to the same resolver without advancing the world', async () => {
     const f = await sparseSetup(), before = await f.service.current();
     const directory = await mkdtemp(join(tmpdir(), 'agf-universal-handoff-'));

@@ -96,6 +96,7 @@ export function publicView(save: SavePackage, registry = createRegistry(save.def
     future_intents:structuredClone(save.future_intents??[]),
     game_id: save.game_id, revision: save.state_revision, title: save.definition.meta.title,
     description: save.definition.meta.description, player_id: save.player_state.entity_id,
+    ...(save.definition.provenance?{world_provenance:structuredClone(save.definition.provenance)}:{}),
     routine_activities:(save.definition.routine_rules?.activities??[]).map(activity=>({id:activity.id,label:activity.label,kind:activity.kind,duration:activity.duration,mode:activity.mode})),
     calendar:save.calendar,calendar_issue:save.routine_meta?.calendar_issue??null,scheduled_tasks:save.routine_meta?.scheduled_tasks??[],time_label:calendarText(save),
     time: structuredClone(save.runtime.time), minutes_per_day: rules.minutes_per_day,

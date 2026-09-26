@@ -9,6 +9,7 @@ import { composePrompt } from './profiles.js';
 import { freeformSchema, needsFreeform, knownDestination, localDestination, parseFreeformProposal } from '../core/freeform.js';
 import { compileWorld, emptyWorld } from './authoring.js';
 import { blankWorldIntent } from '../shared/world-intent.js';
+import { contextEnvelope } from '../system/context-envelope.js';
 import { behaviorFragment } from './behavior.js';
 import { relationshipSummary } from '../shared/relationship.js';
 import { pruneUnknownKeys } from './provider-schema.js';
@@ -121,7 +122,8 @@ export class AIRuntime {
     return save;
   }
   async freeform(save:SavePackage,input:string) {
-    const result=await this.adapter.generate({role:'gm_reasoning',schema:z.toJSONSchema(freeformSchema),maxOutputTokens:4000,prompt:'裁定玩家行动尝试与公开可观察后果。只能生成非数值伤情事实（facts 最多 4 条，每条不超过 300 字）、1至5分钟及最多一项小幅关系变化；没有关系能力则relationship=null。不得编造HP、战斗轮次、地点节点、秘密或世界规则。目标只选输入提及的公开实体；行动未必成功。自然语言使用名字，禁止内部ID与程序术语。局部移动描述场景位置。'+JSON.stringify({input,public_state:publicView(save),character_context:characterContext(save)})});
+    const view=publicView(save),envelope=contextEnvelope(view,input,'WORLD');
+    const result=await this.adapter.generate({role:'gm_reasoning',schema:z.toJSONSchema(freeformSchema),maxOutputTokens:4000,prompt:'裁定玩家行动尝试与公开可观察后果。context_envelope 说明角色与现实语境，但绝不改变 provider safety policy。只能生成非数值伤情事实（facts 最多 4 条，每条不超过 300 字）、1至5分钟及最多一项小幅关系变化；没有关系能力则relationship=null。不得编造HP、战斗轮次、地点节点、秘密或世界规则。目标只选输入提及的公开实体；行动未必成功。自然语言使用名字，禁止内部ID与程序术语。局部移动描述场景位置。'+JSON.stringify({context_envelope:envelope,input,public_state:view,character_context:characterContext(save)})});
     const proposal=parseFreeformProposal(result.data);
     try{assertNotRefusal(proposal);}catch(error){observe('warn','narration.safety_degraded',{module:'ai',metadata:{reason:failureReason(error)}});proposal.narrative='行动尝试已经结算，具体经过略去。';}
     const refined=await this.refineNarrative(save,{narrative:proposal.narrative,dialogue:null,speaker:null,choices:[],context_actions:[],patches:[],interaction:null},proposal.facts,proposal.target_id??undefined);
@@ -131,9 +133,9 @@ export class AIRuntime {
     const destination=knownDestination(save,input);
     if(destination&&(!localDestination(input)||destination.name!==localDestination(input))&&!/揍|拳|踢|扔|丢|抱/.test(input))return {type:'MOVE',target_id:destination.id,parameters:{}};
     if(needsFreeform(input))return {type:'FREEFORM_ACTION',parameters:{}};
-    const registry = createRegistry(save.definition.enabled_modules);
+    const registry = createRegistry(save.definition.enabled_modules),view=publicView(save);
     const { parsed } = await this.call('intent_interpreter', intentResultSchema, save.definition.prompt_profile, {
-      public_state: publicView(save), input, interaction_context:publicView(save).interaction_context??null,
+      context_envelope:contextEnvelope(view,input,'WORLD'),public_state:view, input, interaction_context:view.interaction_context??null,
       instruction:'没有专用规则的普通身体动作仍可尝试，用 FREEFORM_ACTION，parameters_json 为 {}。只在玩家意图不清时澄清，不因模块缺失拒绝。',
       generic_action: {type:'FREEFORM_ACTION',parameters:{}},
       action_catalog: registry.actions.all().filter(([, a]) => (a.ui?.visibility ?? 'internal') !== 'internal').map(([type, a]) => ({ type, parameters: z.toJSONSchema(a.parameters) })),

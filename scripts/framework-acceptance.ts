@@ -16,7 +16,7 @@ const milestone={id:'slice',title:'输入与状态边界验证',kind:'behavior',
 const gap={required_capability:'input.subscription',why_needed:'连续输入需要订阅生命周期',affected_modules:['extension host'],current_limitation:'只支持离散动作',proposed_generic_capability:'可取消、限频的输入订阅和位置事务',risk:'并发与监听释放'};
 f.ai.adapter.generate=async req=>{
  const props=(req.schema as any).properties;
- if(props.facts){const body=JSON.parse(req.prompt.slice(req.prompt.indexOf('{"input"'))),punch=body.input.includes('拳');return {data:{narrative:punch?'你挥出一拳，梅芙退后捂住脸颊。':'你走出门，停在屋外。',minutes:1,target_id:punch?npc.id:null,facts:[punch?'发生肢体冲突。':'走到屋外。'],relationship:null}};}
+ if(props.facts){const encoded=req.prompt.match(/"input":("(?:[^"\\]|\\.)*")/)?.[1]??'""',input=JSON.parse(encoded) as string,punch=input.includes('拳');return {data:{narrative:punch?'你挥出一拳，梅芙退后捂住脸颊。':'你走出门，停在屋外。',minutes:1,target_id:punch?npc.id:null,facts:[punch?'发生肢体冲突。':'走到屋外。'],relationship:null}};}
  if(props.normalized_requirements){const input=JSON.parse(req.prompt.slice(req.prompt.indexOf('{"requirements"'))).requirements.join(' ');
  const high=/键盘/.test(input);return {data:{normalized_requirements:[input],complexity:high?'HIGH':'MEDIUM',clarification:high||input.includes('开关')?null:'请说明游戏规则和结束条件。',milestones:high?[milestone,{...milestone,id:'integration',title:'持久化与恢复验证',kind:'integration'}]:[milestone],capability_gaps:[]}};}
  if(props.spec){
@@ -32,7 +32,7 @@ try{
  browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(15000);
  await page.goto(base);await page.getByRole('button',{name:'继续当前世界',exact:true}).click();
- const send=async(text:string)=>{await page.locator('#action').fill(text);await page.getByRole('button',{name:'发送 →',exact:true}).click();await expect(page.locator('#action')).toBeEnabled();};
+ const send=async(text:string)=>{await page.locator('#action').fill(text);const completed=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/input'&&response.request().method()==='POST');await page.getByRole('button',{name:'发送 →',exact:true}).click();const response=await completed;const responseText=await response.text();assert(response.ok(),responseText);await expect(page.locator('#action')).toBeEnabled();};
  await send('狠狠揍梅芙一拳');await expect(page.locator('.narrative')).toContainText('挥出一拳');await expect(page.locator('.agent-reply')).toHaveCount(0);
  const afterPunch=await f.service.current();assert.equal(afterPunch.action_facts!.length,1);
  await send('我出门到屋外。');await expect(page.locator('.narrative')).toContainText('屋外');assert.deepEqual((await f.service.current()).map_state,save.map_state);
@@ -67,7 +67,7 @@ try{
  await page.getByRole('button',{name:'结束当前开发对话',exact:true}).click();await page.getByLabel('系统请求',{exact:true}).fill('希望通过键盘在地图上移动角色');await page.getByRole('button',{name:'发送',exact:true}).click();
  await expect(page.locator('.development-panel')).toContainText('等待审阅');tasks=await api('development/tasks');const high=await waitTask(tasks.at(-1).id);
  assert.equal(high.complexity,'HIGH');assert(high.milestones.length>=2);assert(high.test_results.some((r:any)=>!r.passed));assert.equal(high.status,'waiting_for_core_approval');
- await page.getByRole('button',{name:'批准核心开发提案',exact:true}).click();await expect(page.locator('.development-panel')).toContainText('核心接口仍需单独开发');
+ await page.getByRole('button',{name:'批准核心开发提案',exact:true}).click();await expect.poll(async()=>(await api('development/tasks/'+high.id)).status,{timeout:30000}).toBe('failed');const coreAttempt=await api('development/tasks/'+high.id);assert.equal(coreAttempt.status,'failed');assert.equal(coreAttempt.core_execution?.installed,false);assert.equal(coreAttempt.core_execution?.registered,false);assert.equal(coreAttempt.core_execution?.changed_files.length,0);assert.match(coreAttempt.core_execution?.message??'',/uncommitted changes/);await expect(page.locator('.development-panel')).toContainText('Live repository has uncommitted changes');
  await page.screenshot({path:join(directory,'development.png')});
  await page.getByLabel('开发任务',{exact:true}).selectOption('');
  await page.getByLabel('开发要求',{exact:true}).fill('增加一个可切换的开关');await page.getByRole('button',{name:'开始开发',exact:true}).click();

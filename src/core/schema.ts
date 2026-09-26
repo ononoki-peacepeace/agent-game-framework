@@ -36,9 +36,21 @@ export const rulesSchema = z.strictObject({
   default_check: z.string().max(30), currencies: dictionary(z.string().min(1).max(80)),
   relationship_dimensions: dictionary(z.strictObject({ min: z.number().int(), max: z.number().int(), initial: z.number().int() })),
 });
+export const provenanceSourceSchema = z.enum(['PLAYER_DECLARED','TEMPLATE_DECLARED','AI_GENERATED','CANONICAL_INSTANTIATED','DERIVED','UNKNOWN']);
+export const worldCreationProvenanceSchema = z.strictObject({
+  version: z.literal(1), original_premise: text.nullable(), declared_themes: z.array(z.string().max(200)).max(30),
+  declared_rules: z.array(z.string().max(500)).max(30), player_role: z.string().max(200).nullable(), initial_scope: z.string().max(300).nullable(),
+  template_source: z.strictObject({ kind: z.enum(['template','idea','recommended','legacy']), id: z.string().max(80).nullable(), version: integer.nullable() }),
+  inspiration_seed: z.number().int().nullable(), preview_signature: z.string().max(500).nullable(),
+  explicit_creation_choices: z.array(z.string().max(300)).max(30), explicit_constraints: z.array(z.string().max(500)).max(30),
+  requested_traits: z.array(z.string().max(300)).max(30),
+  generated_canonical_fact_refs: z.array(z.strictObject({ kind: z.enum(['entity','location','rule','event']), id })).max(1000),
+  records: z.array(z.strictObject({ kind: z.enum(['premise','theme','rule','role','scope','constraint','trait','fact']), statement: z.string().min(1).max(1000), source: provenanceSourceSchema, fact_ref: z.strictObject({ kind: z.enum(['entity','location','rule','event']), id }).nullable() })).max(200),
+});
 export const worldSchema = z.strictObject({
   schema_version: z.literal(1), framework_version: z.literal(VERSION),
   meta: z.strictObject({ id, title: z.string().min(1).max(120), description: text }),
+  provenance: worldCreationProvenanceSchema.optional(),
   routine_rules: routineRulesSchema.optional(),
   task_rules:z.array(z.strictObject({task_id:id,book:z.enum(['quests','opportunities']),location_id:id,start_at:integer,end_at:integer,steps:z.array(z.strictObject({action:id,target_id:id.nullable(),minimum_minutes:integer})).min(1).max(20)})).max(100).optional(),
   calendar: calendarSchema.optional(),
@@ -96,6 +108,7 @@ export const saveSchema = z.strictObject({
   last_turn: narrativeSchema.nullable(),
 });
 export type WorldPackage = z.infer<typeof worldSchema>;
+export type WorldCreationProvenance = z.infer<typeof worldCreationProvenanceSchema>;
 export type SavePackage = z.infer<typeof saveSchema>;
 export type Action = z.infer<typeof actionSchema> & { id: string; actor_id: string; source: 'player' | 'ai'; time_cost: number };
 export type GameEvent = { type: typeof hooks[number]; entity_id?: string; location_id?: string; minutes?: number; reason?: string; event_id?: string };

@@ -50,6 +50,12 @@ export function deterministicGoal(text: string): GoalSpec | null {
       desired_outputs: [{ kind: 'state_change', description: '目标人物名称发生 canonical 变更' }], multi_step: true,
     });
   }
+  const balance=text.match(/(?:钱|余额|资金)(?:\s*从\s*-?\d+)?(?:改成|改为|设置为|设成|变成)\s*(-?\d+)/);
+  if(balance){
+    const amount=Number(balance[1]),prefix=text.slice(0,balance.index??0),named=prefix.match(/(?:把|将)\s*([^，。]{1,30}?)(?:身上|账户|钱包|的)?$/)?.[1]?.trim();
+    const reference=/我|自己|主角|玩家角色/.test(prefix)?'我':clean(named??'')||'我';
+    return baseGoal(text,{targets:[{kind:'entity',reference,entity_id:null}],desired_state:[{path:'wallet.balance',value:amount,target_ref:'target'}],desired_outputs:[{kind:'state_change',description:'目标人物已有货币余额发生 canonical 变更'}]});
+  }
   if (mediaOutcome.test(text)) {
     const reference = clean(text.replace(/^(?:给|为)/, '').split(/(?:生成|制作|画|绘制)/)[0] || '我');
     return baseGoal(text, { targets: [{ kind: 'entity', reference, entity_id: null }], desired_outputs: [{ kind: 'media_asset', description: '生成图片资源' }, { kind: 'avatar_assignment', description: '将资源设置为同一人物头像' }], external_artifact: true, multi_step: true });
@@ -72,6 +78,11 @@ export function composeCapabilityPlan(goal: GoalSpec): CapabilityPlan | null {
     { step_id: 'resolve_target', capability_id: 'entity.lookup', input: { reference: goal.targets[0]?.reference ?? '' }, depends_on: [] },
     { step_id: 'rename_target', capability_id: 'entity.identity.rename', input: { name: identityName.value }, depends_on: ['resolve_target'] },
   ] };
+  const walletBalance=goal.desired_state.find(item=>item.path==='wallet.balance');
+  if(walletBalance)return {goal,steps:[
+    {step_id:'resolve_target',capability_id:'entity.lookup',input:{reference:goal.targets[0]?.reference??''},depends_on:[]},
+    {step_id:'set_balance',capability_id:'entity.wallet.balance.set',input:{amount:walletBalance.value},depends_on:['resolve_target']},
+  ]};
   if (goal.desired_outputs.some(item => item.kind === 'media_asset') && goal.desired_outputs.some(item => item.kind === 'avatar_assignment')) return { goal, steps: [
     { step_id: 'resolve_target', capability_id: 'entity.lookup', input: { reference: goal.targets[0]?.reference ?? '' }, depends_on: [] },
     { step_id: 'generate_image', capability_id: 'media.image.generate', input: { kind: 'avatar', description: goal.objective }, depends_on: ['resolve_target'] },
@@ -102,7 +113,7 @@ function targetEntity(view: PublicView, plan: CapabilityPlan): { entity: Entity 
 export async function executeUniversalPlan(service: GameService, plan: CapabilityPlan, envelope: UniversalRequestEnvelope = {}, options: ExecuteOptions = {}): Promise<UniversalResolution> {
   const save = await service.current(), view = publicView(save);
   if (plan.goal.ambiguity) return { handled: true, kind: 'USER_AMBIGUITY', goal: plan.goal, question: plan.goal.ambiguity.question, candidates: [] };
-  const validation = validateCapabilityPlan(plan, view, options.registry ?? capabilityRegistry);
+  const validation = validateCapabilityPlan(plan, view, options.registry ?? service.systemCapabilities);
   if (!validation.ok) return validation.kind === 'CAPABILITY_GAP'
     ? { handled: true, kind: 'CAPABILITY_GAP', goal: plan.goal, plan, missing: validation.missing, message: '当前能力还不能完整完成这个目标。可以先补齐缺少的能力，再由你明确决定是否创建开发任务。' }
     : { handled: true, kind: 'EXECUTION_FAILURE', goal: plan.goal, plan, message: '这次计划没有通过执行前校验，世界状态没有改变。请重新描述目标后再试。', retryable: false };
@@ -111,7 +122,7 @@ export async function executeUniversalPlan(service: GameService, plan: Capabilit
     return { handled: true, kind: 'USER_AMBIGUITY', goal: plan.goal, question: resolved.candidates.length ? '有多个人物符合这个称呼，请指定是哪一位。' : '我还不能确定要修改哪位人物，请说出人物名字。', candidates: resolved.candidates.map(entityLabel) };
   }
   try {
-    for (const step of validation.ordered) if (!['entity.lookup', 'entity.query', 'entity.identity.rename'].includes(step.capability_id)) {
+    for (const step of validation.ordered) if (!['entity.lookup', 'entity.query', 'entity.identity.rename', 'entity.wallet.balance.set'].includes(step.capability_id)) {
       if (!options.executeExternal) throw new Error('capability executor unavailable');
       await options.executeExternal(step);
     }
@@ -123,9 +134,29 @@ export async function executeUniversalPlan(service: GameService, plan: Capabilit
       const next = await service.agentTransaction(request, { kind: 'capability_plan', objective: plan.goal.objective, steps: plan.steps.map(step => ({ step_id: step.step_id, capability_id: step.capability_id, input: step.input })) }, draft => {
         const entity = draft.entities.find(item => item.id === resolved.entity!.id);
         if (!entity?.components.identity) throw new Error('目标人物没有可修改的身份资料');
-        entity.components.identity.name = name;
+        const identity = entity.components.identity as { name: string; previous_names?: string[] };
+        const old = String(identity.name ?? '');
+        // Renaming keeps the identity history so an old name still resolves to this entity later.
+        if (old && old !== name) identity.previous_names = [...new Set([...(identity.previous_names ?? []), old])].slice(-20);
+        identity.name = name;
+
       });
       return { handled: true, kind: 'EXECUTED', goal: plan.goal, plan, message: `已将${entityLabel(resolved.entity)}的名字改为「${name}」。`, view: next };
+    }
+    const setBalance=validation.ordered.find(step=>step.capability_id==='entity.wallet.balance.set');
+    if(setBalance&&resolved.entity){
+      const amount=Number(setBalance.input.amount??plan.goal.desired_state.find(item=>item.path==='wallet.balance')?.value);
+      if(!Number.isSafeInteger(amount)||amount<0||amount>1_000_000_000)return {handled:true,kind:'EXECUTION_FAILURE',goal:plan.goal,plan,message:'金额必须是有效的非负整数，世界状态没有改变。',retryable:false};
+      const entity=view.entities.find(item=>item.id===resolved.entity!.id),balances=entity?.components.wallet?.balances as Record<string,number>|undefined;
+      const mentioned=Object.entries(view.currencies).filter(([id,name])=>plan.goal.objective.includes(id)||plan.goal.objective.includes(name)).map(([id])=>id);
+      const currencies=mentioned.length?mentioned:Object.keys(balances??{});
+      if(!balances||currencies.length!==1||!Object.hasOwn(balances,currencies[0]))return {handled:true,kind:'USER_AMBIGUITY',goal:plan.goal,question:balances&&Object.keys(balances).length>1?'要修改哪一种货币？':'目标人物没有可修改的货币余额。',candidates:Object.keys(balances??{}).map(id=>view.currencies[id]??id)};
+      const currency=currencies[0],request={game_id:save.game_id,expected_revision:envelope.expected_revision??save.state_revision,request_id:envelope.request_id??randomUUID()};
+      const next=await service.agentTransaction(request,{kind:'capability_plan',objective:plan.goal.objective,steps:plan.steps.map(step=>({step_id:step.step_id,capability_id:step.capability_id,input:step.input}))},draft=>{
+        const target=draft.entities.find(item=>item.id===resolved.entity!.id),wallet=target?.components.wallet as {balances:Record<string,number>}|undefined;
+        if(!wallet||!Object.hasOwn(wallet.balances,currency))throw new Error('目标人物没有可修改的货币余额');wallet.balances[currency]=amount;
+      });
+      return {handled:true,kind:'EXECUTED',goal:plan.goal,plan,message:`已将${entityLabel(resolved.entity)}的${view.currencies[currency]??currency}余额设为 ${amount}。`,view:next};
     }
     throw new Error('plan completed without a canonical outcome');
   } catch (error) {
@@ -142,7 +173,7 @@ export async function resolveUniversalGoal(service: GameService, text: string, e
     player_request: text,
     public_entities: view.entities.map(entity => ({ id: entity.id, name: entity.components.identity?.name ?? null, type: entity.type, role: entity.components.character?.role ?? null })),
     public_locations: view.locations.map(location => ({ id: location.id, name: location.name })),
-    capability_catalog: capabilityRegistry.digest(view.capabilities),
+    capability_catalog: service.systemCapabilities.digest(view.capabilities),
   }, save);
   const goal = planned?.goal ?? deterministicGoal(text);
   const selected = planned ?? (goal ? composeCapabilityPlan(goal) : null);

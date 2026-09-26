@@ -13,6 +13,8 @@ export interface SystemSession {
  status:'active'|'waiting_for_clarification'|'waiting_for_confirmation'|'running'|'completed'|'cancelled'|'failed';
  /** Partial understanding kept across turns: a clarification only fills what is still missing. */
  understanding:SystemUnderstanding|null;pending_field:string|null;workflow:string|null;resolved_request:ResolvedSystemRequest|null;
+ /** A goal that is waiting for a clarification: later short answers fill this instead of starting a new goal. */
+ pending_goal:{goal_id:string;original_input:string;clarifications:string[];question:string|null;created_revision:number}|null;
  /** Feature Idea Guide state: an idea being shaped before any development work starts. */
  guide:FeatureGuide|null;
 }
@@ -57,7 +59,7 @@ export function applyFeatureGuideAction(service:GameService,action:BoundFeatureG
  return {kind:'updated',session:structuredClone(session),guide:structuredClone(session.guide)};
 }
 function freshSession(gameId:string,text:string,currentIntent:string,toolId:string|null):SystemSession{
- return {session_id:randomUUID(),game_id:gameId,current_goal:text,current_intent:currentIntent,clarifications:[],resolved_entities:[],selected_tools:toolId?[toolId]:[],pending_confirmation:null,development_job_id:null,status:'active',understanding:null,pending_field:null,workflow:null,resolved_request:null,guide:null};
+ return {session_id:randomUUID(),game_id:gameId,current_goal:text,current_intent:currentIntent,clarifications:[],resolved_entities:[],selected_tools:toolId?[toolId]:[],pending_confirmation:null,development_job_id:null,status:'active',understanding:null,pending_field:null,workflow:null,resolved_request:null,guide:null,pending_goal:null};
 }
 export function sessionInput(service:GameService,body:{input:string;confirmed:boolean;session_id?:string|null},execute:(input:string,confirmed:boolean,context:SystemExecutionContext)=>Promise<SystemResult>):Promise<SystemResult>{
  const run=(queues.get(service)??Promise.resolve()).catch(()=>undefined).then(async()=>{
@@ -118,6 +120,7 @@ export function sessionInput(service:GameService,body:{input:string;confirmed:bo
    if(result.pending_field!==undefined)session.pending_field=result.pending_field;
    if(result.workflow!==undefined)session.workflow=result.workflow;
    if(result.guide!==undefined)session.guide=result.guide;
+   if(result.pending_goal!==undefined)session.pending_goal=result.pending_goal;
    if(result.resolved!==undefined&&result.resolved)lastResolved.set(service,result.resolved);
    if(result.resolved!==undefined)session.resolved_request=result.resolved;
    if(result.needs_confirmation){session.status='waiting_for_confirmation';session.pending_confirmation=input;}

@@ -8,7 +8,7 @@ import {migrateInstalledWorld,type InstalledWorld} from '../routine/migration.js
 import { settleRoutine } from './routine-controller.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { GameError, assert, safeParse, profileSchema, type SavePackage } from '../core/schema.js';
+import { GameError, assert, safeParse, profileSchema, worldCreationProvenanceSchema, type SavePackage, type WorldCreationProvenance } from '../core/schema.js';
 import { exportSave, importSave, newSave, publicView, validateSave } from '../core/state.js';
 import { executeFreeform } from '../core/freeform.js';
 import { executeAction, applyPatches } from '../core/runtime.js';
@@ -21,6 +21,7 @@ import { normalizeCharacterCard } from '../compat/character-card.js';
 import { emptyWorld } from '../ai/authoring.js';
 import { blankWorldIntent } from '../shared/world-intent.js';
 import { parseBehaviorRule } from '../ai/behavior.js';
+import {CapabilityRegistry,capabilityRegistry} from '../system/capabilities.js';
 
 import { getLogger, observe, startTrace, runWithTrace, summarizeSaveDiff, errorText, type StructuredLogger } from '../observability/index.js';
 const optionalEnrichmentOps = new Set(['relationship_delta']);
@@ -96,7 +97,7 @@ export class GameService {
     const migrated = migrateInstalledWorld(save, this.installedWorlds);
     return { save: validateSave(migrated.save), changed: changed || migrated.changed };
   }
-  constructor(readonly storage: SaveStorage, readonly ai: AIRuntime, readonly demo: WorldPackage, readonly installedWorlds:InstalledWorld[] = [], readonly logger: StructuredLogger = getLogger()) {}
+  constructor(readonly storage: SaveStorage, readonly ai: AIRuntime, readonly demo: WorldPackage, readonly installedWorlds:InstalledWorld[] = [], readonly logger: StructuredLogger = getLogger(),readonly systemCapabilities:CapabilityRegistry=new CapabilityRegistry(capabilityRegistry.all())) {}
   async exclusive<T>(fn: () => Promise<T>,owner?:string): Promise<T> {
     if(this.routineLease && owner!==this.routineLease)throw new GameError('后台生活模式正在运行：查看与图片上传不受影响；需要修改世界的行动请先在生活模式面板请求安全暂停',409);
     if (this.busy) throw new GameError('当前有行动或存档操作正在执行，请稍后重试', 409);
@@ -115,13 +116,17 @@ export class GameService {
     if (upgraded.changed) await this.storage.write(upgraded.save);
     return publicView(upgraded.save);
   }
-  async newGame(description?: string, promptText?: string, promptProfile?: unknown) {
+  async newGame(description?: string, promptText?: string, promptProfile?: unknown, provenance?: WorldCreationProvenance) {
     return this.exclusive(async () => {
       let profile = promptProfile ? safeParse(profileSchema, promptProfile) : structuredClone(this.demo.prompt_profile);
       if (promptText) profile = { ...profile, id: 'imported_prompt', version: 'user-1', engine_policy: promptText };
       // Every creation entry (HTTP, service, future routes) resolves EMPTY_WORLD / FRAMEWORK_TEST here.
       const blank = description ? blankWorldIntent(description) : null;
       const save = blank ? newSave(emptyWorld(profile)) : description ? await this.ai.initialize(description, profile) : newSave(this.demo);
+      if(provenance){
+        const generated=[...save.entities.map(entity=>({kind:'entity' as const,id:entity.id})),...(save.definition.map?.locations??[]).map(location=>({kind:'location' as const,id:location.id}))];
+        save.definition.provenance=worldCreationProvenanceSchema.parse({...provenance,generated_canonical_fact_refs:generated});
+      }
       if (blank) save.last_turn = { narrative: '', speaker: null, dialogue: null, choices: [], context_actions: [] };
       if (!save.last_turn) save.last_turn = { narrative: save.definition.meta.description, speaker: null, dialogue: null, choices: [], context_actions: [] };
       await this.storage.write(save); return publicView(save);

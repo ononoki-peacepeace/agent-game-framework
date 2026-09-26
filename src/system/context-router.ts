@@ -9,6 +9,7 @@ import {fastPlan} from '../agent/planner.js';
 import {recentReferent} from '../core/recent-referent.js';
 import {sanitizePlayerText} from './player-copy.js';
 import {isUniversalGoalCandidate} from './resolver.js';
+import {contextEnvelope} from './context-envelope.js';
 /** A clarification answer belongs to the message right after the question; older entries are forgotten. */
 const pendingTtlMs=10*60*1000;
 
@@ -36,7 +37,8 @@ export async function routeContext(service:GameService,input:string,source:Sourc
   if(!fresh)memory.delete(key);
   const previous=stored&&fresh?stored:undefined;
   const salient=recentReferent(save);
-  const context={source_context:source,input,pending:previous?{input:previous.input,question:previous.question}:null,
+  const envelope=contextEnvelope(view,input,source==='world_input'?'WORLD':'SYSTEM');
+  const context={source_context:source,context_envelope:envelope,input,pending:previous?{input:previous.input,question:previous.question}:null,
     system_session:source==='system_input'?session:null,
     interaction_context:source==='world_input'?view.interaction_context??null:null,
     recent_scene:{primary:salient.primary?.name??null,primary_id:salient.primary?.id??null,last_target:salient.last_target?.name??null,conflict_target:salient.conflict_target?.name??null,last_event:salient.last_event??null,recent_turns:(save.narrative_history??[]).slice(-2).map(entry=>({narrative:String(entry.narrative??'').slice(0,240),dialogue:entry.dialogue??null,speaker:entry.speaker??null}))},
@@ -44,6 +46,7 @@ export async function routeContext(service:GameService,input:string,source:Sourc
     capability_digest:capabilityDigest(view,save),
   };
   const fixed=(destination:ContextRoute['destination']):ContextRoute=>({destination,confidence:1,clarification:null,speech_target_id:null,world_input:null,resolved_input:null,end_conversation:false});
+  if(envelope.real_world_override)return fixed('SYSTEM_META_INTENT');
   if(!previous){
     if(isUniversalGoalCandidate(input))return fixed('SYSTEM_META_INTENT');
     const systemKnown=!['UNKNOWN','IN_WORLD_INPUT'].includes(metaPlan.category);

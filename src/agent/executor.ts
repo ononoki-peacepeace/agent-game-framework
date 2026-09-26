@@ -34,7 +34,7 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
   conflict.retry_policy=readOnlyPlan(plan.goals)?'safe':'manual';throw conflict;
  }
  const initialTime=save.runtime.time.day*save.definition.ruleset.minutes_per_day+save.runtime.time.minute;
- plan.plan_id=body.request_id;plan.status='running';let clarification:string|null=null;const ui:UIAction[]=[],changes:string[]=[],calls:AgentResult['tool_calls']=[],futures:FutureIntent[]=[];
+ plan.plan_id=body.request_id;plan.status='running';let clarification:string|null=null,awarenessStatus:AgentResult['awareness_status'];const ui:UIAction[]=[],changes:string[]=[],calls:AgentResult['tool_calls']=[],futures:FutureIntent[]=[];
  for(const id of plan.execution_order){const goal=plan.goals.find(g=>g.goal_id===id)!;
   const dependencies=goal.depends_on.map(id=>plan.goals.find(g=>g.goal_id===id)!);
   if(dependencies.some(g=>g.status!=='completed')){goal.status='skipped';goal.result={summary:'前置目标未成功，未执行。'};continue;}
@@ -47,7 +47,7 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
     goal.result={condition:value,summary:value===null?'你目前无法确定这个条件是否成立。':value?'根据你可知的关系或位置，条件成立。':'根据当前可知信息，条件不成立。'};
    }else if(['WORLD_QUERY','WORLD_LOOKUP','UI_NAVIGATION'].includes(goal.type)){
     const result=planGameRequest(view,goal.normalized_goal);if(result?.clarification)clarification=result.clarification;if(!result||result.clarification)throw Error(result?.message??'无法确认查询目标');
-    message=result.message;ui.push(...result.ui_actions);
+    message=result.message;ui.push(...result.ui_actions);awarenessStatus=result.awareness_status??awarenessStatus;
    }else if(['FUTURE_INTENT','SCHEDULED_INTENT'].includes(goal.type)){
     assert(goal.target_entities.every(id=>view.entities.some(e=>e.id===id)),'目标不在玩家可知范围');
     const condition=dependencies.find(g=>g.type==='CONDITIONAL_INTENT')?.condition??null;
@@ -90,7 +90,7 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
  const results=plan.goals.map(g=>({goal_id:g.goal_id,summary:g.result?.summary??'',related_entity:g.target_entities[0]??null,status:g.status}));
  const message=results.filter(r=>r.status!=='skipped').map(r=>r.summary).filter(Boolean).join('\n')+(delta===0?'\n当前世界时间没有推进。':'');
  const storyOnly=plan.status==='completed'&&plan.goals.every(g=>['WORLD_ACTION','WORLD_SPEECH'].includes(g.type));
- return agentResult(plan.goals.length===1?plan.goals[0].type:'MULTI_GOAL',storyOnly||plan.goals.every(g=>g.type==='WORLD_ACTION')?message:applyAssistantStyle(save,message),{presentation:storyOnly?'story':'assistant',clarification,plan_id:plan.plan_id,plan,results,future_intents:futures,ui_actions:storyOnly?[]:oneNavigation(ui),canonical_changes:changes,tool_calls:calls,time_advanced:delta,view:publicView(save)});
+ return agentResult(plan.goals.length===1?plan.goals[0].type:'MULTI_GOAL',storyOnly||plan.goals.every(g=>g.type==='WORLD_ACTION')?message:applyAssistantStyle(save,message),{presentation:storyOnly?'story':'assistant',clarification,...(awarenessStatus?{awareness_status:awarenessStatus}:{}),plan_id:plan.plan_id,plan,results,future_intents:futures,ui_actions:storyOnly?[]:oneNavigation(ui),canonical_changes:changes,tool_calls:calls,time_advanced:delta,view:publicView(save)});
 }
 const requests=new WeakMap<GameService,Map<string,{input:string;result:Promise<AgentResult>}>>();
 export async function handleAgentInput(service:GameService,body:PlanRequest,startRoutine?:(body:any)=>Promise<any>):Promise<AgentResult>{

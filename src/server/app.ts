@@ -19,11 +19,16 @@ import {applyWorldModification,draftFromIdea,draftToDescription,previewOf,templa
 import {WORLD_CANDIDATE_HISTORY,candidateSignature,distinctCandidate,inspirationChips,pickLabels,type InspirationPick} from '../world/inspiration.js';
 import {blankWorldIntent} from '../shared/world-intent.js';
 import {JsonStore} from '../storage/json-store.js';
+import {SuspendedGoalStore} from '../system/suspended-goals.js';
+import {capabilityPlanSchema,goalSpecSchema} from '../system/goals.js';
+import {CodexCodingAgentExecutor} from '../development/coding-agent.js';
+import {executeUniversalPlan} from '../system/resolver.js';
+import {capabilityRegistry} from '../system/capabilities.js';
 import express from 'express';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { resolve, join } from 'node:path';
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
-import { GameError, assert, id, profileSchema, safeParse } from '../core/schema.js';
+import { GameError, assert, id, profileSchema, safeParse, type WorldCreationProvenance } from '../core/schema.js';
 
 import { providerConfigSchema, type AIProviderManager } from '../ai/providers.js';
 import { z } from 'zod';
@@ -157,7 +162,18 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   const jobs=new RoutineJobs(service,service.storage instanceof JsonStore?service.storage.directory:undefined);
   const extensions=new ExtensionHost(service,resolve(service.storage instanceof JsonStore?service.storage.directory:join(assetDirectory,'..'),'extensions'));
   const development=new ExtensionDevelopment(extensions);
-  const developmentTasks=new DevelopmentTasks(development);
+  const suspendedGoals=new SuspendedGoalStore(service.storage instanceof JsonStore?join(service.storage.directory,'system'):undefined);
+  const developmentTasks=new DevelopmentTasks(development,undefined,new CodexCodingAgentExecutor(),async task=>{
+    for(const waiting of await suspendedGoals.forDevelopmentTask(task.id)){
+      await suspendedGoals.markInstalledReady(waiting.goal_id);
+      const operationId=randomUUID();const current=await service.view();
+      if(!current){await suspendedGoals.failResume(waiting.goal_id,'世界已卸载，无法恢复目标。');continue;}
+      await suspendedGoals.beginResume(waiting.goal_id,operationId);
+      const resumed=await executeUniversalPlan(service,waiting.plan,{request_id:operationId,expected_revision:current.revision});
+      if(resumed.handled&&resumed.kind==='EXECUTED')await suspendedGoals.completeResume(waiting.goal_id,resumed.view.revision);
+      else await suspendedGoals.failResume(waiting.goal_id,resumed.handled&&'message' in resumed?resumed.message:'安装后的能力仍无法执行原目标。');
+    }
+  });
   app.disable('x-powered-by');
   app.use((req, res, next) => {
     const host = req.headers.host ?? '';
@@ -280,7 +296,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   app.get('/api/state', async (_req, res) => res.json(await service.view()));
   const visibleFields=(value:WorldDraft)=>[value.title,value.one_liner,value.initial_scope,value.player_role,value.special_rules.join('|')];
   const visibleOverlap=(a:WorldDraft,b:WorldDraft)=>{const left=visibleFields(a),right=visibleFields(b);return left.filter((field,index)=>field===right[index]).length;};
-  const worldPreviews=new Map<string,{description:string;draft:WorldDraft;created_at:number;signature:string}>();
+  const worldPreviews=new Map<string,{description:string;draft:WorldDraft;provenance:WorldCreationProvenance;created_at:number;signature:string}>();
   // One creation flow = one candidate history. "换一个" must never repeat the current candidate, never cycle
   // between two worlds, and never regenerate without bound.
   const categoryOf=(id?:string|null)=>({arcane_academy:'academy',space_colony:'space',modern_city:'city',small_town:'town',school_life:'school',crime_city:'crime',medieval_adventure:'medieval',post_apocalypse:'apocalypse'} as Record<string,string>)[id??'']??null;
@@ -359,8 +375,27 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     }
     const description=draftToDescription(value,notes);
     const signature=candidateSignature(value);
+    const sourceKind=body.template_id?'template':flow.idea?'idea':'recommended';
+    const template=body.template_id?templateById(body.template_id):null;
+    const premise=flow.idea??value.one_liner;
+    const premiseSource:WorldCreationProvenance['records'][number]['source']=flow.idea?'PLAYER_DECLARED':template?'TEMPLATE_DECLARED':'AI_GENERATED';
+    const provenance:WorldCreationProvenance={
+      version:1,original_premise:premise,declared_themes:[...value.experiences],declared_rules:[...value.special_rules],
+      player_role:value.player_role,initial_scope:value.initial_scope,
+      template_source:{kind:sourceKind,id:template?.id??null,version:template?.version??null},
+      inspiration_seed:body.inspiration_seed??body.variant??null,preview_signature:signature,
+      explicit_creation_choices:[...new Set([...pickLabelsOut,...flow.picked])].slice(0,30),explicit_constraints:notes,
+      requested_traits:[],generated_canonical_fact_refs:[],records:[
+        {kind:'premise',statement:premise,source:premiseSource,fact_ref:null},
+        ...value.experiences.map(statement=>({kind:'theme' as const,statement,source:premiseSource,fact_ref:null})),
+        ...value.special_rules.map(statement=>({kind:'rule' as const,statement,source:premiseSource,fact_ref:null})),
+        {kind:'role',statement:value.player_role,source:premiseSource,fact_ref:null},
+        {kind:'scope',statement:value.initial_scope,source:premiseSource,fact_ref:null},
+        ...notes.map(statement=>({kind:'constraint' as const,statement,source:'PLAYER_DECLARED' as const,fact_ref:null})),
+      ],
+    };
     const preview_id=randomUUID();
-    worldPreviews.set(preview_id,{description,draft:value,created_at:Date.now(),signature});
+    worldPreviews.set(preview_id,{description,draft:value,provenance,created_at:Date.now(),signature});
     flow.recent=[...flow.recent.filter(entry=>entry!==signature),signature].slice(-WORLD_CANDIDATE_HISTORY);
     flow.created_at=Date.now();worldFlows.set(flow_id,flow);
     for(const [id,entry] of worldPreviews)if(Date.now()-entry.created_at>30*60*1000)worldPreviews.delete(id);
@@ -376,7 +411,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     // while a persistent failure still reports naturally and leaves the preview reusable.
     let created;
     for(let attempt=0;attempt<2&&!created;attempt++){
-      try{created=await service.newGame(entry.description);}
+      try{created=await service.newGame(entry.description,undefined,undefined,entry.provenance);}
       catch(error){
         service.logger.warn('world.create.failed',{module:'world',metadata:{attempt:attempt+1,reason:displayText(error instanceof Error?error.message:'未知原因',[],[])}});
         if(attempt===1)throw new GameError(`这个世界草稿没有通过创建校验（${displayText(error instanceof Error?error.message:'未知原因',[],[])}）。你可以换一个草稿，或做一点调整后重新生成。`);
@@ -389,14 +424,15 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   });
   app.post('/api/new', async (req, res) => {
     const body = safeParse(z.strictObject({ description: z.string().min(1).max(12000).optional(), prompt_text: z.string().min(1).max(100000).optional(), prompt_profile: profileSchema.optional() }), req.body);
-    res.json(await service.newGame(body.description, body.prompt_text, body.prompt_profile));
+    const provenance:WorldCreationProvenance|undefined=body.description?{version:1,original_premise:body.description,declared_themes:[],declared_rules:[],player_role:null,initial_scope:null,template_source:{kind:'legacy',id:null,version:null},inspiration_seed:null,preview_signature:null,explicit_creation_choices:[],explicit_constraints:[],requested_traits:[],generated_canonical_fact_refs:[],records:[{kind:'premise',statement:body.description,source:'PLAYER_DECLARED',fact_ref:null}]}:undefined;
+    res.json(await service.newGame(body.description, body.prompt_text, body.prompt_profile,provenance));
   });
   app.post('/api/input', async (req, res) => {
     const body = safeParse(unifiedInputSchema, req.body);
     const gate=await routeContext(service,body.input,'world_input');
     if(gate.destination==='AMBIGUOUS'){res.json(agentResult('CLARIFICATION',gate.clarification!,{clarification:gate.clarification,view:await readContextView(service)}));return;}
     if(gate.destination==='SYSTEM_META_INTENT'){
-      const result=await processSystem({input:body.input,confirmed:false,request_id:body.request_id,game_id:body.game_id,expected_revision:body.expected_revision});
+      const result=await processSystem({input:body.input,confirmed:false,request_id:body.request_id,game_id:body.game_id,expected_revision:body.expected_revision,originating_surface:'world'});
       res.json({...agentResult('SYSTEM_META_INTENT','已按系统请求处理。'+result.message,{view:await service.view(),ui_actions:[{kind:'open_panel',panel:'system'}]}),system_handoff:{input:body.input,result}});return;
     }
     if(gate.speech_target_id){
@@ -443,7 +479,38 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
       const task=await developmentTasks.revise(String(body.development_task_id),String(body.input??''));
       return ({category:'EXTENSION_REQUEST',tool_id:'extension.create',side_effect_level:'development',needs_confirmation:false,message:task.message,directive:{kind:'extension_development',task_id:task.id,request:task.original_request}});
     }
-    const result=body.action?await handleSystemAction(service,body.action):await handleSystemInput(service,body);
+    const result=body.action?await handleSystemAction(service,body.action):await handleSystemInput(service,{
+      input:body.input,confirmed:body.confirmed,session_id:body.session_id,request_id:body.request_id,
+      game_id:body.game_id,expected_revision:body.expected_revision,
+    });
+    if(result.category==='CAPABILITY_GAP'&&result.advanced?.goal&&result.advanced?.plan&&Array.isArray(result.advanced.missing)){
+      const view=await service.view();
+      if(view){
+        const suspended=await suspendedGoals.suspend({
+          request_id:body.request_id??randomUUID(),game_id:body.game_id??view.game_id,original_input:String(body.input??''),
+          goal:goalSpecSchema.parse(result.advanced.goal),plan:capabilityPlanSchema.parse(result.advanced.plan),
+          missing_capabilities:z.array(z.string()).parse(result.advanced.missing),
+          originating_surface:body.originating_surface==='world'?'world':'system',
+          created_revision:body.expected_revision??view.revision,installed_capabilities:view.capabilities,
+        });
+        let current=suspended;
+        if(current.status==='waiting_for_auto_extension'&&!current.development_task_id){
+          try{
+            const request=`为一个已挂起的用户目标实现以下可复用能力：${current.missing_capabilities.join('、')}。原始目标：${current.goal.objective}`.slice(0,3000);
+            const available=new Set(view.capabilities);
+            const localDescriptors=current.missing_capabilities.map(id=>capabilityRegistry.get(id));
+            const canUseSafeLocalBuilder=localDescriptors.every(descriptor=>descriptor?.implemented&&descriptor.access!=='external'&&descriptor.provider_requirements.every(requirement=>available.has(requirement)));
+            const task=canUseSafeLocalBuilder
+              ?await developmentTasks.startCapability({request_id:randomUUID(),request,capability_ids:current.missing_capabilities})
+              :await developmentTasks.start({request_id:randomUUID(),request});
+            current=await suspendedGoals.attachDevelopmentTask(current.goal_id,task.id);
+          }catch(error){
+            service.logger.warn('suspended_goal.development_not_started',{module:'system',request_id:body.request_id,revision:view.revision,metadata:{goal_id:current.goal_id,reason:String((error as Error).message).slice(0,300)}});
+          }
+        }
+        result.suspended_goal={goal_id:current.goal_id,status:current.status,external_blocked:current.external_prerequisites.length>0};
+      }
+    }
     if(result.directive?.kind==='extension_development'){
       const running=(await developmentTasks.list()).find(task=>['planning','developing','testing','repairing'].includes(task.status));
       if(running){
@@ -477,10 +544,11 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
         : await handleAgentInput(service,tx,(request)=>jobs.start(request));
       return res.json({category:'IN_WORLD_INPUT',tool_id:null,side_effect_level:'canonical',needs_confirmation:false,message:'已按世界内行动处理。',view:result.view});
     }
-    return res.json(await processSystem({input,confirmed:body.confirmed??false,request_id:body.request_id??randomUUID(),game_id:body.game_id,expected_revision:body.expected_revision,...(body.session_id?{session_id:body.session_id}:{}),...(body.development_task_id?{development_task_id:body.development_task_id}:{})}));
+    return res.json(await processSystem({input,confirmed:body.confirmed??false,request_id:body.request_id??randomUUID(),game_id:body.game_id,expected_revision:body.expected_revision,originating_surface:'system',...(body.session_id?{session_id:body.session_id}:{}),...(body.development_task_id?{development_task_id:body.development_task_id}:{})}));
   });
   app.post('/api/system/action',async(req,res)=>res.json(await processSystem({action:req.body})));
   app.get('/api/development/tasks',async(_req,res)=>res.json(await developmentTasks.list()));
+  app.get('/api/system/suspended-goals',async(req,res)=>res.json(await suspendedGoals.list(typeof req.query.game_id==='string'?req.query.game_id:undefined)));
   app.post('/api/development/tasks',async(req,res)=>res.status(202).json(await developmentTasks.start(req.body)));
   app.get('/api/development/tasks/:id',async(req,res)=>res.json(await developmentTasks.get(req.params.id)));
   app.post('/api/development/tasks/:id/revise',async(req,res)=>res.json(await developmentTasks.revise(req.params.id,String(req.body.request??''))));
