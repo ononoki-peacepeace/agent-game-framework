@@ -1,5 +1,5 @@
 import {it,expect,vi} from 'vitest';
-import {mkdtemp,readFile,writeFile} from 'node:fs/promises';
+import {mkdir,mkdtemp,readFile,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -164,13 +164,13 @@ it('a paused task remains intact while a different task becomes active',async()=
  expect(tasks.find(task=>task.id===second.id)).toMatchObject({status:'ready_for_preview',workspace:second.workspace,requirement_history:['开发角色改名能力']});
 },30000);
 
-it('transient core executor abort retries in the same workspace and then succeeds',async()=>{
+it('transient core executor abort leaves a partial repository but retries in a fresh attempt workspace',async()=>{
  let attempt=0;const workspaces:string[]=[];
- const execute=vi.fn(async(request:any)=>{workspaces.push(request.workspace);if(++attempt===1)throw new Error('The operation was aborted');return {status:'candidate_ready' as const,provider:'fixture',workspace:request.workspace,base_revision:'base',changed_files:['src/example.ts'],commands:[],patch_path:join(request.workspace,'candidate.patch'),tests_passed:true,build_passed:true,acceptance_passed:true,installed:false,registered:false,restart_required:true,message:'candidate ready'};});
+ const execute=vi.fn(async(request:any)=>{workspaces.push(request.workspace);if(++attempt===1){await mkdir(join(request.workspace,'repository'),{recursive:true});await writeFile(join(request.workspace,'repository','partial.txt'),'partial candidate');throw new Error('The operation was aborted');}expect(request.workspace).not.toBe(workspaces[0]);return {status:'candidate_ready' as const,provider:'fixture',workspace:request.workspace,base_revision:'base',changed_files:['src/example.ts'],commands:[],patch_path:join(request.workspace,'candidate.patch'),tests_passed:true,build_passed:true,acceptance_passed:true,installed:false,registered:false,restart_required:true,message:'candidate ready'};});
  const executor:CodingAgentExecutor={availability:async()=>({available:true,provider:'fixture',reason:null}),execute};
  const f=await setup(r=>(r.schema as any).properties.normalized_requirements?{...plan,complexity:'HIGH',milestones:[...plan.milestones,{id:'integration',title:'验证世界接入',kind:'integration',acceptance:['只提交合法事务']}],capability_gaps:[gap]}:undefined,executor);
  const t=await start(f,'增加需要核心能力的通用功能');await f.tasks.wait(t.id);await f.tasks.approveCore(t.id,true);const out=await f.tasks.wait(t.id);
- expect(execute).toHaveBeenCalledTimes(2);expect(new Set(workspaces).size).toBe(1);expect(out.status).toBe('paused');expect(out.core_recovery).toMatchObject({attempts:2,replans:0,classification:null});
+ expect(execute).toHaveBeenCalledTimes(2);expect(new Set(workspaces).size).toBe(2);expect(workspaces[0]).toMatch(/revision-1.+replan-0.+attempt-1/);expect(workspaces[1]).toMatch(/revision-1.+replan-0.+attempt-2/);expect(out.status).toBe('paused');expect(out.core_recovery).toMatchObject({attempts:2,replans:0,classification:null});
 },20000);
 
 it('core recovery retry and replan budgets are bounded before final failure',async()=>{

@@ -60,7 +60,7 @@ export class ExtensionHost {
  async nextVersion(id:string,current?:string){await this.ready;const versions=[...(this.approved[id]??[]).map(m=>m.version),...(current?[current]:[])];if(!versions.length)return '0.1.0';versions.sort((a,b)=>{const x=a.split('.').map(Number),y=b.split('.').map(Number);return x[0]-y[0]||x[1]-y[1]||x[2]-y[2];});const [major,minor,patch]=versions.at(-1)!.split('.').map(Number);return [major,minor,patch+1].join('.');}
  async approve(manifest:ExtensionManifest){await this.ready;const parsed=safeParse(manifestSchema,manifest);this.approved[parsed.extension_id]??=[];const same=this.approved[parsed.extension_id].find(m=>m.version===parsed.version);assert(!same||JSON.stringify(same)===JSON.stringify(parsed),'相同版本不可覆盖，请生成新版本');if(!this.has(parsed))this.approved[parsed.extension_id].push(parsed);
  const payload=JSON.stringify(this.approved,null,2);this.writes=this.writes.then(async()=>{await mkdir(this.directory,{recursive:true});const tmp=join(this.directory,randomUUID()+'.tmp');await writeFile(tmp,payload);await rename(tmp,join(this.directory,'approved.json'));});await this.writes;}
- async list(){await this.ready;const save=await this.service.current();return Object.entries(save.extensions??{}).map(([id,e])=>({id,name:e.manifest.name,version:e.version,manifest:e.manifest,enabled:e.enabled,installed:e.installed,available:this.has(e.manifest),can_open:e.enabled&&e.installed&&this.has(e.manifest)&&sceneMatches(save,e.manifest),state:playView(validatedPlay(e.state,e.manifest)),warning:this.has(e.manifest)?null:'本机缺少已验证的对应扩展版本；状态已保留为休眠。'}));}
+ async list(){await this.ready;const save=await this.service.current();return Object.entries(save.extensions??{}).map(([id,e])=>({id,name:e.manifest.name,version:e.version,manifest:e.manifest,enabled:e.enabled,installed:e.installed,available:this.has(e.manifest),can_open:e.enabled&&e.installed&&this.has(e.manifest)&&sceneMatches(save,e.manifest),state:playView(validatedPlay(e.state,e.manifest)),previous_version:e.previous?.version??null,warning:this.has(e.manifest)?null:'本机缺少已验证的对应扩展版本；状态已保留为休眠。'}));}
  async install(raw:unknown,manifest:ExtensionManifest,migrationConfirmed=false){await this.ready;assert(this.has(manifest),'扩展尚未通过安装验证');const tx=safeParse(transactionSchema,raw);return this.service.extensionTransaction(tx,{install:manifest.extension_id,version:manifest.version,migrationConfirmed},save=>{const entries=save.extensions??={},old=entries[manifest.extension_id];if(old){assert(old.manifest.template===manifest.template,'升级不能更换状态类型');const state=validatedPlay(old.state,old.manifest) as {phase?:string}|null;assert(state?.phase!=='playing','请先结束当前局，再更新扩展');}
  let nextState=old?.state??initialState(manifest);
  if(old&&manifest.template==='declarative'){
@@ -77,13 +77,15 @@ export class ExtensionHost {
  }
  validatedPlay(nextState,manifest);
  entries[manifest.extension_id]={version:manifest.version,framework_api_version:'1',manifest,enabled:true,installed:true,state:nextState as never,...(old?{previous:old.manifest,previous_state:structuredClone(old.state)}:{})};});}
- async manage(id:string,raw:unknown,command:'enable'|'disable'|'uninstall'|'rollback'){
+ async manage(id:string,raw:unknown,command:'enable'|'disable'|'reinstall'|'uninstall'|'purge'|'rollback'){
  await this.ready;const tx=safeParse(transactionSchema,raw);return this.service.extensionTransaction(tx,{extension:id,command},save=>{const e=save.extensions?.[id];assert(e,'扩展不存在');assert((validatedPlay(e.state,e.manifest) as {phase?:string}|null)?.phase!=='playing','当前局尚未结束；可关闭界面保留，或完成本局后管理扩展');
 
- if(command==='enable'){assert(this.has(e.manifest),'本机缺少已验证版本');e.enabled=true;e.installed=true;}
- else if(command==='disable')e.enabled=false;
- else if(command==='uninstall'){e.enabled=false;e.installed=false;}
- else{assert(e.previous&&this.has(e.previous),'没有可用的上一版本');const previous=e.previous,previousState=e.previous_state===undefined?e.state:e.previous_state;validatedPlay(previousState,previous);e.previous=e.manifest;e.previous_state=structuredClone(e.state);e.manifest=previous;e.state=previousState;e.version=previous.version;}
+ if(command==='enable'){assert(e.installed,'扩展已经卸载，请先重新安装');assert(this.has(e.manifest),'本机缺少已验证版本');e.enabled=true;}
+ else if(command==='disable'){assert(e.installed,'扩展尚未安装');e.enabled=false;}
+ else if(command==='reinstall'){assert(!e.installed,'扩展当前仍已安装');assert(this.has(e.manifest),'本机缺少已验证版本');validatedPlay(e.state,e.manifest);e.installed=true;e.enabled=true;}
+ else if(command==='uninstall'){assert(e.installed,'扩展已经卸载');e.enabled=false;e.installed=false;}
+ else if(command==='purge'){assert(!e.installed,'请先卸载扩展再删除保留数据');delete save.extensions![id];}
+ else{assert(e.installed,'只有已安装扩展可以回滚');assert(e.previous&&this.has(e.previous),'没有可用的上一版本');const previous=e.previous,previousState=e.previous_state===undefined?e.state:e.previous_state;validatedPlay(previousState,previous);e.previous=e.manifest;e.previous_state=structuredClone(e.state);e.manifest=previous;e.state=previousState;e.version=previous.version;}
  });}
  // Declarative actions only touch the extension's own namespace; canonical effects would have to be
  // requested through the framework transaction API and validated here first.

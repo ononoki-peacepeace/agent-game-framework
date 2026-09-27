@@ -205,6 +205,6 @@ describe('bounded character continuity and safety',()=>{
  it('System raw understanding stays in advanced; default extension header is conditional',async()=>{
   const system=await readFile('src/client/SystemPanel.tsx','utf8'),extension=await readFile('src/client/ExtensionPanel.tsx','utf8');
   expect(system.indexOf('JSON.stringify(result.understanding')).toBeGreaterThan(system.indexOf('<details className="system-advanced">'));
-  expect(extension).toContain('{showDevelopment&&<><h3>功能扩展');
+  expect(extension).toContain('{showDevelopment&&<header className="extension-intro"');
  });
 });

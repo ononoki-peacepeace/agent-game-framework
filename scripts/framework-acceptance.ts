@@ -81,10 +81,10 @@ try{
  const revisedCandidate=await api('development/tasks/'+candidate.id);assert.equal(revisedCandidate.workspace,candidate.workspace);assert.notEqual(revisedCandidate.current_version,candidate.current_version);
  await page.getByRole('button',{name:'确认安装候选',exact:true}).click();await expect.poll(async()=>(await api('development/tasks/'+candidate.id)).status).toBe('installed');
  await page.getByText('已安装功能',{exact:true}).click();
- const installedCard=page.locator('.extension-panel article.entity').filter({hasText:'验收开关'});
+ const installedCard=page.locator('.extension-panel article.feature-card').filter({hasText:'验收开关'});
  await installedCard.getByRole('button',{name:'查看玩法',exact:true}).click();await page.locator('.minigame').getByRole('button',{name:'切换',exact:true}).click();
  await expect(page.locator('.minigame')).toContainText('true');
- await installedCard.getByRole('button',{name:'回滚',exact:true}).click();await expect(page.locator('.minigame')).toContainText('false');
+ await installedCard.getByLabel('验收开关 更多操作').click();await installedCard.getByRole('button',{name:/^回滚到 /}).click();await expect(page.locator('.minigame')).toContainText('false');
 
  assert.deepEqual(errors,[]);
  await writeFile(join(directory,'results.json'),JSON.stringify({passed:true,mode:'real Chrome + real HTTP + deterministic model fixtures',Y1:'punch story, no assistant',Y2:'local outdoor position, no map change',Y3:'profile-only relationship focused/scrolled/highlighted',Y4:'empty shell zero world content',Y5:'durable task requests missing rules, no default game',Y6:'same task/workspace revised; product preview, install, candidate revision, installed update, action and rollback verified in browser',Y7:'high complexity, milestones, injected failure, bounded repair, capability gap and explicit proposal approval',manual_acceptance:false,live_model_validation:false},null,2));console.log('FRAMEWORK ACCEPTANCE PASS '+directory);

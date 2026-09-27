@@ -193,14 +193,14 @@ export class DevelopmentTasks {
   const recovery=t.core_recovery??={classification:null,attempts:0,max_attempts:3,replans:0,max_replans:1,providers_tried:[],last_error:null};
   const classify=(message:string,report?:CoreDevelopmentReport):NonNullable<DevelopmentTask['core_recovery']>['classification']=>{
    if(/尚未保存|uncommitted|dirty worktree|credential|凭证|not available|provider unavailable|unsupported|不支持/i.test(message)||report?.status==='blocked')return 'CAPABILITY_EXTERNAL_BLOCK';
-   if(/aborted|timeout|timed out|temporary|temporar|network|unexpected stop|ECONNRESET|socket hang up/i.test(message))return 'TRANSIENT_EXECUTION_FAILURE';
+   if(/aborted|timeout|timed out|temporary|temporar|network|unexpected stop|ECONNRESET|socket hang up|destination path.*already exists|not an empty directory|workspace collision/i.test(message))return 'TRANSIENT_EXECUTION_FAILURE';
    if(report&&(!report.tests_passed||!report.build_passed||!report.acceptance_passed)||/invalid|no implementation|failed (?:test|build|git diff)|候选.*失败/i.test(message))return 'IMPLEMENTATION_FAILURE';
    return 'UNRECOVERABLE_FAILURE';
   };
-  const workspace=resolve(tmpdir(),'agent-game-framework-core',t.id,`revision-${t.revision}`);
+  const revisionWorkspace=resolve(tmpdir(),'agent-game-framework-core',t.id,`revision-${t.revision}`);
   while(true){
    try{
-    signal.throwIfAborted();recovery.attempts+=1;t.status='developing';t.message=recovery.attempts===1?'核心编码后端正在隔离工作区准备候选；尚未安装或注册。':`本次开发执行被中止，正在自动重试（${recovery.attempts}/${recovery.max_attempts}）。`;await this.persist();
+    signal.throwIfAborted();recovery.attempts+=1;const workspace=resolve(revisionWorkspace,`replan-${recovery.replans}`,`attempt-${recovery.attempts}`);t.status='developing';t.message=recovery.attempts===1&&recovery.replans===0?'核心编码后端正在隔离工作区准备候选；尚未安装或注册。':`上一次开发执行被中止，系统正在重新准备安全工作区并继续尝试。正在自动重试（${recovery.attempts}/${recovery.max_attempts}）。`;await this.persist();
     const report=await this.coreExecutor!.execute({
      task_id:t.id,repository:resolve('.'),workspace,
      requirement:t.requirement_history.join('\n')+(recovery.replans?`\n请根据上一轮失败重新规划并修复：${recovery.last_error??''}`:''),proposal:t.core_proposal!,targeted_tests:['npm test'],required_acceptance:[],

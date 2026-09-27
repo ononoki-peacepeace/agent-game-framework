@@ -14,6 +14,7 @@ import type { DevelopmentProjection } from '../system/development-status.js';
 import {loadDevelopmentWorkspace,saveDevelopmentWorkspace,saveSystemDraft,saveSystemReply} from './development-workspace.js';
 import {ClarificationCard} from './ClarificationCard.js';
 
+type ProviderSnapshot={current:{provider:string;name?:string;model?:string|null}|null;providers:{id:string;label:string}[]};
 type SystemUnderstandingView = { understood?: string[]; unresolved?: {field:string;why:string}[]; likely_workflow?: string } | null;
 type SystemResult = {
   session?:import('../system/session.js').SystemSession; category: string; tool_id: string | null; side_effect_level: string; needs_confirmation: boolean;
@@ -36,11 +37,11 @@ type SystemResult = {
  */
 export function SystemPanel({ handoff, view, onView, onOpenLogs, onExport, onOpenCharacterCrop, busy, act }: PanelProps & {handoff?:{input:string;result:SystemResult}|null}) {
   const workspace=loadDevelopmentWorkspace(view.game_id);
-  const [behavior,setBehavior]=useState<BehaviorRule[]>([]),[devStatus,setDevStatus]=useState<DevelopmentProjection|null>(null);
+  const [behavior,setBehavior]=useState<BehaviorRule[]>([]),[devStatus,setDevStatus]=useState<DevelopmentProjection|null>(null),[provider,setProvider]=useState<ProviderSnapshot|null>(null);
   const [composer,setComposer]=useState<SystemInputState>(submitStarted(initialSystemInput,workspace.system_draft)),[result,setResult]=useState<SystemResult|null>(workspace.system_reply?{...workspace.system_reply} as SystemResult:null),[devDetail,setDevDetail]=useState<{name:string;requiresAnswer:boolean}|null>(null),[sending,setSending]=useState(false),[devRequest,setDevRequest]=useState<string|null>(null),[taskId,setTaskId]=useState<string|null>(workspace.active_task_id),[devOpen,setDevOpen]=useState(workspace.dev_open||Boolean(workspace.active_task_id));
   const input=composer.value,error=composer.error,setInput=(value:string)=>{saveSystemDraft(view.game_id,value);setComposer(state=>submitStarted(state,value));};
   // The System surface is the only place the style configuration is summarised; the assistant body never shows it.
-  useEffect(()=>{void (async()=>{try{setBehavior(await request<BehaviorRule[]>('system/behavior'));}catch{/* no world loaded yet */}})();},[]);
+  useEffect(()=>{void (async()=>{try{setBehavior(await request<BehaviorRule[]>('system/behavior'));}catch{/* no world loaded yet */}try{setProvider(await request<ProviderSnapshot>('ai/providers'));}catch{/* provider status remains unknown */}})();},[]);
   // A handed-off request was already executed by the other input box: show its result, but never put the text
   // back into this composer, otherwise a successfully consumed request looks unsent.
   useEffect(()=>{const saved=loadDevelopmentWorkspace(view.game_id);setTaskId(saved.active_task_id);setDevOpen(saved.dev_open||Boolean(saved.active_task_id));},[view.game_id]);
@@ -84,13 +85,13 @@ export function SystemPanel({ handoff, view, onView, onOpenLogs, onExport, onOpe
   const headline=result?.title??(result?.clarification?'需要你确认一项信息':workflow==='development_task'?'开发任务':workflow==='media_asset'?'人物资源':workflow==='behavior_config'?'风格配置':workflow==='module_management'?'功能开关':workflow==='capability_question'?'能力说明':'系统回复');
   const mediaEntity=workflow==='media_asset'&&typeof result?.advanced?.entity_id==='string'?view.entities.find(entity=>entity.id===result.advanced!.entity_id):undefined;
   const devVisible=devOpen||Boolean(devRequest)||Boolean(taskId);
-  return <div className="system-panel">
+  return <div className="system-panel"><header className="system-hero"><span className="section-kicker">FRAMEWORK CONTROL</span><h2>系统与能力</h2><p>管理 AI 能力、开发任务和已安装功能。世界行动仍在游戏页完成。</p></header><section className="capability-overview" aria-label="能力概览"><article><span>TEXT INTELLIGENCE</span><strong>文本 AI</strong><b className={provider?.current?"ok":"neutral"}>{provider?.current?"可用":"服务托管"}</b><small>{provider?.current?(provider.current.name??provider.current.model??provider.current.provider):"理解系统请求与世界行动"}</small></article><article><span>MEDIA PIPELINE</span><strong>图像生成</strong><b className={result?.capability_guidance?"warn":"neutral"}>{result?.capability_guidance?"需要配置":"按需调用"}</b><small>人物资源与头像工作流</small></article><article><span>EXTENSION SDK</span><strong>扩展开发</strong><b className="ok">可用</b><small>隔离状态、版本与安装生命周期</small></article><article><span>CORE WORKSPACE</span><strong>框架开发</strong><b className={devStatus&&!devStatus.terminal?"working":"neutral"}>{devStatus&&!devStatus.terminal?devStatus.label:"待命"}</b><small>受安全门保护的隔离候选</small></article></section><section className="system-command"><div className="section-heading"><div><span className="section-kicker">SYSTEM COMMAND</span><h3>向系统提出请求</h3></div></div>
     {devStatus&&!devStatus.terminal&&<p className="system-hint" role="status">开发任务：{devStatus.label}。切到别的页面不会中断，处理会在后台继续。</p>}
     {devDetail?.requiresAnswer&&<p className="system-hint">当前输入会回复「{devDetail.name}」的开发问题。</p>}
 
     <label className="system-input">你想让系统做什么？<textarea aria-label="系统请求" value={input} maxLength={2000} onChange={e=>setInput(e.target.value)} placeholder="例如：人物页显示好感度 / 故事写得更有文学性一点 / 关闭生活模式" disabled={sending}/></label>
     <div className="button-row compact"><button disabled={sending||!input.trim()} onClick={()=>void send(false)}>{sending?'处理中…':'发送'}</button>{result?.needs_confirmation&&<button className="quiet" disabled={sending} onClick={()=>void send(true)}>确认执行</button>}</div>
-    {error&&<p role="alert" className="system-error">{error}</p>}
+    {error&&<p role="alert" className="system-error">{error}</p>}</section>
     {result&&<article className={`system-result ${result.needs_confirmation?'pending':''}`}><strong>{headline}</strong><p>{sanitizePlayerText(result.message)}</p>
       {mediaEntity&&<p className="system-hint">{String(mediaEntity.components.identity?.name??mediaEntity.id)}：{Boolean((mediaEntity.components.visual_assets as {images?:Record<string,string>}|undefined)?.images?.fullbody)?'已有全身图，可以直接裁剪头像。':'还没有全身图，只能上传或接入图像生成能力。'}{result.advanced?.capability_gap?' 当前缺少能力：图像生成 Provider。':''}</p>}
       {mediaEntity&&Boolean((mediaEntity.components.visual_assets as {images?:Record<string,string>}|undefined)?.images?.fullbody)&&<div className="button-row compact"><button disabled={sending} onClick={()=>onOpenCharacterCrop?.(mediaEntity.id)}>打开头像裁剪</button></div>}
@@ -102,9 +103,9 @@ export function SystemPanel({ handoff, view, onView, onOpenLogs, onExport, onOpe
 
       <ClarificationCard question={sanitizePlayerText(result.guide.current_question??'你想怎么继续？','你想怎么继续？')} options={result.guide.options.filter(option=>Boolean(option.action)).map(option=>({id:option.id,label:sanitizePlayerText(option.label,'继续'),detail:sanitizePlayerText(option.detail,'')}))} onChoose={option=>{const match=result.guide!.options.find(item=>item.id===option.id);if(match?.action)void sendGuideAction(match.action);}} onAnswer={answer=>void send(false,answer)} disabled={sending}/>
     </section>}
-    {devVisible&&<DevelopmentPanel view={view} onView={onView} taskId={taskId} onSelect={id=>{setTaskId(id);saveDevelopmentWorkspace(view.game_id,{active_task_id:id});}} onStatus={(status,detail)=>{setDevStatus(status);setDevDetail(detail??null);}}/>}
+    {devVisible&&<section className="development-workspace"><header><span className="section-kicker">DEVELOPMENT WORKSPACE</span><h3>开发工作区</h3></header><DevelopmentPanel view={view} onView={onView} taskId={taskId} onSelect={id=>{setTaskId(id);saveDevelopmentWorkspace(view.game_id,{active_task_id:id});}} onStatus={(status,detail)=>{setDevStatus(status);setDevDetail(detail??null);}}/></section>}
     {devVisible&&<button className="quiet" onClick={()=>{setTaskId(null);setDevRequest(null);setDevStatus(null);setDevOpen(false);setResult(null);saveSystemReply(view.game_id,null);setDevDetail(null);saveDevelopmentWorkspace(view.game_id,{active_task_id:null,dev_open:false});}}>结束当前开发对话</button>}
-    <details><summary>已安装功能</summary><ExtensionPanel view={view} intent={null} onView={v=>onView?.(v)} showDevelopment={false}/></details>
+    <section className="system-features"><ExtensionPanel view={view} intent={null} onView={v=>onView?.(v)} showDevelopment={false}/></section>
     <details className="system-advanced">
       <summary>高级 / 开发详情</summary>
       <p>当前请求：{result?.category??'（还没有请求）'} · 工作流：{workflow??'（未进入工作流）'} · 状态：{sending?'处理中':devStatus?`${devStatus.label}（${devStatus.task_status}）`:result?.session?.status??(result?.needs_confirmation?'等待你的确认':'空闲')}{result?.expression?` · 表达：${result.expression==='model'?'模型':'确定性文案'}`:''}</p>

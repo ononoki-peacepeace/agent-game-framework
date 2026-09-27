@@ -6,7 +6,7 @@ import {randomUUID} from 'node:crypto';
 import {sparseSetup} from './sparse-fixture.js';
 import {ExtensionHost} from '../src/extensions/host.js';
 import {ExtensionDevelopment} from '../src/extensions/development.js';
-import {manifestFrom} from '../src/extensions/schema.js';
+import {manifestFrom,type ExtensionSpec} from '../src/extensions/schema.js';
 import {verifyReference} from '../src/extensions/verification.js';
 import {extensionIntent} from '../src/extensions/intent.js';
 const spec={extension_id:'blackjack',name:'21 点',description:'参考玩法',template:'blackjack' as const,allow_betting:true,max_stake:20,healing_item_id:null,fields:[],declarative_actions:[],surfaces:[]};
@@ -32,6 +32,16 @@ it('enable disable uninstall and rollback preserve other namespaces',async()=>{
  const {host,service}=await setup();const one=manifestFrom(spec,'0.1.0','test'),two=manifestFrom({...spec,name:'21 点改版'},'0.1.1','test'),other=manifestFrom({...spec,extension_id:'another'},'0.1.0','test');for(const m of [one,two,other])await host.approve(m);await host.install(await tx(service),one);await host.install(await tx(service),other);const foreign=(await service.current()).extensions!.another;
  await host.install(await tx(service),two);await host.manage('blackjack',await tx(service),'rollback');expect((await service.current()).extensions!.blackjack.version).toBe('0.1.0');
  await host.manage('blackjack',await tx(service),'disable');await expect(host.act('blackjack',{...await tx(service),action:{type:'start'}})).rejects.toThrow('未启用');await host.manage('blackjack',await tx(service),'enable');await host.manage('blackjack',await tx(service),'uninstall');expect((await service.current()).extensions!.blackjack.installed).toBe(false);expect((await service.current()).extensions!.another).toEqual(foreign);
+});
+it('distinguishes disable, uninstall with retained data, reinstall, purge and rollback',async()=>{
+ const {host,service}=await setup();const base:ExtensionSpec={extension_id:'lifecycle',name:'生命周期测试',description:'通用扩展生命周期',template:'declarative',allow_betting:false,max_stake:0,healing_item_id:null,fields:[{key:'count',label:'计数',type:'number',initial:0}],declarative_actions:[{id:'plus',label:'增加',op:'increment',field:'count',value:1}],surfaces:[{id:'panel',kind:'panel',title:'生命周期测试',visibility:'always'}]};
+ const one=manifestFrom(base,'0.1.0','test'),two=manifestFrom({...base,description:'第二版'},'0.1.1','test');await host.approve(one);await host.approve(two);await host.install(await tx(service),one);await host.act('lifecycle',{...await tx(service),action:{type:'plus'}});const stable=structuredClone((await service.current()).extensions!.lifecycle.state);
+ await host.manage('lifecycle',await tx(service),'disable');expect((await host.list()).find(item=>item.id==='lifecycle')?.installed).toBe(true);expect((await service.current()).extensions!.lifecycle).toMatchObject({installed:true,enabled:false,state:stable});
+ await host.manage('lifecycle',await tx(service),'enable');expect((await service.current()).extensions!.lifecycle).toMatchObject({installed:true,enabled:true,state:stable});
+ await host.manage('lifecycle',await tx(service),'uninstall');expect((await host.list()).find(item=>item.id==='lifecycle')?.installed).toBe(false);expect((await service.current()).extensions!.lifecycle.state).toEqual(stable);
+ await host.manage('lifecycle',await tx(service),'reinstall');expect((await service.current()).extensions!.lifecycle).toMatchObject({installed:true,enabled:true,state:stable});
+ await host.install(await tx(service),two);expect((await service.current()).extensions!.lifecycle.version).toBe('0.1.1');await host.manage('lifecycle',await tx(service),'rollback');expect((await service.current()).extensions!.lifecycle).toMatchObject({version:'0.1.0',state:stable});
+ await host.manage('lifecycle',await tx(service),'uninstall');await host.manage('lifecycle',await tx(service),'purge');expect((await service.current()).extensions?.lifecycle).toBeUndefined();expect((await host.list()).some(item=>item.id==='lifecycle')).toBe(false);
 });
 it('combat damage uses host HP transaction without fabricated rewards',async()=>{
  const {host,service}=await setup(),manifest=manifestFrom({...spec,extension_id:'combat',template:'turn_based_combat',allow_betting:false},'0.1.0','test');await host.approve(manifest);await host.install(await tx(service),manifest);await host.act('combat',{...await tx(service),action:{type:'start'}});const before=await service.current();await host.act('combat',{...await tx(service),action:{type:'attack'}});const after=await service.current();expect(Number(after.entities[0].components.condition.hp)).toBeLessThan(Number(before.entities[0].components.condition.hp));expect(after.entities[0].components.wallet).toEqual(before.entities[0].components.wallet);await host.act('combat',{...await tx(service),action:{type:'flee'}});expect((await service.current()).extensions!.combat.state).toMatchObject({phase:'finished'});
