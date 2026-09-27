@@ -12,18 +12,29 @@ const card=z.number().int().min(0).max(51);
 const playSchema=z.discriminatedUnion('kind',[
  z.strictObject({kind:z.literal('blackjack'),phase:z.enum(['playing','finished']),round_id:z.string(),deck:z.array(card).max(52),player:z.array(card).min(2).max(22),dealer:z.array(card).min(2).max(22),stake:z.number().int().min(0).max(100),currency:z.string(),result:z.string().max(100)}),
  z.strictObject({kind:z.literal('combat'),phase:z.enum(['playing','finished']),round_id:z.string(),enemy_hp:z.number().int().min(0).max(20),turn:z.number().int().min(0),result:z.string().max(100)}),
- z.strictObject({kind:z.literal('declarative'),values:z.record(z.string(),z.union([z.number().finite().min(-1_000_000).max(1_000_000),z.boolean(),z.string().max(60)])),last_action:z.string().max(40).nullable()}),
+ z.strictObject({kind:z.literal('declarative'),values:z.record(z.string(),z.union([z.number().finite().min(-1_000_000).max(1_000_000),z.boolean(),z.string().max(60)])),entity_values:z.record(z.string(),z.record(z.string(),z.union([z.number().finite().min(-1_000_000).max(1_000_000),z.boolean(),z.string().max(60)]))).default({}),last_action:z.string().max(40).nullable()}),
 ]);
 export function validatedPlay(raw:unknown,manifest:ExtensionManifest):PlayState|null{
  if(raw===null)return null;const state=safeParse(playSchema,raw);
  if(manifest.template==='declarative'){
    assert(state.kind==='declarative','扩展状态类型不匹配');
-   for(const field of manifest.fields){
+   const globalFields=manifest.fields.filter(field=>(field.scope??'extension')==='extension');
+   const entityFields=manifest.fields.filter(field=>field.scope==='entity');
+   const validType=(field:typeof manifest.fields[number],value:unknown)=>field.type==='flag'?typeof value==='boolean':field.type==='text'?typeof value==='string':typeof value==='number';
+   for(const field of globalFields){
      const value=state.values[field.key];
-     assert(field.type==='flag'?typeof value==='boolean':field.type==='text'?typeof value==='string':typeof value==='number',`扩展字段 ${field.key} 类型不匹配`);
      assert(Object.hasOwn(state.values,field.key),`扩展字段 ${field.key} 缺失`);
+     assert(validType(field,value),`扩展字段 ${field.key} 类型不匹配`);
    }
-   for(const key of Object.keys(state.values))assert(manifest.fields.some(field=>field.key===key),`扩展状态出现未声明字段 ${key}`);
+   for(const key of Object.keys(state.values))assert(globalFields.some(field=>field.key===key),`扩展状态出现未声明字段 ${key}`);
+   for(const [entityId,values] of Object.entries(state.entity_values)){
+     assert(entityId.length>0&&entityId.length<=120,'扩展实体 ID 无效');
+     for(const [key,value] of Object.entries(values)){
+       const field=entityFields.find(candidate=>candidate.key===key);
+       assert(field,`扩展实体状态出现未声明字段 ${key}`);
+       assert(validType(field,value),`扩展实体字段 ${key} 类型不匹配`);
+     }
+   }
    return state;
  }
  assert((manifest.template==='blackjack')===(state.kind==='blackjack'),'扩展状态类型不匹配');
@@ -34,7 +45,7 @@ export function declarativeOpen(){return true;}
 /** Declarative extensions start from the field defaults declared in their own manifest. */
 export function initialState(manifest:ExtensionManifest):PlayState|null{
  if(manifest.template!=='declarative')return null;
- return {kind:'declarative',values:Object.fromEntries(manifest.fields.map(field=>[field.key,field.initial])),last_action:null};
+ return {kind:'declarative',values:Object.fromEntries(manifest.fields.filter(field=>(field.scope??'extension')==='extension').map(field=>[field.key,field.initial])),entity_values:{},last_action:null};
 }
 export function sceneMatches(save:SavePackage,manifest:ExtensionManifest){
  if(manifest.template==='declarative')return declarativeOpen();
@@ -55,7 +66,14 @@ export class ExtensionHost {
  if(old&&manifest.template==='declarative'){
  const changed=JSON.stringify(old.manifest.fields.map(f=>[f.key,f.type]))!==JSON.stringify(manifest.fields.map(f=>[f.key,f.type]));
  assert(!changed||migrationConfirmed,'字段结构变化需要确认迁移');
- if(changed){const before=validatedPlay(old.state,old.manifest);assert(before?.kind==='declarative','旧状态不可迁移');nextState={kind:'declarative',values:Object.fromEntries(manifest.fields.map(f=>[f.key,old.manifest.fields.some(o=>o.key===f.key&&o.type===f.type)?before.values[f.key]:f.initial])),last_action:null};}
+ if(changed){
+  const before=validatedPlay(old.state,old.manifest);assert(before?.kind==='declarative','旧状态不可迁移');
+  const globalFields=manifest.fields.filter(field=>(field.scope??'extension')==='extension');
+  const entityFields=manifest.fields.filter(field=>field.scope==='entity');
+  const values=Object.fromEntries(globalFields.map(field=>[field.key,old.manifest.fields.some(previous=>previous.key===field.key&&previous.type===field.type&&(previous.scope??'extension')==='extension')?before.values[field.key]:field.initial]));
+  const entity_values=Object.fromEntries(Object.entries(before.entity_values).map(([entityId,previousValues])=>[entityId,Object.fromEntries(entityFields.map(field=>[field.key,old.manifest.fields.some(previous=>previous.key===field.key&&previous.type===field.type&&previous.scope==='entity')&&Object.hasOwn(previousValues,field.key)?previousValues[field.key]:field.initial]))]));
+  nextState={kind:'declarative',values,entity_values,last_action:null};
+ }
  }
  validatedPlay(nextState,manifest);
  entries[manifest.extension_id]={version:manifest.version,framework_api_version:'1',manifest,enabled:true,installed:true,state:nextState as never,...(old?{previous:old.manifest,previous_state:structuredClone(old.state)}:{})};});}
@@ -69,21 +87,26 @@ export class ExtensionHost {
  });}
  // Declarative actions only touch the extension's own namespace; canonical effects would have to be
  // requested through the framework transaction API and validated here first.
- private applyDeclarative(entry:NonNullable<SavePackage['extensions']>[string],action:{type:string;field?:string}){
+ private applyDeclarative(save:SavePackage,entry:NonNullable<SavePackage['extensions']>[string],action:{type:string;field?:string;target_entity_id?:string}){
  const manifest=entry.manifest,spec=manifest.declarative_actions.find(candidate=>candidate.id===action.type);assert(spec,`未声明的扩展动作: ${action.type}`);
  const field=manifest.fields.find(candidate=>candidate.key===spec.field);assert(field,`扩展动作引用了不存在的字段: ${spec.field}`);
  const state=validatedPlay(entry.state,manifest);assert(state?.kind==='declarative','扩展状态类型不匹配');
- const values=state.values,current=values[spec.field];
+ let values=state.values;
+ if(field.scope==='entity'){
+   assert(action.target_entity_id,'实体字段动作缺少目标人物');
+   const target=save.entities.find(entity=>entity.id===action.target_entity_id);assert(target&&target.type==='character','实体字段目标人物不存在');
+   values=state.entity_values[action.target_entity_id]??Object.fromEntries(manifest.fields.filter(candidate=>candidate.scope==='entity').map(candidate=>[candidate.key,candidate.initial]));
+   state.entity_values[action.target_entity_id]=values;
+ }
+ const current=values[spec.field]??field.initial;
  if(spec.op==='increment'||spec.op==='decrement'){assert(typeof current==='number','该字段不是数字');const delta=(spec.op==='increment'?1:-1)*(spec.value??1);values[spec.field]=Math.max(-1_000_000,Math.min(1_000_000,current+delta));}
  else if(spec.op==='set'){assert(spec.value!==undefined,'该动作缺少目标值');assert(field.type!=='flag','flag 字段请使用 toggle');assert(typeof current==='number','该字段不是数字');values[spec.field]=Math.max(-1_000_000,Math.min(1_000_000,spec.value));}
  else{assert(field.type==='flag'&&typeof current==='boolean','toggle 只能用于 flag 字段');values[spec.field]=!current;}
- entry.state={...state,values,last_action:spec.id} as never;
-
- this.service.logger.info('extension.declarative.action',{module:'extension',metadata:{extension_id:manifest.extension_id,action:spec.id,field:spec.field,value:values[spec.field]}});
- }
- async act(id:string,raw:unknown){await this.ready;const input=safeParse(transactionSchema.extend({action:extensionActionSchema}),raw),action=input.action;return this.service.extensionTransaction({game_id:input.game_id,expected_revision:input.expected_revision,request_id:input.request_id},{extension:id,action},save=>{
+ entry.state={...state,last_action:spec.id} as never;
+ this.service.logger.info('extension.declarative.action',{module:'extension',metadata:{extension_id:manifest.extension_id,action:spec.id,field:spec.field,target_entity_id:action.target_entity_id??null,value:values[spec.field]}});
+ } async act(id:string,raw:unknown){await this.ready;const input=safeParse(transactionSchema.extend({action:extensionActionSchema}),raw),action=input.action;return this.service.extensionTransaction({game_id:input.game_id,expected_revision:input.expected_revision,request_id:input.request_id},{extension:id,action},save=>{
  const entry=save.extensions?.[id];assert(entry?.enabled&&entry.installed&&this.has(entry.manifest),'扩展未启用或对应版本尚未验证');const manifest=entry.manifest,old=validatedPlay(entry.state,manifest);assert(sceneMatches(save,manifest),'当前位置不符合扩展触发条件');
- if(manifest.template==='declarative'){this.applyDeclarative(entry,action);return;}
+ if(manifest.template==='declarative'){this.applyDeclarative(save,entry,action);return;}
 
  const player=save.entities.find(e=>e.id===save.player_state.entity_id)!,balances=player.components.wallet?.balances as Record<string,number>|undefined;
  if(action.type==='start'){const stake=action.stake??0;assert(stake===0||manifest.allow_betting&&stake<=manifest.max_stake,'下注超出已安装扩展允许范围');if(stake)assert(action.currency&&balances&&Object.hasOwn(balances,action.currency)&&balances[action.currency]>=stake,'货币无效或余额不足');}

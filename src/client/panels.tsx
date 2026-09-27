@@ -15,7 +15,7 @@ export const nameOf = (entity?: Entity) => String(entity?.components.identity?.n
 export const playerOf = (view: PublicView) => view.entities.find(e => e.id === view.player_id)!;
 export const locationOf = (view: PublicView) => String(playerOf(view).components.location?.location_id ?? '');
 export interface PanelProps { onView?:(next:PublicView)=>void; onExport?:()=>void; onOpenCharacterCrop?:(entityId:string)=>void; acknowledgeTask?:(id:string,outcome:'completed'|'cancelled')=>Promise<void>;
-routineJob?:RoutineJob|null; configureCalendar?:(calendar:Calendar)=>Promise<void>; routineAuto?: boolean; pauseRoutine?: () => void; onOpenLogs?:()=>void; view: PublicView; act: (action: ActionInput) => void; busy: boolean; uploadAvatar?: (entity: Entity, file: File, crop?:AvatarCropMetadata) => Promise<void>; clearAvatar?: (entity: Entity) => Promise<void>; uploadVisualAsset?: (entity: Entity, slot: string, file: File) => Promise<void>; importCharacterCard?: (file: File) => Promise<void>; onSelectCharacter?: (entity: Entity) => void }
+routineJob?:RoutineJob|null; configureCalendar?:(calendar:Calendar)=>Promise<void>; routineAuto?: boolean; pauseRoutine?: () => void; onOpenLogs?:()=>void; view: PublicView; act: (action: ActionInput) => void; busy: boolean; uploadAvatar?: (entity: Entity, file: File, crop?:AvatarCropMetadata) => Promise<void>; clearAvatar?: (entity: Entity) => Promise<void>; uploadVisualAsset?: (entity: Entity, slot: string, file: File) => Promise<void>; importCharacterCard?: (file: File) => Promise<void>; onSelectCharacter?: (entity: Entity) => void; extensionAct?: (extensionId:string,targetEntityId:string,actionType:string)=>Promise<void> }
 const numbers = (value: unknown) => (value ?? {}) as Record<string, number>;
 const inventory = (e: Entity) => numbers(e.components.inventory?.items);
 const relLabels: Record<string,string> = { familiarity:'熟悉度', trust:'信任', affection:'亲近', dependence:'依赖', protectiveness:'保护欲', suspicion:'怀疑', fear:'恐惧', respect:'尊重', romantic_interest:'恋爱倾向', leverage:'影响力' };
@@ -112,7 +112,7 @@ function visualImages(entity: Entity) {
   return (visual?.images ?? {}) as Record<string, unknown>;
 }
 
-export function CharacterDetail({ view, entity, busy, uploadAvatar, clearAvatar, uploadVisualAsset, onClose, initialCropOpen }: PanelProps & { entity: Entity; onClose?: () => void; initialCropOpen?:boolean }) {
+export function CharacterDetail({ view, entity, busy, uploadAvatar, clearAvatar, uploadVisualAsset, extensionAct, onClose, initialCropOpen }: PanelProps & { entity: Entity; onClose?: () => void; initialCropOpen?:boolean }) {
   const role = String(entity.components.character?.role ?? '人物');
   const locationId = String(entity.components.location?.location_id ?? '');
   const location = view.locations.find(l => l.id === locationId);
@@ -125,6 +125,7 @@ export function CharacterDetail({ view, entity, busy, uploadAvatar, clearAvatar,
   const relation = relEntries[entity.id];
   const description = textSummary(entity.components.identity?.description);
   const descriptionLines = readableSummaryLines(entity.components.identity?.description, entity);
+  const extensionFields = ((entity.components.extension_fields?.entries ?? []) as import('../shared/contracts.js').ExtensionFieldProjection[]);
   return <div className="character-detail">
     <div className="character-detail-head">
       <button type="button" className="quiet character-back" onClick={onClose}>← 返回</button>
@@ -147,6 +148,7 @@ export function CharacterDetail({ view, entity, busy, uploadAvatar, clearAvatar,
     </div>
     {description&&<section className="character-detail-section"><h4>已知信息</h4><div className="identity-summary-lines character-summary-lines">{descriptionLines.map((line,i)=><p className="identity-summary-line" key={`${entity.id}:detail:${i}:${line}`}>{line}</p>)}</div></section>}
     {traits.length>0&&<section className="character-detail-section"><h4>特征</h4><div className="chip-row">{traits.slice(0,12).map((x,i)=><span className="chip" key={`${String(x)}:${i}`}>{String(x)}</span>)}</div></section>}
+    {extensionFields.length>0&&<section className="character-detail-section extension-character-fields" aria-label="扩展人物属性"><h4>人物属性</h4><div className="extension-field-grid">{extensionFields.map(field=><div className="extension-field" data-extension-field={`${field.extension_id}:${field.field_id}`} key={`${field.extension_id}:${field.field_id}`}><span>{field.label}</span><strong>{field.type==='flag'?(field.value?'是':'否'):String(field.value)}</strong>{field.actions.length>0&&<div className="button-row compact">{field.actions.map(action=><button type="button" className="quiet" disabled={busy||!extensionAct} key={action.id} onClick={()=>void extensionAct?.(field.extension_id,entity.id,action.id)}>{action.label}</button>)}</div>}</div>)}</div></section>}
     {relationshipSummary(view,entity).source!=='unknown'&&<section className="character-detail-section"><h4>与你的关系</h4><p>{relationshipSummary(view,entity).text}</p><div className="relation-bars">{Object.entries(relation??{}).map(([key,val])=><div className="relation-row" key={key}><span>{relLabels[key]??'关系指标'}</span><div className="relation-track"><i style={{width:`${Math.max(0,Math.min(100,(val+100)/2))}%`}}/></div><b>{val}</b></div>)}</div></section>}
     {card&&<section className="character-detail-section"><h4>角色卡资料</h4>{String(card.personality??'').trim()&&<p><b>性格：</b>{String(card.personality)}</p>}{String(card.scenario??'').trim()&&<p><b>场景：</b>{String(card.scenario)}</p>}{Array.isArray(card.tags)&&card.tags.length>0&&<div className="chip-row">{(card.tags as string[]).slice(0,12).map(tag=><span className="chip" key={tag}>{tag}</span>)}</div>}</section>}
   </div>;

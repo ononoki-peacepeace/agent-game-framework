@@ -105,7 +105,13 @@ export class GameService {
     this.imageRuntime=runtime;this.runtimeCapabilities.add('media.image_generation');
     this.systemCapabilities.activate(['media.image.generate','asset.persist','character.avatar.assign']);
   }
-  runtimeProviderStatus(){
+  async imageProviderStatus(){
+    if(!this.imageRuntime)return {status:'adapter_missing' as const,configured:false,provider:null,reason:'当前没有图片生成服务'};
+    const availability=await this.imageRuntime.available();
+    if(availability.available)return {status:'available' as const,configured:true,provider:this.imageRuntime.provider.id,reason:null};
+    const reason=availability.reason??'图片服务当前不可用';
+    return {status:/credential|api[ _-]?key|token|凭证|密钥|认证/i.test(reason)?'credential_missing' as const:'provider_failure' as const,configured:true,provider:this.imageRuntime.provider.id,reason};
+  }  runtimeProviderStatus(){
     const text=this.ai.adapter.providerInfo?.()??{};
     return {
       text:{provider:text.provider??this.ai.adapter.name,model:text.model??null},
@@ -185,7 +191,7 @@ export class GameService {
         interaction=result.interaction??null;
         // Valid prose and optional enrichment are separate concerns: a rejected enrichment must never discard the narration.
         next = applyOptionalEnrichment(next, result.patches, turn.action, turn.registry, req.request_id);
-        next.last_turn = { narrative: result.narrative, speaker: result.speaker, dialogue: result.dialogue, choices: result.choices, context_actions: result.context_actions }; 
+        next.last_turn = { narrative: result.narrative, speaker: result.speaker, dialogue: result.dialogue, choices: result.choices, context_actions: result.context_actions };
       } catch (error) {
         // Only a real narration failure reaches here; the fallback is player-facing prose, never a tool summary.
         observe('warn',['refusal','content_filter'].includes(failureReason(error))?'narration.safety_degraded':'narration.failed',{module:'turn',request_id:req.request_id,metadata:{action:turn.action.type,reason:errorText(error).slice(0,240)}});

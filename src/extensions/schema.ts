@@ -5,9 +5,20 @@ export const templates=['blackjack','turn_based_combat','declarative'] as const;
 export type ExtensionTemplate=typeof templates[number];
 
 // Declarative extensions describe their own state, actions and UI surface — no arbitrary code.
-export const declarativeFieldSchema=z.strictObject({key,type:z.enum(['number','flag','text']),initial:z.union([number,z.boolean(),z.string().max(60)])});
+export const declarativeFieldSchema=z.strictObject({
+ key,
+ label:z.string().min(1).max(60).optional(),
+ type:z.enum(['number','flag','text']),
+ initial:z.union([number,z.boolean(),z.string().max(60)]),
+ /** Entity fields are stored independently for each target entity. Omitted keeps the legacy extension-global scope. */
+ scope:z.enum(['extension','entity']).optional(),
+});
 export const declarativeActionSchema=z.strictObject({id:key,label:z.string().min(1).max(40),op:z.enum(['increment','decrement','set','toggle']),field:key,value:number.optional()});
-export const declarativeSurfaceSchema=z.strictObject({id:key,kind:z.enum(['contextual_panel','panel','modal']),title:z.string().min(1).max(60),visibility:z.enum(['always','scene']).default('always')});
+export const declarativeSurfaceSchema=z.strictObject({
+ id:key,kind:z.enum(['contextual_panel','panel','modal']),title:z.string().min(1).max(60),visibility:z.enum(['always','scene']).default('always'),
+ /** Only hosts implemented by the client may be declared as verified contextual surfaces. */
+ host:z.enum(['character_detail','character_card']).optional(),
+});
 export const specSchema=z.strictObject({
   extension_id:key,name:z.string().min(1).max(80),description:z.string().min(1).max(600),template:z.enum(templates),
   allow_betting:z.boolean().default(false),max_stake:z.number().int().min(0).max(100).default(0),healing_item_id:key.nullable().default(null),
@@ -25,7 +36,7 @@ export type ExtensionManifest=z.infer<typeof manifestSchema>;
 export const extensionSaveSchema=z.strictObject({version:z.string().max(30),framework_api_version:z.literal('1'),manifest:manifestSchema,enabled:z.boolean(),installed:z.boolean(),state:z.json(),previous:manifestSchema.optional(),previous_state:z.json().optional()});
 export const extensionEntriesSchema=z.record(key,extensionSaveSchema).refine(entries=>Object.entries(entries).every(([id,value])=>value.manifest.extension_id===id&&value.manifest.save_namespace===id&&value.version===value.manifest.version),'扩展 namespace / version 不匹配');
 const templateActions:Record<Exclude<ExtensionTemplate,'declarative'>,string[]>={blackjack:['start','hit','stand'],turn_based_combat:['start','attack','heal','flee']};
-export const extensionActionSchema=z.strictObject({type:z.string().max(40),stake:z.number().int().min(0).max(100).optional(),currency:key.optional(),item_id:key.optional()});
+export const extensionActionSchema=z.strictObject({type:z.string().max(40),stake:z.number().int().min(0).max(100).optional(),currency:key.optional(),item_id:key.optional(),target_entity_id:z.string().min(1).max(120).optional()});
 export function manifestFrom(spec:ExtensionSpec,version:string,generatedBy:string):ExtensionManifest{
  const combat=spec.template==='turn_based_combat',declarative=spec.template==='declarative';
  const actions=declarative?spec.declarative_actions.map(action=>action.id):templateActions[spec.template as Exclude<ExtensionTemplate,'declarative'>];

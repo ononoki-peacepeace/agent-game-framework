@@ -1,4 +1,12 @@
 export type ComponentData = Record<string, unknown>;
+export interface ExtensionFieldProjection {
+  extension_id: string;
+  field_id: string;
+  label: string;
+  type: 'number'|'flag'|'text';
+  value: number|boolean|string;
+  actions: {id:string;label:string}[];
+}
 export interface Entity { id: string; type: string; components: Record<string, ComponentData> }
 /** Panel metadata is the single source of truth for desktop navigation, mobile navigation and surfaces. */
 export interface PanelMeta {
@@ -25,7 +33,7 @@ export interface ModuleStatus {
   panels: string[]; supports_enable_disable: boolean; supports_remove: boolean;
 }
 export interface ActionInput { type: string; target_id?: string; parameters?: Record<string, unknown> }
-export interface ContextActionSuggestion { target_id: string; label: string; intent: string }
+export interface ContextActionSuggestion { target_id: string; label: string; intent: string; family?: 'communicate'|'observe'|'approach'|'interact'|'help'|'use_item'|'follow'|'steal'|'intercept'|'attack' }
 export interface Narrative { narrative: string; speaker: string | null; dialogue: string | null; choices: string[]; context_actions?: ContextActionSuggestion[] }
 export interface MapPosition { x: number; y: number }
 export interface PublicLocation {

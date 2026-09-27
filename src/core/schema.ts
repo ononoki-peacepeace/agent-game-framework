@@ -62,7 +62,7 @@ export const worldSchema = z.strictObject({
   gm_state: z.strictObject({ notes: text, flags: dictionary(z.boolean()) }),
   runtime: z.strictObject({ time: z.strictObject({ day: integer, minute: integer }) }),
 });
-export const contextActionSchema = z.strictObject({ target_id: id, label: z.string().min(1).max(80), intent: z.string().min(1).max(500) });
+export const contextActionSchema = z.strictObject({ target_id: id, label: z.string().min(1).max(80), intent: z.string().min(1).max(500), family:z.enum(['communicate','observe','approach','interact','help','use_item','follow','steal','intercept','attack']).optional() });
 export const narrativeSchema = z.strictObject({ narrative: text, speaker: id.nullable(), dialogue: text.nullable(), choices: z.array(z.string().min(1).max(300)).max(6), context_actions: z.array(contextActionSchema).max(20).optional().default([]) });
 export const actionSchema = z.strictObject({ type: id, target_id: id.optional(), parameters: dictionary(z.json()).default({}) });
 export const mapStateSchema = z.strictObject({

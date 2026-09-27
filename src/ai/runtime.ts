@@ -213,7 +213,7 @@ export class AIRuntime {
           '仅对与玩家处于同一 location_id 的 character 生成建议。',
           '不要重复已注册 contextual action。',
           '需要战斗、偷窃、跟踪等硬机制的行为只有在 action_catalog 中已有对应正式 action 时才可作为硬动作；不要用软互动假装完成硬机制。',
-          '软社交/角色扮演互动可以作为 context_actions，label 要短，intent 要明确。',
+          '软社交/角色扮演互动可以作为 context_actions，label 要短，intent 要明确，并填写 family（communicate/observe/approach/interact/help/use_item/follow/steal/intercept/attack）；family 是第二层建议的归类，不是行为白名单。',
           '遵守 Prompt Profile 的年龄、同意、关系和世界规则。'
         ],
         action_catalog: view.actions.filter(a => a.visibility !== 'internal'),

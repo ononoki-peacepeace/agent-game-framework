@@ -163,3 +163,20 @@ it('a paused task remains intact while a different task becomes active',async()=
  expect(tasks.find(task=>task.id===first.id)).toMatchObject({status:'paused',workspace:first.workspace,requirement_history:['开发潜力系统']});
  expect(tasks.find(task=>task.id===second.id)).toMatchObject({status:'ready_for_preview',workspace:second.workspace,requirement_history:['开发角色改名能力']});
 },30000);
+
+it('transient core executor abort retries in the same workspace and then succeeds',async()=>{
+ let attempt=0;const workspaces:string[]=[];
+ const execute=vi.fn(async(request:any)=>{workspaces.push(request.workspace);if(++attempt===1)throw new Error('The operation was aborted');return {status:'candidate_ready' as const,provider:'fixture',workspace:request.workspace,base_revision:'base',changed_files:['src/example.ts'],commands:[],patch_path:join(request.workspace,'candidate.patch'),tests_passed:true,build_passed:true,acceptance_passed:true,installed:false,registered:false,restart_required:true,message:'candidate ready'};});
+ const executor:CodingAgentExecutor={availability:async()=>({available:true,provider:'fixture',reason:null}),execute};
+ const f=await setup(r=>(r.schema as any).properties.normalized_requirements?{...plan,complexity:'HIGH',milestones:[...plan.milestones,{id:'integration',title:'验证世界接入',kind:'integration',acceptance:['只提交合法事务']}],capability_gaps:[gap]}:undefined,executor);
+ const t=await start(f,'增加需要核心能力的通用功能');await f.tasks.wait(t.id);await f.tasks.approveCore(t.id,true);const out=await f.tasks.wait(t.id);
+ expect(execute).toHaveBeenCalledTimes(2);expect(new Set(workspaces).size).toBe(1);expect(out.status).toBe('paused');expect(out.core_recovery).toMatchObject({attempts:2,replans:0,classification:null});
+},20000);
+
+it('core recovery retry and replan budgets are bounded before final failure',async()=>{
+ const execute=vi.fn(async()=>{throw new Error('temporary provider timeout: operation aborted');});
+ const executor:CodingAgentExecutor={availability:async()=>({available:true,provider:'fixture',reason:null}),execute};
+ const f=await setup(r=>(r.schema as any).properties.normalized_requirements?{...plan,complexity:'HIGH',milestones:[...plan.milestones,{id:'integration',title:'验证世界接入',kind:'integration',acceptance:['只提交合法事务']}],capability_gaps:[gap]}:undefined,executor);
+ const t=await start(f,'增加需要核心能力的通用功能');await f.tasks.wait(t.id);await f.tasks.approveCore(t.id,true);const out=await f.tasks.wait(t.id);
+ expect(execute).toHaveBeenCalledTimes(6);expect(out.status).toBe('failed');expect(out.core_recovery).toMatchObject({attempts:3,max_attempts:3,replans:1,max_replans:1,classification:'TRANSIENT_EXECUTION_FAILURE'});expect(out.message).toContain('策略已用完');
+},20000);

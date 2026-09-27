@@ -501,7 +501,23 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
       input:body.input,confirmed:body.confirmed,session_id:body.session_id,request_id:body.request_id,
       game_id:body.game_id,expected_revision:body.expected_revision,
     });
-    if(result.category==='CAPABILITY_GAP'&&result.advanced?.goal&&result.advanced?.plan&&Array.isArray(result.advanced.missing)){
+    if(result.category==='CAPABILITY_GAP'&&Array.isArray(result.advanced?.missing)&&result.advanced.missing.some((id:unknown)=>String(id).startsWith('media.image'))){
+      const provider=await service.imageProviderStatus();
+      const name=(result.advanced?.goal as {targets?:{reference?:string}[]}|undefined)?.targets?.[0]?.reference??'这个人物';
+      const summary=provider.status==='adapter_missing'
+        ?`我已经理解你想为 ${name} 生成图片并自动设置。当前连接的模型只能返回文字，现在没有连接能够生成图片的服务，因此暂时不能生成真实图片。`
+        :provider.status==='credential_missing'
+          ?`我已经理解你的图片目标。当前已安装 ${provider.provider} 图片服务适配器，但尚未配置可用凭证，因此没有调用服务，人物图片也没有修改。`
+          :`我已经理解你的图片目标，但 ${provider.provider??'图片服务'} 当前不可用，因此没有调用服务，人物图片也没有修改。`;
+      result.message=summary+' 补完图片能力后，可以继续原目标：生成图片、保存资源并设置头像。';
+      result.capability_guidance={status:'WAITING_FOR_PROVIDER',capability:'media.image_generation',reason_kind:provider.status==='available'?'provider_failure':provider.status,summary,options:provider.status==='adapter_missing'?[{id:'connect',label:'接入图片生成模型',action:'connect_provider'},{id:'upload',label:'上传一张图片',action:'upload_asset'},{id:'cancel',label:'取消',action:'cancel'}]:provider.status==='credential_missing'?[{id:'credentials',label:'配置凭证',action:'configure_credentials'},{id:'upload',label:'上传一张图片',action:'upload_asset'},{id:'cancel',label:'取消',action:'cancel'}]:[{id:'retry',label:'重试',action:'retry'},{id:'reason',label:'查看原因',action:'view_reason'},{id:'change',label:'更换图片服务',action:'change_provider'}],resumable:true};
+      result.advanced={...result.advanced,provider_status:provider};
+    }    if(result.category==='EXECUTION_FAILURE'&&(result.advanced?.goal as {desired_outputs?:{kind?:string}[]}|undefined)?.desired_outputs?.some(output=>output.kind==='media_asset')){
+      const provider=await service.imageProviderStatus(),reason=String(result.advanced?.reason??provider.reason??'图片服务没有返回可用结果');
+      result.message='本次图片服务调用失败，头像未修改。你可以重试、查看原因或更换图片服务。';
+      result.capability_guidance={status:'PROVIDER_CALL_FAILED',capability:'media.image_generation',reason_kind:provider.status==='credential_missing'?'credential_missing':'provider_failure',summary:result.message,options:provider.status==='credential_missing'?[{id:'credentials',label:'配置凭证',action:'configure_credentials'},{id:'reason',label:'查看原因',action:'view_reason'},{id:'change',label:'更换图片服务',action:'change_provider'}]:[{id:'retry',label:'重试',action:'retry'},{id:'reason',label:'查看原因',action:'view_reason'},{id:'change',label:'更换图片服务',action:'change_provider'}],resumable:true};
+      result.advanced={...result.advanced,provider_status:{...provider,reason}};
+    }    if(result.category==='CAPABILITY_GAP'&&result.advanced?.goal&&result.advanced?.plan&&Array.isArray(result.advanced.missing)){
       const view=await service.view();
       if(view){
         const suspended=await suspendedGoals.suspend({
@@ -566,6 +582,13 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   app.post('/api/system/action',async(req,res)=>res.json(await processSystem({action:req.body})));
   app.get('/api/development/tasks',async(_req,res)=>res.json(await developmentTasks.list()));
   app.get('/api/system/suspended-goals',async(req,res)=>res.json(await suspendedGoals.list(typeof req.query.game_id==='string'?req.query.game_id:undefined)));
+  app.post('/api/system/suspended-goals/:id/resume',async(req,res)=>{
+    const goal=await suspendedGoals.get(req.params.id);assert(goal,'挂起目标不存在');const view=await service.view();assert(view&&view.game_id===goal.game_id,'原目标所属世界当前未载入');
+    const assessment=service.systemCapabilities.assess(goal.missing_capabilities,view.capabilities);assert(!assessment.external_prerequisites.length,'所需外部服务仍未就绪');
+    await suspendedGoals.beginResume(goal.goal_id,randomUUID());const resolution=await executeUniversalPlan(service,goal.plan,{request_id:randomUUID(),expected_revision:view.revision});
+    if(resolution.handled&&resolution.kind==='EXECUTED'){await suspendedGoals.completeResume(goal.goal_id,resolution.view.revision);return res.json({category:'UNIVERSAL_GOAL',tool_id:goal.plan.steps.at(-1)?.capability_id??null,side_effect_level:'canonical-state',needs_confirmation:false,message:resolution.message,view:resolution.view,title:'原目标已继续'});}
+    const message=resolution.handled&&'message' in resolution?resolution.message:'补充能力后仍未能执行原目标。';await suspendedGoals.failResume(goal.goal_id,message);res.status(409).json({error:message});
+  });
   app.post('/api/development/tasks',async(req,res)=>res.status(202).json(await developmentTasks.start(req.body)));
   app.get('/api/development/tasks/:id',async(req,res)=>res.json(await developmentTasks.get(req.params.id)));
   app.post('/api/development/tasks/:id/revise',async(req,res)=>res.json(await developmentTasks.revise(req.params.id,String(req.body.request??''))));

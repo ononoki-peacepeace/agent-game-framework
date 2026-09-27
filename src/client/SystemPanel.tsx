@@ -23,6 +23,8 @@ type SystemResult = {
   title?: string | null;
   guide?: { proposal_id:string;revision:number;status: 'asking' | 'proposing' | 'confirmed'; understood: string[]; draft: string[]; current_question: string | null; options: { id: string; label: string; detail: string; action?:{type:'FEATURE_GUIDE_OPTION'|'CONFIRM_FEATURE_PROPOSAL'|'CANCEL_FEATURE_PROPOSAL';proposal_id:string;proposal_revision:number;option_id:string} }[] } | null;
   development?:DevelopmentProjection|null;
+  suspended_goal?:{goal_id:string;status:string;external_blocked:boolean}|null;
+  capability_guidance?:{status:'WAITING_FOR_PROVIDER'|'PROVIDER_CALL_FAILED';capability:string;reason_kind:'adapter_missing'|'credential_missing'|'provider_failure';summary:string;options:{id:string;label:string;action:'connect_provider'|'configure_credentials'|'upload_asset'|'retry'|'view_reason'|'change_provider'|'cancel'}[];resumable:boolean}|null;
 
 };
 
@@ -62,7 +64,18 @@ export function SystemPanel({ handoff, view, onView, onOpenLogs, onExport, onOpe
     }catch(e){setComposer(state=>submitFailed(state,(e as Error).message));}
     finally{setSending(false);}
   }
-  async function sendGuideAction(action:NonNullable<NonNullable<SystemResult['guide']>['options'][number]['action']>){
+  async function capabilityAction(action:NonNullable<SystemResult['capability_guidance']>['options'][number]['action']){
+    if(action==='cancel'){setResult(null);saveSystemReply(view.game_id,null);return;}
+    if(action==='upload_asset'){
+      if(mediaEntity){onOpenCharacterCrop?.(mediaEntity.id);return;}
+      setResult(current=>current?{...current,message:current.message+' 请打开人物详情，在人物图片区域选择上传。'}:current);return;
+    }
+    if(action==='retry'&&result?.suspended_goal?.goal_id){setSending(true);try{receive(await request<SystemResult>(`system/suspended-goals/${result.suspended_goal.goal_id}/resume`,{}),'继续原目标');}catch(e){setComposer(state=>submitFailed(state,(e as Error).message));}finally{setSending(false);}return;}
+    if(action==='retry'){const objective=(result?.advanced?.goal as {objective?:string}|undefined)?.objective;if(objective){await send(true,objective);return;}}
+    if(action==='view_reason'){const reason=(result?.advanced?.provider_status as {reason?:string}|undefined)?.reason;setResult(current=>current?{...current,message:reason?`图片服务返回：${reason}`:'当前没有更多可读的失败原因。'}:current);return;}
+    const wording=action==='configure_credentials'?'图片服务适配器已经存在；请在本地服务配置中补充该 Provider 的凭证，然后回到这里点击“重试”。':'请在本地服务启动配置中接入一个 ImageGenerationProvider。主文本 Agent 不需要更换；接入后回到这里点击“重试”。';
+    setResult(current=>current?{...current,message:wording}:current);
+  }  async function sendGuideAction(action:NonNullable<NonNullable<SystemResult['guide']>['options'][number]['action']>){
     if(sending||!result?.session?.session_id)return;setSending(true);setComposer(state=>clearSystemError(state));
     try{const next=await request<SystemResult>('system/action',{...action,session_id:result.session.session_id});receive(next,result.guide?.draft.join('\n')??'');}
     catch(e){setComposer(state=>submitFailed(state,(e as Error).message));}finally{setSending(false);}
@@ -81,6 +94,7 @@ export function SystemPanel({ handoff, view, onView, onOpenLogs, onExport, onOpe
     {result&&<article className={`system-result ${result.needs_confirmation?'pending':''}`}><strong>{headline}</strong><p>{sanitizePlayerText(result.message)}</p>
       {mediaEntity&&<p className="system-hint">{String(mediaEntity.components.identity?.name??mediaEntity.id)}：{Boolean((mediaEntity.components.visual_assets as {images?:Record<string,string>}|undefined)?.images?.fullbody)?'已有全身图，可以直接裁剪头像。':'还没有全身图，只能上传或接入图像生成能力。'}{result.advanced?.capability_gap?' 当前缺少能力：图像生成 Provider。':''}</p>}
       {mediaEntity&&Boolean((mediaEntity.components.visual_assets as {images?:Record<string,string>}|undefined)?.images?.fullbody)&&<div className="button-row compact"><button disabled={sending} onClick={()=>onOpenCharacterCrop?.(mediaEntity.id)}>打开头像裁剪</button></div>}
+      {result.capability_guidance&&<section className="capability-guidance" aria-label="外部能力处理选项"><strong>{result.capability_guidance.status==='WAITING_FOR_PROVIDER'?'等待图片服务':'图片服务调用未完成'}</strong><div className="button-row compact">{result.capability_guidance.options.map(option=><button type="button" className={option.action==='cancel'?'quiet':''} disabled={sending} key={option.id} onClick={()=>void capabilityAction(option.action)}>{option.label}</button>)}</div>{result.capability_guidance.resumable&&<small>原目标已经保留；服务可用后可继续，不需要重新描述。</small>}</section>}
     </article>}
     {result?.guide&&result.guide.status!=='confirmed'&&<section className="feature-guide" aria-label="正在完善这个想法"><strong>正在完善这个想法</strong>
       {result.guide.understood.length>0&&<ul>{result.guide.understood.map((line,index)=><li key={index}>{sanitizePlayerText(line, '')}</li>)}</ul>}
@@ -98,7 +112,7 @@ export function SystemPanel({ handoff, view, onView, onOpenLogs, onExport, onOpe
       <p>查看不会改动世界；写入只在你确认后进行。</p>
       <p>当前风格配置：{behaviorSummary(behavior)}</p>
       {!!behavior.length&&<button type="button" className="quiet" disabled={sending} onClick={()=>void send(false,'恢复默认风格配置')}>恢复默认风格</button>}
-      {!devVisible&&<button type="button" className="quiet" onClick={()=>{setDevOpen(true);saveDevelopmentWorkspace(view.game_id,{dev_open:true});}}>打开开发工作区</button>}
+      {!devVisible&&<button type="button" className="quiet" onClick={event=>{(event.currentTarget.closest('details') as HTMLDetailsElement|null)?.removeAttribute('open');setDevOpen(true);saveDevelopmentWorkspace(view.game_id,{dev_open:true});}}>打开开发工作区</button>}
       <button type="button" className="quiet" onClick={()=>void onOpenLogs?.()}>打开日志面板</button>
       {result?.understanding&&<pre>{JSON.stringify(result.understanding,null,2)}</pre>}
     </details>

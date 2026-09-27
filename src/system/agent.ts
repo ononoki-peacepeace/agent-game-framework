@@ -41,6 +41,7 @@ export interface SystemResult {
   pending_goal?: {goal_id:string;original_input:string;clarifications:string[];question:string|null;created_revision:number} | null;
   development?: DevelopmentProjection | null;
   suspended_goal?: { goal_id: string; status: string; external_blocked: boolean } | null;
+  capability_guidance?: {status:'WAITING_FOR_PROVIDER'|'PROVIDER_CALL_FAILED';capability:string;reason_kind:'adapter_missing'|'credential_missing'|'provider_failure';summary:string;options:{id:string;label:string;action:'connect_provider'|'configure_credentials'|'upload_asset'|'retry'|'view_reason'|'change_provider'|'cancel'}[];resumable:boolean} | null;
 }
 const result = (plan: MetaPlan, message: string, toolsList: ToolDescriptor[], extra: Partial<SystemResult> = {}): SystemResult => {
   const tool = toolsList.find(entry => entry.tool_id === plan.tool_id);
@@ -559,7 +560,10 @@ async function executeSystemInput(service: GameService, raw: unknown, context: S
   }
   if (needsUnderstanding(plan, latest, context)) {
     const resolved = await resolveUnderstanding(service, view, save, toolsList, latest, context);
-    if (resolved) return resolved;
+    if (resolved) {
+      if(mediaGap&&universal.handled&&universal.kind==='CAPABILITY_GAP')return {...resolved,category:'CAPABILITY_GAP',advanced:{...resolved.advanced,resolution_kind:universal.kind,missing:universal.missing,goal:universal.goal,plan:universal.plan}};
+      return resolved;
+    }
   }
 
   const executed = await executeTool(service, plan, body, context, toolsList, entityId);
@@ -571,7 +575,7 @@ function universalSystemResult(resolution: Exclude<UniversalResolution, { handle
   if (resolution.kind === 'EXECUTED') return { category: 'UNIVERSAL_GOAL', tool_id: resolution.plan.steps.at(-1)?.capability_id ?? null, side_effect_level: 'canonical-state', needs_confirmation: false, message: resolution.message, view: resolution.view, resolved: resolvedFrom('capability_question',null,resolution.goal.objective), advanced: { resolution_kind: resolution.kind, goal: resolution.goal, plan: resolution.plan, ...(resolution.details ?? {}) } };
   if (resolution.kind === 'USER_AMBIGUITY') return { category: 'USER_AMBIGUITY', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: resolution.candidates.length ? `${resolution.question}\n${resolution.candidates.join('、')}` : resolution.question, clarification: 'universal_goal', pending_field: '具体目标', advanced: { resolution_kind: resolution.kind } };
   if (resolution.kind === 'CAPABILITY_GAP') return { category: 'CAPABILITY_GAP', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: resolution.message, advanced: { resolution_kind: resolution.kind, missing: resolution.missing, goal: resolution.goal, plan: resolution.plan } };
-  return { category: 'EXECUTION_FAILURE', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: resolution.message, advanced: { resolution_kind: resolution.kind, retryable: resolution.retryable, goal: resolution.goal } };
+  return { category: 'EXECUTION_FAILURE', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: resolution.message, advanced: { resolution_kind: resolution.kind, retryable: resolution.retryable, goal: resolution.goal, plan: resolution.plan, reason:resolution.reason??null } };
 }
 const expressionSchema = z.strictObject({ message: z.string().min(1).max(800) });
 async function express(service: GameService, view: ReturnType<typeof publicView>, save: Awaited<ReturnType<GameService['current']>>, text: string, executed: SystemResult, context: SystemExecutionContext): Promise<SystemResult> {

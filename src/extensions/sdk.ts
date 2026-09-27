@@ -7,7 +7,14 @@ export type Request={type:'economy';currency:string;delta:number}|{type:'damage'
 export interface SDKAction {type:string;stake?:number;currency?:string;item_id?:string}
 export interface BlackjackState {kind:'blackjack';phase:'playing'|'finished';round_id:string;deck:number[];player:number[];dealer:number[];stake:number;currency:string;result:string}
 export interface CombatState {kind:'combat';phase:'playing'|'finished';round_id:string;enemy_hp:number;turn:number;result:string}
-export interface DeclarativeState {kind:'declarative';values:Record<string,number|boolean|string>;last_action:string|null}
+export interface DeclarativeState {
+ kind:'declarative';
+ /** Legacy and intentionally extension-global values. */
+ values:Record<string,number|boolean|string>;
+ /** Values owned by this extension and keyed by canonical entity id. */
+ entity_values:Record<string,Record<string,number|boolean|string>>;
+ last_action:string|null;
+}
 export type PlayState=BlackjackState|CombatState|DeclarativeState;
 export const ensure=(value:unknown,message:string):asserts value=>{if(!value)throw Error(message);};
 export function score(cards:number[]){let n=cards.reduce((total,c)=>total+Math.min(c%13+1,10),0);if(cards.some(c=>c%13===0)&&n+10<=21)n+=10;return n;}

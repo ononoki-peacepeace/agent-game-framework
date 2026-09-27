@@ -11,7 +11,7 @@ export type UniversalResolution =
   | { handled: true; kind: 'EXECUTED'; goal: GoalSpec; plan: CapabilityPlan; message: string; view: PublicView; details?: Record<string, unknown> }
   | { handled: true; kind: 'USER_AMBIGUITY'; goal: GoalSpec | null; question: string; candidates: string[] }
   | { handled: true; kind: 'CAPABILITY_GAP'; goal: GoalSpec; plan: CapabilityPlan; missing: string[]; message: string }
-  | { handled: true; kind: 'EXECUTION_FAILURE'; goal: GoalSpec; plan: CapabilityPlan; message: string; retryable: boolean };
+  | { handled: true; kind: 'EXECUTION_FAILURE'; goal: GoalSpec; plan: CapabilityPlan; message: string; retryable: boolean; reason?: string };
 
 export interface UniversalRequestEnvelope { request_id?: string; expected_revision?: number }
 export interface ExecuteOptions {
@@ -126,7 +126,7 @@ export async function executeUniversalPlan(service: GameService, plan: Capabilit
     try{
       const generated=await service.generateAvatar(resolved.entity.id,plan.goal.objective,save.game_id,envelope.expected_revision??save.state_revision);
       return {handled:true,kind:'EXECUTED',goal:plan.goal,plan,message:'已为'+entityLabel(resolved.entity)+'生成并设置了新头像。',view:generated.view,details:{asset_id:generated.artifact.asset_id,mime_type:generated.artifact.mime_type,provider:generated.artifact.provider,model:generated.artifact.model,provider_metadata:generated.artifact.metadata}};
-    }catch(error){const reason=error instanceof Error?error.message:String(error);return {handled:true,kind:'EXECUTION_FAILURE',goal:plan.goal,plan,message:'图片生成或头像设置没有完成：'+reason,retryable:/timeout|timed out|fetch|network/i.test(reason)};}
+    }catch(error){const reason=error instanceof Error?error.message:String(error);return {handled:true,kind:'EXECUTION_FAILURE',goal:plan.goal,plan,message:'图片生成或头像设置没有完成，头像未修改。',retryable:/timeout|timed out|fetch|network/i.test(reason),reason};}
   }
   try {
     for (const step of validation.ordered) if (!['entity.lookup', 'entity.query', 'entity.identity.rename', 'entity.wallet.balance.set'].includes(step.capability_id)) {

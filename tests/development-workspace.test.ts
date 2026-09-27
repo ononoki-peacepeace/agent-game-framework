@@ -38,3 +38,9 @@ describe('development workspace continuity',()=>{
   });
 });
 
+
+it('persists hidden development tasks and restores them independently of canonical task data',()=>{
+  const storage=new MemoryStorage();
+  saveDevelopmentWorkspace('game',{hidden_task_ids:['done','failed'],show_hidden_tasks:true,only_active:true},storage);
+  expect(loadDevelopmentWorkspace('game',storage)).toMatchObject({hidden_task_ids:['done','failed'],show_hidden_tasks:true,only_active:true});
+});

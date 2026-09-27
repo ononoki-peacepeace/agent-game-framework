@@ -27,6 +27,7 @@ export function verifyDeclarative(spec:ExtensionSpec){
  check(new Set(spec.fields.map(field=>field.key)).size===spec.fields.length,'状态字段 key 重复');
  check(new Set(spec.declarative_actions.map(action=>action.id)).size===spec.declarative_actions.length,'动作 id 重复');
  check(new Set(spec.surfaces.map(surface=>surface.id)).size===spec.surfaces.length,'surface id 重复');
+ for(const field of spec.fields.filter(field=>field.scope==='entity'))check(spec.surfaces.some(surface=>surface.kind==='contextual_panel'&&Boolean(surface.host)),'实体字段 '+field.key+' 缺少已实现的 contextual host');
  const values:Record<string,number|boolean|string>={};
  for(const field of spec.fields){
    const ok=field.type==='flag'?typeof field.initial==='boolean':field.type==='text'?typeof field.initial==='string':typeof field.initial==='number';
@@ -43,6 +44,19 @@ export function verifyDeclarative(spec:ExtensionSpec){
  return ['状态字段与动作自洽','重复 id 检查通过','扩展只能写入自有状态（写入清单已限制）'];
 }
 
+/** A milestone may only claim an existing host integration when that host is implemented and populated. */
+export function verifyMilestoneHostProjection(spec:ExtensionSpec,requirement:string){
+ const promise=requirement.replace(/\s+/g,' ');
+ const characterPromise=/(人物|角色).{0,20}(页面|详情|卡片|显示|展示)|(?:页面|详情|卡片).{0,20}(人物|角色)/.test(promise);
+ const unsupportedHostPromise=/(地图|物品详情|背包详情).{0,20}(显示|展示|页面|详情)|(?:显示|展示).{0,20}(地图|物品详情|背包详情)/.test(promise);
+ if(unsupportedHostPromise)throw Error('当前扩展宿主尚未实现该页面投影，不能把里程碑标记为已验证');
+ if(!characterPromise)return [];
+ const entityFields=spec.fields.filter(field=>field.scope==='entity');
+ if(!entityFields.length)throw Error('人物页面承诺需要 entity-scoped 字段，extension-global 状态不能冒充人物属性');
+ const hosts=new Set(spec.surfaces.filter(surface=>surface.kind==='contextual_panel').map(surface=>surface.host));
+ if(!hosts.has('character_detail')&&!hosts.has('character_card'))throw Error('人物页面承诺缺少真实 character host projection');
+ return ['人物宿主 projection 合约通过'];
+}
 export function verifyReference(spec:ExtensionSpec){
  return spec.template==='declarative'?verifyDeclarative(spec):verifyTemplates(spec);
 }

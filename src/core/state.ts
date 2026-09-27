@@ -89,6 +89,26 @@ export function publicView(save: SavePackage, registry = createRegistry(save.def
       return projected ? [[name, structuredClone(projected)]] : [];
     })),
   }));
+  // Contextual extension fields are projected into the canonical host entity only when the
+  // installed extension declares a host the client actually implements. Data remains in the
+  // extension namespace; this object is presentation-only.
+  for (const [extensionId, entry] of Object.entries(save.extensions ?? {})) {
+    if (!entry.installed || !entry.enabled || entry.manifest.template !== 'declarative') continue;
+    const hosts = new Set(entry.manifest.surfaces.filter(surface => surface.kind === 'contextual_panel').map(surface => surface.host));
+    if (!hosts.has('character_detail') && !hosts.has('character_card')) continue;
+    const rawState = entry.state as {kind?:string;entity_values?:Record<string,Record<string,number|boolean|string>>};
+    if (rawState?.kind !== 'declarative') continue;
+    const fields = entry.manifest.fields.filter(field => field.scope === 'entity');
+    for (const entity of entities) {
+      if (entity.type !== 'character' || !fields.length) continue;
+      const stored = rawState.entity_values?.[entity.id] ?? {};
+      entity.components.extension_fields = {entries: fields.map(field => ({
+        extension_id: extensionId, field_id: field.key, label: field.label ?? field.key,
+        type: field.type, value: Object.hasOwn(stored, field.key) ? stored[field.key] : field.initial,
+        actions: entry.manifest.declarative_actions.filter(action => action.field === field.key).map(action => ({id: action.id, label: action.label})),
+      }))};
+    }
+  }
   const visibleLocations = map.locations.filter(location => known.has(location.id));
   const visibleIds = new Set(visibleLocations.map(location => location.id));
   const extensionPanels = Object.entries(save.extensions ?? {}).flatMap(([extensionId, entry]) => {
