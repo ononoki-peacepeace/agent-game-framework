@@ -12,7 +12,14 @@ export interface WorldAffordance {
   location_id: string | null;
   target_id: string | null;
 }
-export const affordanceChoiceSchema=z.strictObject({candidate_id:z.string().nullable(),reason:z.string().max(300),ambiguity:z.string().max(300).nullable()});
+/**
+ * The planner answers one bounded step at a time: act on a discovered affordance, declare the objective
+ * already reached, ask the player to decide, or report a canonical block. It never picks two things at once.
+ */
+export const goalDecisionSchema=z.strictObject({decision:z.enum(['act','done','blocked','clarify']),candidate_id:z.string().nullable(),reason:z.string().max(300),ambiguity:z.string().max(300).nullable()});
+export const affordanceChoiceSchema=goalDecisionSchema;
+/** Every extra step costs a model call and a world turn, so an open goal walk is always bounded. */
+export const MAX_GOAL_STEPS=5;
 
 const effectText=(effect:{op:string;key:string;delta:number})=>`${effect.op}:${effect.key}${effect.delta>=0?'+':''}${effect.delta}`;
 export function discoverAffordances(save:SavePackage,view:PublicView):WorldAffordance[]{
@@ -40,31 +47,70 @@ function firstRoute(view:PublicView,from:string,to:string){
   return null;
 }
 
-export async function executeOpenWorldGoal(service:GameService,save:SavePackage,objective:string,requestId:string){
-  const view=service.project(save),candidates=discoverAffordances(save,view);
-  if(!candidates.length)return {ok:false,message:'当前世界没有声明可用于推进这个目标的行动。',view};
-  const choice=await service.ai.chooseAffordance(view,objective,candidates,affordanceChoiceSchema);
-  if(choice.ambiguity||!choice.candidate_id)return {ok:false,message:choice.ambiguity||'还需要一个关键信息才能选择行动。',view,clarification:choice.ambiguity||'请说明你更偏向哪种做法。'};
-  const selected=candidates.find(candidate=>candidate.id===choice.candidate_id);
-  if(!selected)return {ok:false,message:'规划器选择了当前世界不存在的行动，世界状态没有改变。',view};
+/**
+ * One concrete step of an open goal, expressed only through affordances the world already declares.
+ * Reaching a remote affordance takes as many steps as the route needs; only the step that actually performed
+ * the candidate counts as fulfilled, so a single relocation never consumes the action it was travelling to.
+ */
+async function performAffordance(service:GameService,view:PublicView,save:SavePackage,selected:WorldAffordance,objective:string,requestId:string):Promise<{summary:string;fulfilled:boolean}|null>{
   const player=view.entities.find(entity=>entity.id===view.player_id)!,here=String(player.components.location?.location_id??'');
   if(selected.location_id&&selected.location_id!==here){
     const path=firstRoute(view,here,selected.location_id);
-    if(!path?.length)return {ok:false,message:'当前没有通往所选行动地点的已知路线。',view};
-    const next=await service.turn({game_id:save.game_id,expected_revision:save.state_revision,request_id:requestId,action:{type:'MOVE',target_id:path[0].to,parameters:{}}});
-    return {ok:true,message:`已开始推进「${objective}」：先沿已知路线前往${view.locations.find(location=>location.id===path[0].to)?.name??'下一地点'}。`,view:next};
+    if(!path?.length)return null;
+    await service.turn({game_id:save.game_id,expected_revision:save.state_revision,request_id:requestId,action:{type:'MOVE',target_id:path[0].to,parameters:{}}});
+    return {summary:`已开始推进「${objective}」：先沿已知路线前往${view.locations.find(location=>location.id===path[0].to)?.name??'下一地点'}。`,fulfilled:false};
   }
   if(selected.kind==='activity'){
-    const next=await service.performDeclaredActivity({activity_id:selected.id.slice('activity:'.length),game_id:save.game_id,expected_revision:save.state_revision,request_id:requestId});
-    return {ok:true,message:`已开始推进「${objective}」：完成了${selected.label}。`,view:next};
+    await service.performDeclaredActivity({activity_id:selected.id.slice('activity:'.length),game_id:save.game_id,expected_revision:save.state_revision,request_id:requestId});
+    return {summary:`已开始推进「${objective}」：完成了${selected.label}。`,fulfilled:true};
   }
   if(selected.kind==='talk'&&selected.target_id){
-    const next=await service.turn({game_id:save.game_id,expected_revision:save.state_revision,request_id:requestId,action:{type:'TALK',target_id:selected.target_id,parameters:{topic:objective}}});
-    return {ok:true,message:`已开始推进「${objective}」：向${selected.label.replace(/^与|交谈$/g,'')}打听。`,view:next};
+    await service.turn({game_id:save.game_id,expected_revision:save.state_revision,request_id:requestId,action:{type:'TALK',target_id:selected.target_id,parameters:{topic:objective}}});
+    return {summary:`已开始推进「${objective}」：向${selected.label.replace(/^与|交谈$/g,'')}打听。`,fulfilled:true};
   }
   if(selected.kind==='move'){
-    const next=await service.turn({game_id:save.game_id,expected_revision:save.state_revision,request_id:requestId,action:{type:'MOVE',target_id:selected.location_id!,parameters:{}}});
-    return {ok:true,message:`已开始推进「${objective}」：${selected.label}。`,view:next};
+    await service.turn({game_id:save.game_id,expected_revision:save.state_revision,request_id:requestId,action:{type:'MOVE',target_id:selected.location_id!,parameters:{}}});
+    return {summary:`已开始推进「${objective}」：${selected.label}。`,fulfilled:true};
   }
-  return {ok:false,message:'这个候选行动目前不能执行。',view};
+  return null;
+}
+
+/**
+ * Goal → affordance discovery → plan → execute → observe → re-plan, bounded by MAX_GOAL_STEPS.
+ * Every step re-reads canonical state, must actually change it, and stops only on: goal reached, a player
+ * decision, missing information, a canonical block, or the step cap. Achieved affordances are never repeated.
+ */
+export async function executeOpenWorldGoal(service:GameService,save:SavePackage,objective:string,requestId:string){
+  let current=save;const attempted=new Set<string>(),steps:{candidate:string;summary:string}[]=[];
+  const summarise=()=>steps.map(entry=>entry.summary).join(' ');
+  let view=service.project(current);
+  for(let step=0;step<MAX_GOAL_STEPS;step++){
+    view=service.project(current);
+    const candidates=discoverAffordances(current,view).filter(candidate=>!attempted.has(candidate.id));
+    if(!candidates.length){
+      if(!steps.length)return {ok:false,message:'当前世界没有声明可用于推进这个目标的行动。',view};
+      return {ok:true,message:`${summarise()}（当前世界没有更多可直接推进「${objective}」的行动。）`,view};
+    }
+    const player=view.entities.find(entity=>entity.id===view.player_id),here=String(player?.components.location?.location_id??'');
+    const decision=await service.ai.chooseAffordance(view,objective,candidates,goalDecisionSchema,{
+      completed:steps,player_location:here,player_location_name:view.locations.find(location=>location.id===here)?.name??null,
+    });
+    if(decision.decision==='done'){
+      if(!steps.length)return {ok:false,message:decision.reason||'当前世界没有可直接推进这个目标的行动。',view};
+      return {ok:true,message:summarise(),view};
+    }
+    if(decision.decision==='clarify'){const question=decision.ambiguity||decision.reason||'请说明你更偏向哪种做法。';return {ok:false,message:question,view,clarification:question};}
+    if(decision.decision==='blocked')return {ok:false,message:decision.reason||'当前世界条件无法继续推进这个目标。',view};
+    const selected=candidates.find(candidate=>candidate.id===decision.candidate_id);
+    if(!selected)return {ok:false,message:'规划器选择了当前世界不存在的行动，世界状态没有改变。',view};
+    const revisionBefore=current.state_revision;
+    const outcome=await performAffordance(service,view,current,selected,objective,step===0?requestId:randomUUID());
+    if(!outcome)return {ok:false,message:'当前没有通往所选行动地点的已知路线。',view};
+    if(outcome.fulfilled)attempted.add(selected.id);
+    current=await service.current();
+    // A verified outcome is the only thing that lets the walk continue instead of looping on a no-op.
+    if(current.state_revision<=revisionBefore)return {ok:false,message:`${outcome.summary} 这一步没有改变世界状态，因此停在这里。`,view:service.project(current)};
+    steps.push({candidate:selected.id,summary:outcome.summary});
+  }
+  return {ok:true,message:`${summarise()}（已达到本轮推进步数上限，可以接着说下去让我继续推进。）`,view:service.project(current)};
 }

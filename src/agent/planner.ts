@@ -41,6 +41,9 @@ export function fastPlan(view:PublicView,text:string):AgentPlan|null {
  const simple=planGameRequest(view,text);
  if(simple&&!/而且|然后|并且|同时|顺便/.test(text)){add(simple.intent as GoalInput['type'],text);return validatePlan({goals});}
  if(/^(继续日常|继续生活|继续按.*计划生活)[。！!]?$/u.test(text)){add('CONTINUE_ROUTINE',text);return validatePlan({goals});}
+ // A purpose marker after a movement verb means travel is only the first step of a sustained goal, so the turn
+ // enters bounded goal execution. A bare destination ("去市场") stays a single move, and no place name is special-cased.
+ if(!conditional&&!future&&/^(我)?(现在)?(去|前往|走到|出门|走|移动|往|朝)/.test(text)&&/(看看|看一圈|看一眼|逛逛|逛一逛|转一转|转转|走走|找找|调查|探查|侦查|查看|参观|了解一下|探索|踩点)/.test(text)&&!/(说|问|告诉|邀请)/.test(text)){add('WORLD_GOAL',text);return validatePlan({goals});}
  if(!conditional&&!future&&!/而且|然后|并且|同时|顺便|[；;]/.test(text)&&/^(我)?(现在)?(狠狠|轻轻|用力|去|找|向|对|和|跟|等待|等|观察|检查|买|卖|邀请|训练|说|揍|打|踢|抱|拥抱|扔|丢|爬|喊|大叫|出门|走|移动|靠近)/.test(text)){if(/^((我)?(现在)?去)?找/.test(text)&&!target)return null;add(/说|告诉/.test(text)?'WORLD_SPEECH':'WORLD_ACTION',text);return validatePlan({goals});}
  return null;
 }

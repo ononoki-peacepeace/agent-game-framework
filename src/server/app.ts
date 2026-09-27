@@ -8,6 +8,8 @@ import {handleSystemAction,handleSystemInput} from '../system/agent.js';
 import {planMeta} from '../system/router.js';
 import {handleAgentInput} from '../agent/executor.js';
 import {planGameRequest} from '../agent/game.js';
+import {isRefinementOf} from '../system/refinement.js';
+
 import {toolAvailability} from '../system/tools.js';
 import {RoutineJobs} from '../routine/jobs.js';
 import {ExtensionHost} from '../extensions/host.js';
@@ -440,7 +442,9 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     if(gate.destination==='AMBIGUOUS'){res.json(agentResult('CLARIFICATION',gate.clarification!,{clarification:gate.clarification,view:await readContextView(service)}));return;}
     if(gate.destination==='SYSTEM_META_INTENT'){
       const result=await processSystem({input:body.input,confirmed:false,request_id:body.request_id,game_id:body.game_id,expected_revision:body.expected_revision,originating_surface:'world'});
-      res.json({...agentResult('SYSTEM_META_INTENT','已按系统请求处理。'+result.message,{view:await service.view(),ui_actions:[{kind:'open_panel',panel:'system'}]}),system_handoff:{input:body.input,result}});return;
+      // The System surface owns the one authoritative answer; the world column only acknowledges the handover, so
+      // the same player-facing text is never carried twice in one response.
+      res.json({...agentResult('SYSTEM_META_INTENT','这条内容属于系统设置，已经交给右侧「系统」处理。',{view:await service.view(),ui_actions:[{kind:'open_panel',panel:'system'}]}),system_handoff:{input:body.input,result}});return;
     }
     if(gate.speech_target_id){
       const view=await service.turn({request_id:body.request_id,game_id:body.game_id,expected_revision:body.expected_revision,end_conversation:gate.end_conversation,action:{type:'TALK',target_id:gate.speech_target_id,parameters:{topic:gate.world_input??body.input}}});
@@ -483,8 +487,15 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   app.get('/api/system/behavior',async(_req,res)=>res.json(await service.behaviorConfig()));
   async function processSystem(body:any){
     if(body.development_task_id){
-      const task=await developmentTasks.revise(String(body.development_task_id),String(body.input??''));
-      return ({category:'EXTENSION_REQUEST',tool_id:'extension.create',side_effect_level:'development',needs_confirmation:false,message:task.message,directive:{kind:'extension_development',task_id:task.id,request:task.original_request}});
+      // The client always sends the selected task id, so the server decides whether this really refines it. An
+      // unrelated goal starts its own task instead of being silently merged into the open one.
+      const current=await developmentTasks.get(String(body.development_task_id)),request=String(body.input??'');
+      if(isRefinementOf(`${current.original_request} ${current.normalized_requirements.join(' ')}`,request)){
+        const task=await developmentTasks.revise(current.id,request);
+        return ({category:'EXTENSION_REQUEST',tool_id:'extension.create',side_effect_level:'development',needs_confirmation:false,message:task.message,directive:{kind:'extension_development',task_id:task.id,request:task.original_request},advanced:{task_id:task.id,refinement:true}});
+      }
+      const created=await developmentTasks.start({request_id:body.request_id??randomUUID(),request});
+      return ({category:'EXTENSION_REQUEST',tool_id:'extension.create',side_effect_level:'development',needs_confirmation:false,message:`这是另一个需求，我为它新建了一个开发任务；之前那个任务仍然保留，可以从开发工作区里继续。`,directive:{kind:'extension_development',task_id:created.id,request:created.original_request},advanced:{task_id:created.id,refinement:false,previous_task_id:current.id}});
     }
     const result=body.action?await handleSystemAction(service,body.action):await handleSystemInput(service,{
       input:body.input,confirmed:body.confirmed,session_id:body.session_id,request_id:body.request_id,

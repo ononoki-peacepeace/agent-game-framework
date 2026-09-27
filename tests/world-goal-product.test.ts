@@ -9,12 +9,12 @@ import type { SavePackage } from '../src/core/schema.js';
 import { sparseSetup } from './sparse-fixture.js';
 
 async function runGoal(input:string,select:(save:SavePackage)=>string){
-  let candidate='';
+  let candidate='',decisions=0;
   const fixture=await sparseSetup(async request=>{
     const properties=(request.schema as any).properties??{};
     if(properties.destination)return {data:{destination:'WORLD_INTENT',confidence:1,clarification:null,speech_target_id:null,world_input:null,resolved_input:null,end_conversation:false}};
     if(properties.goals)return {data:{goals:[{goal_id:'g1',type:'WORLD_GOAL',normalized_goal:input,depends_on:[],condition:null,branch:null,temporal_scope:{scope:'now',day_offset:0,window:'any'},target_entities:[]}]}};
-    if(properties.candidate_id)return {data:{candidate_id:candidate,reason:'fixture selects one supplied canonical affordance',ambiguity:null}};
+    if(properties.decision)return {data:{decision:decisions++?'done':'act',candidate_id:decisions>1?null:candidate,reason:'fixture walks one declared affordance and then reports the goal reached',ambiguity:null}};
     if(request.role==='narrator')return {data:{narrative:'你采取了当前世界允许的第一步。',speaker:null,dialogue:null,choices:[],context_actions:[],patches:[],interaction:null}};
     throw new Error('unexpected fixture request');
   });

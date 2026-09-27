@@ -3,6 +3,7 @@ import { execFile } from 'node:child_process';
 import { mkdir, readFile, symlink, writeFile } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
+import { observe } from '../observability/index.js';
 
 const exec = promisify(execFile);
 
@@ -75,8 +76,14 @@ export class CodexCodingAgentExecutor implements CodingAgentExecutor {
     const available = await this.availability();
     if (!available.available) return this.report(request, null, [], [], null, false, false, false, available.reason!);
     const status = await this.run('git', ['status', '--porcelain'], repository, signal);
-    if (status.stdout.trim()) return this.report(request, null, [], [], null, false, false, false, 'Live repository has uncommitted changes; refusing to build a core patch against a moving checkout.');
+    if (status.stdout.trim()) {
+      // The safety gate stays exactly as strict; only the player-facing wording changes. The raw reason goes to
+      // the log (visible in 高级 / 开发详情) so operators still see the real Git state.
+      observe('warn', 'core.development.dirty_worktree', { module: 'development', metadata: { reason: 'Live repository has uncommitted changes; refusing to build a core patch against a moving checkout.', paths: status.stdout.trim().split('\n').slice(0, 8) } });
+      return this.report(request, null, [], [], null, false, false, false, '当前框架有尚未保存的开发修改，为避免覆盖代码，这次核心开发暂时没有开始。请先完成或保存当前开发版本后再继续。');
+    }
     const base = (await this.run('git', ['rev-parse', 'HEAD'], repository, signal)).stdout.trim();
+
     await this.run('git', ['clone', '--no-local', '--no-hardlinks', '--quiet', repository, candidate], workspace, signal);
     const prompt = [
       'You are the bounded core development worker for Agent Game Framework.',

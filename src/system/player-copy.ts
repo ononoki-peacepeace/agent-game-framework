@@ -23,6 +23,7 @@ export function sanitizePlayerText(text: string | null | undefined, fallback = '
     .replace(/\bcapability(?:\s|_)*digest(?:\.tools)?\b/gi, '可用能力')
     .replace(/\binstalled_extensions\b/gi, '已安装功能')
     .replace(/\bunderstanding\b/gi, '需求整理')
+    .replace(/\bresponse_hint\b/gi, '表达要求')
     .replace(/\b(dimensions?)\b/gi, '维度')
     .replace(/\bcapability_gap\b/gi, '缺少的能力')
     .replace(/\bworkflow\b/gi, '处理流程')

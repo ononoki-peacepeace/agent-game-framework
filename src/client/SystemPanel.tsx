@@ -11,13 +11,16 @@ import { sanitizePlayerText } from '../system/player-copy.js';
 
 import type { PublicView } from '../shared/contracts.js';
 import type { DevelopmentProjection } from '../system/development-status.js';
-import {loadDevelopmentWorkspace,saveDevelopmentWorkspace} from './development-workspace.js';
+import {loadDevelopmentWorkspace,saveDevelopmentWorkspace,saveSystemDraft,saveSystemReply} from './development-workspace.js';
+import {ClarificationCard} from './ClarificationCard.js';
 
 type SystemUnderstandingView = { understood?: string[]; unresolved?: {field:string;why:string}[]; likely_workflow?: string } | null;
 type SystemResult = {
   session?:import('../system/session.js').SystemSession; category: string; tool_id: string | null; side_effect_level: string; needs_confirmation: boolean;
   view?:PublicView; message: string; directive?: { kind: string } & Record<string, unknown>; advanced?: Record<string, unknown>;
   clarification?: string | null; workflow?: string | null; pending_field?: string | null; expression?: 'model' | 'template'; understanding?: SystemUnderstandingView;
+  /** Set by the System Agent for the real category of the answer (world setting, character assets, capability…). */
+  title?: string | null;
   guide?: { proposal_id:string;revision:number;status: 'asking' | 'proposing' | 'confirmed'; understood: string[]; draft: string[]; current_question: string | null; options: { id: string; label: string; detail: string; action?:{type:'FEATURE_GUIDE_OPTION'|'CONFIRM_FEATURE_PROPOSAL'|'CANCEL_FEATURE_PROPOSAL';proposal_id:string;proposal_revision:number;option_id:string} }[] } | null;
   development?:DevelopmentProjection|null;
 
@@ -32,8 +35,8 @@ type SystemResult = {
 export function SystemPanel({ handoff, view, onView, onOpenLogs, onExport, onOpenCharacterCrop, busy, act }: PanelProps & {handoff?:{input:string;result:SystemResult}|null}) {
   const workspace=loadDevelopmentWorkspace(view.game_id);
   const [behavior,setBehavior]=useState<BehaviorRule[]>([]),[devStatus,setDevStatus]=useState<DevelopmentProjection|null>(null);
-  const [composer,setComposer]=useState<SystemInputState>(initialSystemInput),[result,setResult]=useState<SystemResult|null>(null),[sending,setSending]=useState(false),[devRequest,setDevRequest]=useState<string|null>(null),[taskId,setTaskId]=useState<string|null>(workspace.active_task_id),[devOpen,setDevOpen]=useState(workspace.dev_open||Boolean(workspace.active_task_id));
-  const input=composer.value,error=composer.error,setInput=(value:string)=>setComposer(state=>submitStarted(state,value));
+  const [composer,setComposer]=useState<SystemInputState>(submitStarted(initialSystemInput,workspace.system_draft)),[result,setResult]=useState<SystemResult|null>(workspace.system_reply?{...workspace.system_reply} as SystemResult:null),[devDetail,setDevDetail]=useState<{name:string;requiresAnswer:boolean}|null>(null),[sending,setSending]=useState(false),[devRequest,setDevRequest]=useState<string|null>(null),[taskId,setTaskId]=useState<string|null>(workspace.active_task_id),[devOpen,setDevOpen]=useState(workspace.dev_open||Boolean(workspace.active_task_id));
+  const input=composer.value,error=composer.error,setInput=(value:string)=>{saveSystemDraft(view.game_id,value);setComposer(state=>submitStarted(state,value));};
   // The System surface is the only place the style configuration is summarised; the assistant body never shows it.
   useEffect(()=>{void (async()=>{try{setBehavior(await request<BehaviorRule[]>('system/behavior'));}catch{/* no world loaded yet */}})();},[]);
   // A handed-off request was already executed by the other input box: show its result, but never put the text
@@ -41,7 +44,7 @@ export function SystemPanel({ handoff, view, onView, onOpenLogs, onExport, onOpe
   useEffect(()=>{const saved=loadDevelopmentWorkspace(view.game_id);setTaskId(saved.active_task_id);setDevOpen(saved.dev_open||Boolean(saved.active_task_id));},[view.game_id]);
   useEffect(()=>{if(!handoff)return;setResult(handoff.result);setDevStatus(handoff.result.development??null);const d=handoff.result.directive;if(d?.kind==='extension_development'){const id=String(d.task_id??'');setDevRequest(String(d.request??handoff.input));setTaskId(id||null);setDevOpen(true);saveDevelopmentWorkspace(view.game_id,{active_task_id:id||null,dev_open:true});}if(d?.kind==='open_crop_editor'&&typeof d.entity_id==='string')onOpenCharacterCrop?.(d.entity_id);},[handoff]);
   function receive(next:SystemResult,text:string){
-    if(next.view)onView?.(next.view);setResult(next);if(next.development)setDevStatus(next.development);setComposer(state=>submitSucceeded(state));
+    if(next.view)onView?.(next.view);setResult(next);saveSystemDraft(view.game_id,'');saveSystemReply(view.game_id,{category:next.category,tool_id:next.tool_id,needs_confirmation:next.needs_confirmation,message:next.message,title:next.title??null,clarification:next.clarification??null,workflow:next.workflow??null,pending_field:next.pending_field??null,expression:next.expression});if(next.development)setDevStatus(next.development);setComposer(state=>submitSucceeded(state));
     if(Array.isArray(next.advanced?.behavior))setBehavior(next.advanced.behavior as BehaviorRule[]);
     if(next.directive?.kind==='export_save')onExport?.();
     if(next.directive?.kind==='open_crop_editor'&&typeof next.directive.entity_id==='string')onOpenCharacterCrop?.(next.directive.entity_id);
@@ -65,10 +68,12 @@ export function SystemPanel({ handoff, view, onView, onOpenLogs, onExport, onOpe
     catch(e){setComposer(state=>submitFailed(state,(e as Error).message));}finally{setSending(false);}
   }
   const workflow=result?.workflow??null;
-  const headline=result?.clarification?'需要你确认一项信息':workflow==='development_task'?'开发工作区':workflow==='media_asset'?'人物资源':workflow==='behavior_config'?'风格配置':workflow==='module_management'?'功能开关':workflow==='capability_question'?'能力说明':'系统回复';
+  const headline=result?.title??(result?.clarification?'需要你确认一项信息':workflow==='development_task'?'开发任务':workflow==='media_asset'?'人物资源':workflow==='behavior_config'?'风格配置':workflow==='module_management'?'功能开关':workflow==='capability_question'?'能力说明':'系统回复');
   const mediaEntity=workflow==='media_asset'&&typeof result?.advanced?.entity_id==='string'?view.entities.find(entity=>entity.id===result.advanced!.entity_id):undefined;
   const devVisible=devOpen||Boolean(devRequest)||Boolean(taskId);
   return <div className="system-panel">
+    {devStatus&&!devStatus.terminal&&<p className="system-hint" role="status">开发任务：{devStatus.label}。切到别的页面不会中断，处理会在后台继续。</p>}
+    {devDetail?.requiresAnswer&&<p className="system-hint">当前输入会回复「{devDetail.name}」的开发问题。</p>}
 
     <label className="system-input">你想让系统做什么？<textarea aria-label="系统请求" value={input} maxLength={2000} onChange={e=>setInput(e.target.value)} placeholder="例如：人物页显示好感度 / 故事写得更有文学性一点 / 关闭生活模式" disabled={sending}/></label>
     <div className="button-row compact"><button disabled={sending||!input.trim()} onClick={()=>void send(false)}>{sending?'处理中…':'发送'}</button>{result?.needs_confirmation&&<button className="quiet" disabled={sending} onClick={()=>void send(true)}>确认执行</button>}</div>
@@ -81,11 +86,10 @@ export function SystemPanel({ handoff, view, onView, onOpenLogs, onExport, onOpe
       {result.guide.understood.length>0&&<ul>{result.guide.understood.map((line,index)=><li key={index}>{sanitizePlayerText(line, '')}</li>)}</ul>}
       {result.guide.draft.length>0&&<ul>{result.guide.draft.map((line,index)=><li key={index}>{sanitizePlayerText(line, '')}</li>)}</ul>}
 
-      {result.guide.current_question&&<p>{sanitizePlayerText(result.guide.current_question,'')}</p>}
-      <div className="button-row compact">{result.guide.options.map(option=><button key={option.id} type="button" className="quiet" title={sanitizePlayerText(option.detail,'')} disabled={sending||!option.action} onClick={()=>option.action&&void sendGuideAction(option.action)}>{sanitizePlayerText(option.label,'继续')}</button>)}</div>
+      <ClarificationCard question={sanitizePlayerText(result.guide.current_question??'你想怎么继续？','你想怎么继续？')} options={result.guide.options.filter(option=>Boolean(option.action)).map(option=>({id:option.id,label:sanitizePlayerText(option.label,'继续'),detail:sanitizePlayerText(option.detail,'')}))} onChoose={option=>{const match=result.guide!.options.find(item=>item.id===option.id);if(match?.action)void sendGuideAction(match.action);}} onAnswer={answer=>void send(false,answer)} disabled={sending}/>
     </section>}
-    {devVisible&&<DevelopmentPanel view={view} onView={onView} taskId={taskId} onSelect={id=>{setTaskId(id);saveDevelopmentWorkspace(view.game_id,{active_task_id:id});}} onStatus={setDevStatus}/>}
-    {devVisible&&<button className="quiet" onClick={()=>{setTaskId(null);setDevRequest(null);setDevStatus(null);setDevOpen(false);setResult(null);saveDevelopmentWorkspace(view.game_id,{active_task_id:null,dev_open:false});}}>结束当前开发对话</button>}
+    {devVisible&&<DevelopmentPanel view={view} onView={onView} taskId={taskId} onSelect={id=>{setTaskId(id);saveDevelopmentWorkspace(view.game_id,{active_task_id:id});}} onStatus={(status,detail)=>{setDevStatus(status);setDevDetail(detail??null);}}/>}
+    {devVisible&&<button className="quiet" onClick={()=>{setTaskId(null);setDevRequest(null);setDevStatus(null);setDevOpen(false);setResult(null);saveSystemReply(view.game_id,null);setDevDetail(null);saveDevelopmentWorkspace(view.game_id,{active_task_id:null,dev_open:false});}}>结束当前开发对话</button>}
     <details><summary>已安装功能</summary><ExtensionPanel view={view} intent={null} onView={v=>onView?.(v)} showDevelopment={false}/></details>
     <details className="system-advanced">
       <summary>高级 / 开发详情</summary>

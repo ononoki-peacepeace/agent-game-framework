@@ -49,7 +49,7 @@ export const tools: ToolDescriptor[] = [
   { tool_id: 'extension.create', name: '准备新玩法', description: '为 Framework 目前没有的玩法准备一个扩展（需要确认后安装）。', category: 'EXTENSION_REQUEST',
     input_schema: { request: 'string' }, output_schema: 'development job', required_capabilities: [], permissions: ['write extension workspace'], side_effect_level: 'development', confirmation_policy: 'always', supported_platforms: ['desktop','mobile'] },
   { tool_id: 'framework.development', name: '修改框架自身', description: '修改 Framework 核心代码或存档机制。', category: 'FRAMEWORK_DEVELOPMENT',
-    input_schema: { request: 'string' }, output_schema: 'development plan', required_capabilities: ['framework.development'], permissions: ['modify framework source'], side_effect_level: 'development', confirmation_policy: 'always', supported_platforms: ['desktop','mobile'] },
+    input_schema: { request: 'string' }, output_schema: 'development plan', required_capabilities: [], permissions: ['modify framework source'], side_effect_level: 'development', confirmation_policy: 'always', supported_platforms: ['desktop','mobile'] },
 ];
 
 export function toolAvailability(capabilities: string[]) {

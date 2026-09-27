@@ -24,6 +24,8 @@ import {
 const moduleNames: Record<string, string> = { map: '地图', commerce: '商店', inventory: '背包', equipment: '装备', quests: '任务', routine: '生活模式', attributes: '属性', aptitudes: '资质', skills: '技能', traits: '特质', relationships: '关系系统', characters: '人物系统' };
 const moduleLabel = (id: string | null) => (id ? moduleNames[id] ?? id : '');
 const behaviorScopeQuestion = '旁白叙述、人物对话，还是游戏助手（我）的回答方式？';
+/** "你/你现在能做什么" always means the Assistant or the Framework, never the NPC the player last spoke to. */
+const asksAboutAssistant=(text:string)=>/你(们)?\s*(现在|目前|当前|都)?\s*(能|会|可以|支持|有|是|做|干)/.test(String(text??''))||/你(们)?\s*(能|会|可以|支持)\s*(做什么|干什么|哪些|什么)/.test(String(text??''));
 const mediaTools = ['avatar.crop','media.set_avatar','character.media.get','media.generate_image'];
 
 export interface SystemResult {
@@ -31,6 +33,8 @@ export interface SystemResult {
   category: string; tool_id: string | null; side_effect_level: string; needs_confirmation: boolean;
   message: string; advanced?: Record<string, unknown>; directive?: { kind: string } & Record<string, unknown>;
   clarification?: string | null; view?: unknown;
+  /** The real category of this final response, so the surface never falls back to a wrong workflow title. */
+  title?: string | null;
   /** Structured state the session keeps, so a clarification only fills what is still missing. */
   understanding?: SystemUnderstanding | null; pending_field?: string | null; workflow?: SystemWorkflow | null;
   resolved?: ResolvedSystemRequest | null; expression?: 'model' | 'template'; guide?: FeatureGuide | null;
@@ -174,9 +178,14 @@ function capabilityAnswer(service: GameService, view: ReturnType<typeof publicVi
  const availableTools=toolAvailability(view.capabilities).filter(tool=>tool.available).map(tool=>tool.name);
   const enabledModules=view.modules.filter(module=>module.enabled).map(module=>module.id);
   const installedExtensions=extensions.filter(([,entry])=>entry.installed&&entry.enabled).map(([,entry])=>String(entry.manifest.name));
-  const development=service.systemCapabilities.get('feature.develop')?.implemented
-    ? '可以把新玩法整理成受校验的扩展开发任务；涉及框架源码时仍会经过隔离工作区、测试和安全门。'
-    : '当前没有可用的扩展开发执行能力。';
+  // Availability is read from live runtime state, never from a static promise: an answered question about
+  // development must separate extension work, gated core work and the missing image provider.
+  const extensionDevelopmentAvailable=service.systemCapabilities.get('feature.develop')?.implemented===true;
+  const coreDevelopmentAvailable=toolAvailability(view.capabilities).find(tool=>tool.tool_id==='framework.development')?.available===true;
+  const development=[
+    `扩展开发：${extensionDevelopmentAvailable?'可用，能把新玩法整理成受校验的扩展开发任务；构建与验证通过后由你确认安装。':'当前不可用。'}`,
+    `框架核心开发：${coreDevelopmentAvailable?'可用，但受安全门约束——在隔离工作区进行，必须通过自动测试并经你明确确认，不会直接改动你正在运行的世界或存档。':'当前不可用。'}`,
+  ].join(' ');
   const image=providers.image.configured
     ? `图片生成已接入（${providers.image.provider}）。`
     : '图片生成 Provider 尚未接入；我会明确报告这个外部依赖，不会假装生成成功。';
@@ -256,7 +265,7 @@ async function resolveUnderstanding(service: GameService, view: ReturnType<typeo
     if (/(道歉|道个歉|对不起)/.test(text) && /(说|给|来|道|要)/.test(text)) return direct('对不起。');
     if (/(打个?招呼|问个好|问声好|问好)/.test(text)) return direct('你好。');
     if (settled.side_effect_class === 'none' && !settled.unresolved.length && settled.likely_workflow === 'capability_question') {
-      return { category: 'CAPABILITY_ANSWER', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: capabilityAnswer(service, view, save, text), understanding: settled, workflow: 'capability_question', expression: 'template', ...(settled.response_hint ? { advanced: { understanding_response_hint: settled.response_hint } } : {}) };
+      return { category: 'CAPABILITY_ANSWER', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: capabilityAnswer(service, view, save, text), title: '能力说明', understanding: settled, workflow: 'capability_question', expression: 'template', ...(settled.response_hint ? { advanced: { understanding_response_hint: settled.response_hint } } : {}) };
     }
   }
   const activeGuide
@@ -269,7 +278,36 @@ async function resolveUnderstanding(service: GameService, view: ReturnType<typeo
   // as a module/capability question, and the player must still get the idea guide instead of a technical answer.
   const wishIsDevelopment = understanding.likely_workflow === 'development_task'
     || shallowUnderstanding(text, view).likely_workflow === 'development_task';
+  // A read-only question about the player's own appearance is a truth query: answered from canonical state,
+  // never routed to a clarification ("who is the player?") or to the capability summary.
+  if (/我.{0,6}(有(没有)?|拥有).{0,4}(头像|立绘|造型|外观)/.test(text) || /(头像|立绘).{0,4}(有没有|有吗|是什么|是多少)/.test(text)) {
+    const player = view.entities.find(entity => entity.id === view.player_id);
+    const identity = (player?.components.identity ?? {}) as { avatar_id?: string | null; name?: string };
+    const visuals = (player?.components.visual_assets ?? {}) as { images?: Record<string, string> };
+    const avatar = identity.avatar_id ?? null, fullbody = visuals.images?.fullbody ?? null;
+    const state = !player ? 'UNAVAILABLE' : avatar ? 'FOUND' : fullbody ? 'NOT_FOUND' : 'NOT_DEFINED';
+    const message = !player ? '还没有载入世界，所以现在查不到头像。'
+      : avatar ? `你现在有头像（${String(identity.name ?? '你的角色')}）。`
+      : fullbody ? '你还没有设置头像，但已经有一张全身图，可以直接裁一张头像。'
+      : '你还没有头像，也没有可用于裁剪的全身图。';
+    return { category: 'SYSTEM_ANSWER', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message, title: '人物资源', advanced: { truth_query: 'avatar', state, entity_id: player?.id ?? null, has_fullbody: Boolean(fullbody) }, understanding, workflow: 'media_asset', expression: 'template' };
+  }
+  // Creation provenance: what the world was authored as, read straight from the save (no model, no guessing).
+  if (/(这个)?世界.{0,8}(最开始|最初|原本|一开始|创建时|初始|开始).{0,8}(设定|背景|主题|来源|描述)/.test(text) || /(世界观|世界设定).{0,6}(是什么|怎样|如何)/.test(text)) {
+    const meta = (save.definition.meta ?? {}) as { title?: string; description?: string };
+    const premise = String(meta.description ?? '').trim();
+    const theme = String(((save.definition as { world?: { description?: string } }).world ?? {}).description ?? '').trim();
+    const parts = [premise, theme && theme !== premise ? theme : ''].filter(Boolean);
+    return {
+      category: 'SYSTEM_ANSWER', tool_id: null, side_effect_level: 'none', needs_confirmation: false,
+      message: parts.length ? `创建时的设定是：${parts.join('\n')}\n（细节以世界运行中已经发生的内容为准。）` : '这个世界的创建记录里没有写明初始设定。',
+      title: '世界设定',
+      advanced: { truth_query: 'creation_provenance', has_premise: Boolean(premise), has_theme: Boolean(theme) },
+      understanding, workflow: 'capability_question', expression: 'template',
+    };
+  }
   const guideForIdea = !answeringOtherField && (activeGuide || (wishIsDevelopment
+
     && (understanding.unresolved.length > 0 || understanding.understood.length > 0))) && !surfacesIn(text).length
     ? (session.guide && session.guide.status !== 'confirmed'
       ? (isGuideConfirmation(text) && session.guide.status === 'proposing' ? { ...session.guide, status: 'confirmed' as const } : advanceFeatureGuide(session.guide, text))
@@ -438,7 +476,7 @@ async function executeTool(service: GameService, plan: MetaPlan, body: { input: 
     case 'save.export':
       return result(plan, '已准备导出标准存档包。', toolsList, { directive: { kind: 'export_save' } });
     case 'extension.create':
-      return result(plan, '这需要一个 Framework 目前没有的玩法。我会在「高级开发」里准备一个候选扩展，构建与验证通过后由你确认安装；它不会自动改框架源码。', toolsList, { directive: { kind: 'extension_development', request: String(plan.args.request ?? body.input) } });
+      return result(plan, '这需要一个 Framework 目前没有的玩法。我会在「高级开发」里准备一个候选扩展，构建与验证通过后由你确认安装；它不会自动改框架源码。', toolsList, { title: '开发任务', directive: { kind: 'extension_development', request: String(plan.args.request ?? body.input) } });
     case 'behavior.configure': {
       const instruction = String(plan.args.instruction ?? body.input).slice(0, 200);
       // A clarification answer names one scope; otherwise every scope the sentence mentions is configured, so
@@ -459,7 +497,9 @@ async function executeTool(service: GameService, plan: MetaPlan, body: { input: 
       return result(plan, scope ? `已恢复该范围的默认风格。` : '已恢复全部默认风格。', toolsList, { advanced: { behavior: rules }, view: next });
     }
     case 'framework.development':
-      return result(plan, '修改 Framework 核心或存档机制属于框架开发，当前尚未接入核心源码开发流程，也不会让 Codex 直接改动源码。', toolsList);
+      // Core development is wired: it uses the existing development workspace, and any core-source change only
+      // runs behind the isolated build/test gate plus the player's explicit confirmation.
+      return result(plan, '修改 Framework 核心或存档机制属于框架开发：这个能力已经接通，会走隔离工作区、自动测试和安全门，只有全部通过并经你明确确认后才会生效。我先把它整理成一个开发任务。', toolsList, { title: '开发任务', directive: { kind: 'extension_development', request: String(plan.args.request ?? body.input) } });
     default:
       return result(plan, '我还不确定你的目标，可以再具体一点吗？', toolsList);
   }
@@ -474,6 +514,8 @@ async function executeSystemInput(service: GameService, raw: unknown, context: S
   const entityId = context.entityId;
   // The session goal is what the tool layer executes; understanding always reads what the player just said.
   const latest = context.latest ?? body.input;
+  // A second-person question is about this Assistant: a recently talked-to NPC must not supply its subject.
+  if(asksAboutAssistant(latest)){context.preferredNames=undefined;context.entityId=undefined;}
   // A goal that is still waiting for a clarification keeps its original request: short answers fill it in,
   // they are not understood again from zero (and never become a different goal).
   const pendingGoal = context.session.pending_goal;

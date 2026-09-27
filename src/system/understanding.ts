@@ -90,10 +90,15 @@ export function shallowUnderstanding(text: string, view: PublicView): SystemUnde
   const moduleId = moduleFromText(clean);
   const media = /(头像|立绘|全身图|人物图|图片|照片|插画)/.test(clean) && /(生成|画|绘制|制作|做一张|来一张|补一张|换|替换|调整|裁|重裁|重新裁|修改|做)/.test(clean);
   const changeClassification = classifyFrameworkChange(clean);
-  const development = Boolean(changeClassification && changeClassification.level >= 2);
+  // "你现在能开发新功能吗？" asks about live capability; it is not a wish to develop something. A real provider
+  // would otherwise file it as a development task and the honest, state-derived capability answer is lost.
+  const asksForDevelopmentCapability = !/(帮我|给我|替我|我想|想要|希望|请).{0,10}(开发|新增|增加|添加|扩展|实现|做|修改)/.test(clean)
+    && (/(能(不能)?|可以(不可以)?|能否|是否|会).{0,12}(开发|新增|增加|添加|扩展|实现|做|支持|修改|处理).{0,10}(功能|玩法|模块|系统|能力|扩展|框架|核心|存档|界面|面板|内容)/.test(clean)
+      || /(你|你们|框架|系统|助手).{0,6}(能|可以|会).{0,8}(做什么|干什么|开发|支持|实现)/.test(clean));
+  const development = Boolean(changeClassification && changeClassification.level >= 2) && !asksForDevelopmentCapability;
   const diagnostic = /(日志|报错|出错|打不开|点了没有反应|卡住|异常|bug)/i.test(clean);
   const feedback = /(界面|按钮|布局|排版|太挤|难看|不直观|建议|反馈|吐槽)/.test(clean);
-  const question = /(有哪些|为什么|怎么回事|是不是|有没有|清单|列表|能做什么|有什么能力|介绍.{0,8}(能力|功能))/.test(clean);
+  const question = /(有哪些|为什么|怎么回事|是不是|有没有|清单|列表|能做什么|有什么能力|介绍.{0,8}(能力|功能))/.test(clean) || asksForDevelopmentCapability;
   // "把地图上的人物卡加上好感度" mentions a module word but is a UI change; a module intent needs a real module verb.
   const moduleVerb = /(启用|开启|打开|恢复|重新启用|需要|加入|不需要|不用|关闭|停用|禁用|隐藏|移除|删除|不要)/.test(clean);
   const likely: SystemWorkflow = media ? 'media_asset' : styleLike ? 'behavior_config' : uiChange || development ? 'development_task'
