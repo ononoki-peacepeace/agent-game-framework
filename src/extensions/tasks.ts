@@ -12,6 +12,7 @@ import {ExtensionDevelopment} from './development.js';
 import type {CodingAgentExecutor,CoreDevelopmentReport} from '../development/coding-agent.js';
 import {capabilityRegistry,type CapabilityDescriptor} from '../system/capabilities.js';
 import {changePlanSchema,type ChangePlan} from '../change/contracts.js';
+import {CoreCandidateInstaller,type CoreInstallRecord} from '../development/core-installer.js';
 const runCommand=promisify(execFile);
 export const capabilityGapSchema=z.strictObject({required_capability:z.string().max(150),why_needed:z.string().max(600),affected_modules:z.array(z.string()).max(10),current_limitation:z.string().max(600),proposed_generic_capability:z.string().max(600),risk:z.string().max(600)});
 export const developmentPlanSchema=z.strictObject({
@@ -36,6 +37,7 @@ export interface DevelopmentTask {
  core_execution?:CoreDevelopmentReport|null;
  capability_artifacts?:{version:string;path:string;capability_ids:string[];hash:string}[];
  change_plan?:ChangePlan|null;
+ core_install?:CoreInstallRecord|null;
 }
 const inputSchema=z.strictObject({request:z.string().min(1).max(3000),request_id:z.string().uuid(),extension_id:z.string().regex(/^[a-z][a-z0-9_]{0,63}$/).refine(x=>!['constructor','prototype','__proto__'].includes(x)).optional(),change_plan:changePlanSchema.optional()});
 const sdk='SDK 只支持扩展自有 number/flag/text 字段，increment/decrement/set/toggle 动作和静态 panel/modal/contextual_panel。不支持任意代码、连续输入、随机游戏规则、世界状态写入。只能开发 SDK 可表达的需求。';
@@ -43,7 +45,7 @@ export class DevelopmentTasks {
  private tasks:DevelopmentTask[]=[];private receipts:Record<string,{id:string;request:string}>={};private writes:Promise<void>=Promise.resolve();
  private installing=new Set<string>();private controls=new Set<string>();private starting=false;
  private runs=new Map<string,{controller:AbortController;promise:Promise<void>}>();readonly ready:Promise<void>;
- constructor(readonly builder:ExtensionDevelopment,private adapter:()=>AIAdapter=()=>builder.host.service.ai.adapter,private readonly coreExecutor?:CodingAgentExecutor,private readonly onInstalled?:(task:DevelopmentTask)=>Promise<void>){this.ready=this.load();}
+ constructor(readonly builder:ExtensionDevelopment,private adapter:()=>AIAdapter=()=>builder.host.service.ai.adapter,private readonly coreExecutor?:CodingAgentExecutor,private readonly onInstalled?:(task:DevelopmentTask)=>Promise<void>,private readonly coreInstaller?:CoreCandidateInstaller){this.ready=this.load().then(()=>this.recoverCoreInstalls());}
  private async load(){try{const data=JSON.parse(await readFile(join(this.builder.host.directory,'tasks.json'),'utf8'));this.tasks=data.tasks;this.receipts=data.receipts;
  for(const t of this.tasks){z.string().uuid().parse(t.id);z.string().uuid().parse(t.game_id);assert(t.workspace===resolve(this.builder.host.directory,'tasks',t.id),'开发工作区路径不匹配');}
  for(const t of this.tasks)if(['planning','developing','testing','repairing'].includes(t.status)){t.status='paused';t.message='服务重启，需求与检查点已保留，可以继续。';}
@@ -175,6 +177,40 @@ export class DevelopmentTasks {
    this.history(t,'core_execution',report.message);
   }catch(error){t.status=signal.aborted?'paused':'failed';t.message=signal.aborted?'核心开发已暂停，候选工作区保留。':'核心编码执行失败，未安装任何变更。';this.history(t,'core_execution_failed',String((error as Error).message).slice(0,1500));}
   await this.persist();
+ }
+ async installCore(id:string,confirmed:boolean){return this.control(id,()=>this.installCoreTask(id,confirmed));}
+ private async installCoreTask(id:string,confirmed:boolean){
+  const t=await this.find(id);assert(confirmed===true,'请明确确认安装核心候选');assert(this.coreInstaller,'当前主机没有配置核心候选安装器');
+  assert(t.core_execution?.status==='candidate_ready'&&t.core_execution.tests_passed&&t.core_execution.build_passed&&t.core_execution.acceptance_passed,'核心候选尚未通过全部验证');
+  assert(!t.core_install||['candidate_ready','install_failed','rolled_back'].includes(t.core_install.stage),'核心候选当前不能安装');
+  try{
+   const installed=await this.coreInstaller.install(t.id,t.core_execution);t.core_install=installed;t.core_execution.installed=true;t.status='paused';
+   t.message='核心候选已作为受控提交安装；必须重启 Framework 才能载入并验证新运行时。';this.history(t,'core_installed_pending_reload',installed.installed_revision??'');
+   await this.persist();return structuredClone(t);
+  }catch(error){
+   const record=(error as Error&{install_record?:CoreInstallRecord}).install_record;if(record)t.core_install=record;
+   t.status='failed';t.message='核心候选安装失败，live repository 已恢复或进入明确的回滚状态。';this.history(t,'core_install_failed',String((error as Error).message).slice(0,1500));await this.persist();throw error;
+  }
+ }
+ private async recoverCoreInstalls(){
+  if(!this.coreInstaller)return;
+  for(const t of this.tasks){
+   const record=t.core_install;if(!record||!['installed_pending_reload','reloading','validating_runtime'].includes(record.stage))continue;
+   if(record.installed_by_boot_id===this.coreInstaller.bootId)continue;
+   try{
+    record.stage='reloading';await this.persist();const validation=await this.coreInstaller.validateReload(record);
+    if(!validation.ready)throw new Error(validation.reason??'新运行时验证失败');
+    t.core_execution={...t.core_execution!,installed:true,registered:true,restart_required:false,message:'Core candidate installed, reloaded and registered.'};
+    record.stage='resuming';t.message='新核心运行时已验证，正在恢复原始目标。';await this.persist();
+    if(this.onInstalled)await this.onInstalled(structuredClone(t));
+    record.stage='completed';t.status='installed';t.installed_version=t.current_version;t.message='核心候选已安装、重载、注册，并已恢复关联目标。';this.history(t,'core_runtime_completed',record.installed_revision??'');await this.persist();
+   }catch(error){
+    record.error=String((error as Error).message).slice(0,1500);
+    try{await this.coreInstaller.rollback(record);t.message='新核心运行时验证失败，已回滚到上一稳定源码版本；需要再次重启。';}
+    catch(rollback){record.stage='install_failed';record.error+='; rollback failed: '+String((rollback as Error).message);t.message='新核心运行时验证失败且自动回滚未完成，请查看高级开发详情。';}
+    t.status='failed';t.core_execution={...t.core_execution!,registered:false,restart_required:true,message:t.message};this.history(t,'core_runtime_failed',record.error);await this.persist();
+   }
+  }
  }
  async install(id:string,raw:unknown){return this.control(id,()=>this.installTask(id,raw));}
  private async installTask(id:string,raw:unknown){

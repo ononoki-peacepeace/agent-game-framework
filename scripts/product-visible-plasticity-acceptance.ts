@@ -1,0 +1,53 @@
+import assert from 'node:assert/strict';
+import { once } from 'node:events';
+import { randomUUID } from 'node:crypto';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { chromium, expect } from '@playwright/test';
+import { AIRuntime } from '../src/ai/runtime.js';
+import type { AIRequest } from '../src/ai/contracts.js';
+import type { ExtensionSpec } from '../src/extensions/schema.js';
+import type { ImageGenerationProvider } from '../src/media/image.js';
+import { createApp } from '../src/server/app.js';
+import { GameService } from '../src/server/service.js';
+import { JsonStore } from '../src/storage/json-store.js';
+import { sparseWorld } from '../tests/sparse-fixture.js';
+
+const waitFor=async<T>(read:()=>Promise<T>,done:(value:T)=>boolean,timeout=30_000)=>{const started=Date.now();while(Date.now()-started<timeout){const value=await read();if(done(value))return value;await new Promise(resolve=>setTimeout(resolve,50));}throw Error('timed out');};
+const close=async(server:any)=>{server.closeAllConnections();await new Promise<void>((done,reject)=>server.close((error?:Error)=>error?reject(error):done()));};
+const root=await mkdtemp(join(tmpdir(),'agf-product-visible-')),saveDirectory=join(root,'save'),assets=join(root,'assets');
+const plan={normalized_requirements:['提供持久记录状态、更新动作和一级面板入口'],complexity:'LOW',clarification:null,milestones:[{id:'record_surface',title:'记录状态与一级面板',kind:'integration',acceptance:['面板可打开并显示持久状态']}],capability_gaps:[],affected_milestone_ids:[]};
+const adapter={name:'mock',async generate(request:AIRequest){if((request.schema as any).properties.normalized_requirements)return{data:plan};const marker=request.prompt.indexOf('{"extension_id"');assert(marker>=0,'missing extension context');const context=JSON.parse(request.prompt.slice(marker));const spec:ExtensionSpec={extension_id:context.extension_id,name:'记录台',description:'保存并展示这个功能自己的记录次数。',template:'declarative',allow_betting:false,max_stake:0,healing_item_id:null,fields:[{key:'entries',type:'number',initial:0}],declarative_actions:[{id:'add_entry',label:'新增记录',op:'increment',field:'entries',value:1}],surfaces:[{id:'records_panel',kind:'panel',title:'记录台',visibility:'always'}]};return{data:{spec,capability_gaps:[]}};}};
+const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=','base64');
+const imageProvider:ImageGenerationProvider={id:'controlled-acceptance-image',availability:async()=>({available:true,reason:null}),generate:async()=>({bytes:png,mime_type:'image/png',provider:'controlled-acceptance-image',model:'fixture-v1'})};
+const ai=new AIRuntime(adapter),service1=new GameService(new JsonStore(saveDirectory),ai,sparseWorld());await service1.newGame();
+let server1:any=null,server2:any=null,browser:Awaited<ReturnType<typeof chromium.launch>>|null=null;
+try{
+  server1=createApp(service1,resolve('dist/client'),undefined,assets,{}, {imageProvider}).listen(0,'127.0.0.1');await once(server1,'listening');
+  let base='http://127.0.0.1:'+(server1.address() as any).port,token=(await(await fetch(base+'/api/session')).json()).token;
+  let headers={'Content-Type':'application/json','X-Game-Token':token};
+  const post=async(path:string,body:unknown)=>{const response=await fetch(base+'/api/'+path,{method:'POST',headers,body:JSON.stringify(body)});const value:any=await response.json();assert(response.ok,JSON.stringify(value));return value;};
+  const before=(await service1.view())!;
+  const requested=await post('system',{input:'增加一个新的记录类模块，作为一级面板入口。',request_id:randomUUID(),game_id:before.game_id,expected_revision:before.revision});
+  assert.equal(requested.directive?.kind,'extension_development');
+  const ready:any=await waitFor(async()=>await(await fetch(base+'/api/development/tasks/'+requested.directive.task_id)).json(),(task:any)=>task.status==='ready_for_preview');
+  const installed=await post('development/tasks/'+requested.directive.task_id+'/install',{candidate_version:ready.current_version,confirmed:true,game_id:before.game_id,expected_revision:before.revision,request_id:randomUUID()});
+  const mediaRequested=await post('system',{input:'给我的角色生成一张头像并设置上去。',request_id:randomUUID(),game_id:installed.game_id,expected_revision:installed.revision});
+  const mediaCompleted=await post('system',{input:'给我的角色生成一张头像并设置上去。',confirmed:true,session_id:mediaRequested.session.session_id,request_id:randomUUID(),game_id:installed.game_id,expected_revision:installed.revision});
+  assert.match(mediaCompleted.view.entities.find((entity:any)=>entity.id===mediaCompleted.view.player_id).components.identity.avatar_id,/^avatar_[a-f0-9]{32}$/);
+
+  await close(server1);server1=null;
+  const service2=new GameService(new JsonStore(saveDirectory),ai,sparseWorld());
+  server2=createApp(service2,resolve('dist/client'),undefined,assets,{}, {imageProvider}).listen(0,'127.0.0.1');await once(server2,'listening');
+  base='http://127.0.0.1:'+(server2.address() as any).port;token=(await(await fetch(base+'/api/session')).json()).token;headers={'Content-Type':'application/json','X-Game-Token':token};
+  browser=await chromium.launch({headless:true,executablePath:process.env.BROWSER_EXECUTABLE??'C:/Program Files/Google/Chrome/Application/chrome.exe'});
+  const page=await browser.newPage({viewport:{width:1440,height:1000}});await page.goto(base);await page.getByRole('button',{name:'继续当前世界',exact:true}).click();
+  const navigation=page.getByRole('navigation',{name:'世界面板'}),entry=navigation.getByRole('button',{name:'记录台',exact:true});await expect(entry).toBeVisible();await entry.click();
+  const panel=page.getByRole('region',{name:'记录台'});await expect(panel).toBeVisible();await expect(panel.getByText('状态 1：0',{exact:true})).toBeVisible();await panel.getByRole('button',{name:'新增记录',exact:true}).click();await expect(panel.getByText('状态 1：1',{exact:true})).toBeVisible();
+  const visibleView=(await service2.view())!;const playerName=String(visibleView.entities.find(entity=>entity.id===visibleView.player_id)?.components.identity?.name);
+  await page.getByRole('button',{name:'状态',exact:true}).click();const avatar=page.getByRole('img',{name:`${playerName}头像`,exact:true});await expect(avatar).toBeVisible();assert(await avatar.evaluate((image:HTMLImageElement)=>image.complete&&image.naturalWidth>0),'avatar image did not load');
+  await page.reload();await page.getByRole('button',{name:'继续当前世界',exact:true}).click();await page.getByRole('navigation',{name:'世界面板'}).getByRole('button',{name:'记录台',exact:true}).click();await expect(page.getByRole('region',{name:'记录台'}).getByText('状态 1：1',{exact:true})).toBeVisible();
+  const state:any=await(await fetch(base+'/api/state')).json();const answer=await post('system',{input:'现在有没有记录台这个模块？',request_id:randomUUID(),game_id:state.game_id,expected_revision:state.revision});assert.match(answer.message,/记录台/);assert.match(answer.message,/已安装|已启用/);
+  console.log(JSON.stringify({status:'PASS',visible_module:'PASS',non_empty_action:'PASS',reload_persistence:'PASS',runtime_self_knowledge:'PASS',controlled_avatar_visible:'PASS'},null,2));
+}finally{if(browser)await browser.close();if(server1)await close(server1);if(server2)await close(server2);await rm(root,{recursive:true,force:true});}

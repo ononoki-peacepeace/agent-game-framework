@@ -24,7 +24,7 @@ export interface AgentResult {
   canonical_changes: string[];
   time_advanced: number;
   clarification?: string | null;
-  awareness_status?: 'FOUND' | 'NOT_FOUND' | 'NOT_DEFINED' | 'UNKNOWN' | 'UNAVAILABLE';
+  awareness_status?: 'FOUND' | 'NOT_FOUND' | 'NOT_DEFINED' | 'UNKNOWN' | 'UNAVAILABLE' | 'AMBIGUOUS';
   view?: PublicView | null;
 }
 

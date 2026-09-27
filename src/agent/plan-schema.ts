@@ -3,7 +3,7 @@ const ref=z.string().min(1).max(100);
 export const conditionSchema=z.strictObject({kind:z.enum(['familiar','present','unknown']),entity_id:ref,description:z.string().max(500)});
 export const temporalSchema=z.strictObject({scope:z.enum(['now','future','scheduled']),day_offset:z.number().int().min(0).max(3650),window:z.enum(['any','morning','afternoon','evening','after_school'])});
 export const goalSchema=z.strictObject({
- goal_id:ref,type:z.enum(['WORLD_QUERY','WORLD_LOOKUP','UI_NAVIGATION','WORLD_ACTION','WORLD_SPEECH','CONTINUE_ROUTINE','FUTURE_INTENT','SCHEDULED_INTENT','CONDITIONAL_INTENT','LIST_FUTURE','CANCEL_FUTURE','EXECUTE_FUTURE']),
+ goal_id:ref,type:z.enum(['WORLD_QUERY','WORLD_LOOKUP','UI_NAVIGATION','WORLD_ACTION','WORLD_SPEECH','WORLD_GOAL','CONTINUE_ROUTINE','FUTURE_INTENT','SCHEDULED_INTENT','CONDITIONAL_INTENT','LIST_FUTURE','CANCEL_FUTURE','EXECUTE_FUTURE']),
  normalized_goal:z.string().min(1).max(2000),depends_on:z.array(ref).max(12),condition:conditionSchema.nullable(),branch:z.enum(['then','else']).nullable(),
  temporal_scope:temporalSchema,target_entities:z.array(ref).max(10),
 });

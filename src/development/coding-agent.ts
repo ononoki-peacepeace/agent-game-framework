@@ -101,7 +101,8 @@ export class CodexCodingAgentExecutor implements CodingAgentExecutor {
     await this.run('git', ['add', '--all'], candidate, signal);
     const diffCheck = await this.run('git', ['diff', '--cached', '--check'], candidate, signal).catch(error => ({ stdout: '', stderr: String(error) }));
     if (diffCheck.stderr.trim()) return this.report(request, base, changedFiles, commands, null, false, false, false, 'Candidate failed git diff --check.');
-    const patch = (await this.run('git', ['diff', '--cached', '--binary', 'HEAD'], candidate, signal)).stdout;
+    const patchOutput = (await this.run('git', ['diff', '--cached', '--binary', 'HEAD'], candidate, signal)).stdout;
+    const patch = patchOutput.endsWith('\n') ? patchOutput : patchOutput + '\n';
     const patchPath = join(workspace, 'candidate.patch'); await writeFile(patchPath, patch, 'utf8');
     // Add dependencies only after the coding turn, so the agent cannot mutate the live installation through the junction.
     await symlink(join(repository, 'node_modules'), join(candidate, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');

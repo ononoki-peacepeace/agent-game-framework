@@ -8,7 +8,7 @@ import { capabilityRegistry, validateCapabilityPlan, type CapabilityRegistry } f
 
 export type UniversalResolution =
   | { handled: false }
-  | { handled: true; kind: 'EXECUTED'; goal: GoalSpec; plan: CapabilityPlan; message: string; view: PublicView }
+  | { handled: true; kind: 'EXECUTED'; goal: GoalSpec; plan: CapabilityPlan; message: string; view: PublicView; details?: Record<string, unknown> }
   | { handled: true; kind: 'USER_AMBIGUITY'; goal: GoalSpec | null; question: string; candidates: string[] }
   | { handled: true; kind: 'CAPABILITY_GAP'; goal: GoalSpec; plan: CapabilityPlan; missing: string[]; message: string }
   | { handled: true; kind: 'EXECUTION_FAILURE'; goal: GoalSpec; plan: CapabilityPlan; message: string; retryable: boolean };
@@ -104,14 +104,14 @@ function targetEntity(view: PublicView, plan: CapabilityPlan): { entity: Entity 
   const target = plan.goal.targets.find(item => item.kind === 'entity');
   if (!target) return { entity: null, candidates: [] };
   if (target.entity_id) return { entity: view.entities.find(entity => entity.id === target.entity_id) ?? null, candidates: [] };
-  if (/^(我|我自己|自己|我的)$/.test(target.reference)) return { entity: view.entities.find(entity => entity.id === view.player_id) ?? null, candidates: [] };
+  if (/^(我|我自己|自己|我的|我的角色|主角|玩家角色)$/.test(target.reference)) return { entity: view.entities.find(entity => entity.id === view.player_id) ?? null, candidates: [] };
   const resolved = resolveEntities(view, target.reference);
   return { entity: resolved.confident ? resolved.matches[0] ?? null : null, candidates: resolved.matches };
 }
 
 /** Preflight completes before any side effect. Canonical writes then share one receipt/revision transaction. */
 export async function executeUniversalPlan(service: GameService, plan: CapabilityPlan, envelope: UniversalRequestEnvelope = {}, options: ExecuteOptions = {}): Promise<UniversalResolution> {
-  const save = await service.current(), view = publicView(save);
+  const save = await service.current(), view = service.project(save);
   if (plan.goal.ambiguity) return { handled: true, kind: 'USER_AMBIGUITY', goal: plan.goal, question: plan.goal.ambiguity.question, candidates: [] };
   const validation = validateCapabilityPlan(plan, view, options.registry ?? service.systemCapabilities);
   if (!validation.ok) return validation.kind === 'CAPABILITY_GAP'
@@ -120,6 +120,13 @@ export async function executeUniversalPlan(service: GameService, plan: Capabilit
   const resolved = targetEntity(view, plan);
   if (plan.goal.targets.some(item => item.kind === 'entity') && !resolved.entity) {
     return { handled: true, kind: 'USER_AMBIGUITY', goal: plan.goal, question: resolved.candidates.length ? '有多个人物符合这个称呼，请指定是哪一位。' : '我还不能确定要修改哪位人物，请说出人物名字。', candidates: resolved.candidates.map(entityLabel) };
+  }
+  const mediaPlan=validation.ordered.some(step=>step.capability_id==='media.image.generate')&&validation.ordered.some(step=>step.capability_id==='character.avatar.assign');
+  if(mediaPlan&&resolved.entity&&!options.executeExternal){
+    try{
+      const generated=await service.generateAvatar(resolved.entity.id,plan.goal.objective,save.game_id,envelope.expected_revision??save.state_revision);
+      return {handled:true,kind:'EXECUTED',goal:plan.goal,plan,message:'已为'+entityLabel(resolved.entity)+'生成并设置了新头像。',view:generated.view,details:{asset_id:generated.artifact.asset_id,mime_type:generated.artifact.mime_type,provider:generated.artifact.provider,model:generated.artifact.model,provider_metadata:generated.artifact.metadata}};
+    }catch(error){const reason=error instanceof Error?error.message:String(error);return {handled:true,kind:'EXECUTION_FAILURE',goal:plan.goal,plan,message:'图片生成或头像设置没有完成：'+reason,retryable:/timeout|timed out|fetch|network/i.test(reason)};}
   }
   try {
     for (const step of validation.ordered) if (!['entity.lookup', 'entity.query', 'entity.identity.rename', 'entity.wallet.balance.set'].includes(step.capability_id)) {
@@ -165,9 +172,9 @@ export async function executeUniversalPlan(service: GameService, plan: Capabilit
   }
 }
 
-export async function resolveUniversalGoal(service: GameService, text: string, envelope: UniversalRequestEnvelope = {}): Promise<UniversalResolution> {
+export async function resolveUniversalGoal(service: GameService, text: string, envelope: UniversalRequestEnvelope = {}, options: { external_effects_confirmed?: boolean } = {}): Promise<UniversalResolution> {
   if (!isUniversalGoalCandidate(text)) return { handled: false };
-  const save = await service.current(), view = publicView(save);
+  const save = await service.current(), view = service.project(save);
   const planned = await service.ai.systemAgent(capabilityPlanSchema, save.definition.prompt_profile, {
     instruction: '把请求表示为 provider-neutral GoalSpec，并从 capability_catalog 组合最小有向无环计划。不要发明 capability id。目标不明确时填写 goal.ambiguity；缺能力也保留完整计划，由程序判断 availability。功能开发愿望不属于这里。名字值只是字符串，不推断现实身份。',
     player_request: text,
@@ -178,5 +185,7 @@ export async function resolveUniversalGoal(service: GameService, text: string, e
   const goal = planned?.goal ?? deterministicGoal(text);
   const selected = planned ?? (goal ? composeCapabilityPlan(goal) : null);
   if (!selected) return { handled: false };
+  const preflight=validateCapabilityPlan(selected,view,service.systemCapabilities);
+  if(preflight.ok&&selected.steps.some(step=>step.capability_id==='media.image.generate')&&!options.external_effects_confirmed)return {handled:false};
   return executeUniversalPlan(service, selected, envelope);
 }

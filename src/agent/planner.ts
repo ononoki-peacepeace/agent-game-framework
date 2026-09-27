@@ -9,9 +9,9 @@ export const hasUserCondition=(text:string)=>/如果|假如|要是|(?:^|[，,。
 const temporal=(text:string):GoalInput['temporal_scope']=>({scope:/明天|后天|之后|打算|计划|以后/.test(text)?(/上午|下午|晚上|放学后/.test(text)?'scheduled':'future'):'now',day_offset:/后天/.test(text)?2:/明天/.test(text)?1:0,window:/放学后/.test(text)?'after_school':/上午/.test(text)?'morning':/下午/.test(text)?'afternoon':/晚上/.test(text)?'evening':'any'});
 export function validatePlan(raw:unknown):AgentPlan {
  const {goals}=blueprintSchema.parse(raw),ids=new Set(goals.map(g=>g.goal_id));if(ids.size!==goals.length)throw Error('重复 goal_id');
- for(const g of goals){if(g.depends_on.some(id=>!ids.has(id)||id===g.goal_id))throw Error('无效依赖');if(g.branch&&!g.depends_on.some(id=>goals.find(x=>x.goal_id===id)?.type==='CONDITIONAL_INTENT'))throw Error('分支缺少条件依赖');if(g.type==='CONDITIONAL_INTENT'&&!g.condition)throw Error('缺少条件');if(g.condition&&g.type!=='CONDITIONAL_INTENT')throw Error('条件必须由独立条件节点判定');if(['WORLD_ACTION','WORLD_SPEECH','CONTINUE_ROUTINE','EXECUTE_FUTURE'].includes(g.type)&&g.temporal_scope.scope!=='now')throw Error('未来意图不能作为当前行动');}
+ for(const g of goals){if(g.depends_on.some(id=>!ids.has(id)||id===g.goal_id))throw Error('无效依赖');if(g.branch&&!g.depends_on.some(id=>goals.find(x=>x.goal_id===id)?.type==='CONDITIONAL_INTENT'))throw Error('分支缺少条件依赖');if(g.type==='CONDITIONAL_INTENT'&&!g.condition)throw Error('缺少条件');if(g.condition&&g.type!=='CONDITIONAL_INTENT')throw Error('条件必须由独立条件节点判定');if(['WORLD_ACTION','WORLD_SPEECH','WORLD_GOAL','CONTINUE_ROUTINE','EXECUTE_FUTURE'].includes(g.type)&&g.temporal_scope.scope!=='now')throw Error('未来意图不能作为当前行动');}
  const order:string[]=[],remaining=new Set(ids);while(remaining.size){const ready=goals.filter(g=>remaining.has(g.goal_id)&&g.depends_on.every(id=>order.includes(id)));if(!ready.length)throw Error('依赖图存在循环');for(const g of ready){order.push(g.goal_id);remaining.delete(g.goal_id);}}
- return {plan_id:randomUUID(),goals:goals.map(g=>({...g,status:'pending',side_effect_level:['FUTURE_INTENT','SCHEDULED_INTENT','CANCEL_FUTURE'].includes(g.type)?'player_plan':['WORLD_ACTION','WORLD_SPEECH','CONTINUE_ROUTINE','EXECUTE_FUTURE'].includes(g.type)?'world':'none',requires_confirmation:false})),dependencies:goals.flatMap(g=>g.depends_on.map(from=>({from,to:g.goal_id}))),execution_order:order,ui_policy:'one_primary_panel',status:'pending'};
+ return {plan_id:randomUUID(),goals:goals.map(g=>({...g,status:'pending',side_effect_level:['FUTURE_INTENT','SCHEDULED_INTENT','CANCEL_FUTURE'].includes(g.type)?'player_plan':['WORLD_ACTION','WORLD_SPEECH','WORLD_GOAL','CONTINUE_ROUTINE','EXECUTE_FUTURE'].includes(g.type)?'world':'none',requires_confirmation:false})),dependencies:goals.flatMap(g=>g.depends_on.map(from=>({from,to:g.goal_id}))),execution_order:order,ui_policy:'one_primary_panel',status:'pending'};
 }
 // Fast paths recognize semantic slots, not a conjunction split. Uncovered compositions use schema-bound LLM planning.
 export function fastPlan(view:PublicView,text:string):AgentPlan|null {
@@ -41,7 +41,7 @@ export function fastPlan(view:PublicView,text:string):AgentPlan|null {
  const simple=planGameRequest(view,text);
  if(simple&&!/而且|然后|并且|同时|顺便/.test(text)){add(simple.intent as GoalInput['type'],text);return validatePlan({goals});}
  if(/^(继续日常|继续生活|继续按.*计划生活)[。！!]?$/u.test(text)){add('CONTINUE_ROUTINE',text);return validatePlan({goals});}
- if(!conditional&&!future&&!/而且|然后|并且|同时|顺便|[；;]/.test(text)&&/^(我)?(现在)?(狠狠|轻轻|用力|去|找|向|对|和|跟|等待|等|观察|检查|买|卖|邀请|训练|说|揍|打|踢|抱|拥抱|扔|丢|爬|喊|大叫|出门|走|移动|靠近)/.test(text)){add(/说|告诉/.test(text)?'WORLD_SPEECH':'WORLD_ACTION',text);return validatePlan({goals});}
+ if(!conditional&&!future&&!/而且|然后|并且|同时|顺便|[；;]/.test(text)&&/^(我)?(现在)?(狠狠|轻轻|用力|去|找|向|对|和|跟|等待|等|观察|检查|买|卖|邀请|训练|说|揍|打|踢|抱|拥抱|扔|丢|爬|喊|大叫|出门|走|移动|靠近)/.test(text)){if(/^((我)?(现在)?去)?找/.test(text)&&!target)return null;add(/说|告诉/.test(text)?'WORLD_SPEECH':'WORLD_ACTION',text);return validatePlan({goals});}
  return null;
 }
 export async function createAgentPlan(ai:AIRuntime,view:PublicView,text:string,recentScene?:unknown){

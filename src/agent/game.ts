@@ -1,7 +1,8 @@
 import { agentResult, type AgentResult, type UIAction } from './contracts.js';
-import { entityLabel, explicitEntityReference, isSelfReference, resolveEntities, resolveNamedEntity } from './entities.js';
+import { entityLabel, explicitEntityReference, resolveEntities, resolveNamedEntity } from './entities.js';
 import { relationshipSummary } from '../shared/relationship.js';
 import type { Entity, PublicView } from '../shared/contracts.js';
+import { queryWorldTruth } from './truth-query.js';
 
 export type GameIntent = 'WORLD_QUERY' | 'WORLD_LOOKUP' | 'UI_NAVIGATION' | 'WORLD_ACTION' | 'UNKNOWN';
 
@@ -29,36 +30,6 @@ function panelFor(text: string) {
 function relationLine(view: PublicView, target: Entity) {
   return relationshipSummary(view, target).text;
 }
-function moneyLine(view: PublicView) {
-  const balances = (view.entities.find(entity => entity.id === view.player_id)?.components.wallet?.balances ?? {}) as Record<string, number>;
-  const entries = Object.entries(balances);
-  if (!entries.length) return '这个世界没有为你记录金钱。';
-  return `你现在有 ${entries.map(([currency, amount]) => `${amount} ${view.currencies[currency] ?? currency}`).join('、')}。`;
-}
-function provenanceTerms(value: string) {
-  const normalized=value.toLowerCase().replace(/这个世界|世界观|创建时|最初|是不是|是否|有没有|设定|规则|我的|我有|我|什么|具体|内容|是|有|的|了|吗|呢/g,'').replace(/[^\p{L}\p{N}]/gu,'');
-  const terms=new Set<string>();for(let size=2;size<=Math.min(4,normalized.length);size++)for(let i=0;i+size<=normalized.length;i++)terms.add(normalized.slice(i,i+size));return terms;
-}
-function relatedStatement(query:string,statement:string){
-  const q=provenanceTerms(query),s=provenanceTerms(statement);if(!q.size||!s.size)return false;
-  let overlap=0;for(const term of q)if(s.has(term))overlap++;return overlap>=Math.min(2,Math.max(1,Math.floor(Math.min(q.size,s.size)*.25)));
-}
-function provenanceAnswer(view:PublicView,text:string){
-  const settingQuestion=/(世界|创建|最初).{0,12}(设定|规则|前提|要求)|设定.{0,12}(是否|是不是|有没有|吗)/.test(text);
-  const detailQuestion=/(我的|我有|玩家角色).{0,30}(是什么|有哪些|多少|具体|内容|谁|哪)/.test(text);
-  if(!settingQuestion&&!detailQuestion)return null;
-  const provenance=view.world_provenance;
-  if(!provenance)return {message:'这个旧存档没有记录创建来源，因此无法确认这是否是创建时声明的前提。',status:'UNKNOWN' as const};
-  const records=provenance.records.filter(record=>['premise','rule','theme','constraint','trait'].includes(record.kind));
-  const matched=records.find(record=>relatedStatement(text,record.statement))??(settingQuestion&&records.length===1?records[0]:null);
-  if(!matched)return {message:'创建记录里没有找到与这个问题对应的声明。',status:'NOT_FOUND' as const};
-  const source={PLAYER_DECLARED:'玩家创建时声明',TEMPLATE_DECLARED:'模板声明',AI_GENERATED:'创建流程生成',CANONICAL_INSTANTIATED:'已实例化为世界事实',DERIVED:'由现有事实推导',UNKNOWN:'来源未记录'}[matched.source];
-  if(detailQuestion){
-    const fact=provenance.records.find(record=>record.kind==='fact'&&record.fact_ref&&relatedStatement(text,record.statement));
-    return fact?{message:`已保存的具体事实是：${fact.statement}`,status:'FOUND' as const}:{message:`这个世界确实记录了「${matched.statement}」这一创建前提（${source}），但当前存档还没有保存与你问题对应的具体事实。`,status:'NOT_DEFINED' as const};
-  }
-  return {message:`有。创建记录中的相关内容是「${matched.statement}」（${source}）。`,status:'FOUND' as const};
-}
 /**
  * In-world agent: queries and navigation are read-only. Only a real world action or an explicit
  * "keep living" request advances time, and those keep using the normal turn pipeline.
@@ -70,8 +41,8 @@ export function planGameRequest(view: PublicView, text: string): AgentResult | n
   const { matches, confident } = resolveEntities(view, text);
   const explicitReference=explicitEntityReference(text);
   let target = explicitReference?resolveNamedEntity(view,explicitReference):matches[0]??null;
-  const provenance=provenanceAnswer(view,text);if(provenance)return agentResult(intent,provenance.message,{awareness_status:provenance.status});
-  if(explicitReference&&!isSelfReference(explicitReference)&&!target)return agentResult(intent,`没有找到名为「${explicitReference}」的人物。`,{awareness_status:'NOT_FOUND'});
+  const truth=queryWorldTruth(view,text);
+  if(truth&&!(truth.subject==='entity'&&truth.status==='FOUND'))return agentResult(intent,truth.message,{awareness_status:truth.status,...(truth.status==='AMBIGUOUS'?{clarification:'which_entity'}:{}),...(truth.panel?{ui_actions:[{kind:'open_panel' as const,panel:truth.panel}]}:{})});
   if (intent === 'UI_NAVIGATION') {
     const actions: UIAction[] = [];
     if (panel) actions.push({ kind: 'open_panel', panel });
@@ -91,7 +62,6 @@ export function planGameRequest(view: PublicView, text: string): AgentResult | n
       { kind: 'scroll_to_entity', entity_id: target.id }, { kind: 'highlight_entity', entity_id: target.id },
     ] });
   }
-  if (/多少钱|有多少钱|余额|钱|铜|金/.test(text)) return agentResult(intent, moneyLine(view), { ui_actions: [{ kind: 'open_panel', panel: /背包/.test(text) ? 'inventory' : 'status' }] });
   if (/几点|时间|第几天|现在.*时候/.test(text))return agentResult(intent,`现在是第 ${view.time.day} 天 ${String(Math.floor(view.time.minute/60)).padStart(2,'0')}:${String(view.time.minute%60).padStart(2,'0')}。`,{awareness_status:'FOUND'});
   if (/我(是|叫)谁|我叫什么|我的名字|我是什么身份|我是哪个角色/.test(text)) {
     const player = view.entities.find(entity => entity.id === view.player_id);
@@ -112,11 +82,6 @@ export function planGameRequest(view: PublicView, text: string): AgentResult | n
     const items = (view.entities.find(entity => entity.id === view.player_id)?.components.inventory?.items ?? {}) as Record<string, number>;
     const names = Object.entries(items).filter(([, count]) => count > 0).map(([id, count]) => `${view.entities.find(entity => entity.id === id)?.components.identity?.name ?? '物品'}×${count}`);
     return agentResult(intent, names.length ? `你带着：${names.join('、')}。` : '你的背包是空的。', { ui_actions: [{ kind: 'open_panel', panel: 'inventory' }] });
-  }
-  if (/全身图|全身立绘|头像/.test(text)&&/(有|有没有|是否|存在|已经)/.test(text)){
-    const entity=target??view.entities.find(item=>item.id===view.player_id),visuals=entity?.components.visual_assets as {images?:Record<string,string>}|undefined;
-    const asksFullbody=/全身图|全身立绘/.test(text),exists=asksFullbody?Boolean(visuals?.images?.fullbody):Boolean(entity?.components.identity?.avatar_id);
-    return agentResult(intent,`${entity?entityLabel(entity):'该人物'}${exists?'已有':'还没有'}${asksFullbody?'全身立绘':'头像'}。`,{awareness_status:'FOUND'});
   }
   if (/任务|委托|机会/.test(text)) {
     const quests = (view.entities.find(entity => entity.id === view.player_id)?.components.quests?.entries ?? {}) as Record<string, { title?: string; status?: string }>;

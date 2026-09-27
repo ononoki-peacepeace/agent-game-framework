@@ -4,13 +4,14 @@ import type {GameService} from '../server/service.js';
 import {publicView} from '../core/state.js';
 import {assert,GameError} from '../core/schema.js';
 import {agentResult,type AgentResult,type UIAction} from './contracts.js';
-import {createAgentPlan} from './planner.js';
+import {createAgentPlan,fastPlan} from './planner.js';
 import type {AgentPlan,AtomicGoal,FutureIntent} from './plan-schema.js';
 import {planGameRequest} from './game.js';
 import {applyAssistantStyle} from '../ai/behavior.js';
 import {relationshipCondition} from '../shared/relationship.js';
 import {dueAssessment} from './future.js';
 import {recentReferent} from '../core/recent-referent.js';
+import {executeOpenWorldGoal} from './affordances.js';
 
 function childId(request:string,goal:string){const hex=createHash('sha256').update(request+':'+goal).digest('hex');return hex.slice(0,8)+'-'+hex.slice(8,12)+'-4'+hex.slice(13,16)+'-a'+hex.slice(17,20)+'-'+hex.slice(20,32);}
 export function oneNavigation(actions:UIAction[]):UIAction[]{
@@ -45,6 +46,10 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
    if(goal.type==='CONDITIONAL_INTENT'){
     const c=goal.condition!,target=view.entities.find(e=>e.id===c.entity_id);const value=!target?null:c.kind==='familiar'?relationshipCondition(view,target):c.kind==='present'?(target.components.location&&view.entities.find(e=>e.id===view.player_id)?.components.location?target.components.location.location_id===view.entities.find(e=>e.id===view.player_id)!.components.location.location_id:null):null;
     goal.result={condition:value,summary:value===null?'你目前无法确定这个条件是否成立。':value?'根据你可知的关系或位置，条件成立。':'根据当前可知信息，条件不成立。'};
+   }else if(goal.type==='WORLD_GOAL'){
+    const outcome=await executeOpenWorldGoal(service,save,goal.normalized_goal,childId(body.request_id,id));
+    if(!outcome.ok){clarification=outcome.clarification??clarification;throw Error(outcome.message);}
+    save=await service.current();message=outcome.message;changes.push('world_goal:'+id);
    }else if(['WORLD_QUERY','WORLD_LOOKUP','UI_NAVIGATION'].includes(goal.type)){
     const result=planGameRequest(view,goal.normalized_goal);if(result?.clarification)clarification=result.clarification;if(!result||result.clarification)throw Error(result?.message??'无法确认查询目标');
     message=result.message;ui.push(...result.ui_actions);awarenessStatus=result.awareness_status??awarenessStatus;
@@ -96,6 +101,6 @@ const requests=new WeakMap<GameService,Map<string,{input:string;result:Promise<A
 export async function handleAgentInput(service:GameService,body:PlanRequest,startRoutine?:(body:any)=>Promise<any>):Promise<AgentResult>{
  const cache=requests.get(service)??new Map();requests.set(service,cache);const key=body.game_id+':'+body.request_id,old=cache.get(key);
  if(old){assert(old.input===body.input,'请求 ID 已用于不同输入');return structuredClone(await old.result);}
- const promise=(async()=>{const view=await service.view();assert(view&&view.game_id===body.game_id,'游戏已切换');const save=await service.current();const plan=await createAgentPlan(service.ai,view,body.input,{recent_referent:recentReferent(save),recent_turns:(save.narrative_history??[]).slice(-2).map(entry=>({narrative:String(entry.narrative??'').slice(0,240),dialogue:entry.dialogue??null,speaker:entry.speaker??null})),recent_actions:(save.action_facts??[]).slice(-3).map(entry=>({input:String(entry.input??'').slice(0,160),facts:entry.facts,target_id:entry.target_id}))});return executePlan(service,body,plan,startRoutine);})();
+ const promise=(async()=>{const view=await service.view();assert(view&&view.game_id===body.game_id,'游戏已切换');const save=await service.current();if(save.state_revision!==body.expected_revision){const quick=fastPlan(view,body.input),conflict=new GameError('状态已更新，请重新规划',409) as GameError&{retry_policy?:'safe'|'manual'};conflict.retry_policy=quick&&readOnlyPlan(quick.goals)?'safe':'manual';throw conflict;}const plan=await createAgentPlan(service.ai,view,body.input,{recent_referent:recentReferent(save),recent_turns:(save.narrative_history??[]).slice(-2).map(entry=>({narrative:String(entry.narrative??'').slice(0,240),dialogue:entry.dialogue??null,speaker:entry.speaker??null})),recent_actions:(save.action_facts??[]).slice(-3).map(entry=>({input:String(entry.input??'').slice(0,160),facts:entry.facts,target_id:entry.target_id}))});return executePlan(service,body,plan,startRoutine);})();
  cache.set(key,{input:body.input,result:promise});if(cache.size>100)cache.delete(cache.keys().next().value!);try{return structuredClone(await promise);}catch(e){cache.delete(key);throw e;}
 }

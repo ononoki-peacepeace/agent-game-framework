@@ -91,6 +91,31 @@ export function publicView(save: SavePackage, registry = createRegistry(save.def
   }));
   const visibleLocations = map.locations.filter(location => known.has(location.id));
   const visibleIds = new Set(visibleLocations.map(location => location.id));
+  const extensionPanels = Object.entries(save.extensions ?? {}).flatMap(([extensionId, entry]) => {
+    if (!entry.installed || !entry.enabled) return [];
+    return entry.manifest.surfaces.filter(surface => surface.kind === 'panel').map((surface, index) => ({
+      id: `extension:${extensionId}:${surface.id}`,
+      label: surface.title,
+      module: `extension:${extensionId}`,
+      order: 600 + index,
+      mobile_group: 'secondary' as const,
+      presentation_type: 'panel' as const,
+      extension_id: extensionId,
+    }));
+  });
+  const extensionModules = Object.entries(save.extensions ?? {}).map(([extensionId, entry]) => ({
+    id: `extension:${extensionId}`,
+    version: entry.version,
+    installed: entry.installed,
+    enabled: entry.enabled,
+    state_schema_version: entry.manifest.state_schema,
+    provides: [`extension.${extensionId}`],
+    requires: entry.manifest.dependencies,
+    dependents: [],
+    panels: entry.manifest.surfaces.filter(surface => surface.kind === 'panel').map(surface => `extension:${extensionId}:${surface.id}`),
+    supports_enable_disable: true,
+    supports_remove: true,
+  }));
   return resolvePresentation({
     interaction_context:structuredClone(activeFocus(save)),can_undo:canUndo(save),
     future_intents:structuredClone(save.future_intents??[]),
@@ -102,9 +127,9 @@ export function publicView(save: SavePackage, registry = createRegistry(save.def
     time: structuredClone(save.runtime.time), minutes_per_day: rules.minutes_per_day,
     entities, locations: structuredClone(visibleLocations),
     routes: map.routes.filter(r => visibleIds.has(r.from) && visibleIds.has(r.to) && r.conditions.every(c => save.gm_state.flags[c.flag] === c.equals)).map(({ from, to, travel_minutes }) => ({ from, to, travel_minutes })),
-    panels: panelMeta(registry),
-    modules: moduleStatuses(save),
-    capabilities: capabilityList(registry),
+    panels: [...panelMeta(registry), ...extensionPanels],
+    modules: [...moduleStatuses(save), ...extensionModules],
+    capabilities: [...capabilityList(registry), ...extensionModules.filter(module => module.installed && module.enabled).flatMap(module => module.provides)],
     world_history:(save.turn_history??[]).map((entry,index,all)=>({turn_id:entry.turn_id,label:entry.label,time:structuredClone(entry.time),current:index===all.length-1})),
     actions: registry.actions.all().map(([type, spec]) => ({ type, label: spec.ui?.label ?? type, visibility: spec.ui?.visibility ?? 'internal', target_component: spec.ui?.target_component, requires_text: spec.ui?.requires_text, text_parameter: spec.ui?.text_parameter, module: registry.modules.all().find(([, module]) => Object.hasOwn(module.actions ?? {}, type))?.[0] ?? 'framework' })),
     currencies: structuredClone(rules.currencies),

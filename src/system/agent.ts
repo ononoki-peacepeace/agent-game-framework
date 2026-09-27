@@ -8,6 +8,7 @@ import { toolAvailability, type ToolDescriptor } from './tools.js';
 type AvailableTool = ToolDescriptor & { available: boolean };
 import { applicationFor, behaviorSummary, detectBehaviorScopes, normalizeBehaviorScope, type BehaviorApplication, type BehaviorScope } from '../ai/behavior.js';
 import { resolveEntities } from '../agent/entities.js';
+import { queryRuntimeTruth } from '../agent/truth-query.js';
 import { relationshipSummary } from '../shared/relationship.js';
 import { sanitizePlayerText } from './player-copy.js';
 import { advanceFeatureGuide, featureGuideMessage, featureRequirement, isGuideConfirmation, startFeatureGuide, type FeatureGuide } from './feature-guide.js';
@@ -142,11 +143,25 @@ function clarificationMessage(understanding: SystemUnderstanding, fallback: stri
   return sanitizePlayerText(lines.join('\n'), fallback);
 
 }
-function capabilityAnswer(view: ReturnType<typeof publicView>, save: Awaited<ReturnType<GameService['current']>>, text: string) {
+function capabilityAnswer(service: GameService, view: ReturnType<typeof publicView>, save: Awaited<ReturnType<GameService['current']>>, text: string) {
   const extensions = Object.entries(save.extensions ?? {});
+  const providers=service.runtimeProviderStatus();
+  const runtimeTruth=queryRuntimeTruth(view,text,{text_provider:providers.text.provider,image_provider:providers.image.provider});
+  if(runtimeTruth)return runtimeTruth.message;
+  const namedExtension = extensions.find(([id, entry]) => {
+    const name = String(entry.manifest.name ?? id);
+    return text.includes(name) || text.includes(id) || entry.manifest.surfaces.some(surface => text.includes(surface.title));
+  });
+  if (namedExtension) {
+    const [id, entry] = namedExtension;
+    const panels = view.panels.filter(panel => panel.extension_id === id).map(panel => panel.label);
+    if (!entry.installed) return `「${entry.manifest.name}」保留了历史状态，但当前没有安装。`;
+    return `「${entry.manifest.name}」已经安装，当前${entry.enabled ? '已启用' : '已停用'}${panels.length ? `；可见入口：${panels.join('、')}` : ''}。`;
+  }
   if (/扩展|插件|功能包/.test(text)) {
-    return extensions.length
-      ? `当前世界已安装 ${extensions.length} 个扩展：${extensions.map(([id, entry]) => `${String((entry.manifest as { name?: string }).name ?? id)}${entry.enabled ? '' : '（已停用）'}`).join('、')}。`
+    const installed = extensions.filter(([, entry]) => entry.installed);
+    return installed.length
+      ? `当前世界已安装 ${installed.length} 个扩展：${installed.map(([id, entry]) => `${String((entry.manifest as { name?: string }).name ?? id)}${entry.enabled ? '' : '（已停用）'}`).join('、')}。`
       : '当前世界还没有安装扩展；你可以直接说想要的新玩法，我会先整理需求再准备候选扩展。';
   }
   if (/关系|好感/.test(text)) {
@@ -156,7 +171,23 @@ function capabilityAnswer(view: ReturnType<typeof publicView>, save: Awaited<Ret
     const entries = (view.entities.find(entity => entity.id === view.player_id)?.components.relationships?.entries ?? {}) as Record<string, unknown>;
     return `${String(target.components.identity?.name ?? target.id)}：${summary.text}（来源：${summary.source === 'graph' ? '关系数值' : '人物档案'}${entries[target.id] ? '，两人之间已有关系数值' : '，目前还没有关系数值'}）。`;
   }
-  return `我读到的世界能力：模块 ${view.modules.filter(module => module.enabled).map(module => module.id).join('、') || 'core'}；面板 ${view.panels.map(panel => panel.label).join('、')}。你可以直接描述想改的东西，例如界面展示、玩法、人物资料或故事风格。`;
+ const availableTools=toolAvailability(view.capabilities).filter(tool=>tool.available).map(tool=>tool.name);
+  const enabledModules=view.modules.filter(module=>module.enabled).map(module=>module.id);
+  const installedExtensions=extensions.filter(([,entry])=>entry.installed&&entry.enabled).map(([,entry])=>String(entry.manifest.name));
+  const development=service.systemCapabilities.get('feature.develop')?.implemented
+    ? '可以把新玩法整理成受校验的扩展开发任务；涉及框架源码时仍会经过隔离工作区、测试和安全门。'
+    : '当前没有可用的扩展开发执行能力。';
+  const image=providers.image.configured
+    ? `图片生成已接入（${providers.image.provider}）。`
+    : '图片生成 Provider 尚未接入；我会明确报告这个外部依赖，不会假装生成成功。';
+  return [
+    `当前启用的世界模块：${enabledModules.join('、')||'仅核心运行时'}。`,
+    `当前可见面板：${view.panels.map(panel=>panel.label).join('、')||'无'}。`,
+    installedExtensions.length?`当前启用的扩展：${installedExtensions.join('、')}。`:'当前没有启用的扩展。',
+    `可用操作包括：${availableTools.join('、')||'读取当前世界状态'}。`,
+    `文本 AI：${providers.text.provider}${providers.text.model?` / ${providers.text.model}`:''}。${image}`,
+    development,
+  ].join('\n');
 }
 async function resolveUnderstanding(service: GameService, view: ReturnType<typeof publicView>, save: Awaited<ReturnType<GameService['current']>>, toolsList: AvailableTool[], text: string, context: SystemExecutionContext): Promise<SystemResult | null> {
   const session = context.session;
@@ -220,11 +251,13 @@ async function resolveUnderstanding(service: GameService, view: ReturnType<typeo
 
     const literal = text.match(/[“"「『]([^”"」』]{1,60})[”"」』]/)?.[1]?.trim() ?? null;
     const settled = understanding;
-    const direct = (message: string) => ({ category: 'SYSTEM_ANSWER', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message, understanding: settled, workflow: settled.likely_workflow, expression: 'template' as const });
+    const direct = (message: string, advanced?: Record<string, unknown>) => ({ category: 'SYSTEM_ANSWER', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message, understanding: settled, workflow: settled.likely_workflow, expression: 'template' as const, ...(advanced ? { advanced } : {}) });
     if (literal && /(只回复|只回|回复我|回我|说出|照着说)/.test(text)) return direct(literal);
     if (/(道歉|道个歉|对不起)/.test(text) && /(说|给|来|道|要)/.test(text)) return direct('对不起。');
     if (/(打个?招呼|问个好|问声好|问好)/.test(text)) return direct('你好。');
-    if (settled.side_effect_class === 'none' && !settled.unresolved.length && settled.response_hint) return direct(settled.response_hint);
+    if (settled.side_effect_class === 'none' && !settled.unresolved.length && settled.likely_workflow === 'capability_question') {
+      return { category: 'CAPABILITY_ANSWER', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: capabilityAnswer(service, view, save, text), understanding: settled, workflow: 'capability_question', expression: 'template', ...(settled.response_hint ? { advanced: { understanding_response_hint: settled.response_hint } } : {}) };
+    }
   }
   const activeGuide
  = Boolean(session.guide && session.guide.status !== 'confirmed');
@@ -309,7 +342,7 @@ async function resolveUnderstanding(service: GameService, view: ReturnType<typeo
   }
   // 5. Capability questions are answered from real state.
   if (understanding.likely_workflow === 'capability_question') {
-    return { category: 'CAPABILITY_ANSWER', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: capabilityAnswer(view, save, text), understanding, workflow: 'capability_question', expression: 'template' };
+    return { category: 'CAPABILITY_ANSWER', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: capabilityAnswer(service, view, save, text), understanding, workflow: 'capability_question', expression: 'template', ...(understanding.response_hint ? { advanced: { understanding_response_hint: understanding.response_hint } } : {}) };
   }
   // 6. Understood, but it maps onto no single deterministic tool (yet). Answer with what was understood and the
   //    nearest honest next step instead of falling back to a canned "I don't understand".
@@ -348,7 +381,7 @@ async function applyCorrection(service: GameService, toolsList: AvailableTool[],
 }
 /** The deterministic tool switch: unchanged execution semantics, used whenever the request is already clear. */
 async function executeTool(service: GameService, plan: MetaPlan, body: { input: string; confirmed: boolean }, context: SystemExecutionContext, toolsList: AvailableTool[], entityId?: string): Promise<SystemResult> {
-  const save = await service.current(), view = publicView(save);
+  const save = await service.current(), view = service.project(save);
   if (plan.reply && !(plan.tool_id === 'module.remove' && body.confirmed)) return result(plan, plan.reply, toolsList);
   const tool = toolsList.find(entry => entry.tool_id === plan.tool_id)!;
   service.logger.info('system.agent.request', { module: 'system', metadata: { category: plan.category, tool: tool.tool_id, side_effect: tool.side_effect_level, confirmed: body.confirmed } });
@@ -436,7 +469,7 @@ function resolvedFrom(workflow: SystemWorkflow, rule: { op?: string; value?: str
 }
 async function executeSystemInput(service: GameService, raw: unknown, context: SystemExecutionContext): Promise<SystemResult> {
   const body = safeParse(z.strictObject({ input: z.string().min(1).max(2000), confirmed: z.boolean().default(false), request_id: z.string().uuid().optional(), expected_revision: z.number().int().nonnegative().optional() }), raw);
-  const save = await service.current(), view = publicView(save), toolsList = toolAvailability(view.capabilities);
+  const save = await service.current(), view = service.project(save), toolsList = toolAvailability(view.capabilities);
   const plan = planMeta(body.input, view.capabilities);
   const entityId = context.entityId;
   // The session goal is what the tool layer executes; understanding always reads what the player just said.
@@ -446,7 +479,7 @@ async function executeSystemInput(service: GameService, raw: unknown, context: S
   const pendingGoal = context.session.pending_goal;
   const answersPending = Boolean(pendingGoal) && isClarificationReply(latest);
   const universalInput = pendingGoal && answersPending ? [pendingGoal.original_input, ...pendingGoal.clarifications, latest].join('；') : latest;
-  const universal = await resolveUniversalGoal(service, universalInput, { request_id: body.request_id, expected_revision: body.expected_revision });
+  const universal = await resolveUniversalGoal(service, universalInput, { request_id: body.request_id, expected_revision: body.expected_revision }, { external_effects_confirmed: body.confirmed });
   // Existing local media fallbacks (for example cropping an already stored full-body image) remain usable even
   // when the requested generation chain reports a missing provider capability.
   const mediaGap = universal.handled && universal.kind === 'CAPABILITY_GAP'
@@ -493,7 +526,7 @@ async function executeSystemInput(service: GameService, raw: unknown, context: S
 }
 
 function universalSystemResult(resolution: Exclude<UniversalResolution, { handled: false }>): SystemResult {
-  if (resolution.kind === 'EXECUTED') return { category: 'UNIVERSAL_GOAL', tool_id: resolution.plan.steps.at(-1)?.capability_id ?? null, side_effect_level: 'canonical-state', needs_confirmation: false, message: resolution.message, view: resolution.view, resolved: resolvedFrom('capability_question',null,resolution.goal.objective), advanced: { resolution_kind: resolution.kind, goal: resolution.goal, plan: resolution.plan } };
+  if (resolution.kind === 'EXECUTED') return { category: 'UNIVERSAL_GOAL', tool_id: resolution.plan.steps.at(-1)?.capability_id ?? null, side_effect_level: 'canonical-state', needs_confirmation: false, message: resolution.message, view: resolution.view, resolved: resolvedFrom('capability_question',null,resolution.goal.objective), advanced: { resolution_kind: resolution.kind, goal: resolution.goal, plan: resolution.plan, ...(resolution.details ?? {}) } };
   if (resolution.kind === 'USER_AMBIGUITY') return { category: 'USER_AMBIGUITY', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: resolution.candidates.length ? `${resolution.question}\n${resolution.candidates.join('、')}` : resolution.question, clarification: 'universal_goal', pending_field: '具体目标', advanced: { resolution_kind: resolution.kind } };
   if (resolution.kind === 'CAPABILITY_GAP') return { category: 'CAPABILITY_GAP', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: resolution.message, advanced: { resolution_kind: resolution.kind, missing: resolution.missing, goal: resolution.goal, plan: resolution.plan } };
   return { category: 'EXECUTION_FAILURE', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: resolution.message, advanced: { resolution_kind: resolution.kind, retryable: resolution.retryable, goal: resolution.goal } };

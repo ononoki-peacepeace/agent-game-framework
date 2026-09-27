@@ -5,7 +5,7 @@ import {checkpointTurn,canUndo,historyAvailable,imageHash,worldImage,worldKeys} 
 import {avatarCropSchema,type AvatarCropMetadata} from '../shared/avatar.js';
 import {calendarSchema} from '../routine/schema.js';
 import {migrateInstalledWorld,type InstalledWorld} from '../routine/migration.js';
-import { settleRoutine } from './routine-controller.js';
+import { settleRoutine,applyLifePatches } from './routine-controller.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { GameError, assert, safeParse, profileSchema, worldCreationProvenanceSchema, type SavePackage, type WorldCreationProvenance } from '../core/schema.js';
@@ -22,6 +22,7 @@ import { emptyWorld } from '../ai/authoring.js';
 import { blankWorldIntent } from '../shared/world-intent.js';
 import { parseBehaviorRule } from '../ai/behavior.js';
 import {CapabilityRegistry,capabilityRegistry} from '../system/capabilities.js';
+import type {ImageAssetRuntime, PersistedImage} from '../media/image.js';
 
 import { getLogger, observe, startTrace, runWithTrace, summarizeSaveDiff, errorText, type StructuredLogger } from '../observability/index.js';
 const optionalEnrichmentOps = new Set(['relationship_delta']);
@@ -64,6 +65,8 @@ function preservePresentation(source: SavePackage, target: SavePackage) {
 export class GameService {
   private busy = false;
   private mediaQueue:Promise<unknown>=Promise.resolve();
+  private imageRuntime:ImageAssetRuntime|null=null;
+  private readonly runtimeCapabilities=new Set<string>();
   routineLease:string|null=null;
   // Presentation-only writes (avatars, full-body art) run on their own short queue: they never take the
   // canonical gameplay lock, so they stay usable while a routine job is compiling or waiting for AI.
@@ -98,6 +101,18 @@ export class GameService {
     return { save: validateSave(migrated.save), changed: changed || migrated.changed };
   }
   constructor(readonly storage: SaveStorage, readonly ai: AIRuntime, readonly demo: WorldPackage, readonly installedWorlds:InstalledWorld[] = [], readonly logger: StructuredLogger = getLogger(),readonly systemCapabilities:CapabilityRegistry=new CapabilityRegistry(capabilityRegistry.all())) {}
+  configureImageGeneration(runtime:ImageAssetRuntime){
+    this.imageRuntime=runtime;this.runtimeCapabilities.add('media.image_generation');
+    this.systemCapabilities.activate(['media.image.generate','asset.persist','character.avatar.assign']);
+  }
+  runtimeProviderStatus(){
+    const text=this.ai.adapter.providerInfo?.()??{};
+    return {
+      text:{provider:text.provider??this.ai.adapter.name,model:text.model??null},
+      image:this.imageRuntime?{configured:true,provider:this.imageRuntime.provider.id}:{configured:false,provider:null},
+    };
+  }
+  project(save:SavePackage){const view=publicView(save);view.capabilities=[...new Set([...view.capabilities,...this.runtimeCapabilities])];return view;}
   async exclusive<T>(fn: () => Promise<T>,owner?:string): Promise<T> {
     if(this.routineLease && owner!==this.routineLease)throw new GameError('后台生活模式正在运行：查看与图片上传不受影响；需要修改世界的行动请先在生活模式面板请求安全暂停',409);
     if (this.busy) throw new GameError('当前有行动或存档操作正在执行，请稍后重试', 409);
@@ -114,7 +129,7 @@ export class GameService {
     if (!raw) return null;
     const upgraded = this.ensureBaseFeatures(raw);
     if (upgraded.changed) await this.storage.write(upgraded.save);
-    return publicView(upgraded.save);
+    return this.project(upgraded.save);
   }
   async newGame(description?: string, promptText?: string, promptProfile?: unknown, provenance?: WorldCreationProvenance) {
     return this.exclusive(async () => {
@@ -302,6 +317,19 @@ export class GameService {
   }
   // Avatar and full-body art are presentation data: they use the media queue and ignore stale revisions,
   // so uploading a portrait works even while a routine job is compiling or calling AI.
+  async generateAvatar(entityId:string,prompt:string,gameId:string,expectedRevision?:number):Promise<{view:ReturnType<GameService['project']>;artifact:PersistedImage}>{
+    assert(this.imageRuntime,'当前没有配置图片生成 Provider');
+    const before=await this.current();
+    if(before.game_id!==gameId)throw new GameError('游戏已切换，请刷新后操作',409);
+    if(expectedRevision!==undefined&&before.state_revision!==expectedRevision)throw new GameError('状态已更新，请刷新后重试',409);
+    const entity=before.entities.find(item=>item.id===entityId);
+    assert(entity?.components.identity,'目标没有可设置头像的身份信息');
+    const identity=entity.components.identity as {name?:unknown;description?:unknown};
+    const description=[String(identity.name??''),String(identity.description??''),prompt].filter(Boolean).join('；').slice(0,3000);
+    const artifact=await this.imageRuntime.generateAndPersist({prompt:description,usage:'avatar',aspect:'square',entity_id:entityId});
+    try{return {view:await this.setAvatar(entityId,artifact.asset_id,gameId,expectedRevision),artifact};}
+    catch(error){await this.imageRuntime.discard(artifact);throw error;}
+  }
   async setAvatar(entityId: string, avatarId: string | null, gameId: string, _expectedRevision?: number,crop?:AvatarCropMetadata) {
     return this.media(async () => {
       const save = await this.current();
@@ -313,7 +341,7 @@ export class GameService {
       save.state_revision++;
       const next = validateSave(save);
       await this.storage.write(next);
-      return publicView(next);
+      return this.project(next);
     });
   }
   async setVisualAsset(entityId: string, slot: string, assetId: string, gameId: string, _expectedRevision?: number) {
@@ -329,12 +357,35 @@ export class GameService {
       save.state_revision++;
       const next = validateSave(save);
       await this.storage.write(next);
-      return publicView(next);
+      return this.project(next);
+    });
+  }
+  async performDeclaredActivity(raw:{activity_id:string;game_id:string;expected_revision:number;request_id:string}){
+    return this.exclusive(async()=>{
+      const input=safeParse(z.strictObject({activity_id:z.string().min(1).max(80),game_id:z.string().uuid(),expected_revision:z.number().int().nonnegative(),request_id:z.string().uuid()}),raw);
+      const current=await this.current(),fingerprint=createHash('sha256').update(JSON.stringify({activity_id:input.activity_id})).digest('hex');
+      assert(current.game_id===input.game_id,'Game changed; refresh and retry');
+      const receipt=current.runtime.receipts.find(item=>item.id===input.request_id);
+      if(receipt){assert(receipt.fingerprint===fingerprint,'Request id already used');return this.project(current);}
+      assert(current.state_revision===input.expected_revision,'State changed; refresh and retry');
+      const rule=current.definition.routine_rules?.activities.find(item=>item.id===input.activity_id);assert(rule,'World does not declare this activity');
+      const player=current.entities.find(entity=>entity.id===current.player_state.entity_id)!;
+      assert(!rule.location_id||player.components.location?.location_id===rule.location_id,'Reach the activity location first');
+      const effects=rule.effects.filter(effect=>effect.op!=='condition_delta'||Boolean(player.components.condition));
+      const proposal={patches:effects} as import('../ai/routine.js').RoutineResult;
+      applyLifePatches(structuredClone(current),proposal);
+      let next=structuredClone(current);applyLifePatches(next,proposal);
+      const original=next.definition.ruleset.max_wait_minutes;next.definition.ruleset.max_wait_minutes=Math.max(original,rule.duration);
+      next=executeAction(next,{type:'WAIT',parameters:{minutes:rule.duration}},input.request_id,'player',undefined,undefined,false).save;
+      next.definition.ruleset.max_wait_minutes=original;next.state_revision=current.state_revision+1;
+      next.runtime.receipts=[...next.runtime.receipts,{id:input.request_id,fingerprint,revision:next.state_revision}].slice(-100);
+      next.last_turn={narrative:rule.label+' completed.',speaker:null,dialogue:null,choices:[],context_actions:[]};
+      await this.storage.write(validateSave(next));return this.project(next);
     });
   }
   async modules() {
     const save = await this.current();
-    return { modules: moduleStatuses(save), capabilities: capabilityList(createRegistry(save.definition.enabled_modules)), installed: save.modules };
+    return { modules: moduleStatuses(save), capabilities: [...new Set([...capabilityList(createRegistry(save.definition.enabled_modules)),...this.runtimeCapabilities])], installed: save.modules };
   }
   /** Module lifecycle is a canonical mutation: same revision/idempotency rules as a turn. */
   async manageModule(raw: unknown, command: 'enable' | 'disable' | 'remove') {

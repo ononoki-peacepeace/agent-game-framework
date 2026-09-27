@@ -98,7 +98,11 @@ export class AIRuntime {
   async planGoals(view:import('../shared/contracts.js').PublicView,input:string,schema:z.ZodType,recentScene?:unknown){
 
     // No SavePackage, GM state, world prompt profile or previous thread is passed to the planner.
-    const result=await this.adapter.generate({role:'intent_interpreter',schema:z.toJSONSchema(schema),maxOutputTokens:6000,prompt:'你是玩家可见状态的多目标规划器。只输出 JSON，不执行行动。将每个问题/动作拆成独立 goal。真实 depends_on 必须形成无环图。仅当玩家明确提出如果/假如/要是/若/只要/当…时/除非等条件才创建条件节点；目标在场、可达、身体状态属于执行检查，绝不能变成玩家条件。条件用独立 CONDITIONAL_INTENT 节点（familiar/present/unknown），then/else 子目标依赖它；无法从玩家知识确定的喜欢/秘密条件用 unknown。明天/打算不是当前 WORLD_ACTION：使用 FUTURE_INTENT 或 SCHEDULED_INTENT，day_offset 明天=1 后天=2，放学后 window=after_school。世界内实际说话 WORLD_SPEECH，生活继续 CONTINUE_ROUTINE。查看/取消未来计划 LIST_FUTURE/CANCEL_FUTURE。目标 entity_id 只能来自给定公开实体。不要遗漏任何目标，不要填写结果或修改状态。'+JSON.stringify({input,public_state:view,recent_scene:recentScene??null})});
+    const result=await this.adapter.generate({role:'intent_interpreter',schema:z.toJSONSchema(schema),maxOutputTokens:6000,prompt:'你是玩家可见状态的多目标规划器。只输出 JSON，不执行行动。将每个问题/动作拆成独立 goal。玩家只给出期望结果、需要先发现世界中可用办法时使用 WORLD_GOAL；明确动作仍用 WORLD_ACTION。真实 depends_on 必须形成无环图。仅当玩家明确提出如果/假如/要是/若/只要/当…时/除非等条件才创建条件节点；目标在场、可达、身体状态属于执行检查，绝不能变成玩家条件。条件用独立 CONDITIONAL_INTENT 节点（familiar/present/unknown），then/else 子目标依赖它；无法从玩家知识确定的喜欢/秘密条件用 unknown。明天/打算不是当前 WORLD_ACTION：使用 FUTURE_INTENT 或 SCHEDULED_INTENT，day_offset 明天=1 后天=2，放学后 window=after_school。世界内实际说话 WORLD_SPEECH，生活继续 CONTINUE_ROUTINE。查看/取消未来计划 LIST_FUTURE/CANCEL_FUTURE。目标 entity_id 只能来自给定公开实体。不要遗漏任何目标，不要填写结果或修改状态。'+JSON.stringify({input,public_state:view,recent_scene:recentScene??null})});
+    return schema.parse(result.data);
+  }
+  async chooseAffordance<T>(view:import('../shared/contracts.js').PublicView,objective:string,candidates:unknown[],schema:z.ZodType<T>){
+    const result=await this.adapter.generate({role:'intent_interpreter',schema:z.toJSONSchema(schema),maxOutputTokens:2000,prompt:'Select exactly one candidate_id that can reasonably advance objective now. Never invent a place, person, job, item, rule, or candidate id. If materially different choices require the player decision, return candidate_id null and one necessary ambiguity question. JSON only.'+JSON.stringify({objective,current_time:view.time,player_id:view.player_id,candidates})});
     return schema.parse(result.data);
   }
   async initialize(description: string, profile: z.infer<typeof profileSchema>) {

@@ -93,7 +93,7 @@ export function shallowUnderstanding(text: string, view: PublicView): SystemUnde
   const development = Boolean(changeClassification && changeClassification.level >= 2);
   const diagnostic = /(日志|报错|出错|打不开|点了没有反应|卡住|异常|bug)/i.test(clean);
   const feedback = /(界面|按钮|布局|排版|太挤|难看|不直观|建议|反馈|吐槽)/.test(clean);
-  const question = /(有哪些|为什么|怎么回事|是不是|有没有|清单|列表)/.test(clean);
+  const question = /(有哪些|为什么|怎么回事|是不是|有没有|清单|列表|能做什么|有什么能力|介绍.{0,8}(能力|功能))/.test(clean);
   // "把地图上的人物卡加上好感度" mentions a module word but is a UI change; a module intent needs a real module verb.
   const moduleVerb = /(启用|开启|打开|恢复|重新启用|需要|加入|不需要|不用|关闭|停用|禁用|隐藏|移除|删除|不要)/.test(clean);
   const likely: SystemWorkflow = media ? 'media_asset' : styleLike ? 'behavior_config' : uiChange || development ? 'development_task'

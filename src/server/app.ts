@@ -21,7 +21,9 @@ import {blankWorldIntent} from '../shared/world-intent.js';
 import {JsonStore} from '../storage/json-store.js';
 import {SuspendedGoalStore} from '../system/suspended-goals.js';
 import {capabilityPlanSchema,goalSpecSchema} from '../system/goals.js';
-import {CodexCodingAgentExecutor} from '../development/coding-agent.js';
+import {CodexCodingAgentExecutor,type CodingAgentExecutor} from '../development/coding-agent.js';
+import {CoreCandidateInstaller} from '../development/core-installer.js';
+import {ImageAssetRuntime,type ImageGenerationProvider} from '../media/image.js';
 import {executeUniversalPlan} from '../system/resolver.js';
 import {capabilityRegistry} from '../system/capabilities.js';
 import express from 'express';
@@ -35,6 +37,7 @@ import { z } from 'zod';
 import type { GameService } from './service.js';
 
 export interface AppNetworkOptions { allowLan?: boolean }
+export interface AppDevelopmentOptions { coreExecutor?: CodingAgentExecutor; coreInstaller?: CoreCandidateInstaller; imageProvider?: ImageGenerationProvider }
 // Build/process marker: lets anyone confirm which dist a running 3100 server actually loaded.
 const STARTED_AT = new Date().toISOString();
 /**
@@ -157,13 +160,14 @@ function allowedHost(hostHeader: string, allowLan: boolean) {
 }
 
 
-export function createApp(service: GameService, clientDirectory = resolve('dist/client'), providers?: AIProviderManager, assetDirectory = resolve('data/assets'), network: AppNetworkOptions = {}) {
+export function createApp(service: GameService, clientDirectory = resolve('dist/client'), providers?: AIProviderManager, assetDirectory = resolve('data/assets'), network: AppNetworkOptions = {}, developmentOptions: AppDevelopmentOptions = {}) {
   const app = express(), token = randomBytes(32).toString('hex'), allowLan = network.allowLan === true;
+  if(developmentOptions.imageProvider)service.configureImageGeneration(new ImageAssetRuntime(developmentOptions.imageProvider,assetDirectory));
   const jobs=new RoutineJobs(service,service.storage instanceof JsonStore?service.storage.directory:undefined);
   const extensions=new ExtensionHost(service,resolve(service.storage instanceof JsonStore?service.storage.directory:join(assetDirectory,'..'),'extensions'));
   const development=new ExtensionDevelopment(extensions);
   const suspendedGoals=new SuspendedGoalStore(service.storage instanceof JsonStore?join(service.storage.directory,'system'):undefined);
-  const developmentTasks=new DevelopmentTasks(development,undefined,new CodexCodingAgentExecutor(),async task=>{
+  const developmentTasks=new DevelopmentTasks(development,undefined,developmentOptions.coreExecutor??new CodexCodingAgentExecutor(),async task=>{
     for(const waiting of await suspendedGoals.forDevelopmentTask(task.id)){
       await suspendedGoals.markInstalledReady(waiting.goal_id);
       const operationId=randomUUID();const current=await service.view();
@@ -173,7 +177,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
       if(resumed.handled&&resumed.kind==='EXECUTED')await suspendedGoals.completeResume(waiting.goal_id,resumed.view.revision);
       else await suspendedGoals.failResume(waiting.goal_id,resumed.handled&&'message' in resumed?resumed.message:'安装后的能力仍无法执行原目标。');
     }
-  });
+  },developmentOptions.coreInstaller??new CoreCandidateInstaller(resolve('.')));
   app.disable('x-powered-by');
   app.use((req, res, next) => {
     const host = req.headers.host ?? '';
@@ -429,6 +433,9 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   });
   app.post('/api/input', async (req, res) => {
     const body = safeParse(unifiedInputSchema, req.body);
+    const snapshot=await service.view();
+    if(!snapshot||snapshot.game_id!==body.game_id)throw new GameError('游戏已切换，请刷新后操作',409);
+    if(snapshot.revision!==body.expected_revision)throw new GameError('状态已更新，请重新规划',409);
     const gate=await routeContext(service,body.input,'world_input');
     if(gate.destination==='AMBIGUOUS'){res.json(agentResult('CLARIFICATION',gate.clarification!,{clarification:gate.clarification,view:await readContextView(service)}));return;}
     if(gate.destination==='SYSTEM_META_INTENT'){
@@ -497,7 +504,8 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
         if(current.status==='waiting_for_auto_extension'&&!current.development_task_id){
           try{
             const request=`为一个已挂起的用户目标实现以下可复用能力：${current.missing_capabilities.join('、')}。原始目标：${current.goal.objective}`.slice(0,3000);
-            const canUseSafeLocalBuilder=capabilityRegistry.assess(current.missing_capabilities,view.capabilities).safe_local_builder;
+            const runtimeAssessment=service.systemCapabilities.assess(current.missing_capabilities,view.capabilities);
+            const canUseSafeLocalBuilder=runtimeAssessment.safe_local_builder||(current.missing_capabilities.every(id=>service.systemCapabilities.get(id)===null)&&capabilityRegistry.assess(current.missing_capabilities,view.capabilities).safe_local_builder);
             const task=canUseSafeLocalBuilder
               ?await developmentTasks.startCapability({request_id:randomUUID(),request,capability_ids:current.missing_capabilities})
               :await developmentTasks.start({request_id:randomUUID(),request});
@@ -553,6 +561,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   app.post('/api/development/tasks/:id/resume',async(req,res)=>res.json(await developmentTasks.resume(req.params.id)));
   app.post('/api/development/tasks/:id/cancel',async(req,res)=>res.json(await developmentTasks.cancel(req.params.id)));
   app.post('/api/development/tasks/:id/approve-core',async(req,res)=>res.json(await developmentTasks.approveCore(req.params.id,req.body.confirmed)));
+  app.post('/api/development/tasks/:id/install-core',async(req,res)=>res.json(await developmentTasks.installCore(req.params.id,req.body.confirmed)));
   app.post('/api/development/tasks/:id/install',async(req,res)=>res.json(await developmentTasks.install(req.params.id,req.body)));
   app.post('/api/modules/:command',async(req,res)=>res.json(await service.manageModule(req.body,safeParse(z.enum(['enable','disable','remove']),req.params.command))));
   app.get('/api/extensions',async(_req,res)=>res.json(await extensions.list()));

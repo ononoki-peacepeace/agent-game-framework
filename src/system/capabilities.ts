@@ -63,6 +63,13 @@ export class CapabilityRegistry {
     if(existing){if(JSON.stringify(existing)!==JSON.stringify(descriptor))throw new Error(`capability ${descriptor.id} 已注册为不同实现`);return existing;}
     const frozen=Object.freeze({...descriptor});this.entries.set(descriptor.id,frozen);return frozen;
   }
+  activate(ids: string[]) {
+    for (const id of ids) {
+      const existing = this.entries.get(id);
+      if (!existing) throw new Error('Unknown capability: ' + id);
+      this.entries.set(id, Object.freeze({ ...existing, implemented: true }));
+    }
+  }
   without(ids: string[]) { const removed=new Set(ids);return new CapabilityRegistry(this.all().filter(entry=>!removed.has(entry.id))); }
   availability(capabilities: string[]): CapabilityAvailability[] {
     const installed = new Set(capabilities);

@@ -20,12 +20,12 @@ export const contextRouteSchema=z.strictObject({
 });
 export type ContextRoute=z.infer<typeof contextRouteSchema>;
 export type SourceContext='world_input'|'system_input';
-export async function readContextView(service:GameService){const save=await service.storage.read();return save?publicView(save):null;}
+export async function readContextView(service:GameService){const save=await service.storage.read();return save?service.project(save):null;}
 const pending=new WeakMap<GameService,Map<string,{input:string;question:string;at:number}>>();
 /** Read-only semantic gate. Failure to understand never grants permission to execute. */
 export async function routeContext(service:GameService,input:string,source:SourceContext):Promise<ContextRoute>{
   const save=await service.storage.read();assert(save,'请先载入世界');
-  const view=publicView(save),key=save.game_id+':'+source;
+  const view=service.project(save),key=save.game_id+':'+source;
   const memory=pending.get(service)??new Map();pending.set(service,memory);
   const session=systemSessionContext(service,save.game_id);
   const quick=fastPlan(view,input),metaPlan=planMeta(input,view.capabilities),shallowGuess=shallowUnderstanding(input,view);
@@ -63,7 +63,8 @@ export async function routeContext(service:GameService,input:string,source:Sourc
   if(!result){
     const meta=planMeta(input,view.capabilities),shallow=shallowUnderstanding(input,view),world=fastPlan(view,input);
     const knownMeta=!['UNKNOWN','IN_WORLD_INPUT'].includes(meta.category);
-    const explicitMeta=isUniversalGoalCandidate(input)||knownMeta||shallow.likely_workflow!=='unclear'&&['behavior_config','media_asset','development_task','module_management','diagnostic'].includes(shallow.likely_workflow);
+    const capabilityQuestion=shallow.likely_workflow==='capability_question'&&(/能力|模块|扩展|插件|功能包|面板|系统能|你能|能做什么|介绍.{0,8}(能力|功能)/.test(input)||view.panels.some(panel=>input.includes(panel.label))||view.modules.some(module=>input.includes(module.id)));
+    const explicitMeta=isUniversalGoalCandidate(input)||knownMeta||shallow.likely_workflow!=='unclear'&&['behavior_config','media_asset','development_task','module_management','diagnostic'].includes(shallow.likely_workflow)||capabilityQuestion;
     // Existing recognizers are an offline fallback only. Conflicting interpretations remain unresolved.
     const worldOnly=world&&!explicitMeta;
     result={destination:explicitMeta?'SYSTEM_META_INTENT':worldOnly?'WORLD_INTENT':'AMBIGUOUS',confidence:worldOnly||explicitMeta?0.85:0,
