@@ -52,12 +52,17 @@ export const changePlanStepSchema = z.strictObject({
   depends_on: z.array(z.string()), mechanism: z.enum(['content', 'configuration', 'composition', 'extension', 'core']),
   target_layers: z.array(z.string()), validation_gates: z.array(z.string()), rollback: z.string(),
 });
+export const minimumChangeReviewSchema=z.strictObject({
+ existing_extension_primitives:z.boolean(),reusable_state_or_runtime_value:z.boolean(),read_only_adapter_sufficient:z.boolean(),host_projection_sufficient:z.boolean(),canonical_schema_change_required:z.boolean(),new_framework_concept_required:z.boolean(),generic_value:z.string().min(1),selected_mechanism:z.enum(['content','configuration','composition','extension','core']),core_justification:z.string().nullable(),
+});
+export type MinimumChangeReview=z.infer<typeof minimumChangeReviewSchema>;
+
 export const changePlanSchema = z.strictObject({
   plan_id: z.string().min(1), request: changeRequestSchema, classification: changeClassificationSchema,
   recipes: z.array(z.union([recipeSchema, temporaryRecipeSchema])).min(1), temporary_recipe: temporaryRecipeSchema.nullable(),
   steps: z.array(changePlanStepSchema).min(1),
   target_pipeline: z.enum(['runtime_content', 'runtime_configuration', 'extension_development', 'core_development']),
-  requires_development_task: z.boolean(), requires_core_approval: z.boolean(),
+  requires_development_task: z.boolean(), requires_core_approval: z.boolean(), minimum_change_review:minimumChangeReviewSchema,
   constitution_version: z.string(), completion_criteria: z.array(z.string()).min(1),
 });
 export type ChangePlan = z.infer<typeof changePlanSchema>;

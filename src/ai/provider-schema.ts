@@ -86,3 +86,10 @@ export function schemaViolations(schema: unknown, path = '$', found: string[] = 
   for (const [key, value] of Object.entries(node)) schemaViolations(value, `${path}.${key}`, found);
   return found;
 }
+/** Compile a domain JSON Schema into the strict contract accepted by structured-output providers. */
+export function compileStructuredSchema(schema: unknown): unknown {
+  const compiled = normalizeStructuredSchema(schema);
+  const violations = schemaViolations(compiled);
+  if (violations.length) throw new Error(`INVALID_PROVIDER_SCHEMA: ${violations.slice(0, 8).join('; ')}`);
+  return compiled;
+}

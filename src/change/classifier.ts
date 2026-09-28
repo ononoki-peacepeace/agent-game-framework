@@ -11,7 +11,7 @@ const layerRules: { type: Exclude<ChangeType, 'NOVEL_CHANGE_DISCOVERY'>; layer: 
   { type: 'QUERY_AWARENESS_EXTENSION', layer: 'query', patterns: [/(查询|感知|读取|查看|知道|列出).{0,14}(状态|事实|数据|信息|结果)/i, /(query|awareness|read.only).{0,12}(state|truth|result)/i] },
   { type: 'UI_SURFACE_CHANGE', layer: 'surface', patterns: [/(页面|面板|功能框|tab|按钮|界面|布局|卡片|hud|显示|展示|交互|键盘|控制器)/i, /(panel|surface|layout|button|display|keyboard|controller)/i] },
   { type: 'RULE_EXTENSION', layer: 'rule', patterns: [/(新增|增加|扩展|添加).{0,8}(规则|条件|触发)|每当|随着|达到.{0,8}(时|就)|变化时|衰减|自动.{0,8}(增长|更新)/i, /(add|extend).{0,8}(rule|trigger)|decay|progression|transition/i] },
-  { type: 'STATE_EXTENSION', layer: 'state', patterns: [/(新增|增加|添加|扩展|拥有).{0,12}(属性|数值|资源|字段|维度|component|状态)/i, /(new|add).{0,12}(field|resource|component|dimension|attribute)/i] },
+  { type: 'STATE_EXTENSION', layer: 'state', patterns: [/(新增|增加|添加|扩展|拥有).{0,12}(属性|数值|资源|字段|维度|component|状态)/i, /(给|为).{0,8}(人物|角色|npc).{0,16}(开关|标记)/i, /(new|add).{0,12}(field|resource|component|dimension|attribute)/i] },
   { type: 'BEHAVIOR_CHANGE', layer: 'behavior', patterns: [/(行为|动作|执行|响应方式|处理方式).{0,12}(修改|改变|调整|规则)/i, /(change|modify).{0,12}(behavior|executor|semantics)/i] },
   { type: 'CONFIGURATION_CHANGE', layer: 'configuration', patterns: [/(配置|设置|参数|上限|倍率|阈值|开关|默认值|模型设置|文风|语气|启用|停用|关闭|打开|不需要.{0,8}(模式|系统))/i, /(config|setting|limit|multiplier|threshold|toggle|default|enable|disable)/i] },
   { type: 'CONTENT_CHANGE', layer: 'content', patterns: [/(新增|添加|修改|删除|移除|创建).{0,12}(人物|角色|地点|物品|任务|商品|世界内容|剧情内容)/i, /(add|edit|remove|create).{0,12}(character|location|item|quest|content)/i] },
@@ -19,9 +19,16 @@ const layerRules: { type: Exclude<ChangeType, 'NOVEL_CHANGE_DISCOVERY'>; layer: 
 const extensionTypes = new Set<ChangeType>(['STATE_EXTENSION','RULE_EXTENSION','BEHAVIOR_CHANGE','CAPABILITY_EXTENSION','PROVIDER_INTEGRATION','UI_SURFACE_CHANGE','WORKFLOW_CHANGE','AGENT_PLANNING_CHANGE','QUERY_AWARENESS_EXTENSION']);
 const order: ChangeType[] = ['CONTENT_CHANGE','CONFIGURATION_CHANGE','STATE_EXTENSION','RULE_EXTENSION','QUERY_AWARENESS_EXTENSION','UI_SURFACE_CHANGE','BEHAVIOR_CHANGE','CAPABILITY_EXTENSION','PROVIDER_INTEGRATION','WORKFLOW_CHANGE','AGENT_PLANNING_CHANGE','DATA_MODEL_CHANGE','CORE_EVOLUTION'];
 
+export function compileNaturalLanguageChange(input:string){
+ const text=input.trim(),entityScoped=/(人物|角色|npc|每个人|逐人物|每名)/i.test(text),flag=/(开关|切换|标记|是否|启用|关闭|关注)/i.test(text),characterSurface=/(人物|角色|详情|档案|角色页)/i.test(text),explicitCanonical=/(canonical|正史|世界状态|存档结构|schema|回合|系统时间)/i.test(text);
+ const scope=entityScoped?'entity':'extension',field_type=flag?'flag':'unspecified',surface=characterSurface?'character_detail':'panel',action=flag?'toggle':'unspecified';
+ return {goal:text,scope,field_type,default:flag?false:null,surface,action,persistence:'extension-owned',constraints:[...(explicitCanonical?[]:['不推进世界时间','不修改 canonical world state']),scope==='entity'?'每个人物独立保存':'状态保存在扩展命名空间','优先使用现有 Extension SDK','禁止无理由升级 Core'],acceptance:[...(scope==='entity'?['不同人物状态相互独立']:[]),'重新载入后状态保留',...(flag?['切换动作有效']:[]),'停用时隐藏，重新启用后恢复']};
+}
+
 export function createChangeRequest(input: string, context: Record<string, unknown> = {}, requestId: string = randomUUID()): ChangeRequest {
   const text = input.trim();
-  return changeRequestSchema.parse({ request_id: requestId, original_input: text, goal_summary: text.slice(0, 1000), desired_outcomes: [text.slice(0, 600)], target_layers: [], known_context: context });
+  const engineering_spec=compileNaturalLanguageChange(text);
+  return changeRequestSchema.parse({ request_id: requestId, original_input: text, goal_summary: text.slice(0, 1000), desired_outcomes: [text.slice(0, 600),...engineering_spec.acceptance].slice(0,12), target_layers: [], known_context: {...context,engineering_spec} });
 }
 
 export function classifyChangeRequest(request: ChangeRequest): ChangeClassification {

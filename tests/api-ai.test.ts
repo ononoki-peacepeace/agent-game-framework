@@ -38,7 +38,14 @@ it('Codex cache failure retries once with fresh canonical prompt', async () => {
   try { const out=await new CodexAdapter(dir,client).generate({role:'narrator',prompt:'canonical context',schema:{},threadId:'invalid'}); expect(out.recovered).toBe(true); expect(out.threadId).toBe('new-id'); expect([starts,resumes]).toEqual([1,1]); }
   finally {await rm(dir,{recursive:true,force:true});}
 });
-it('Codex adapter rejects unexpected tools', async () => {
+
+it('Codex receives the compiled strict schema rather than the optional domain schema', async () => {
+  const dir=await mkdtemp(join(tmpdir(),'agf-ai-'));let outputSchema:any;
+  const client={startThread:()=>({id:'strict',run:async(_prompt:string,options:any)=>{outputSchema=options.outputSchema;return {finalResponse:'{"spec":null,"capability_gaps":[]}',items:[]};}})} as unknown as Codex;
+  const {generationSchema}=await import('../src/extensions/tasks.js');
+  try{await new CodexAdapter(dir,client).generate({role:'gm_reasoning',prompt:'compile extension',schema:z.toJSONSchema(generationSchema)});const spec=outputSchema.properties.spec.anyOf.find((entry:any)=>entry.type!=='null');const fields=spec.anyOf?.[0]?.properties?.fields??spec.properties.fields;expect(fields.items.required).toContain('label');expect(fields.items.required.sort()).toEqual(Object.keys(fields.items.properties).sort());}
+  finally{await rm(dir,{recursive:true,force:true});}
+});it('Codex adapter rejects unexpected tools', async () => {
   const dir=await mkdtemp(join(tmpdir(),'agf-ai-'));
   const client={startThread:()=>({id:'x',run:async()=>({finalResponse:'{}',items:[{type:'file_change'}]})})} as unknown as Codex;
   try {await expect(new CodexAdapter(dir,client).generate({role:'narrator',prompt:'test',schema:{}})).rejects.toThrow('AI_TOOL_BOUNDARY');}

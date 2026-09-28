@@ -16,15 +16,26 @@ import {changePlanSchema,type ChangePlan} from '../change/contracts.js';
 import {isDelegateAnswer} from '../system/feature-guide.js';
 import {CoreCandidateInstaller,type CoreInstallRecord} from '../development/core-installer.js';
 const runCommand=promisify(execFile);
+export type DevelopmentFailureClassification='TRANSIENT_EXECUTION_FAILURE'|'DETERMINISTIC_REQUEST_FAILURE'|'IMPLEMENTATION_FAILURE'|'CAPABILITY_EXTERNAL_BLOCK'|'UNRECOVERABLE_FAILURE';
+export function classifyDevelopmentFailure(message:string):DevelopmentFailureClassification{
+ if(/invalid[_ -]?json[_ -]?schema|invalid schema for response_format|malformed request|unsupported parameter|unknown parameter|INVALID_PROVIDER_SCHEMA|deterministic validation/i.test(message))return 'DETERMINISTIC_REQUEST_FAILURE';
+ if(/aborted|timeout|timed out|temporary|temporar|network|ECONNRESET|socket hang up|provider 5\d\d/i.test(message))return 'TRANSIENT_EXECUTION_FAILURE';
+ if(/dirty worktree|uncommitted|credential|provider unavailable|not available/i.test(message))return 'CAPABILITY_EXTERNAL_BLOCK';
+ return 'IMPLEMENTATION_FAILURE';
+}
+export function developmentFailureFingerprint(stage:string,message:string){
+ const normalized=message.toLowerCase().replace(/[a-f0-9]{8}-[a-f0-9-]{27,}/g,'<id>').replace(/[a-z]:\\[^\n]+/g,'<path>').replace(/\s+/g,' ').trim();
+ return createHash('sha256').update(`${stage}|${classifyDevelopmentFailure(message)}|${normalized}`).digest('hex').slice(0,24);
+}
 export const capabilityGapSchema=z.strictObject({required_capability:z.string().max(150),why_needed:z.string().max(600),affected_modules:z.array(z.string()).max(10),current_limitation:z.string().max(600),proposed_generic_capability:z.string().max(600),risk:z.string().max(600)});
 export const developmentPlanSchema=z.strictObject({
  normalized_requirements:z.array(z.string().max(600)).min(1).max(20),complexity:z.enum(['LOW','MEDIUM','HIGH','VERY_HIGH']),clarification:z.string().max(600).nullable(),clarification_options:z.array(z.string().max(60)).max(4).default([]),
  milestones:z.array(z.strictObject({id:z.string().regex(/^[a-z][a-z0-9_]{0,40}$/),title:z.string().max(100),kind:z.enum(['behavior','ui','integration']),acceptance:z.array(z.string().max(250)).min(1).max(8)})).min(1).max(8),
  capability_gaps:z.array(capabilityGapSchema).max(10),affected_milestone_ids:z.array(z.string().max(40)).max(8).default([]),
 });
-const generationSchema=z.strictObject({spec:specSchema.nullable(),capability_gaps:z.array(capabilityGapSchema).max(10)});
+export const generationSchema=z.strictObject({spec:specSchema.nullable(),capability_gaps:z.array(capabilityGapSchema).max(10)});
 export type CapabilityGap=z.infer<typeof capabilityGapSchema>;
-export interface CoreProposal {problem:string;proposed_api:string[];impact:string[];migration:string;tests:string[];rollback:string;risk:string;status:'pending'|'approved';approved_at?:string}
+export interface CoreProposal {problem:string;proposed_api:string[];impact:string[];migration:string;tests:string[];rollback:string;risk:string;minimum_change_review?:ChangePlan['minimum_change_review'];canonical_change_warning?:string|null;status:'pending'|'approved';approved_at?:string}
 export interface DevelopmentTask {
  kind?:'extension'|'capability';
  id:string;game_id:string;extension_id:string;original_request:string;normalized_requirements:string[];requirement_history:string[];
@@ -38,7 +49,8 @@ export interface DevelopmentTask {
  test_results:{version:string;milestone:string;passed:boolean;detail:string}[];history:{at:string;event:string;detail:string}[];
  message:string;candidate_job_id:string|null;
  started_at?:string;last_activity_at?:string;current_phase?:string;active_job?:string|null;latest_progress_message?:string;
- core_recovery?:{classification:'TRANSIENT_EXECUTION_FAILURE'|'IMPLEMENTATION_FAILURE'|'CAPABILITY_EXTERNAL_BLOCK'|'UNRECOVERABLE_FAILURE'|null;attempts:number;max_attempts:number;replans:number;max_replans:number;providers_tried:string[];last_error:string|null};
+ core_recovery?:{classification:DevelopmentFailureClassification|null;attempts:number;max_attempts:number;replans:number;max_replans:number;providers_tried:string[];last_error:string|null;last_fingerprint?:string|null;repeated_failures?:number};
+ development_recovery?:{classification:DevelopmentFailureClassification|null;stage:string;provider_calls:number;repair_attempts:number;last_fingerprint:string|null;repeated_failures:number;last_error:string|null;last_meaningful_progress_at:string};
  preview:null|{name:string;requirements:string[];usage:string;rules:string[];ui:string[];world_integration:string;canonical_writes:string[];own_state:string[];permissions:string[];risk:string;version:string;migration:string[]};
  core_execution?:CoreDevelopmentReport|null;
  capability_artifacts?:{version:string;path:string;capability_ids:string[];hash:string}[];
@@ -66,6 +78,10 @@ export class DevelopmentTasks {
   }
   const payload=JSON.stringify({tasks:this.tasks,receipts:this.receipts},null,2);this.writes=this.writes.catch(()=>{}).then(async()=>{await mkdir(this.builder.host.directory,{recursive:true});const path=join(this.builder.host.directory,randomUUID()+'.tmp');await writeFile(path,payload);await rename(path,join(this.builder.host.directory,'tasks.json'));});return this.writes;}
  private history(t:DevelopmentTask,event:string,detail:string){t.history.push({at:new Date().toISOString(),event,detail});}
+ private recovery(t:DevelopmentTask){return t.development_recovery??={classification:null,stage:'需求分析',provider_calls:0,repair_attempts:0,last_fingerprint:null,repeated_failures:0,last_error:null,last_meaningful_progress_at:new Date().toISOString()};}
+ private providerAttempt(t:DevelopmentTask,stage:string){const recovery=this.recovery(t);recovery.stage=stage;recovery.provider_calls+=1;}
+ private meaningfulProgress(t:DevelopmentTask,stage:string){const recovery=this.recovery(t);recovery.stage=stage;recovery.classification=null;recovery.last_error=null;recovery.repeated_failures=0;recovery.last_meaningful_progress_at=new Date().toISOString();}
+ private recordFailure(t:DevelopmentTask,stage:string,detail:string){const recovery=this.recovery(t),fingerprint=developmentFailureFingerprint(stage,detail),same=recovery.last_fingerprint===fingerprint;recovery.classification=classifyDevelopmentFailure(detail);recovery.stage=stage;recovery.last_error=detail;recovery.repeated_failures=same?recovery.repeated_failures+1:1;recovery.last_fingerprint=fingerprint;if(t.status==='repairing')recovery.repair_attempts+=1;return recovery;}
  private async find(id:string){await this.ready;const t=this.tasks.find(t=>t.id===id);assert(t,'开发任务不存在');assert(t.game_id===(await this.builder.host.service.current()).game_id,'开发任务属于另一个世界');return t;}
  async list(){await this.ready;const s=await this.builder.host.service.current();return structuredClone(this.tasks.filter(t=>t.game_id===s.game_id));}
  async get(id:string){return structuredClone(await this.find(id));}
@@ -116,28 +132,28 @@ export class DevelopmentTasks {
   return true;
  }
  private launch(t:DevelopmentTask){const controller=new AbortController();const promise=Promise.resolve().then(()=>this.run(t,controller.signal)).finally(()=>this.runs.delete(t.id));this.runs.set(t.id,{controller,promise});}
- private gap(t:DevelopmentTask,gaps:CapabilityGap[]){t.capability_gaps=gaps;t.status='waiting_for_core_approval';t.message='当前扩展接口不足以完成需求，核心能力提案等待审阅。';t.core_proposal={problem:gaps.map(g=>g.why_needed).join('\n'),proposed_api:gaps.map(g=>g.proposed_generic_capability),impact:gaps.flatMap(g=>g.affected_modules),migration:'新增状态必须可选且版本化；旧档往返兼容，迁移前保留检查点。',tests:['权限越界拒绝','旧档往返兼容','并发冲突与原子回滚','中断恢复','新接口行为验证'],rollback:'禁用新能力，恢复迁移前检查点和上一扩展版本。',risk:gaps.map(g=>g.risk).join('\n'),status:'pending'};this.history(t,'capability_gap',t.message);}
+ private gap(t:DevelopmentTask,gaps:CapabilityGap[]){const simple=/(人物|角色|npc)/i.test(t.original_request)&&/(开关|切换|标记|关注)/i.test(t.original_request)&&!/(回合|时间|系统状态|canonical|schema|源码|框架)/i.test(t.original_request);if(simple){t.capability_gaps=[];this.history(t,'minimum_change_review','现有 entity-scoped flag、toggle 和 Character Host 已能表达需求；拒绝升级 Core。');return;}t.capability_gaps=gaps;t.status='waiting_for_core_approval';t.message='当前扩展接口不足以完成需求，核心能力提案等待审阅。';t.core_proposal={problem:gaps.map(g=>g.why_needed).join('\n'),proposed_api:gaps.map(g=>g.proposed_generic_capability),impact:gaps.flatMap(g=>g.affected_modules),migration:'新增状态必须可选且版本化；旧档往返兼容，迁移前保留检查点。',tests:['权限越界拒绝','旧档往返兼容','并发冲突与原子回滚','中断恢复','新接口行为验证'],rollback:'禁用新能力，恢复迁移前检查点和上一扩展版本。',risk:gaps.map(g=>g.risk).join('\n'),minimum_change_review:t.change_plan?.minimum_change_review,canonical_change_warning:gaps.some(g=>/(schema|canonical|存档|回合|时间|runtime)/i.test(g.why_needed+' '+g.proposed_generic_capability))?'这已经不再是普通扩展修改，而是在增加新的 Framework 核心概念；可能影响存档、撤销或历史语义。':null,status:'pending'};this.history(t,'capability_gap',t.message);}
  private async run(t:DevelopmentTask,signal:AbortSignal){
  try{
  while((t.replan_required||!t.milestones.length)&&t.attempts<t.budget.max_attempts){
-  signal.throwIfAborted();t.attempts++;t.status='planning';await this.persist();
-  try{const reply=await this.adapter().generate({role:'gm_reasoning',signal,maxOutputTokens:5000,schema:z.toJSONSchema(developmentPlanSchema),prompt:sdk+' 只规划用户目标，不默认生成参考游戏或计数器。玩家说的是产品概念时先给最小可用版本：只有需求明确要求某个高级行为（例如达到上限后真的不能继续成长）时才引入对应规则、迁移或额外能力；不要把 hook、可见性框架、数据迁移、额外核心能力当作默认。规则缺失用 clarification 询问；给玩家的问题只用自然语言，不包含内部标识。超出 SDK 必须产生 capability_gaps，不降级冒充实现。每个 milestone 为可实现/构建/测试/检查点的纵向功能切片；高复杂任务需要多个阶段。修改现有需求时，affected_milestone_ids 必须明确指出受影响的已有阶段；不受影响的阶段保持 id、验收标准和标题不变。'+' 澄清要一次性问清：只问真的会改变玩家看到的行为的关键选择，同一任务最多再问一轮，绝不把实现细节（是否复用现有日志、字段怎么存、用哪种 hook、要不要新能力）当成玩家必须回答的问题。如果玩家把选择交给你（你帮我选/不知道/随便/按默认），不要再追问，直接按最小合理方案继续。需要澄清时同时给出 clarification_options：最多 4 个玩家能直接点选的中文短句，不要出现任何内部标识。'+JSON.stringify({requirements:t.requirement_history,previous_milestones:t.milestones,previous:t.artifacts.at(-1)?.manifest,diagnostics:t.test_results.slice(-2),change_plan:t.change_plan,player_delegated:t.delegated_choice===true,clarification_rounds:t.clarification_rounds})});
-   signal.throwIfAborted();const p=developmentPlanSchema.parse(reply.data);assert(new Set(p.milestones.map(m=>m.id)).size===p.milestones.length,'阶段标识重复');assert(!['HIGH','VERY_HIGH'].includes(p.complexity)||p.milestones.length>=2,'复杂需求必须拆分多个阶段');t.normalized_requirements=p.normalized_requirements;t.complexity=p.complexity;let affected=false;const old=t.milestones;
+  signal.throwIfAborted();t.attempts++;t.status='planning';this.providerAttempt(t,'需求分析');await this.persist();
+  try{const reply=await this.adapter().generate({role:'gm_reasoning',signal,maxOutputTokens:5000,schema:z.toJSONSchema(developmentPlanSchema),prompt:sdk+' 只规划用户目标，不默认生成参考游戏或计数器。玩家说的是产品概念时先给最小可用版本：只有需求明确要求某个高级行为（例如达到上限后真的不能继续成长）时才引入对应规则、迁移或额外能力；不要把 hook、可见性框架、数据迁移、额外核心能力当作默认。规则缺失用 clarification 询问；给玩家的问题只用自然语言，不包含内部标识。超出 SDK 必须产生 capability_gaps，不降级冒充实现。每个 milestone 为可实现/构建/测试/检查点的纵向功能切片；高复杂任务需要多个阶段。修改现有需求时，affected_milestone_ids 必须明确指出受影响的已有阶段；不受影响的阶段保持 id、验收标准和标题不变。'+' 澄清要一次性问清：只问真的会改变玩家看到的行为的关键选择，同一任务最多再问一轮，绝不把实现细节（是否复用现有日志、字段怎么存、用哪种 hook、要不要新能力）当成玩家必须回答的问题。如果玩家把选择交给你（你帮我选/不知道/随便/按默认），不要再追问，直接按最小合理方案继续。需要澄清时同时给出 clarification_options：最多 4 个玩家能直接点选的中文短句，不要出现任何内部标识。'+JSON.stringify({requirements:t.requirement_history,previous_milestones:t.milestones,previous:t.artifacts.at(-1)?.manifest,diagnostics:t.test_results.slice(-2),change_plan:t.change_plan,engineering_spec:t.change_plan?.request.known_context.engineering_spec,minimum_change_review:t.change_plan?.minimum_change_review,player_delegated:t.delegated_choice===true,clarification_rounds:t.clarification_rounds})});
+   signal.throwIfAborted();const p=developmentPlanSchema.parse(reply.data);this.meaningfulProgress(t,'需求分析');assert(new Set(p.milestones.map(m=>m.id)).size===p.milestones.length,'阶段标识重复');assert(!['HIGH','VERY_HIGH'].includes(p.complexity)||p.milestones.length>=2,'复杂需求必须拆分多个阶段');t.normalized_requirements=p.normalized_requirements;t.complexity=p.complexity;let affected=false;const old=t.milestones;
    t.milestones=p.milestones.map(m=>{const previous=old.find(x=>x.id===m.id);if(!p.affected_milestone_ids.length||p.affected_milestone_ids.includes(m.id)||!previous||previous.title!==m.title||JSON.stringify(previous.acceptance)!==JSON.stringify(m.acceptance))affected=true;return {...m,status:!affected&&previous?.status==='passed'?'passed':'pending',...(!affected&&previous?.checkpoint?{checkpoint:previous.checkpoint}:{})};});t.replan_required=false;t.budget.max_attempts=Math.max(t.budget.max_attempts,t.attempts+p.milestones.length*2);
    if(p.capability_gaps.length)this.gap(t,p.capability_gaps);
    else if(p.clarification&&this.mustAsk(t)){t.status='waiting_for_user';t.message=p.clarification;t.clarification_options=p.clarification_options;t.clarification_rounds+=1;}
    else if(p.clarification){t.clarification_options=[];t.message='这次的差异只是实现细节，我按最小合理方案继续，不占用你的时间。';}
    else t.clarification_options=[];
-  }catch(e){if(signal.aborted)throw e;t.test_results.push({version:t.current_version,milestone:'planning',passed:false,detail:String((e as Error).message).slice(0,1500)});}
+  }catch(e){if(signal.aborted)throw e;const detail=String((e as Error).message).slice(0,1500),recovery=this.recordFailure(t,'需求分析',detail);t.test_results.push({version:t.current_version,milestone:'planning',passed:false,detail});if(recovery.classification==='DETERMINISTIC_REQUEST_FAILURE'){t.status='failed';t.message='开发器生成请求的结构校验失败，已停止重复调用；玩家需求与进度均已保留。';this.history(t,'deterministic_request_failure',recovery.last_fingerprint??'');await this.persist();return;}t.message=recovery.classification==='TRANSIENT_EXECUTION_FAILURE'?'Provider 暂时中断，正在进行有限重试。':'需求分析未通过，正在用已有诊断重新规划。';}
  }
  if(['waiting_for_user','waiting_for_core_approval'].includes(t.status)){await this.persist();return;}
  if(t.replan_required||!t.milestones.length){t.status='paused';t.message='规划尝试预算已用完，需求已保留。';await this.persist();return;}
  for(const m of t.milestones){
   if(m.status==='passed')continue;
   while(m.status!=='passed'&&t.attempts<t.budget.max_attempts){
-   signal.throwIfAborted();t.attempts++;t.status=m.status==='failed'?'repairing':'developing';t.message='正在处理：'+m.title;await this.persist();
+   signal.throwIfAborted();t.attempts++;t.status=m.status==='failed'?'repairing':'developing';t.message=(m.status==='failed'?'正在尝试另一种修复方式：':'正在生成扩展规格：')+m.title;this.providerAttempt(t,m.status==='failed'?'自动修复':'生成扩展规格');await this.persist();
    try{
-    const reply=await this.adapter().generate({role:'gm_reasoning',signal,maxOutputTokens:5000,schema:z.toJSONSchema(generationSchema),prompt:sdk+' 在现有候选上局部实现或修复当前阶段，返回累积完整Spec。template只能declarative。缺少SDK能力返回capability_gaps并令spec=null，不能偷偷修改Core。保留已通过阶段。'+JSON.stringify({extension_id:t.extension_id,requirements:t.normalized_requirements,milestone:m,previous:t.artifacts.at(-1)?.manifest,diagnostics:t.test_results.filter(x=>!x.passed).slice(-2)})});
+    const reply=await this.adapter().generate({role:'gm_reasoning',signal,maxOutputTokens:5000,schema:z.toJSONSchema(generationSchema),prompt:sdk+' 在现有候选上局部实现或修复当前阶段，返回累积完整Spec。template只能declarative。缺少SDK能力返回capability_gaps并令spec=null，不能偷偷修改Core。保留已通过阶段。'+JSON.stringify({extension_id:t.extension_id,requirements:t.normalized_requirements,milestone:m,previous:t.artifacts.at(-1)?.manifest,diagnostics:t.test_results.filter(x=>!x.passed).slice(-2),engineering_spec:t.change_plan?.request.known_context.engineering_spec,minimum_change_review:t.change_plan?.minimum_change_review})});
     signal.throwIfAborted();const generated=generationSchema.parse(reply.data);if(generated.capability_gaps.length){this.gap(t,generated.capability_gaps);await this.persist();return;}
     const spec=generated.spec;assert(spec&&spec.template==='declarative'&&spec.extension_id===t.extension_id,'候选身份或执行边界不匹配');
     const job=await this.builder.start({request_id:randomUUID(),request:t.normalized_requirements.join('\n').slice(0,3000),extension_id:t.extension_id,template:'declarative',allow_betting:false,use_codex:false,spec},{workspace:join(t.workspace,'candidate'),version:t.current_version});
@@ -147,9 +163,9 @@ export class DevelopmentTasks {
     signal.throwIfAborted();assert(built.status==='ready'&&built.manifest,built.message);
     const hostChecks=verifyMilestoneHostProjection(spec,[m.title,...m.acceptance].join(' '));
     const path=join(t.workspace,'checkpoints',t.current_version+'-'+m.id+'.json');await mkdir(join(t.workspace,'checkpoints'),{recursive:true});await copyFile(join(built.workspace,'dist','profile.json'),path);
-    m.status='passed';m.checkpoint=path;t.artifacts.push({version:t.current_version,milestone:m.id,path,job_id:built.job_id,manifest:built.manifest});
+    m.status='passed';m.checkpoint=path;this.meaningfulProgress(t,'验证完成');t.artifacts.push({version:t.current_version,milestone:m.id,path,job_id:built.job_id,manifest:built.manifest});
     t.test_results.push({version:t.current_version,milestone:m.id,passed:true,detail:'TypeScript、状态动作约束及规则验证通过。'+(hostChecks.length?' '+hostChecks.join('；'):'')});this.history(t,'checkpoint',m.title);await this.persist();
-   }catch(e){if(signal.aborted)throw e;m.status='failed';const detail=String((e as Error).message).slice(0,1500);t.test_results.push({version:t.current_version,milestone:m.id,passed:false,detail});this.history(t,'repair',detail);await this.persist();}
+   }catch(e){if(signal.aborted)throw e;m.status='failed';const detail=String((e as Error).message).slice(0,1500),recovery=this.recordFailure(t,'生成扩展规格',detail);t.test_results.push({version:t.current_version,milestone:m.id,passed:false,detail});this.history(t,recovery.classification==='DETERMINISTIC_REQUEST_FAILURE'?'deterministic_request_failure':'repair',detail);if(recovery.classification==='DETERMINISTIC_REQUEST_FAILURE'){t.status='failed';t.message=recovery.repeated_failures>=2?'自动修复未能解决相同问题，开发已停止；需要修复 Framework 开发器本身。':'开发器请求结构无效，已停止重复调用；需要修复 Framework 开发器本身。';await this.persist();return;}t.message=recovery.classification==='TRANSIENT_EXECUTION_FAILURE'?'Provider 暂时中断，准备有限重试。':'候选未通过验证，正在尝试一次有诊断依据的修复。';await this.persist();}
   }
   if(m.status!=='passed'){t.status='paused';t.message='本轮预算用完，需求、工作区和检查点已保留，可继续修复。';await this.persist();return;}
  }
@@ -175,7 +191,7 @@ export class DevelopmentTasks {
  t.replan_required=true;await this.persist();this.launch(t);return structuredClone(t);
  }
  async resume(id:string){return this.control(id,()=>this.resumeTask(id));}
- private async resumeTask(id:string){const t=await this.find(id);assert(!this.runs.size&&['paused','failed'].includes(t.status),'当前任务不能恢复');assert(!t.capability_gaps.length,'核心能力尚未提供，请先修改需求或完成核心开发');t.budget.max_attempts=t.attempts+Math.max(3,t.milestones.length*2);t.status='developing';await this.persist();this.launch(t);return structuredClone(t);}
+ private async resumeTask(id:string){const t=await this.find(id);assert(!this.runs.size&&['paused','failed'].includes(t.status),'当前任务不能恢复');if(t.core_proposal?.status==='approved'){assert(this.coreExecutor,'当前主机没有配置核心编码执行器');const availability=await this.coreExecutor.availability();assert(availability.available,`核心编码后端不可用：${availability.reason??availability.provider}`);t.status='developing';t.message='正在重新检查安全条件并从新的隔离 attempt 继续核心开发。';await this.persist();const controller=new AbortController(),promise=this.runCore(t,controller.signal).finally(()=>this.runs.delete(t.id));this.runs.set(t.id,{controller,promise});return structuredClone(t);}assert(!t.capability_gaps.length,'核心能力尚未提供，请先修改需求或完成核心开发');t.budget.max_attempts=t.attempts+Math.max(3,t.milestones.length*2);t.status='developing';await this.persist();this.launch(t);return structuredClone(t);}
  async cancel(id:string){return this.control(id,()=>this.cancelTask(id));}
  private async cancelTask(id:string){assert(!this.installing.has(id),'安装正在提交');const t=await this.find(id),running=this.runs.get(id);running?.controller.abort();await running?.promise;t.status='cancelled';t.message='已取消；工作区与历史保留。';await this.persist();return structuredClone(t);}
  async approveCore(id:string,confirmed:boolean){return this.control(id,()=>this.approveCoreTask(id,confirmed));}
@@ -193,6 +209,7 @@ export class DevelopmentTasks {
   const recovery=t.core_recovery??={classification:null,attempts:0,max_attempts:3,replans:0,max_replans:1,providers_tried:[],last_error:null};
   const classify=(message:string,report?:CoreDevelopmentReport):NonNullable<DevelopmentTask['core_recovery']>['classification']=>{
    if(/尚未保存|uncommitted|dirty worktree|credential|凭证|not available|provider unavailable|unsupported|不支持/i.test(message)||report?.status==='blocked')return 'CAPABILITY_EXTERNAL_BLOCK';
+   if(/invalid[_ -]?json[_ -]?schema|invalid schema for response_format|malformed request|unsupported parameter|INVALID_PROVIDER_SCHEMA/i.test(message))return 'DETERMINISTIC_REQUEST_FAILURE';
    if(/aborted|timeout|timed out|temporary|temporar|network|unexpected stop|ECONNRESET|socket hang up|destination path.*already exists|not an empty directory|workspace collision/i.test(message))return 'TRANSIENT_EXECUTION_FAILURE';
    if(report&&(!report.tests_passed||!report.build_passed||!report.acceptance_passed)||/invalid|no implementation|failed (?:test|build|git diff)|候选.*失败/i.test(message))return 'IMPLEMENTATION_FAILURE';
    return 'UNRECOVERABLE_FAILURE';
@@ -203,26 +220,28 @@ export class DevelopmentTasks {
     signal.throwIfAborted();recovery.attempts+=1;const workspace=resolve(revisionWorkspace,`replan-${recovery.replans}`,`attempt-${recovery.attempts}`);t.status='developing';t.message=recovery.attempts===1&&recovery.replans===0?'核心编码后端正在隔离工作区准备候选；尚未安装或注册。':`上一次开发执行被中止，系统正在重新准备安全工作区并继续尝试。正在自动重试（${recovery.attempts}/${recovery.max_attempts}）。`;await this.persist();
     const report=await this.coreExecutor!.execute({
      task_id:t.id,repository:resolve('.'),workspace,
-     requirement:t.requirement_history.join('\n')+(recovery.replans?`\n请根据上一轮失败重新规划并修复：${recovery.last_error??''}`:''),proposal:t.core_proposal!,targeted_tests:['npm test'],required_acceptance:[],
+     requirement:`ENGINEERING CHANGE PLAN:\n${JSON.stringify(t.change_plan??{requirements:t.normalized_requirements},null,2)}\nPLAYER REQUIREMENTS:\n${t.requirement_history.join('\n')}`+(recovery.replans?`\n请根据上一轮失败重新规划并修复：${recovery.last_error??''}`:''),proposal:t.core_proposal!,targeted_tests:['npm test'],required_acceptance:[],
     },signal);
     t.core_execution=report;if(!recovery.providers_tried.includes(report.provider))recovery.providers_tried.push(report.provider);
     if(report.status==='candidate_ready'&&report.tests_passed&&report.build_passed&&report.acceptance_passed){
      recovery.classification=null;t.status='paused';t.message='核心候选已通过隔离测试和构建，但尚未安装、注册或恢复原目标。';this.history(t,'core_execution',report.message);break;
     }
-    const classification=classify(report.message,report);recovery.classification=classification;recovery.last_error=report.message;this.history(t,'core_execution_attempt',`${classification}: ${report.message}`);
+    const classification=classify(report.message,report);recovery.classification=classification;recovery.last_error=report.message;const fingerprint=developmentFailureFingerprint('core',report.message);recovery.repeated_failures=recovery.last_fingerprint===fingerprint?(recovery.repeated_failures??0)+1:1;recovery.last_fingerprint=fingerprint;this.history(t,'core_execution_attempt',`${classification}: ${report.message}`);
+    if(classification==='DETERMINISTIC_REQUEST_FAILURE'){t.status='failed';t.message='核心开发请求连续出现相同的确定性错误，已停止重复执行；候选没有安装。';break;}
     if(classification==='TRANSIENT_EXECUTION_FAILURE'&&recovery.attempts<recovery.max_attempts)continue;
     if(classification==='TRANSIENT_EXECUTION_FAILURE'&&recovery.replans<recovery.max_replans){recovery.replans+=1;recovery.attempts=0;t.status='repairing';t.message='多次执行中断，正在保留工作区并重新规划恢复方式。';await this.persist();continue;}
     if(classification==='IMPLEMENTATION_FAILURE'&&recovery.replans<recovery.max_replans){recovery.replans+=1;recovery.attempts=0;t.status='repairing';t.message='候选没有通过验证，正在根据失败原因重新规划一次。';await this.persist();continue;}
-    if(classification==='CAPABILITY_EXTERNAL_BLOCK'){t.status='paused';t.message='当前缺少外部条件或触发了安全门，开发已暂停，候选没有安装。';}
+    if(classification==='CAPABILITY_EXTERNAL_BLOCK'){t.status='paused';t.message=/dirty worktree|uncommitted|尚未保存/i.test(report.message)?'当前 Framework 存在尚未保存的开发修改。为避免覆盖代码，核心开发没有开始；请先保存或提交源码修改，然后点击继续。':'当前缺少核心开发所需的外部条件。请处理高级详情中的条件后点击继续；候选没有安装。';}
     else{t.status='failed';t.message='自动重试与修复策略已用完，后台已经停止；候选没有安装。';}
     break;
    }catch(error){
     if(signal.aborted){t.status='paused';t.message='核心开发已暂停，候选工作区保留。';this.history(t,'core_execution_paused',String((error as Error).message).slice(0,1500));break;}
-    const detail=String((error as Error).message).slice(0,1500),classification=classify(detail);recovery.classification=classification;recovery.last_error=detail;this.history(t,'core_execution_attempt',`${classification}: ${detail}`);
+    const detail=String((error as Error).message).slice(0,1500),classification=classify(detail);recovery.classification=classification;recovery.last_error=detail;const fingerprint=developmentFailureFingerprint('core',detail);recovery.repeated_failures=recovery.last_fingerprint===fingerprint?(recovery.repeated_failures??0)+1:1;recovery.last_fingerprint=fingerprint;this.history(t,'core_execution_attempt',`${classification}: ${detail}`);
+    if(classification==='DETERMINISTIC_REQUEST_FAILURE'){t.status='failed';t.message='核心开发请求连续出现相同的确定性错误，已停止重复执行；候选没有安装。';break;}
     if(classification==='TRANSIENT_EXECUTION_FAILURE'&&recovery.attempts<recovery.max_attempts)continue;
     if(classification==='TRANSIENT_EXECUTION_FAILURE'&&recovery.replans<recovery.max_replans){recovery.replans+=1;recovery.attempts=0;t.status='repairing';t.message='多次执行中断，正在保留工作区并重新规划恢复方式。';await this.persist();continue;}
     if(classification==='IMPLEMENTATION_FAILURE'&&recovery.replans<recovery.max_replans){recovery.replans+=1;recovery.attempts=0;t.status='repairing';t.message='实现没有通过验证，正在根据失败原因重新规划一次。';await this.persist();continue;}
-    if(classification==='CAPABILITY_EXTERNAL_BLOCK'){t.status='paused';t.message='当前缺少外部条件，开发已暂停，候选没有安装。';}
+    if(classification==='CAPABILITY_EXTERNAL_BLOCK'){t.status='paused';t.message=/dirty worktree|uncommitted|尚未保存/i.test(detail)?'当前 Framework 存在尚未保存的开发修改。为避免覆盖代码，核心开发没有开始；请先保存或提交源码修改，然后点击继续。':'当前缺少核心开发所需的外部条件。请处理高级详情中的条件后点击继续；候选没有安装。';}
     else{t.status='failed';t.message='自动重试与修复策略已用完，后台已经停止；候选没有安装。';}
     break;
    }

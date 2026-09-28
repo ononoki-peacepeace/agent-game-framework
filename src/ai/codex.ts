@@ -2,6 +2,7 @@ import { Codex, type ThreadOptions } from '@openai/codex-sdk';
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { AIAdapter, AIRequest, AIResult } from './contracts.js';
+import { compileStructuredSchema } from './provider-schema.js';
 
 export class CodexAdapter implements AIAdapter {
   readonly name = 'codex';
@@ -23,7 +24,7 @@ export class CodexAdapter implements AIAdapter {
     const signal = request.signal ? AbortSignal.any([request.signal, AbortSignal.timeout(180000)]) : AbortSignal.timeout(180000);
     const run = async (resume?: string): Promise<AIResult> => {
       const thread = resume ? this.codex.resumeThread(resume, this.options) : this.codex.startThread(this.options);
-      const result = await thread.run(request.prompt, { outputSchema: request.schema, signal });
+      const result = await thread.run(request.prompt, { outputSchema: compileStructuredSchema(request.schema), signal });
       if (result.items.some(i => ['command_execution','file_change','mcp_tool_call','web_search'].includes(i.type))) throw new Error('AI_TOOL_BOUNDARY: unexpected tool use');
       return { data: JSON.parse(result.finalResponse), threadId: thread.id ?? undefined, ...(result.usage?{usage:{input_tokens:result.usage.input_tokens,output_tokens:result.usage.output_tokens}}:{}) };
     };

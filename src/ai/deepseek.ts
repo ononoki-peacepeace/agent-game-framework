@@ -1,5 +1,5 @@
 import { ProviderError, providerError } from './failures.js';
-import { normalizeStructuredSchema, schemaViolations } from './provider-schema.js';
+import { compileStructuredSchema, schemaViolations } from './provider-schema.js';
 import { observe } from '../observability/index.js';
 import type { AIAdapter, AIRequest, AIResult } from './contracts.js';
 
@@ -64,7 +64,7 @@ export class DeepSeekAdapter implements AIAdapter {
     const timeout = AbortSignal.timeout(180000);
     const signal = request.signal ? AbortSignal.any([request.signal, timeout]) : timeout;
     // Canonical Zod stays untouched; only the outgoing provider schema is normalized for strict mode.
-    const schema = normalizeStructuredSchema(request.schema && typeof request.schema === 'object' ? request.schema : {});
+    const schema = compileStructuredSchema(request.schema && typeof request.schema === 'object' ? request.schema : {});
     // Diagnostic: the formal product path must never send an object whose required != properties.
     const violations = schemaViolations(schema);
     if (violations.length) observe('error', 'provider.schema.invalid', { module: 'ai', metadata: { role: request.role, violations: violations.slice(0, 6) } });

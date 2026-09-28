@@ -28,11 +28,14 @@ export function planChange(request: ChangeRequest, registry: RecipeRegistry = re
   }));
   const mechanisms = new Set(recipes.map(item => item.preferred_mechanism));
   const target = mechanisms.has('core') ? 'core_development' : mechanisms.has('extension') ? 'extension_development' : mechanisms.has('configuration') ? 'runtime_configuration' : 'runtime_content';
+    const explicitCore=classification.primary_type==='CORE_EVOLUTION'||classification.primary_type==='DATA_MODEL_CHANGE';
+  const extensionSufficient=target==='extension_development'&&!explicitCore;
+  const minimum_change_review={existing_extension_primitives:extensionSufficient,reusable_state_or_runtime_value:false,read_only_adapter_sufficient:false,host_projection_sufficient:extensionSufficient,canonical_schema_change_required:classification.primary_type==='DATA_MODEL_CHANGE',new_framework_concept_required:classification.primary_type==='CORE_EVOLUTION',generic_value:extensionSufficient?'现有扩展字段、动作和宿主投影可表达该目标。':explicitCore?'请求明确涉及框架或数据模型；必须经核心审批。':'使用更低成本的内容或配置机制。',selected_mechanism:target==='core_development'?'core':target==='extension_development'?'extension':target==='runtime_configuration'?'configuration':'content',core_justification:explicitCore?'玩家请求明确修改框架源码或 canonical 数据模型；低层机制不能满足。':null} as const;
   const digest = createHash('sha256').update(`${request.request_id}:${classification.recipe_types.join(',')}`).digest('hex').slice(0, 16);
   return changePlanSchema.parse({
     plan_id: `change-plan-${digest}`, request: { ...request, target_layers: [...new Set([...request.target_layers, ...classification.reasons.map(reason => reason.match(/the ([^ ]+) layer/)?.[1]).filter((x): x is string => Boolean(x))])] },
     classification, recipes, temporary_recipe: temporary, steps, target_pipeline: target,
-    requires_development_task: target === 'extension_development' || target === 'core_development', requires_core_approval: target === 'core_development',
+    requires_development_task: target === 'extension_development' || target === 'core_development', requires_core_approval: target === 'core_development', minimum_change_review,
     constitution_version: DEVELOPMENT_CONSTITUTION.version, completion_criteria: [...new Set(recipes.flatMap(item => item.completion_criteria))],
   });
 }

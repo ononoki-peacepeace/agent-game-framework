@@ -1,5 +1,5 @@
 import { providerError } from './failures.js';
-import { normalizeStructuredSchema } from './provider-schema.js';
+import { compileStructuredSchema } from './provider-schema.js';
 import type { AIAdapter, AIRequest, AIResult } from './contracts.js';
 
 type FetchLike = typeof fetch;
@@ -35,7 +35,7 @@ export class OpenAIAdapter implements AIAdapter {
       headers: { Authorization: `Bearer ${this.apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: this.model, input: request.prompt, max_output_tokens: request.maxOutputTokens ?? this.maxOutputTokens,
-        text: { format: { type: 'json_schema', name: `agent_game_${request.role}`, strict: true, schema: normalizeStructuredSchema(request.schema && typeof request.schema === 'object' ? request.schema : {}) } },
+        text: { format: { type: 'json_schema', name: `agent_game_${request.role}`, strict: true, schema: compileStructuredSchema(request.schema && typeof request.schema === 'object' ? request.schema : {}) } },
       }),
     });
     const raw = await response.text();

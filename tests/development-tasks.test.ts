@@ -6,7 +6,8 @@ import {randomUUID} from 'node:crypto';
 import {sparseSetup} from './sparse-fixture.js';
 import {ExtensionHost} from '../src/extensions/host.js';
 import {ExtensionDevelopment} from '../src/extensions/development.js';
-import {DevelopmentTasks} from '../src/extensions/tasks.js';
+import {DevelopmentTasks,classifyDevelopmentFailure,developmentFailureFingerprint} from '../src/extensions/tasks.js';
+import {planFrameworkChange} from '../src/change/planner.js';
 import {manifestFrom,type ExtensionSpec} from '../src/extensions/schema.js';
 import {taskGroups} from '../src/client/task-visibility.js';
 import type {AIRequest} from '../src/ai/contracts.js';
@@ -45,7 +46,7 @@ it('capability gap stops retries and approval never edits Core or grants executi
  const t=await start(f,'希望通过键盘连续控制地图上的角色位置'),out=await f.tasks.wait(t.id);
  expect(out.status).toBe('waiting_for_core_approval');expect(out.milestones).toHaveLength(2);expect(f.calls).toHaveLength(1);expect(out.core_proposal).toHaveProperty('rollback');
  await expect(f.tasks.approveCore(t.id,false)).rejects.toThrow();expect((await f.tasks.approveCore(t.id,true)).core_proposal!.status).toBe('approved');
- await expect(f.tasks.resume(t.id)).rejects.toThrow('核心能力');expect(out.artifacts).toEqual([]);
+ await expect(f.tasks.resume(t.id)).rejects.toThrow('核心编码执行器');expect(out.artifacts).toEqual([]);
 });
 it('approved core work uses the configured executor but cannot become installed without install and registration gates',async()=>{
  const execute=vi.fn(async(request:any)=>({status:'candidate_ready' as const,provider:'fixture',workspace:request.workspace,base_revision:'base',changed_files:['src/example.ts'],commands:[],patch_path:join(request.workspace,'candidate.patch'),tests_passed:true,build_passed:true,acceptance_passed:true,installed:false,registered:false,restart_required:true,message:'candidate ready'}));
@@ -179,4 +180,27 @@ it('core recovery retry and replan budgets are bounded before final failure',asy
  const f=await setup(r=>(r.schema as any).properties.normalized_requirements?{...plan,complexity:'HIGH',milestones:[...plan.milestones,{id:'integration',title:'验证世界接入',kind:'integration',acceptance:['只提交合法事务']}],capability_gaps:[gap]}:undefined,executor);
  const t=await start(f,'增加需要核心能力的通用功能');await f.tasks.wait(t.id);await f.tasks.approveCore(t.id,true);const out=await f.tasks.wait(t.id);
  expect(execute).toHaveBeenCalledTimes(6);expect(out.status).toBe('failed');expect(out.core_recovery).toMatchObject({attempts:3,max_attempts:3,replans:1,max_replans:1,classification:'TRANSIENT_EXECUTION_FAILURE'});expect(out.message).toContain('策略已用完');
+},20000);
+it('deterministic provider schema failure stops after one provider request instead of no-op repair',async()=>{
+ const f=await setup(r=>{if((r.schema as any).properties.spec)throw new Error("invalid_json_schema: Missing 'label' at properties.spec.anyOf.0.properties.fields.items");}),t=await start(f),out=await f.tasks.wait(t.id);
+ const generationCalls=f.calls.filter(call=>(call.schema as any).properties.spec);
+ expect(generationCalls).toHaveLength(1);expect(out.status).toBe('failed');expect(out.message).toContain('停止重复调用');expect(out.development_recovery).toMatchObject({classification:'DETERMINISTIC_REQUEST_FAILURE',provider_calls:2,repeated_failures:1});
+});
+
+it('failure fingerprints are stable for identical deterministic schema errors and distinct by stage',()=>{
+ const error="invalid_json_schema: Missing 'label' in fields.items";
+ expect(classifyDevelopmentFailure(error)).toBe('DETERMINISTIC_REQUEST_FAILURE');expect(developmentFailureFingerprint('生成扩展规格',error)).toBe(developmentFailureFingerprint('生成扩展规格',error));expect(developmentFailureFingerprint('需求分析',error)).not.toBe(developmentFailureFingerprint('生成扩展规格',error));
+});
+
+it('plain-language per-character flag compiles through existing SDK without Core escalation',async()=>{
+ const request='给人物加个重点关注开关',change_plan=planFrameworkChange(request,{surface:'system'})!;
+ const focused=(id:string):ExtensionSpec=>({extension_id:id,name:'人物关注标记',description:'逐人物保存的关注开关',template:'declarative',allow_betting:false,max_stake:0,healing_item_id:null,fields:[{key:'focused',label:'重点关注',type:'flag',initial:false,scope:'entity'}],declarative_actions:[{id:'toggle',label:'切换关注',op:'toggle',field:'focused'}],surfaces:[{id:'character_focus',kind:'contextual_panel',title:'重点关注',visibility:'always',host:'character_detail'}]});
+ const f=await setup(r=>{if((r.schema as any).properties.normalized_requirements)return {...plan,normalized_requirements:['为每个人物增加独立、默认关闭的关注开关，不推进世界时间'],milestones:[{id:'focus',title:'人物独立关注开关',kind:'ui',acceptance:['人物字段独立保存并在人物详情切换']}],capability_gaps:[gap]};if((r.schema as any).properties.spec){const context=JSON.parse(r.prompt.slice(r.prompt.indexOf('{"extension_id"')));return {spec:focused(context.extension_id),capability_gaps:[]};}});
+ const created=await f.tasks.start({request,request_id:randomUUID(),change_plan}),out=await f.tasks.wait(created.id);
+ expect(out.status).toBe('ready_for_preview');expect(out.capability_gaps).toEqual([]);expect(out.core_proposal).toBeNull();expect(out.change_plan?.minimum_change_review).toMatchObject({existing_extension_primitives:true,host_projection_sufficient:true,selected_mechanism:'extension'});const generation=f.calls.find(call=>(call.schema as any).properties.spec)!;expect(generation.prompt).toContain('engineering_spec');expect(generation.prompt).toContain('character_detail');expect(generation.prompt).toContain('不推进世界时间');
+},20000);
+
+it('dirty-worktree safety pause keeps a player-facing reason and can resume the approved task',async()=>{
+ let attempt=0;const execute=vi.fn(async(request:any)=>++attempt===1?{status:'blocked' as const,provider:'fixture',workspace:request.workspace,base_revision:'base',changed_files:[],commands:[],patch_path:null,tests_passed:false,build_passed:false,acceptance_passed:false,installed:false,registered:false,restart_required:false,message:'dirty worktree: uncommitted changes'}:{status:'candidate_ready' as const,provider:'fixture',workspace:request.workspace,base_revision:'base',changed_files:['src/example.ts'],commands:[],patch_path:join(request.workspace,'candidate.patch'),tests_passed:true,build_passed:true,acceptance_passed:true,installed:false,registered:false,restart_required:true,message:'candidate ready'});
+ const executor:CodingAgentExecutor={availability:async()=>({available:true,provider:'fixture',reason:null}),execute};const f=await setup(r=>(r.schema as any).properties.normalized_requirements?{...plan,complexity:'HIGH',milestones:[...plan.milestones,{id:'integration',title:'验证接入',kind:'integration',acceptance:['安全接入']}],capability_gaps:[gap]}:undefined,executor),t=await start(f,'增加 SDK 无法表达的通用输入能力');await f.tasks.wait(t.id);await f.tasks.approveCore(t.id,true);const paused=await f.tasks.wait(t.id);expect(paused.status).toBe('paused');expect(paused.message).toContain('尚未保存');expect(paused.message).toContain('点击继续');expect((await f.tasks.resume(t.id)).status).toBe('developing');const resumed=await f.tasks.wait(t.id);expect(execute).toHaveBeenCalledTimes(2);expect(resumed.core_execution?.status).toBe('candidate_ready');
 },20000);

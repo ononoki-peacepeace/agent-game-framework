@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { worldInitializationSchema, intentResultSchema, narrativeResultSchema } from '../src/ai/contracts.js';
 import { routinePlanSchema } from '../src/routine/schema.js';
 import { routineResultSchema } from '../src/ai/routine.js';
-import { normalizeStructuredSchema, schemaViolations } from '../src/ai/provider-schema.js';
+import { compileStructuredSchema, normalizeStructuredSchema, schemaViolations } from '../src/ai/provider-schema.js';
+import { developmentPlanSchema, generationSchema } from '../src/extensions/tasks.js';
 import { compileWorld } from '../src/ai/authoring.js';
 import { readProfile } from '../src/ai/profiles.js';
 import { newSave, publicView } from '../src/core/state.js';
@@ -14,6 +15,8 @@ const roleSchemas: [string, z.ZodType][] = [
   ['narrator', narrativeResultSchema],
   ['routine_compiler', routinePlanSchema],
   ['gm_reasoning', routineResultSchema],
+  ['development_plan', developmentPlanSchema],
+  ['extension_generation', generationSchema],
 ];
 
 it('the canonical world schema has optional keys that strict providers reject, and normalization fixes them', () => {
@@ -68,4 +71,14 @@ it('a map world still compiles with locations and routes', async () => {
   const view = publicView(newSave(world));
   expect(view.panels.map(panel => panel.id)).toEqual(expect.arrayContaining(['map','inventory','commerce']));
   expect(view.locations.map(location => location.id)).toEqual(expect.arrayContaining(['square','docks']));
+});
+it('extension generation fields satisfy strict required/properties rules before provider dispatch', () => {
+  const compiled = compileStructuredSchema(z.toJSONSchema(generationSchema)) as any;
+  expect(schemaViolations(compiled)).toEqual([]);
+  const spec = compiled.properties.spec.anyOf.find((entry:any)=>entry.type!=='null');
+  const fields = spec.anyOf?.[0]?.properties?.fields ?? spec.properties.fields;
+  const item = fields.items;
+  expect(item.required).toEqual(expect.arrayContaining(Object.keys(item.properties)));
+  expect(item.required).toContain('label');
+  expect(JSON.stringify(item.properties.label)).toContain('null');
 });

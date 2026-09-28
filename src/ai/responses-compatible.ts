@@ -1,5 +1,5 @@
 import {providerError} from './failures.js';
-import { normalizeStructuredSchema } from './provider-schema.js';
+import { compileStructuredSchema } from './provider-schema.js';
 import type { AIAdapter, AIRequest, AIResult } from './contracts.js';
 
 
@@ -23,7 +23,7 @@ export class ResponsesCompatibleAdapter implements AIAdapter {
       method: 'POST', signal,
       headers: { Authorization: `Bearer ${this.options.apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: this.options.model, input: request.prompt, max_output_tokens: request.maxOutputTokens ?? this.options.maxOutputTokens ?? 12000,
-        text: { format: { type: 'json_schema', name: `agent_game_${request.role}`, schema: normalizeStructuredSchema(request.schema && typeof request.schema === 'object' ? request.schema : {}) } } }),
+        text: { format: { type: 'json_schema', name: `agent_game_${request.role}`, schema: compileStructuredSchema(request.schema && typeof request.schema === 'object' ? request.schema : {}) } } }),
     });
     const raw = await response.text(); let payload: Payload;
     try { payload = raw ? JSON.parse(raw) as Payload : {}; } catch { throw new Error(`自定义 API 返回非 JSON（${response.status}）`); }
