@@ -18,6 +18,7 @@ import { assert, safeParse, type Action, type SavePackage, type profileSchema } 
 import { newSave, publicView } from '../core/state.js';
 import { createRegistry } from '../modules/index.js';
 import { observe, errorText } from '../observability/index.js';
+import { defaultRoleplayConfig, roleplayPolicyFragment } from '../narrative/policy.js';
 
 // Per-role output budgets. Structured routine output legitimately needs more room than a narrator line,
 // and a truncated document is never accepted.
@@ -35,7 +36,7 @@ export class AIRuntime {
   constructor(readonly adapter: AIAdapter) {}
   private async call<T>(role: AIRole, schema: z.ZodType<T>, profile: z.infer<typeof profileSchema>, data: unknown, save?: SavePackage, signal?:AbortSignal, describe?:(parsed:T)=>Record<string,unknown>, threadKey: string = role, includeFragments = true, retryTruncated = true) {
     const fragments = includeFragments
-      ? [...behaviorFragment(save, role), ...(save ? createRegistry(save.definition.enabled_modules).modules.all().flatMap(([, m]) => m.prompt ? [m.prompt] : []) : [])]
+      ? [...(save?[roleplayPolicyFragment(role,save.definition.roleplay_config??defaultRoleplayConfig())]:[]),...behaviorFragment(save, role), ...(save ? createRegistry(save.definition.enabled_modules).modules.all().flatMap(([, m]) => m.prompt ? [m.prompt] : []) : [])]
       : [];
     this.metrics.requests++;if(role==='routine_compiler')this.metrics.compiler_calls++;
     const provider=this.adapter.providerInfo?.()??{},prompt=composePrompt(profile,role,data,fragments),threadId=save?.ai.threads[threadKey],begin=performance.now();
@@ -109,7 +110,7 @@ export class AIRuntime {
     if(blankWorldIntent(description)){const save=newSave(emptyWorld(profile));save.last_turn={narrative:'',speaker:null,dialogue:null,choices:[],context_actions:[]};return save;}
     const { parsed, threadId } = await this.call('world_initializer', worldInitializationSchema, profile, {
       description,
-      instruction: '只安装这个世界真正需要的能力（modules）。不要因为框架支持就默认安装地图/商店/装备/生活模式；省略的能力请把对应数据填 null。locations/routes 只有在选择 map 时才需要给出。',
+      instruction: '只安装这个世界真正需要的能力（modules）。不要因为框架支持就默认安装地图/商店/装备/生活模式；省略的能力请把对应数据填 null。locations/routes 只有在选择 map 时才需要给出。'+roleplayPolicyFragment('world_initializer',defaultRoleplayConfig())+' 若 premise 存在核心谜团，在 hidden_truths 中先承诺核心答案与已经存在的关键证据；普通无谜团世界可返回空数组。不要生成章节表、固定结局或最终Boss。',
       module_catalog: [
         { id: 'map', name: '地图与移动', needs: 'locations/routes' },
         { id: 'characters', name: '人物' }, { id: 'relationships', name: '关系' },
@@ -127,7 +128,7 @@ export class AIRuntime {
   }
   async freeform(save:SavePackage,input:string) {
     const view=publicView(save),envelope=contextEnvelope(view,input,'WORLD');
-    const result=await this.adapter.generate({role:'gm_reasoning',schema:z.toJSONSchema(freeformSchema),maxOutputTokens:4000,prompt:'裁定玩家行动尝试与公开可观察后果。context_envelope 说明角色与现实语境，但绝不改变 provider safety policy。只能生成非数值伤情事实（facts 最多 4 条，每条不超过 300 字）、1至5分钟及最多一项小幅关系变化；没有关系能力则relationship=null。不得编造HP、战斗轮次、地点节点、秘密或世界规则。目标只选输入提及的公开实体；行动未必成功。自然语言使用名字，禁止内部ID与程序术语。局部移动描述场景位置。'+JSON.stringify({context_envelope:envelope,input,public_state:view,character_context:characterContext(save)})});
+    const result=await this.adapter.generate({role:'gm_reasoning',schema:z.toJSONSchema(freeformSchema),maxOutputTokens:4000,prompt:roleplayPolicyFragment('gm_reasoning',save.definition.roleplay_config??defaultRoleplayConfig())+'\n裁定玩家行动尝试与公开可观察后果。context_envelope 说明角色与现实语境，但绝不改变 provider safety policy。只能生成非数值伤情事实（facts 最多 4 条，每条不超过 300 字）、1至5分钟及最多一项小幅关系变化；没有关系能力则relationship=null。不得编造HP、战斗轮次、地点节点、秘密或世界规则。目标只选输入提及的公开实体；行动未必成功。自然语言使用名字，禁止内部ID与程序术语。局部移动描述场景位置。'+JSON.stringify({context_envelope:envelope,input,public_state:view,character_context:characterContext(save)})});
     const proposal=parseFreeformProposal(result.data);
     try{assertNotRefusal(proposal);}catch(error){observe('warn','narration.safety_degraded',{module:'ai',metadata:{reason:failureReason(error)}});proposal.narrative='行动尝试已经结算，具体经过略去。';}
     const refined=await this.refineNarrative(save,{narrative:proposal.narrative,dialogue:null,speaker:null,choices:[],context_actions:[],patches:[],interaction:null},proposal.facts,proposal.target_id??undefined);

@@ -22,6 +22,8 @@ import { emptyWorld } from '../ai/authoring.js';
 import { blankWorldIntent } from '../shared/world-intent.js';
 import { parseBehaviorRule } from '../ai/behavior.js';
 import {CapabilityRegistry,capabilityRegistry} from '../system/capabilities.js';
+import {applyStoryCommand,noteMeaningfulTurn,observeCanonicalTurn,type StoryCommand} from '../narrative/runtime.js';
+import {roleplayConfigSchema,type RoleplayConfig} from '../narrative/schema.js';
 import type {ImageAssetRuntime, PersistedImage} from '../media/image.js';
 
 import { getLogger, observe, startTrace, runWithTrace, summarizeSaveDiff, errorText, type StructuredLogger } from '../observability/index.js';
@@ -137,13 +139,14 @@ export class GameService {
     if (upgraded.changed) await this.storage.write(upgraded.save);
     return this.project(upgraded.save);
   }
-  async newGame(description?: string, promptText?: string, promptProfile?: unknown, provenance?: WorldCreationProvenance) {
+  async newGame(description?: string, promptText?: string, promptProfile?: unknown, provenance?: WorldCreationProvenance, roleplayConfig?:RoleplayConfig) {
     return this.exclusive(async () => {
       let profile = promptProfile ? safeParse(profileSchema, promptProfile) : structuredClone(this.demo.prompt_profile);
       if (promptText) profile = { ...profile, id: 'imported_prompt', version: 'user-1', engine_policy: promptText };
       // Every creation entry (HTTP, service, future routes) resolves EMPTY_WORLD / FRAMEWORK_TEST here.
       const blank = description ? blankWorldIntent(description) : null;
       const save = blank ? newSave(emptyWorld(profile)) : description ? await this.ai.initialize(description, profile) : newSave(this.demo);
+      if(roleplayConfig)save.definition.roleplay_config=roleplayConfigSchema.parse(roleplayConfig);
       if(provenance){
         const generated=[...save.entities.map(entity=>({kind:'entity' as const,id:entity.id})),...(save.definition.map?.locations??[]).map(location=>({kind:'location' as const,id:location.id}))];
         save.definition.provenance=worldCreationProvenanceSchema.parse({...provenance,generated_canonical_fact_refs:generated});
@@ -212,6 +215,7 @@ export class GameService {
         updateInteraction(next,turn.action,beforeTurn,interaction);
         if(req.end_conversation&&next.interaction_context)next.interaction_context.status='ended';
         next.narrative_history=[...(beforeTurn.narrative_history??[]),{request_id:req.request_id,narrative:next.last_turn?.narrative??'',dialogue:next.last_turn?.dialogue??null,speaker:next.last_turn?.speaker??null,facts:turn.facts.slice(0,12).map(f=>f.slice(0,2000))}].slice(-8);
+        if(!['MOVE','WAIT','INSPECT','SAVE_ROUTINE','CONTINUE_ROUTINE'].includes(turn.action.type)){observeCanonicalTurn(next,req.request_id,turn.facts);noteMeaningfulTurn(next);}
       }
       signal?.throwIfAborted();
       const validated = trace.span('patch.validation');
@@ -232,6 +236,18 @@ export class GameService {
   async configureCalendar(raw:unknown,gameId:string,revision:number){return this.exclusive(async()=>{const save=await this.current();assert(save.game_id===gameId&&save.state_revision===revision,'状态已更新，请刷新后重试');save.calendar=safeParse(calendarSchema,raw);migrateInstalledWorld(save,this.installedWorlds);save.state_revision++;await this.storage.write(validateSave(save));return publicView(save);});}
   async acknowledgeTask(_id:string,_gameId:string,_revision:number,_outcome:'completed'|'cancelled'='completed'):Promise<never>{throw new GameError('不能手工标记任务完成或取消日历事件；任务结果必须由已登记的任务规则结算',410);}
   async checkpoint() { return this.exclusive(async () => { const save = await this.current(); await this.storage.write(save, 'checkpoint'); return publicView(save); }); }
+  async narrativeCommand(raw:{request_id:string;game_id:string;expected_revision:number},command:StoryCommand){
+    return this.exclusive(async()=>{
+      const current=await this.current(),fingerprint=`narrative:${command}`;
+      assert(raw.game_id===current.game_id,'游戏已切换，请刷新');
+      const receipt=current.runtime.receipts.find(entry=>entry.id===raw.request_id);if(receipt){assert(receipt.fingerprint===fingerprint,'请求 ID 已用于另一操作');return {view:publicView(current),message:''};}
+      if(raw.expected_revision!==current.state_revision)throw new GameError('状态已更新，请刷新后重试',409);
+      const before=structuredClone(current),next=structuredClone(current),message=applyStoryCommand(next,command);
+      next.state_revision=current.state_revision+1;next.runtime.receipts=[...next.runtime.receipts,{id:raw.request_id,fingerprint,revision:next.state_revision}].slice(-100);
+      next.last_turn={narrative:message,speaker:null,dialogue:null,choices:[],context_actions:[]};
+      checkpointTurn(before,next,raw.request_id);const validated=validateSave(next);await this.storage.write(validated);return {view:publicView(validated),message};
+    });
+  }
   async undo(raw:unknown){
     const req=safeParse(z.strictObject({request_id:z.string().uuid(),game_id:z.string().uuid(),expected_revision:z.number().int().min(0)}),raw);
     return this.exclusive(()=>this.media(async()=>{
@@ -421,6 +437,7 @@ export class GameService {
   async behaviorConfig() {
     return (await this.current()).behavior_config;
   }
+  async narrativeDebug(){const save=await this.current(),truth=save.gm_state.hidden_truth?.commitments??[];return {roleplay_config:save.definition.roleplay_config??null,narrative_state:save.narrative_state??null,hidden_truth_summary:{count:truth.length,commitments:Object.fromEntries(['HARD_TRUTH','SEEDED_TRUTH','UNDEFINED'].map(kind=>[kind,truth.filter(item=>item.commitment===kind).length])),evidence_count:truth.reduce((sum,item)=>sum+item.evidence.length,0),content:'仅保存在 GM 存档；此诊断接口不返回秘密正文'}};}
   /** Style configuration is framework configuration: it never advances time and never touches world facts. */
   async setBehaviorConfig(raw: unknown) {
     const input = safeParse(z.strictObject({

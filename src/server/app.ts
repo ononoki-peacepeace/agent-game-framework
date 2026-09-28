@@ -27,6 +27,7 @@ import {CodexCodingAgentExecutor,type CodingAgentExecutor} from '../development/
 import {CoreCandidateInstaller} from '../development/core-installer.js';
 import {ImageAssetRuntime,type ImageGenerationProvider} from '../media/image.js';
 import {executeUniversalPlan} from '../system/resolver.js';
+import {storyCommand} from '../narrative/runtime.js';
 import {capabilityRegistry} from '../system/capabilities.js';
 import express from 'express';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -36,6 +37,8 @@ import { GameError, assert, id, profileSchema, safeParse, type WorldCreationProv
 
 import { providerConfigSchema, type AIProviderManager } from '../ai/providers.js';
 import { z } from 'zod';
+import {roleplayConfigSchema} from '../narrative/schema.js';
+import {suggestLifeHorizon} from '../narrative/policy.js';
 import type { GameService } from './service.js';
 
 export interface AppNetworkOptions { allowLan?: boolean }
@@ -406,18 +409,18 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     flow.created_at=Date.now();worldFlows.set(flow_id,flow);
     for(const [id,entry] of worldPreviews)if(Date.now()-entry.created_at>30*60*1000)worldPreviews.delete(id);
     for(const [id,entry] of worldFlows)if(Date.now()-entry.created_at>60*60*1000)worldFlows.delete(id);
-    res.json({preview_id,flow_id,category:flow.category,preview:previewOf(value,{kind:body.template_id?'template':body.idea?'idea':'recommended',id:body.template_id}),description,blank:blankWorldIntent(description)!==null,signature,attempts,picks:pickLabelsOut,features:value.special_rules,chips:inspirationChips(body.inspiration_seed??Date.now()+attempts,6,body.exclude??[],flow.picked)});
+    res.json({preview_id,flow_id,category:flow.category,preview:previewOf(value,{kind:body.template_id?'template':body.idea?'idea':'recommended',id:body.template_id}),description,blank:blankWorldIntent(description)!==null,signature,attempts,picks:pickLabelsOut,features:value.special_rules,life_horizon_suggestion:suggestLifeHorizon({species:value.player_role,premise:description,rules:value.special_rules}),chips:inspirationChips(body.inspiration_seed??Date.now()+attempts,6,body.exclude??[],flow.picked)});
 
   });
   app.post('/api/world/confirm',async(req,res)=>{
-    const body=safeParse(z.strictObject({preview_id:z.string().uuid()}),req.body);
+    const body=safeParse(z.strictObject({preview_id:z.string().uuid(),roleplay_config:roleplayConfigSchema.optional()}),req.body);
     const entry=worldPreviews.get(body.preview_id);assert(entry,'这个预览已过期，请重新生成');
     // Authoring is a model call: an occasional attempt fails validation (invalid or truncated structure). One
     // bounded retry keeps a preview the player already confirmed from turning into a normal, frequent 400,
     // while a persistent failure still reports naturally and leaves the preview reusable.
     let created;
     for(let attempt=0;attempt<2&&!created;attempt++){
-      try{created=await service.newGame(entry.description,undefined,undefined,entry.provenance);}
+      try{created=await service.newGame(entry.description,undefined,undefined,entry.provenance,body.roleplay_config);}
       catch(error){
         service.logger.warn('world.create.failed',{module:'world',metadata:{attempt:attempt+1,reason:displayText(error instanceof Error?error.message:'未知原因',[],[])}});
         if(attempt===1)throw new GameError(`这个世界草稿没有通过创建校验（${displayText(error instanceof Error?error.message:'未知原因',[],[])}）。你可以换一个草稿，或做一点调整后重新生成。`);
@@ -429,15 +432,17 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
 
   });
   app.post('/api/new', async (req, res) => {
-    const body = safeParse(z.strictObject({ description: z.string().min(1).max(12000).optional(), prompt_text: z.string().min(1).max(100000).optional(), prompt_profile: profileSchema.optional() }), req.body);
+    const body = safeParse(z.strictObject({ description: z.string().min(1).max(12000).optional(), prompt_text: z.string().min(1).max(100000).optional(), prompt_profile: profileSchema.optional(),roleplay_config:roleplayConfigSchema.optional() }), req.body);
     const provenance:WorldCreationProvenance|undefined=body.description?{version:1,original_premise:body.description,declared_themes:[],declared_rules:[],player_role:null,initial_scope:null,template_source:{kind:'legacy',id:null,version:null},inspiration_seed:null,preview_signature:null,explicit_creation_choices:[],explicit_constraints:[],requested_traits:[],generated_canonical_fact_refs:[],records:[{kind:'premise',statement:body.description,source:'PLAYER_DECLARED',fact_ref:null}]}:undefined;
-    res.json(await service.newGame(body.description, body.prompt_text, body.prompt_profile,provenance));
+    res.json(await service.newGame(body.description, body.prompt_text, body.prompt_profile,provenance,body.roleplay_config));
   });
   app.post('/api/input', async (req, res) => {
     const body = safeParse(unifiedInputSchema, req.body);
     const snapshot=await service.view();
     if(!snapshot||snapshot.game_id!==body.game_id)throw new GameError('游戏已切换，请刷新后操作',409);
     if(snapshot.revision!==body.expected_revision)throw new GameError('状态已更新，请重新规划',409);
+    const narrativeCommand=storyCommand(body.input);
+    if(narrativeCommand){const result=await service.narrativeCommand(body,narrativeCommand);res.json(agentResult('WORLD_ACTION',result.message,{presentation:'story',view:result.view}));return;}
     const gate=await routeContext(service,body.input,'world_input');
     if(gate.destination==='AMBIGUOUS'){res.json(agentResult('CLARIFICATION',gate.clarification!,{clarification:gate.clarification,view:await readContextView(service)}));return;}
     if(gate.destination==='SYSTEM_META_INTENT'){
@@ -485,6 +490,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   app.get('/api/modules',async(_req,res)=>res.json(await service.modules()));
   app.get('/api/system/tools',async(_req,res)=>{const info=await service.modules();res.json(toolAvailability(info.capabilities));});
   app.get('/api/system/behavior',async(_req,res)=>res.json(await service.behaviorConfig()));
+  app.get('/api/narrative/debug',async(_req,res)=>res.json(await service.narrativeDebug()));
   async function processSystem(body:any){
     if(body.development_task_id){
       // The client always sends the selected task id, so the server decides whether this really refines it. An

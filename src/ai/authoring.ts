@@ -2,6 +2,8 @@ import type { z } from 'zod';
 import { VERSION, type WorldPackage, type profileSchema } from '../core/schema.js';
 import { defaultCalendar } from '../routine/schema.js';
 import type { worldInitializationSchema } from './contracts.js';
+import { defaultRoleplayConfig } from '../narrative/policy.js';
+import { hiddenTruthStateSchema } from '../narrative/schema.js';
 
 // New worlds start with a trustworthy calendar anchor. Routine data only exists when the world
 // actually selects the routine capability.
@@ -84,9 +86,14 @@ export function compileWorld(b: z.infer<typeof worldInitializationSchema>, profi
     entities.push(entity(store.id, 'shop', { identity: identity(store.name, ''), ...place(store.location_id), wallet: { balances: { [b.currency.id]: store.cash } }, shop: { currency_id: b.currency.id, stock: Object.fromEntries(items.map(i => [i.id, 10])), prices: Object.fromEntries(items.map(i => [i.id, { buy: i.price, sell: Math.floor(i.price / 2) }])) } }));
   }
 
+  const structuredTruth=hiddenTruthStateSchema.parse({version:1,commitments:(b.hidden_truths??[]).map(truth=>({
+    id:truth.id,commitment:truth.commitment,statement:truth.statement,seed_constraint:truth.seed_constraint,source:'WORLD_CREATION' as const,created_event_ref:null,
+    evidence:truth.evidence.map(evidence=>({id:evidence.id,status:'EXISTS' as const,description:evidence.description,event_ref:null,discovered_by:[]})),known_by:[],
+  }))});
   return {
     schema_version: 1, framework_version: VERSION,
     meta: { id: b.id, title: b.title, description: b.description },
+    roleplay_config:defaultRoleplayConfig(),
     enabled_modules: modules,
     calendar: defaultCalendar(),
     ...(has('routine') ? { routine_rules: defaultRoutineRules(home) } : {}),
@@ -95,9 +102,9 @@ export function compileWorld(b: z.infer<typeof worldInitializationSchema>, profi
     prompt_profile: profile, world: { description: b.description },
     entities,
     ...(has('map') ? { map: { locations: locations.map(l => ({ ...l, tags: [], position: positions[l.id] })), routes: routes.map(r => ({ ...r, conditions: [] })) } } : {}),
-    events: [], player: { entity_id: b.player.id }, gm_state: { notes: b.hidden_notes, flags: {} }, runtime: { time: { day: 1, minute: 540 } },
+    events: [], player: { entity_id: b.player.id }, gm_state: { notes: b.hidden_notes, flags: {}, ...(structuredTruth.commitments.length?{hidden_truth:structuredTruth}:{}) }, runtime: { time: { day: 1, minute: 540 } },
   };
 }
 
 export {isEmptyWorld} from '../shared/world-intent.js';
-export function emptyWorld(profile:z.infer<typeof profileSchema>):WorldPackage { return {schema_version:1,framework_version:VERSION,meta:{id:'empty_world',title:'空白世界',description:'空白世界：只包含框架运行所需的最小结构，没有地点、人物或剧情。'},enabled_modules:['core'],ruleset:{minutes_per_day:1440,max_wait_minutes:1440,talk_minutes:1,trade_minutes:1,default_check:'1d6',currencies:{},relationship_dimensions:{}},prompt_profile:profile,world:{description:''},entities:[{id:'player',type:'character',components:{identity:{name:'玩家',description:'',avatar_id:null}}}],events:[],player:{entity_id:'player'},gm_state:{notes:'',flags:{}},runtime:{time:{day:1,minute:0}}}; }
+export function emptyWorld(profile:z.infer<typeof profileSchema>):WorldPackage { return {schema_version:1,framework_version:VERSION,meta:{id:'empty_world',title:'空白世界',description:'空白世界：只包含框架运行所需的最小结构，没有地点、人物或剧情。'},roleplay_config:defaultRoleplayConfig(),enabled_modules:['core'],ruleset:{minutes_per_day:1440,max_wait_minutes:1440,talk_minutes:1,trade_minutes:1,default_check:'1d6',currencies:{},relationship_dimensions:{}},prompt_profile:profile,world:{description:''},entities:[{id:'player',type:'character',components:{identity:{name:'玩家',description:'',avatar_id:null}}}],events:[],player:{entity_id:'player'},gm_state:{notes:'',flags:{},hidden_truth:{version:1,commitments:[]}},runtime:{time:{day:1,minute:0}}}; }

@@ -1,6 +1,7 @@
 import {calendarSchema,routineRulesSchema,routineMetaSchema} from '../routine/schema.js';
 import {extensionEntriesSchema} from '../extensions/schema.js';
 import {futureIntentSchema} from '../agent/plan-schema.js';
+import {hiddenTruthStateSchema,narrativeStateSchema,roleplayConfigSchema} from '../narrative/schema.js';
 import { z } from 'zod';
 
 export const VERSION = '0.1.0';
@@ -59,7 +60,8 @@ export const worldSchema = z.strictObject({
   // The map capability is optional: a world without map data is a legal world.
   map: z.strictObject({ locations: z.array(locationSchema).min(1).max(500), routes: z.array(routeSchema).max(2000) }).optional(),
   events: z.array(eventSchema).max(500), player: z.strictObject({ entity_id: id }),
-  gm_state: z.strictObject({ notes: text, flags: dictionary(z.boolean()) }),
+  roleplay_config: roleplayConfigSchema.optional(),
+  gm_state: z.strictObject({ notes: text, flags: dictionary(z.boolean()), hidden_truth:hiddenTruthStateSchema.optional() }),
   runtime: z.strictObject({ time: z.strictObject({ day: integer, minute: integer }) }),
 });
 export const contextActionSchema = z.strictObject({ target_id: id, label: z.string().min(1).max(80), intent: z.string().min(1).max(500), family:z.enum(['communicate','observe','approach','interact','help','use_item','follow','steal','intercept','attack']).optional() });
@@ -99,7 +101,8 @@ export const saveSchema = z.strictObject({
   modules: dictionary(z.strictObject({ installed: z.boolean(), enabled: z.boolean(), version: z.string().max(30), state_version: z.string().max(30) })).default({}),
   game_id: z.string().uuid(), state_revision: integer, definition: worldSchema,
   entities: z.array(entitySchema).min(1).max(1000), player_state: z.strictObject({ entity_id: id }),
-  gm_state: z.strictObject({ notes: text, flags: dictionary(z.boolean()) }),
+  gm_state: z.strictObject({ notes: text, flags: dictionary(z.boolean()), hidden_truth:hiddenTruthStateSchema.optional() }),
+  narrative_state:narrativeStateSchema.optional(),
   event_state: z.strictObject({ fired: z.array(id).max(500), counts: dictionary(integer) }),
   runtime: z.strictObject({ time: z.strictObject({ day: integer, minute: integer }),
     receipts: z.array(z.strictObject({ id: z.string().uuid(), fingerprint: z.string(), revision: integer })).max(100) }),

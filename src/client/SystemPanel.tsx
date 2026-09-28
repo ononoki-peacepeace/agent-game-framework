@@ -39,6 +39,7 @@ export function SystemPanel({ handoff, view, onView, onOpenLogs, onExport, onOpe
   const workspace=loadDevelopmentWorkspace(view.game_id);
   const [behavior,setBehavior]=useState<BehaviorRule[]>([]),[devStatus,setDevStatus]=useState<DevelopmentProjection|null>(null),[provider,setProvider]=useState<ProviderSnapshot|null>(null);
   const [composer,setComposer]=useState<SystemInputState>(submitStarted(initialSystemInput,workspace.system_draft)),[result,setResult]=useState<SystemResult|null>(workspace.system_reply?{...workspace.system_reply} as SystemResult:null),[devDetail,setDevDetail]=useState<{name:string;requiresAnswer:boolean}|null>(null),[sending,setSending]=useState(false),[devRequest,setDevRequest]=useState<string|null>(null),[taskId,setTaskId]=useState<string|null>(workspace.active_task_id),[devOpen,setDevOpen]=useState(workspace.dev_open||Boolean(workspace.active_task_id));
+  const [narrativeDebug,setNarrativeDebug]=useState<unknown>(null);
   const input=composer.value,error=composer.error,setInput=(value:string)=>{saveSystemDraft(view.game_id,value);setComposer(state=>submitStarted(state,value));};
   // The System surface is the only place the style configuration is summarised; the assistant body never shows it.
   useEffect(()=>{void (async()=>{try{setBehavior(await request<BehaviorRule[]>('system/behavior'));}catch{/* no world loaded yet */}try{setProvider(await request<ProviderSnapshot>('ai/providers'));}catch{/* provider status remains unknown */}})();},[]);
@@ -115,6 +116,8 @@ export function SystemPanel({ handoff, view, onView, onOpenLogs, onExport, onOpe
       {!!behavior.length&&<button type="button" className="quiet" disabled={sending} onClick={()=>void send(false,'恢复默认风格配置')}>恢复默认风格</button>}
       {!devVisible&&<button type="button" className="quiet" onClick={event=>{(event.currentTarget.closest('details') as HTMLDetailsElement|null)?.removeAttribute('open');setDevOpen(true);saveDevelopmentWorkspace(view.game_id,{dev_open:true});}}>打开开发工作区</button>}
       <button type="button" className="quiet" onClick={()=>void onOpenLogs?.()}>打开日志面板</button>
+      <button type="button" className="quiet" onClick={()=>void request<unknown>('narrative/debug').then(setNarrativeDebug)}>读取叙事诊断</button>
+      {narrativeDebug!==null&&<pre aria-label="叙事诊断">{JSON.stringify(narrativeDebug,null,2)}</pre>}
       {result?.understanding&&<pre>{JSON.stringify(result.understanding,null,2)}</pre>}
     </details>
   </div>;

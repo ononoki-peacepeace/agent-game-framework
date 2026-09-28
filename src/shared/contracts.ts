@@ -66,5 +66,12 @@ export interface PublicView {
   modules: ModuleStatus[];
   capabilities: string[];
   world_history?:{turn_id:string;label:string;time:{day:number;minute:number};current:boolean}[];
+  story?:{
+    mode:'minimal'|'standard'|'story_focused';scale:'short'|'seasonal'|'life_chapter'|'life_epic'|'open_ended';
+    life_horizon:{kind:'species_normal'|'custom'|'ai_suggested'|'open_ended'|'immortal';target_age_min:number|null;target_age_max:number|null;basis:string};
+    current_saga:{id:string;title:string;phase:string}|null;
+    major_arcs:{id:string;title:string;status:string;summary:string}[];
+    completed_sagas:{id:string;title:string;start_time:{day:number;minute:number};end_time:{day:number;minute:number};outcome:string;unresolved_count:number}[];
+  };
   last_turn: Narrative | null; notices: string[];
 }

@@ -273,6 +273,13 @@ function QuestsPanel({ view }: PanelProps) {
  return <><label><input type="checkbox" checked={showHidden} onChange={e=>setShowHidden(e.target.checked)}/>显示已隐藏任务</label>{section('任务','quests')}{section('机会 / 活动','opportunities')}</>;
 }
 
+function StoryPanel({view}:PanelProps){
+ const story=view.story;if(!story)return <p className="empty">这个旧存档还没有建立故事记录；它会在需要时安全初始化。</p>;
+ const phases:Record<string,string>={FORMING:'正在形成',DEVELOPING:'发展中',ESCALATING:'升级中',CLIMAX:'高潮',AFTERMATH:'余波'};const statuses:Record<string,string>={SEED:'伏笔',EMERGING:'正在形成',ACTIVE:'进行中',DORMANT:'暂时搁置',CONVERGING:'正在收束',CLIMAX:'高潮',RESOLVED:'已解决',FAILED:'失败',ABANDONED:'已放弃',AFTERMATH:'余波',CLOSED:'已结束'};
+ const horizon=story.life_horizon.kind==='open_ended'?'开放式':story.life_horizon.kind==='immortal'?'不老/永生':story.life_horizon.target_age_min===story.life_horizon.target_age_max?`${story.life_horizon.target_age_min} 岁左右`:`${story.life_horizon.target_age_min}～${story.life_horizon.target_age_max} 岁参考`;
+ return <div className="story-record"><article className="entity"><small>人生长度参考 · {horizon}</small><h3>{story.current_saga?.title??'当前没有成形的篇章'}</h3><p>{story.current_saga?`阶段：${phases[story.current_saga.phase]??story.current_saga.phase}`:'世界仍会继续；故事可以从真实事件中自然形成。'}</p></article><section><h3>当前主要故事</h3>{story.major_arcs.length?<div className="list">{story.major_arcs.map(arc=><article className="entity" key={arc.id}><div className="item-row"><strong>{arc.title}</strong><b>{statuses[arc.status]??arc.status}</b></div>{arc.summary&&<p>{arc.summary}</p>}</article>)}</div>:<p className="empty">暂时没有主要故事线。安静生活也是有效的游玩状态。</p>}</section><section><h3>过去篇章</h3>{story.completed_sagas.length?<div className="list">{story.completed_sagas.map(saga=><article className="entity" key={saga.id}><strong>{saga.title}</strong><p>{saga.outcome}</p><small>第 {saga.start_time.day} 日—第 {saga.end_time.day} 日{saga.unresolved_count?` · ${saga.unresolved_count} 条未完成故事`:''}</small></article>)}</div>:<p className="empty">还没有完成的篇章。</p>}</section></div>;
+}
+
 
 // Local log viewer: a first-class panel in every build. This is the only place where internal ids are visible.
 type LogEntry = { timestamp:string; level:string; event:string; module:string; trace_id:string|null; request_id:string|null; job_id:string|null; revision:number|null; duration_ms:number|null; metadata:Record<string,unknown> };
@@ -333,4 +340,4 @@ export function LogPanel(){
   </div>;
 }
 
-export const panelRegistry: Record<string, ComponentType<PanelProps>> = { status:Status, characters:Characters, relationships:Relationships, inventory:InventoryPanel, map:MapPanel, commerce:Commerce, attributes:AttributesPanel, aptitudes:AptitudesPanel, skills:SkillsPanel, traits:TraitsPanel, equipment:EquipmentPanel, quests:QuestsPanel, routine:RoutinePlanPanel, logs:LogPanel, system:SystemPanel };
+export const panelRegistry: Record<string, ComponentType<PanelProps>> = { status:Status, characters:Characters, relationships:Relationships, inventory:InventoryPanel, map:MapPanel, commerce:Commerce, attributes:AttributesPanel, aptitudes:AptitudesPanel, skills:SkillsPanel, traits:TraitsPanel, equipment:EquipmentPanel, quests:QuestsPanel, routine:RoutinePlanPanel, story:StoryPanel, logs:LogPanel, system:SystemPanel };

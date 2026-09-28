@@ -13,11 +13,16 @@ import type { PublicView, Entity } from '../shared/contracts.js';
 import { parseDice } from './dice.js';
 import { currentMap, seedKnownLocations } from './map.js';
 import { availableModules } from '../modules/index.js';
+import { defaultRoleplayConfig } from '../narrative/policy.js';
+import { initialTruthFromNotes } from '../narrative/truth.js';
+import { ensureNarrativeState } from '../narrative/runtime.js';
 export function availableModuleIds() { return availableModules.map(module => module.id); }
 
 
 export function newSave(input: unknown): SavePackage {
   const definition = safeParse(worldSchema, input), registry = createRegistry(definition.enabled_modules);
+  definition.roleplay_config ??= defaultRoleplayConfig();
+  definition.gm_state.hidden_truth ??= initialTruthFromNotes(definition.gm_state.notes);
   const save: SavePackage = {
     schema_version: 1, framework_version: VERSION,
     module_versions: Object.fromEntries(registry.modules.all().map(([id, m]) => [id, m.version])),
@@ -33,6 +38,7 @@ export function newSave(input: unknown): SavePackage {
   for (const [id, module] of registry.modules.all()) save.modules[id] = { installed: true, enabled: true, version: module.version, state_version: module.manifest?.state_schema_version ?? 'v1' };
   // A brand new world runs the same setup hook an ENABLE_MODULE action would use.
   for (const [, module] of registry.modules.all()) module.manifest?.setup?.(save);
+  ensureNarrativeState(save);
   seedKnownLocations(save);
   return validateSave(save);
 }
@@ -151,6 +157,12 @@ export function publicView(save: SavePackage, registry = createRegistry(save.def
     modules: [...moduleStatuses(save), ...extensionModules],
     capabilities: [...capabilityList(registry), ...extensionModules.filter(module => module.installed && module.enabled).flatMap(module => module.provides)],
     world_history:(save.turn_history??[]).map((entry,index,all)=>({turn_id:entry.turn_id,label:entry.label,time:structuredClone(entry.time),current:index===all.length-1})),
+    ...(save.narrative_state?{story:{
+      mode:save.definition.roleplay_config?.narrative_mode??'standard',scale:save.definition.roleplay_config?.narrative_scale??'seasonal',life_horizon:structuredClone(save.definition.roleplay_config?.life_horizon??defaultRoleplayConfig().life_horizon),
+      current_saga:save.narrative_state.current_saga?{id:save.narrative_state.current_saga.id,title:save.narrative_state.current_saga.title,phase:save.narrative_state.current_saga.phase}:null,
+      major_arcs:save.narrative_state.arcs.filter(arc=>!['SEED','CLOSED'].includes(arc.status)).map(arc=>({id:arc.id,title:arc.title,status:arc.status,summary:arc.summary})),
+      completed_sagas:save.narrative_state.saga_history.map(saga=>({id:saga.id,title:saga.title,start_time:saga.start_time,end_time:saga.end_time,outcome:saga.outcome,unresolved_count:saga.unresolved_arc_refs.length})),
+    }}:{}),
     actions: registry.actions.all().map(([type, spec]) => ({ type, label: spec.ui?.label ?? type, visibility: spec.ui?.visibility ?? 'internal', target_component: spec.ui?.target_component, requires_text: spec.ui?.requires_text, text_parameter: spec.ui?.text_parameter, module: registry.modules.all().find(([, module]) => Object.hasOwn(module.actions ?? {}, type))?.[0] ?? 'framework' })),
     currencies: structuredClone(rules.currencies),
     last_turn: structuredClone(save.last_turn), notices: (save.future_intents??[]).filter(i=>i.status==='due').map(i=>'你的打算已到期：'+i.goal+'。尚未自动执行；请先处理当前场景，再决定是否尝试。'),

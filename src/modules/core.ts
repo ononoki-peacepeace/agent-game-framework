@@ -7,8 +7,8 @@ import { lifecycleActions } from './lifecycle.js';
 export const coreModule: Module = {
   id: 'core', version: '0.1.0',
   manifest: {
-    api_version: '1', provides: ['core.session', 'core.transaction', 'core.event_bus'],
-    state_ownership: ['game_id', 'state_revision', 'runtime', 'gm_state', 'event_state', 'ai', 'last_turn', 'action_facts', 'components.scene_position', 'definition.meta', 'definition.ruleset', 'definition.enabled_modules', 'modules'],
+    api_version: '1', provides: ['core.session', 'core.transaction', 'core.event_bus','core.narrative_foundation'],
+    state_ownership: ['game_id', 'state_revision', 'runtime', 'gm_state', 'narrative_state', 'event_state', 'ai', 'last_turn', 'action_facts', 'components.scene_position', 'definition.meta', 'definition.roleplay_config', 'definition.ruleset', 'definition.enabled_modules', 'modules'],
     state_schema_version: 'core.v1', migration_version: 1, supports_enable_disable: false, supports_remove: false,
   },
   components: { scene_position: { schema:z.strictObject({label:z.string().min(1).max(120)}),project:d=>d }, identity: { schema: z.strictObject({ name: z.string().min(1).max(120), description: z.string().max(2000), avatar_id: id.nullable().default(null), previous_names: z.array(z.string().min(1).max(120)).max(20).default([]) }), project: d => d } },

@@ -33,5 +33,10 @@ export const worldInitializationSchema = z.strictObject({
   items: z.array(z.strictObject({ id, name: z.string().min(1).max(120), description: z.string().max(1000), weight: z.number().min(0).max(100), price: z.number().int().min(2).max(1000) })).nullish(),
   shop: z.strictObject({ id, name: z.string().min(1).max(120), location_id: id.nullish(), cash: z.number().int().min(100).max(100000) }).nullish(),
 
-  hidden_notes: z.string().max(2000), opening: z.string().max(2000),
+  hidden_notes: z.string().max(2000),
+  hidden_truths: z.array(z.strictObject({
+    id, commitment:z.enum(['HARD_TRUTH','SEEDED_TRUTH']), statement:z.string().min(1).max(2000), seed_constraint:z.string().max(500).nullable(),
+    evidence:z.array(z.strictObject({id,description:z.string().min(1).max(1000)})).max(20),
+  })).max(30).optional(),
+  opening: z.string().max(2000),
 });

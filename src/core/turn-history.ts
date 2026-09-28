@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import type { SavePackage } from './schema.js';
 
 /** Configuration, presentation and external extension state are deliberately outside World Undo. */
-export const worldKeys=['schema_version','framework_version','module_versions','modules','game_id','definition','entities','player_state','gm_state','event_state','runtime','map_state','last_turn','action_facts','future_intents','task_progress','foreground','calendar','routine_meta','interaction_context','narrative_history'] as const;
+export const worldKeys=['schema_version','framework_version','module_versions','modules','game_id','definition','entities','player_state','gm_state','narrative_state','event_state','runtime','map_state','last_turn','action_facts','future_intents','task_progress','foreground','calendar','routine_meta','interaction_context','narrative_history'] as const;
 /** The snapshot travels inside `z.record(z.string(), z.json())`, which rejects `undefined` values. */
 function jsonSafe(value:any):any{
   if(Array.isArray(value))return value.map(jsonSafe);

@@ -24,6 +24,7 @@ setModuleCatalog(availableModules);
 
 /** Framework-level surfaces: always available, independent of world modules. */
 export const frameworkPanels: PanelMeta[] = [
+  { id: 'story', label: '故事', module: 'framework', order: 790, mobile_group: 'secondary', presentation_type: 'panel' },
   // Out-of-game surface. Extension development lives inside it as an advanced sub-capability.
   { id: 'system', label: '系统', module: 'framework', order: 800, mobile_group: 'secondary', presentation_type: 'panel' },
   { id: 'saves', label: '存档', module: 'framework', order: 810, mobile_group: 'secondary', presentation_type: 'panel' },
