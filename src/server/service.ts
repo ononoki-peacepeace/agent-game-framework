@@ -9,6 +9,7 @@ import { settleRoutine,applyLifePatches } from './routine-controller.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { GameError, assert, safeParse, profileSchema, worldCreationProvenanceSchema, type SavePackage, type WorldCreationProvenance } from '../core/schema.js';
+import { normalizeProvenance } from '../core/provenance.js';
 import { exportSave, importSave, newSave, publicView, validateSave } from '../core/state.js';
 import { executeFreeform } from '../core/freeform.js';
 import { executeAction, applyPatches } from '../core/runtime.js';
@@ -149,7 +150,9 @@ export class GameService {
       if(roleplayConfig)save.definition.roleplay_config=roleplayConfigSchema.parse(roleplayConfig);
       if(provenance){
         const generated=[...save.entities.map(entity=>({kind:'entity' as const,id:entity.id})),...(save.definition.map?.locations??[]).map(location=>({kind:'location' as const,id:location.id}))];
-        save.definition.provenance=worldCreationProvenanceSchema.parse({...provenance,generated_canonical_fact_refs:generated});
+        // Provenance records are atomic cells (a statement may be quoted back to the player). A long premise is split
+// loss-free here, so one over-long sentence can never fail an otherwise valid world creation.
+save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenance({...provenance,generated_canonical_fact_refs:generated}));
       }
       if (blank) save.last_turn = { narrative: '', speaker: null, dialogue: null, choices: [], context_actions: [] };
       if (!save.last_turn) save.last_turn = { narrative: save.definition.meta.description, speaker: null, dialogue: null, choices: [], context_actions: [] };
