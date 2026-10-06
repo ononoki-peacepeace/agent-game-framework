@@ -8,6 +8,24 @@
  * and the framework parses a returned `null` back as "absent".
  */
 type JsonObject = Record<string, unknown>;
+/** Exact contract fields where provider null/omission means an empty collection, never a null-valued fact. */
+const emptyCollections={
+  narrator:['choices','context_actions','mechanical_claims','choice_semantics','item_claims','stable_locations','patches'],
+  freeform:['facts','required_conditions'],
+  freeformResolution:['stages','evidence_ids'],
+} as const;
+export function normalizeProviderCollections(role:'narrator'|'freeform',value:unknown):unknown{
+  if(!value||typeof value!=='object'||Array.isArray(value))return value;
+  const out={...(value as JsonObject)};
+  for(const key of emptyCollections[role])if(out[key]==null)out[key]=[];
+  if(role==='freeform'&&out.resolution&&typeof out.resolution==='object'&&!Array.isArray(out.resolution)){
+    const resolution={...(out.resolution as JsonObject)};
+    for(const key of emptyCollections.freeformResolution)if(resolution[key]==null)resolution[key]=[];
+    if(resolution.discover_facts==null)resolution.discover_facts=false;
+    out.resolution=resolution;
+  }
+  return out;
+}
 const dropped = new Set(['$schema', 'default']);
 
 function nullable(schema: unknown): unknown {

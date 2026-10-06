@@ -4,6 +4,7 @@ import { validateSave } from '../core/state.js';
 import { rollDice, parseDice } from '../core/dice.js';
 import type { AIRuntime } from '../ai/runtime.js';
 import type { RoutineResult } from '../ai/routine.js';
+import {drainBackgroundDisplay} from '../background/runtime.js';
 
 // Operates exclusively on the uncommitted turn candidate. Any error discards it.
 export async function settleRoutine(candidate: SavePackage, ai: AIRuntime, maxMinutes: number, generate?: (save:SavePackage,max:number,random?:unknown[],planned?:unknown)=>Promise<RoutineResult>) {
@@ -90,7 +91,7 @@ export async function settleRoutine(candidate: SavePackage, ai: AIRuntime, maxMi
   r.next_arrangement=result.next_arrangement;
   const history=Array.isArray(r.history)?r.history:[];
   r.history=[...history,{...result.segment,activities:result.activities,patches:result.patches,random_results:randomResults,interrupt:interrupted,interrupt_reason:reason}].slice(-30);
-  next.last_turn={narrative:[result.segment.summary,...result.activities.map(a=>a.summary),...(reason?[reason]:[])].join('\n'),speaker:null,dialogue:null,choices:[],context_actions:[]};
+  next.last_turn={narrative:[result.segment.summary,...result.activities.map(a=>a.summary),...drainBackgroundDisplay(next),...(reason?[reason]:[])].join('\n'),speaker:null,dialogue:null,choices:[],context_actions:[]};
   return validateSave(next);
 }
 

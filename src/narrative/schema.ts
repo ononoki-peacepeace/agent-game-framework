@@ -33,6 +33,8 @@ export const truthCommitmentSchema = z.strictObject({
   evidence: z.array(z.strictObject({
     id, status: z.enum(['EXISTS','CAUSALLY_CREATED','DESTROYED']), description: text,
     event_ref: z.string().max(100).nullable(), discovered_by: z.array(id).max(100),
+    placement:z.strictObject({location_id:id.nullable(),anchor_entity_id:id.nullable(),scene_scope:z.string().max(120).nullable(),
+      discoverability:z.strictObject({domain:id,difficulty:z.enum(['trivial','easy','normal','hard','very_hard','extreme'])})}).optional(),
   })).max(100),
   known_by: z.array(id).max(100),
 });

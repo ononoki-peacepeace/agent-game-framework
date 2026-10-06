@@ -26,10 +26,14 @@ export const referenceFields: Record<string, ReferenceKind> = {
   quest_id:'quest', quest_ids:'quest', task_id:'quest', task_ids:'quest', opportunity_id:'quest', opportunity_ids:'quest',
   activity_id:'activity', activity_ids:'activity',
 };
+function referenceKind(key:string,parent?:Record<string,unknown>|null):ReferenceKind|undefined {
+  // Step bindings use entity_id for both people/items and destinations. The role is authoritative.
+  return key==='entity_id'&&parent?.role==='destination'?'location':referenceFields[key];
+}
 
 // Narrative fields: player-visible prose that may mention an internal id instead of a display name.
 export const proseFields = new Set([
-  'description','summary','narrative','dialogue','choices','intent','reason',
+  'description','summary','narrative','dialogue','choices','text','intent','reason',
   'interrupt_reason','last_interrupt','next_arrangement','pattern','note','notes','source','role','message',
   'notices','calendar_issue','time_label','known_state','current_relationship','objectives',
   'objective','effect','effects','personality','scenario',
@@ -122,18 +126,18 @@ function renderProse(value: string, index: DisplayIndex, path: string, seen: Set
 function renderStructured(value: unknown, index: DisplayIndex, path: string, seen: Set<string>, mode: DisplayMode): unknown {
   if (typeof value === 'string') return renderStructuredField(value, '', index, path, seen, mode);
   if (Array.isArray(value)) return value.map((entry, i) => renderStructured(entry, index, `${path}[${i}]`, seen, mode));
-  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, renderStructuredField(entry, key, index, `${path}.${key}`, seen, mode)]));
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, renderStructuredField(entry, key, index, `${path}.${key}`, seen, mode, value as Record<string,unknown>)]));
   return value;
 }
-function renderStructuredField(value: unknown, key: string, index: DisplayIndex, path: string, seen: Set<string>, mode: DisplayMode): unknown {
+function renderStructuredField(value: unknown, key: string, index: DisplayIndex, path: string, seen: Set<string>, mode: DisplayMode, parent?:Record<string,unknown>): unknown {
   if (typeof value === 'string') {
-    const kind = referenceFields[key];
+    const kind = referenceKind(key,parent);
     if (kind) return resolveReference(index, kind, value, key, path, seen);
     if (proseFields.has(key)) return renderProse(value, index, path, seen, mode);
     if (labelFields.has(key)) return renderLabel(value, index, path, seen, mode);
     return isMachineData(value) ? renderData(value, index, path, seen, mode) : value;
   }
-  if (Array.isArray(value)) return value.map((entry, i) => renderStructuredField(entry, key, index, `${path}[${i}]`, seen, mode));
+  if (Array.isArray(value)) return value.map((entry, i) => renderStructuredField(entry, key, index, `${path}[${i}]`, seen, mode, parent));
   if (value && typeof value === 'object') return renderStructured(value, index, path, seen, mode);
   return value;
 }
@@ -150,16 +154,16 @@ export function displayDiagnostic(value: string, entities: Entity[] = [], locati
 
 export function resolvePresentation<T>(input: T, entities: Entity[], locations: PublicLocation[], options: DisplayOptions = {}): T {
   const index = options.index ?? buildDisplayIndex(entities, locations, options.activities ?? []), seen = new Set<string>(), mode = options.mode ?? 'narrative';
-  const visit = (value: unknown, key: string, path: string): unknown => {
+  const visit = (value: unknown, key: string, path: string, parent?:Record<string,unknown>): unknown => {
     if (typeof value === 'string') {
-      const kind = referenceFields[key];
+      const kind = referenceKind(key,parent);
       if (kind) return resolveReference(index, kind, value, key, path, seen);
       if (proseFields.has(key)) return renderProse(value, index, path, seen, mode);
       if (labelFields.has(key)) return renderLabel(value, index, path, seen, mode);
       return isMachineData(value) ? renderData(value, index, path, seen, mode) : value;
     }
-    if (Array.isArray(value)) return value.map((entry, i) => visit(entry, key, `${path}[${i}]`));
-    if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([name, entry]) => [name, visit(entry, name, `${path}.${name}`)]));
+    if (Array.isArray(value)) return value.map((entry, i) => visit(entry, key, `${path}[${i}]`,parent));
+    if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([name, entry]) => [name, visit(entry, name, `${path}.${name}`,value as Record<string,unknown>)]));
     return value;
   };
   return visit(input, '', '$') as T;

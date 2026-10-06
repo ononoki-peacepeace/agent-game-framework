@@ -33,8 +33,8 @@ export interface ModuleStatus {
   panels: string[]; supports_enable_disable: boolean; supports_remove: boolean;
 }
 export interface ActionInput { type: string; target_id?: string; parameters?: Record<string, unknown> }
-export interface ContextActionSuggestion { target_id: string; label: string; intent: string; family?: 'communicate'|'observe'|'approach'|'interact'|'help'|'use_item'|'follow'|'steal'|'intercept'|'attack' }
-export interface Narrative { narrative: string; speaker: string | null; dialogue: string | null; choices: string[]; context_actions?: ContextActionSuggestion[] }
+export interface ContextActionSuggestion { target_id: string; label: string; intent: string; family?: 'communicate'|'observe'|'approach'|'interact'|'help'|'use_item'|'follow'|'steal'|'intercept'|'attack'; category?: string|null }
+export interface Narrative { narrative: string; speaker: string | null; dialogue: string | null; choices: string[]; choice_offers?:import('../core/schema.js').ChoiceOffer[]; context_actions?: ContextActionSuggestion[] }
 export interface MapPosition { x: number; y: number }
 export interface PublicLocation {
   id: string; name: string; description: string; tags: string[]; position?: MapPosition;
@@ -50,6 +50,9 @@ export interface PublicActionMeta {
   module?: string;
 }
 export interface PublicView {
+  active_goal?:{plan_id:string;status:import('../agent/plan-schema.js').AgentPlan['status'];original_intent:string;
+    goals:{goal_id:string;summary:string;status:import('../agent/plan-schema.js').GoalStatus}[];
+    waiting_question:string|null;options:{candidate_id:string;label:string}[]};
   interaction_context?:import('../core/schema.js').SavePackage['interaction_context'];
   can_undo?:boolean;
   future_intents?:import("../agent/plan-schema.js").FutureIntent[];

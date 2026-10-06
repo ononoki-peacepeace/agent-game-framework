@@ -15,8 +15,20 @@ export interface ActionContext {
   emit(event: GameEvent): void; advance(minutes: number): void; facts: string[];
 }
 export interface ComponentSpec { schema: z.ZodType; project?: (data: ComponentData, entity: Entity, save: SavePackage) => ComponentData | undefined }
+/** Program-facing discovery contract for a registered action. The agent still binds public
+ * entities and validates the action schema; this metadata never grants model authority. */
+export interface ActionCapabilitySpec {
+  intent: 'move' | 'purchase' | 'talk' | 'item_move';
+  description: string;
+  target_role: 'destination' | 'shop' | 'person' | 'item';
+  parameter_roles: Record<string, 'item' | 'quantity' | 'text' | 'destination'>;
+  completion_kind: 'location_at' | 'purchase' | 'conversation_attempted' | 'item_location';
+}
 export interface ActionSpec {
   parameters: z.ZodType; execute(ctx: ActionContext): void;
+  capability?: ActionCapabilitySpec;
+  // Workflow entry actions settle through their own job lifecycle; only completed world actions get a turn receipt.
+  resolution_mode?:'registered'|'self'|'workflow';
   ui?: { label: string; visibility?: 'internal' | 'text' | 'contextual' | 'panel'; target_component?: string; requires_text?: boolean; text_parameter?: string };
 }
 export interface Patch { op: string; entity_id: string; target_id: string; dimension: string; delta: number }

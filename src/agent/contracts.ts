@@ -1,4 +1,5 @@
 import type { PublicView } from '../shared/contracts.js';
+import {displayText} from '../shared/display.js';
 
 /** Shared Agent result used by both the in-world (left) and Meta (right) surfaces. */
 export type UIAction =
@@ -12,7 +13,7 @@ export type UIAction =
   | { kind: 'extension_development'; request: string };
 
 export interface AgentResult {
-  presentation?: 'story' | 'assistant';
+  presentation?: 'story' | 'assistant' | 'handoff' | 'failure';
   plan_id?: string;
   plan?: import("./plan-schema.js").AgentPlan;
   results?: {goal_id:string;summary:string;related_entity:string|null;status:import("./plan-schema.js").GoalStatus}[];
@@ -29,5 +30,9 @@ export interface AgentResult {
 }
 
 export function agentResult(intent: string, message: string, extra: Partial<AgentResult> = {}): AgentResult {
-  return { intent, message, ui_actions: [], tool_calls: [], canonical_changes: [], time_advanced: 0, clarification: null, ...extra };
+  const view=extra.view;
+  const shown=(value:string)=>view?displayText(value,view.entities,view.locations):value;
+  return { intent, ui_actions: [], tool_calls: [], canonical_changes: [], time_advanced: 0, ...extra,
+    ...(extra.results?{results:extra.results.map(result=>({...result,summary:shown(result.summary)}))}:{}),
+    message:shown(message),clarification:extra.clarification??null };
 }

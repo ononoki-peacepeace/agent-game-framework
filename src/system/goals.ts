@@ -15,7 +15,7 @@ export const desiredStateSchema = z.strictObject({
 });
 
 export const desiredOutputSchema = z.strictObject({
-  kind: z.enum(['state_change', 'media_asset', 'avatar_assignment', 'schedule', 'relationship', 'feature']),
+  kind: z.enum(['state_change', 'entity_create', 'entity_delete', 'media_asset', 'avatar_assignment', 'schedule', 'relationship', 'feature']),
   description: z.string().min(1).max(400),
 });
 

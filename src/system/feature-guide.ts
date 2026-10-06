@@ -32,7 +32,7 @@ function bindActions(guide: FeatureGuide): FeatureGuide {
 }
 // The delegate chip the UI offers must be recognised verbatim, otherwise "你帮我决定" would be filed as a
 // brand-new request instead of the player handing a non-critical choice to the framework.
-const delegateIntent = /^(我不知道|不知道|不懂|我什么都不懂|你帮我选|你帮我决定|帮我选|帮我决定|你替我选|你替我决定|你来定|你来决定|你决定|你看着办|随便|都行|都可以|按正常|按默认|简单一?(点|些)|简单点|你觉得|给我推荐|推荐一个|没有想法|无所谓)/;
+const delegateIntent = /^(我不知道|不知道|不懂|我什么都不懂|你帮我选|你帮我决定|帮我选|帮我决定|你替我选|你替我决定|你来定|你来决定|你决定|你看着办|随便|都行|都可以|按正常|按默认|简单一?(点|些)|简单点|你觉得|给我推荐|推荐一个|没有想法|无所谓|不要再问我.{0,16}(?:你)?(?:直接)?(?:定|选|决定)|系统随机生成)/;
 const confirmationIntent = /^(开始制作|开始吧|开始|就这样|这样做|可以|好|好的|行|确认|没问题|ok|OK)/;
 const ideaWanted = /(不知道|没想好|没有想法|不清楚).{0,8}(是什么|做什么|加什么|要什么|玩法|系统)|给我(点)?灵感|随便来一个|想不出来/;
 const directionOptions: GuideOption[] = [

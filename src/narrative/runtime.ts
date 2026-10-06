@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { assert, type SavePackage } from '../core/schema.js';
 import { defaultRoleplayConfig } from './policy.js';
 import { narrativeStateSchema, type DirectorDecision, type NarrativeArc, type NarrativeState } from './schema.js';
+import { ageOf, lifeHorizonPressure } from '../shared/age.js';
 
 export type DirectorTrigger=DirectorDecision['trigger'];
 export function ensureNarrativeState(save:SavePackage):NarrativeState{
@@ -17,8 +18,9 @@ export function calculateClosurePressure(save:SavePackage,state:NarrativeState){
   const active=state.arcs.filter(a=>['ACTIVE','CONVERGING','CLIMAX'].includes(a.status)).length;
   const majorLoops=state.open_loops.filter(l=>l.importance==='major'&&l.status==='OPEN').length;
   const stale=state.arcs.filter(a=>['ACTIVE','EMERGING'].includes(a.status)&&save.state_revision-a.last_meaningful_revision>=12).length;
-  const player=save.entities.find(entity=>entity.id===save.player_state.entity_id),age=Number(player?.components.character?.age??player?.components.identity?.age??NaN);
-  const horizon=config.life_horizon.kind==='open_ended'||config.life_horizon.kind==='immortal'?0:Number.isFinite(age)&&config.life_horizon.target_age_max?Math.max(0,Math.min(.3,(age/config.life_horizon.target_age_max-.65)*.8)):.08;
+  const player=save.entities.find(entity=>entity.id===save.player_state.entity_id),age=ageOf(player,save);
+  // One shared calculation: an unknown age has a defined fallback and can never leak NaN into closure pressure.
+  const horizon=lifeHorizonPressure(age,config.life_horizon);
   return Math.min(1,Number((horizon+Math.max(0,active-config.major_arc_soft_cap)*.12+Math.max(0,majorLoops-config.major_open_loop_soft_cap)*.1+stale*.08).toFixed(3)));
 }
 
@@ -101,14 +103,14 @@ export function invalidateDirectorPlan(save:SavePackage,reason:string){
 export function completeSaga(save:SavePackage,input:{title?:string;outcome:string;failures?:string[];permanent_world_change_refs?:string[];continuation_hooks?:string[]}){
   const state=ensureNarrativeState(save),saga=state.current_saga;assert(saga,'当前没有可完成的篇章');
   const arcs=state.arcs.filter(a=>saga.arc_refs.includes(a.id));assert(arcs.every(a=>['RESOLVED','FAILED','ABANDONED','AFTERMATH','CLOSED'].includes(a.status)),'仍有活跃主要故事线，不能完成篇章');
-  const knownEvents=new Set([...(save.action_facts??[]).map(item=>item.request_id),...(save.turn_history??[]).map(item=>item.turn_id)]);
+  const knownEvents=new Set([...(save.action_facts??[]).map(item=>item.request_id),...(save.turn_history??[]).map(item=>item.turn_id),...(save.background_state?.event_log??[]).map(item=>item.id)]);
   assert(saga.canonical_event_refs.every(ref=>knownEvents.has(ref))&&arcs.every(arc=>arc.canonical_event_refs.every(ref=>knownEvents.has(ref))),'篇章只能引用真实历史事件');
   assert((input.permanent_world_change_refs??[]).every(ref=>knownEvents.has(ref)),'永久世界变化必须引用真实历史事件');
   const record={id:saga.id,title:input.title??saga.title,start_time:saga.start_time,end_time:structuredClone(save.runtime.time),major_participant_refs:[...new Set(arcs.flatMap(a=>a.participant_refs))],major_arc_refs:arcs.map(a=>a.id),outcome:input.outcome,failures:input.failures??arcs.filter(a=>a.status==='FAILED').map(a=>a.title),permanent_world_change_refs:input.permanent_world_change_refs??[],unresolved_arc_refs:arcs.filter(a=>!['RESOLVED','CLOSED'].includes(a.status)).map(a=>a.id),continuation_hooks:input.continuation_hooks??[]};
   state.saga_history.push(record);state.current_saga=null;state.open_loops=state.open_loops.map(loop=>loop.status==='OPEN'?{...loop,status:'UNKNOWN' as const}:loop);save.narrative_state=state;return record;
 }
 
-function assertEvent(save:SavePackage,eventRef:string){assert((save.action_facts??[]).some(item=>item.request_id===eventRef)||(save.turn_history??[]).some(item=>item.turn_id===eventRef),'叙事技法必须引用真实历史事件');}
+function assertEvent(save:SavePackage,eventRef:string){assert((save.action_facts??[]).some(item=>item.request_id===eventRef)||(save.turn_history??[]).some(item=>item.turn_id===eventRef)||(save.background_state?.event_log??[]).some(item=>item.id===eventRef),'叙事技法必须引用真实历史事件');}
 export function recordSetup(save:SavePackage,input:{id:string;label:string;source_event_ref:string;arc_ref?:string|null;truth_ref?:string|null}){assertEvent(save,input.source_event_ref);const state=ensureNarrativeState(save);assert(!state.unpaid_setups.some(item=>item.id===input.id),'伏笔 ID 重复');const setup={...input,arc_ref:input.arc_ref??null,truth_ref:input.truth_ref??null,status:'UNPAID' as const,payoff_event_ref:null};state.unpaid_setups.push(setup);return setup;}
 export function payoffSetup(save:SavePackage,id:string,eventRef:string){assertEvent(save,eventRef);const setup=ensureNarrativeState(save).unpaid_setups.find(item=>item.id===id);assert(setup&&setup.status==='UNPAID','找不到未回收的伏笔');setup.status='PAID_OFF';setup.payoff_event_ref=eventRef;return setup;}
 export function advanceReveal(save:SavePackage,arcId:string,eventRef:string){assertEvent(save,eventRef);const state=ensureNarrativeState(save),arc=state.arcs.find(item=>item.id===arcId);assert(arc,'找不到主要故事线');assert(arc.truth_refs.length>0,'揭示阶梯必须引用既有真相承诺');arc.reveal_step++;if(!arc.canonical_event_refs.includes(eventRef))arc.canonical_event_refs.push(eventRef);return arc.reveal_step;}

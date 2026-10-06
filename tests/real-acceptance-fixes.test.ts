@@ -62,7 +62,8 @@ describe('A. EMPTY_WORLD / FRAMEWORK_TEST semantics', () => {
 });
 
 describe('B/C. generic world action robustness and player-safe errors', () => {
-  const proposal = (facts: string[]) => ({ narrative: '你挥出一拳。', minutes: 1, target_id: null, facts, relationship: null });
+  const proposal = (facts: string[]) => ({ narrative: '你挥出一拳。', minutes: 1, target_id: null, facts, relationship: null,
+    resolution:{type:'DETERMINISTIC',domain:'general',band:'normal',visibility:'public',stakes:'仅完成这次尝试',stages:[],evidence_ids:[]} });
   it('merges an over-long facts array instead of failing the turn', () => {
     const parsed = parseFreeformProposal(proposal(['一', '二', '三', '四', '五', '六']));
     expect(parsed.facts).toHaveLength(4);

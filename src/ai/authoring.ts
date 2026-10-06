@@ -1,5 +1,8 @@
 import type { z } from 'zod';
 import { VERSION, type WorldPackage, type profileSchema } from '../core/schema.js';
+import type { Gender } from '../shared/gender.js';
+import { AGE_MAX, isAge } from '../shared/age.js';
+import { suggestLifeHorizon } from '../narrative/policy.js';
 import { defaultCalendar } from '../routine/schema.js';
 import type { worldInitializationSchema } from './contracts.js';
 import { defaultRoleplayConfig } from '../narrative/policy.js';
@@ -52,8 +55,12 @@ function layoutLocations(locations: NonNullable<z.infer<typeof worldInitializati
 }
 
 export function compileWorld(b: z.infer<typeof worldInitializationSchema>, profile: z.infer<typeof profileSchema>): WorldPackage {
-  const identity = (name: string, description: string) => ({ name, description, avatar_id: null });
+  // Gender travels as canonical character data: a world may specify it, and `null` means "not defined yet".
+  const identity = (name: string, description: string, gender: Gender | null = null, age: number | null = null) => ({ name, description, avatar_id: null, gender, age: typeof age === 'number' && Number.isSafeInteger(age) && age >= 0 && age <= AGE_MAX ? age : null });
   // A strict provider answers every property; `null` means "this world does not have that data".
+  // Authored worlds start on the first day: an age the world declares is the age on that day, and from there
+  // it follows the world's own calendar instead of being frozen.
+  const startDay = 1;
   const locations = b.locations ?? [], routes = b.routes ?? [], items = b.items ?? [], shop = b.shop ?? null;
   const positions = layoutLocations(locations);
   const modules = resolveModules(b.modules ?? ['map','characters','relationships','inventory','commerce','routine']);
@@ -63,7 +70,7 @@ export function compileWorld(b: z.infer<typeof worldInitializationSchema>, profi
   const shops = has('commerce') && shop ? [shop] : [];
 
 
-  const playerComponents: Record<string, unknown> = { identity: identity(b.player.name, b.player.description) };
+  const playerComponents: Record<string, unknown> = { identity: identity(b.player.name, b.player.description, b.player.gender, b.player.age) };
   if (has('characters')) playerComponents.character = { role: 'player', traits: [] };
   if (has('routine')) playerComponents.condition = { hp:100, stamina:100, stress:0 };
   if (has('inventory')) playerComponents.inventory = { items: {} };
@@ -76,7 +83,7 @@ export function compileWorld(b: z.infer<typeof worldInitializationSchema>, profi
   const entity = (id: string, type: string, components: Record<string, unknown>) => ({ id, type, components } as Entity);
   const entities: Entity[] = [entity(b.player.id, 'character', playerComponents)];
   if (has('characters')) for (const character of b.characters) {
-    entities.push(entity(character.id, 'character', { identity: identity(character.name, character.description), character: { role: character.role, traits: [] }, ...place(character.location_id) }));
+    entities.push(entity(character.id, 'character', { identity: identity(character.name, character.description, character.gender, character.age), character: { role: character.role, traits: [] }, ...place(character.location_id) }));
   }
   if (has('inventory')) for (const item of items) {
     entities.push(entity(item.id, 'item', { identity: identity(item.name, item.description), item: { weight: item.weight, stackable: true } }));
@@ -88,23 +95,40 @@ export function compileWorld(b: z.infer<typeof worldInitializationSchema>, profi
 
   const structuredTruth=hiddenTruthStateSchema.parse({version:1,commitments:(b.hidden_truths??[]).map(truth=>({
     id:truth.id,commitment:truth.commitment,statement:truth.statement,seed_constraint:truth.seed_constraint,source:'WORLD_CREATION' as const,created_event_ref:null,
-    evidence:truth.evidence.map(evidence=>({id:evidence.id,status:'EXISTS' as const,description:evidence.description,event_ref:null,discovered_by:[]})),known_by:[],
+    evidence:truth.evidence.map(evidence=>({id:evidence.id,status:'EXISTS' as const,description:evidence.description,event_ref:null,discovered_by:[],
+      ...(evidence.location_id||evidence.anchor_entity_id||evidence.scene_scope?{placement:{
+        location_id:evidence.location_id??null,anchor_entity_id:evidence.anchor_entity_id??null,scene_scope:evidence.scene_scope??null,
+        discoverability:evidence.discoverability??{domain:'investigation',difficulty:'normal' as const},
+      }}:{}),
+    })),known_by:[],
   }))});
+  for (const entity of entities) {
+    const identity = entity.components.identity as { age?: unknown } | undefined;
+    if (isAge(identity?.age)) (identity as { age_as_of_day?: number | null }).age_as_of_day = startDay;
+  }
   return {
     schema_version: 1, framework_version: VERSION,
     meta: { id: b.id, title: b.title, description: b.description },
-    roleplay_config:defaultRoleplayConfig(),
+    // The world's own premise selects the soft lifespan reference, so an immortal or long-lived setting is not
+    // measured with a human 70–100 yardstick. It stays a pacing range, never a death date.
+    roleplay_config:{...defaultRoleplayConfig(),life_horizon:suggestLifeHorizon({premise:b.description})},
     enabled_modules: modules,
     calendar: defaultCalendar(),
     ...(has('routine') ? { routine_rules: defaultRoutineRules(home) } : {}),
-    ruleset: { minutes_per_day: 1440, max_wait_minutes: 1440, talk_minutes: 5, trade_minutes: 2, default_check: '2d6+1',
+    ruleset: { minutes_per_day: 1440, max_wait_minutes: 1440, talk_minutes: 5, trade_minutes: 2, default_check: '2d6+1',resolution_profile:{version:1,kind:b.resolution_profile??'bell_2d6'},
       currencies: { [b.currency.id]: b.currency.name }, relationship_dimensions: { trust: { min: -100, max: 100, initial: 0 }, familiarity: { min: 0, max: 100, initial: 0 } } },
     prompt_profile: profile, world: { description: b.description },
     entities,
     ...(has('map') ? { map: { locations: locations.map(l => ({ ...l, tags: [], position: positions[l.id] })), routes: routes.map(r => ({ ...r, conditions: [] })) } } : {}),
-    events: [], player: { entity_id: b.player.id }, gm_state: { notes: b.hidden_notes, flags: {}, ...(structuredTruth.commitments.length?{hidden_truth:structuredTruth}:{}) }, runtime: { time: { day: 1, minute: 540 } },
+    events: [],
+    ...(b.background_incidents?.length?{
+      background_event_policy:{enabled:true,target_active_incidents:1,max_dormant_incidents:3,minimum_gap_minutes:1440,replenishment:true},
+      background_incidents:b.background_incidents.map(incident=>({...incident,source:'WORLD_CREATION' as const})),
+    }:{}),
+    ...(b.world_macro_arcs?.length?{world_macro_arcs:b.world_macro_arcs}:{}),
+    player: { entity_id: b.player.id }, gm_state: { notes: b.hidden_notes, flags: {}, ...(structuredTruth.commitments.length?{hidden_truth:structuredTruth}:{}) }, runtime: { time: { day: startDay, minute: 540 } },
   };
 }
 
 export {isEmptyWorld} from '../shared/world-intent.js';
-export function emptyWorld(profile:z.infer<typeof profileSchema>):WorldPackage { return {schema_version:1,framework_version:VERSION,meta:{id:'empty_world',title:'空白世界',description:'空白世界：只包含框架运行所需的最小结构，没有地点、人物或剧情。'},roleplay_config:defaultRoleplayConfig(),enabled_modules:['core'],ruleset:{minutes_per_day:1440,max_wait_minutes:1440,talk_minutes:1,trade_minutes:1,default_check:'1d6',currencies:{},relationship_dimensions:{}},prompt_profile:profile,world:{description:''},entities:[{id:'player',type:'character',components:{identity:{name:'玩家',description:'',avatar_id:null}}}],events:[],player:{entity_id:'player'},gm_state:{notes:'',flags:{},hidden_truth:{version:1,commitments:[]}},runtime:{time:{day:1,minute:0}}}; }
+export function emptyWorld(profile:z.infer<typeof profileSchema>):WorldPackage { return {schema_version:1,framework_version:VERSION,meta:{id:'empty_world',title:'空白世界',description:'空白世界：只包含框架运行所需的最小结构，没有地点、人物或剧情。'},roleplay_config:defaultRoleplayConfig(),enabled_modules:['core'],ruleset:{minutes_per_day:1440,max_wait_minutes:1440,talk_minutes:1,trade_minutes:1,default_check:'1d6',resolution_profile:{version:1,kind:'classic_d20'},currencies:{},relationship_dimensions:{}},prompt_profile:profile,world:{description:''},entities:[{id:'player',type:'character',components:{identity:{name:'玩家',description:'',avatar_id:null,gender:null,age:null}}}],events:[],player:{entity_id:'player'},gm_state:{notes:'',flags:{},hidden_truth:{version:1,commitments:[]}},runtime:{time:{day:1,minute:0}}}; }

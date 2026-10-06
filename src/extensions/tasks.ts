@@ -62,14 +62,29 @@ const sdk='SDK 支持扩展自有 number/flag/text 字段、extension/entity sco
 export class DevelopmentTasks {
  private tasks:DevelopmentTask[]=[];private receipts:Record<string,{id:string;request:string}>={};private writes:Promise<void>=Promise.resolve();
  private installing=new Set<string>();private controls=new Set<string>();private starting=false;
+ private interruptedCore=new Set<string>();
  private runs=new Map<string,{controller:AbortController;promise:Promise<void>}>();private activitySignatures=new Map<string,string>();readonly ready:Promise<void>;
- constructor(readonly builder:ExtensionDevelopment,private adapter:()=>AIAdapter=()=>builder.host.service.ai.adapter,private readonly coreExecutor?:CodingAgentExecutor,private readonly onInstalled?:(task:DevelopmentTask)=>Promise<void>,private readonly coreInstaller?:CoreCandidateInstaller){this.ready=this.load().then(()=>this.recoverCoreInstalls());}
+ constructor(readonly builder:ExtensionDevelopment,private adapter:()=>AIAdapter=()=>builder.host.service.ai.adapter,private readonly coreExecutor?:CodingAgentExecutor,private readonly onInstalled?:(task:DevelopmentTask)=>Promise<void>,private readonly coreInstaller?:CoreCandidateInstaller){this.ready=this.load().then(()=>this.recoverCoreInstalls()).then(()=>this.recoverApprovedCore());}
  private async load(){try{const data=JSON.parse(await readFile(join(this.builder.host.directory,'tasks.json'),'utf8'));this.tasks=data.tasks;this.receipts=data.receipts;
  for(const t of this.tasks){z.string().uuid().parse(t.id);z.string().uuid().parse(t.game_id);assert(t.workspace===resolve(this.builder.host.directory,'tasks',t.id),'开发工作区路径不匹配');}
- for(const t of this.tasks)if(['planning','developing','testing','repairing'].includes(t.status)){t.status='paused';t.message='服务重启，需求与检查点已保留，可以继续。';}
+ for(const t of this.tasks)if(['planning','developing','testing','repairing'].includes(t.status)){
+   if(t.core_proposal?.status==='approved'&&!t.core_execution?.installed&&['developing','repairing','testing'].includes(t.status))this.interruptedCore.add(t.id);
+   t.status='paused';t.message='服务重启，需求与检查点已保留，可以继续。';
+ }
  const current=await this.builder.host.service.storage.read();
  for(const t of this.tasks){const installed=current?.game_id===t.game_id?current.extensions?.[t.extension_id]:undefined;const candidate=t.artifacts.at(-1)?.manifest;if(installed&&candidate&&installed.version===t.current_version&&JSON.stringify(installed.manifest)===JSON.stringify(candidate)){t.status='installed';t.installed_version=installed.version;t.message='已从存档确认此版本安装成功。';}}
  }catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}}
+ private async recoverApprovedCore(){
+  for(const id of this.interruptedCore){
+   const task=this.tasks.find(item=>item.id===id);
+   if(!task||!this.coreExecutor)continue;
+   const available=await this.coreExecutor.availability();
+   if(!available.available){task.message='核心编码后端暂不可用；已保留批准与检查点，待恢复后可继续。';continue;}
+   task.status='developing';task.message='服务已恢复，正在隔离工作区继续已批准的核心开发。';await this.persist();
+   const controller=new AbortController(),promise=Promise.resolve().then(()=>this.runCore(task,controller.signal)).finally(()=>this.runs.delete(task.id));this.runs.set(task.id,{controller,promise});
+  }
+  this.interruptedCore.clear();
+ }
  private persist(){
   const now=new Date().toISOString();
   for(const task of this.tasks){
@@ -176,7 +191,7 @@ export class DevelopmentTasks {
  t.status='ready_for_preview';t.message='候选已通过构建和规则验证，可继续修改或确认安装。';await this.persist();
  }catch(e){t.status=signal.aborted?'paused':'failed';t.message=signal.aborted?'已暂停，已有进展保留。':'本次开发已停止，已有进展保留；详细原因见高级开发记录。';this.history(t,'stopped',String((e as Error).message).slice(0,1500));await this.persist();}
  }
- async wait(id:string){await this.runs.get(id)?.promise;return this.get(id);}
+ async wait(id:string){await this.ready;await this.runs.get(id)?.promise;return this.get(id);}
  private async control<T>(id:string,operation:()=>Promise<T>){assert(!this.controls.has(id),'此任务正在处理另一项操作');this.controls.add(id);try{return await operation();}finally{this.controls.delete(id);}}
  async revise(id:string,request:string){return this.control(id,()=>this.reviseTask(id,request));}
  private async reviseTask(id:string,request:string){

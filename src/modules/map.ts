@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { assert, id, locationSchema, routeSchema, type SavePackage } from '../core/schema.js';
-import { addDynamicLocation, currentMap, seedKnownLocations } from '../core/map.js';
+import { addDynamicLocation, currentMap, localHierarchyTransition, routePath, seedKnownLocations } from '../core/map.js';
 import type { ActionContext, Module } from '../core/registry.js';
 
 /** Deterministic placeholder used only when a world enables the map capability without map data. */
@@ -24,19 +24,31 @@ export const mapModule: Module = {
   components: { location: { schema: z.strictObject({ location_id: id }), project: d => d } },
   panels: [{ id: 'map', label: '地图', module: 'map', order: 30, mobile_group: 'primary', presentation_type: 'panel' }],
   actions: {
-    MOVE: { ui: { label: '前往', visibility: 'contextual' }, parameters: z.strictObject({}), execute(c) {
+    MOVE: { ui: { label: '前往', visibility: 'contextual' },
+      capability:{intent:'move',description:'沿当前世界已知路线前往唯一绑定的地点',target_role:'destination',parameter_roles:{},completion_kind:'location_at'},
+      parameters: z.strictObject({}), execute(c) {
       const location = c.store.component<{ location_id: string }>(c.action.actor_id, 'location');
-      const route = currentMap(c.save).routes.find(r => r.from === location.location_id && r.to === c.action.target_id);
-      assert(route, '没有可用的直达路线');
-      assert(route.conditions.every(x => c.save.gm_state.flags[x.flag] === x.equals), '这条路线目前不可通行');
-      c.emit({ type: 'on_location_leave', location_id: location.location_id });
-      c.advance(route.travel_minutes);
-      c.store.update(c.action.actor_id, 'location', { location_id: route.to });
-      delete c.store.entity(c.action.actor_id).components.scene_position;
-      c.emit({ type: 'on_entity_changed', entity_id: c.action.actor_id });
-      c.emit({ type: 'on_travel_complete', location_id: route.to });
-      c.emit({ type: 'on_location_enter', location_id: route.to });
-      c.facts.push(`移动至 ${currentMap(c.save).locations.find(l => l.id === route.to)!.name}，用时 ${route.travel_minutes} 分钟。`);
+      const map=currentMap(c.save),available=map.routes.filter(r=>r.conditions.every(x=>c.save.gm_state.flags[x.flag]===x.equals));
+      const path=routePath(available,location.location_id,c.action.target_id??'');
+      if(!path?.length&&localHierarchyTransition(c.save,location.location_id,c.action.target_id??'')){
+        const from=location.location_id,to=c.action.target_id!;
+        c.emit({type:'on_location_leave',location_id:from});c.advance(1);
+        c.store.update(c.action.actor_id,'location',{location_id:to});delete c.store.entity(c.action.actor_id).components.scene_position;
+        c.emit({type:'on_entity_changed',entity_id:c.action.actor_id});c.emit({type:'on_travel_complete',location_id:to});c.emit({type:'on_location_enter',location_id:to});
+        c.facts.push(`进入 ${map.locations.find(entry=>entry.id===to)!.name}，用时 1 分钟。`);
+        return;
+      }
+      assert(path?.length, '当前没有通往这个地点的可用路线');
+      for(const route of path){
+        c.emit({ type: 'on_location_leave', location_id: route.from });
+        c.advance(route.travel_minutes);
+        c.store.update(c.action.actor_id, 'location', { location_id: route.to });
+        delete c.store.entity(c.action.actor_id).components.scene_position;
+        c.emit({ type: 'on_entity_changed', entity_id: c.action.actor_id });
+        c.emit({ type: 'on_travel_complete', location_id: route.to });
+        c.emit({ type: 'on_location_enter', location_id: route.to });
+        c.facts.push(`移动至 ${map.locations.find(l=>l.id===route.to)!.name}，用时 ${route.travel_minutes} 分钟。`);
+      }
     } },
     REGISTER_LOCATION: { ui: { label: '登记新地点', visibility: 'internal' }, parameters: z.strictObject({ location: locationSchema, routes: z.array(routeSchema).max(8).default([]) }), execute(c) {
       addDynamicLocation(c.save, c.action.parameters.location, (c.action.parameters.routes ?? []) as unknown[], true);

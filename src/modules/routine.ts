@@ -63,6 +63,7 @@ export const routineModule: Module = {
       ui:{label:'清除生活计划',visibility:'panel'},parameters:z.strictObject({}),execute(c){const current=readRoutine(c);assert(current,'尚未设置生活模式');const {plan,...kept}=current;writeRoutine(c,{...kept,pattern:'未设置',label:'未设置',supplements:[],active:false,enabled:false,status:'saved',interrupted:false,last_interrupt:null,armed_reason:null});c.facts.push('生活计划已清除，既有生活历史仍保留。');},
     },
     START_ROUTINE: {
+      resolution_mode:'workflow',
       ui: { label: '启用生活模式', visibility: 'text' },
       parameters: z.strictObject({
         label: z.string().min(1).max(120), pattern: z.string().min(1).max(3000), activities: z.array(id).max(20).default([]),
@@ -121,6 +122,7 @@ export const routineModule: Module = {
       },
     },
     CONTINUE_ROUTINE: {
+      resolution_mode:'workflow',
       ui: { label: '继续生活模式', visibility: 'text' },
       parameters: z.strictObject({ max_minutes: integer.min(1).max(43200).default(43200) }),
       execute(c) { const r = readRoutine(c); assert(r && r.label !== '未设置', '请先设置生活模式'); writeRoutine(c, {...r, active:true, enabled:true, status:'armed', interrupted:false, last_interrupt:null, armed_reason:null}); },

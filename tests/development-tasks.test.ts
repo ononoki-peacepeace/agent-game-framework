@@ -58,6 +58,17 @@ it('approved core work uses the configured executor but cannot become installed 
  expect(finished).toMatchObject({status:'paused',core_execution:{status:'candidate_ready',tests_passed:true,build_passed:true,installed:false,registered:false}});
  expect(finished.message).toContain('尚未安装、注册');
 });
+it('restarts an interrupted approved core task automatically without installing a candidate',async()=>{
+ const waiting=new Promise<never>(()=>{});
+ const first:CodingAgentExecutor={availability:async()=>({available:true,provider:'fixture',reason:null}),execute:async()=>waiting};
+ const f=await setup(r=>(r.schema as any).properties.normalized_requirements?{...plan,complexity:'HIGH',milestones:[...plan.milestones,{id:'integration',title:'验证接入',kind:'integration',acceptance:['安全接入']}],capability_gaps:[gap]}:undefined,first);
+ const task=await start(f,'实现一个通用输入能力');await f.tasks.wait(task.id);await f.tasks.approveCore(task.id,true);
+ expect((await f.tasks.get(task.id)).status).toBe('developing');
+ const execute=vi.fn(async(request:any)=>({status:'candidate_ready' as const,provider:'fixture',workspace:request.workspace,base_revision:'base',changed_files:['src/example.ts'],commands:[],patch_path:join(request.workspace,'candidate.patch'),tests_passed:true,build_passed:true,acceptance_passed:true,installed:false,registered:false,restart_required:true,message:'candidate ready'}));
+ const restarted=new DevelopmentTasks(f.builder,()=>f.adapter,{availability:async()=>({available:true,provider:'fixture',reason:null}),execute});
+ const final=await restarted.wait(task.id);
+ expect(execute).toHaveBeenCalledOnce();expect(final.status).toBe('paused');expect(final.core_execution?.status).toBe('candidate_ready');expect(final.core_execution?.installed).toBe(false);
+},20000);
 it('underspecified request asks rules instead of generating a reference game',async()=>{
  const f=await setup(r=>(r.schema as any).properties.normalized_requirements?{...plan,clarification:'请说明一局的规则和结束条件。'}:undefined);
  const t=await start(f,'加入赌博小游戏'),out=await f.tasks.wait(t.id);expect(out.status).toBe('waiting_for_user');expect(out.candidate_job_id).toBeNull();expect(f.calls).toHaveLength(1);

@@ -52,7 +52,8 @@ describe('System Agent: partial understanding, workflow routing and precise clar
     expect(r.directive).toBeUndefined();
     expect(message).toContain('我理解的是');
     expect(message).toContain('涉及人物关系数据');
-    expect(message).toContain('还缺一项：展示位置');
+    expect(message).toContain(r.understanding?.clarification?.question);
+    expect(message).toContain('展示位置');
     expect(message).toContain('你可以直接回复');
     expect(message).toContain('只放人物页');
     expect(message).not.toContain('UNKNOWN');
@@ -225,20 +226,15 @@ describe('Character-panel speech and honest System expression', () => {
     } finally { configureDefaultLogger(new StructuredLogger({ directory: null })); }
   });
 
-  it('G2. a real narration failure falls back to prose, never to the tool summary', async () => {
+  it('G2. an unclassified provider failure leaves the whole turn uncommitted', async () => {
     const logger = configureDefaultLogger(new StructuredLogger({ directory: null, level: 'debug' }));
     const f = await fixture();
     const adapter = { name: 'broken-narrator', generate: async () => { throw Error('provider unavailable'); } };
     const service = new GameService(f.store, new AIRuntime(adapter as never), f.save.definition);
     try {
-      const view = await service.turn({ game_id: f.save.game_id, expected_revision: f.save.state_revision, request_id: randomUUID(), action: { type: 'TALK', target_id: f.npcId, parameters: { topic: '怎么，这就跑了？灰溜溜的' } } });
-      const narrative = String(view.last_turn?.narrative ?? '');
-      expect(narrative).not.toContain('交谈，话题：');
-      expect(narrative).not.toContain('affinity');
-      expect(narrative).toContain('伊芙琳');
-      expect(logger.entries({ event: 'narration.failed' })).toHaveLength(1);
-      // the deterministic action still committed short time
-      expect((await service.current()).runtime.time).not.toEqual(f.save.runtime.time);
+      await expect(service.turn({ game_id: f.save.game_id, expected_revision: f.save.state_revision, request_id: randomUUID(), action: { type: 'TALK', target_id: f.npcId, parameters: { topic: '怎么，这就跑了？灰溜溜的' } } })).rejects.toThrow('尚未结算');
+      expect(logger.entries({ event: 'narration.aborted_before_commit' })).toHaveLength(1);
+      expect(await service.current()).toEqual(f.save);
     } finally { configureDefaultLogger(new StructuredLogger({ directory: null })); }
   });
 

@@ -35,7 +35,9 @@ export const commerceModule: Module = {
     shop: { schema: z.strictObject({ currency_id: id, stock: dictionary(integer), prices: dictionary(z.strictObject({ buy: integer.min(1), sell: integer })) }), project: d => d },
   },
   panels: [{ id: 'commerce', label: '商店', module: 'commerce', order: 70, mobile_group: 'secondary', presentation_type: 'panel' }],
-  actions: Object.fromEntries(['BUY', 'SELL'].map(type => [type, { ui: { label: type === 'BUY' ? '买入' : '卖出', visibility: 'panel', target_component: 'shop' }, parameters: z.strictObject({ item_id: id, quantity: integer.min(1).max(100) }), execute: (c: ActionContext) => trade(c, type === 'BUY') }])),
+  actions: Object.fromEntries(['BUY', 'SELL'].map(type => [type, { ui: { label: type === 'BUY' ? '买入' : '卖出', visibility: 'panel', target_component: 'shop' },
+    ...(type==='BUY'?{capability:{intent:'purchase',description:'在当前地点从有库存的商店购买指定商品',target_role:'shop',parameter_roles:{item_id:'item',quantity:'quantity'},completion_kind:'purchase'}}:{}),
+    parameters: z.strictObject({ item_id: id, quantity: integer.min(1).max(100) }), execute: (c: ActionContext) => trade(c, type === 'BUY') }])),
   validate(save) {
     for (const e of save.entities) {
       const wallet = e.components.wallet as Wallet | undefined;

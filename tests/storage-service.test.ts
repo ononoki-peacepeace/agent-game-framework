@@ -30,13 +30,14 @@ it('checkpoint/load resets generation; bad import does not overwrite', async () 
   const restored = await service.load(); expect(restored.time.minute).toBe(540); expect(restored.game_id).not.toBe(start.game_id);
   const before = await service.current(); await expect(service.import({ malformed:true })).rejects.toThrow(); expect(await service.current()).toEqual(before);
 });
-it('serializes mutations while AI runs and degrades prose safely', async () => {
+it('serializes mutations while AI runs and leaves an incomplete narration uncommitted', async () => {
   let release!: () => void;
   const adapter = { name:'slow',generate:async () => { await new Promise<void>(resolve => { release=resolve; }); throw new Error('offline'); } };
   const service = new GameService(new MemoryStore(),new AIRuntime(adapter),demo), v=await service.newGame();
+  const before=await service.current();
   const action = service.turn({request_id:randomUUID(),game_id:v.game_id,expected_revision:0,action:{type:'WAIT',parameters:{minutes:10}}});
   await new Promise(resolve => setTimeout(resolve,10)); await expect(service.newGame()).rejects.toThrow('正在执行'); release();
-  const out=await action; expect(out.revision).toBe(1); expect(out.notices.length).toBe(1);
+  await expect(action).rejects.toThrow('尚未结算');expect(await service.current()).toEqual(before);
 });
 it('failed disk commit leaves authoritative state unchanged', async () => {
   const store = new MemoryStore(), service = new GameService(store,new AIRuntime(new MockAIAdapter()),demo), v=await service.newGame();

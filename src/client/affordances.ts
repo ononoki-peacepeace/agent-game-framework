@@ -1,7 +1,7 @@
 import type {ContextActionSuggestion,PublicActionMeta} from '../shared/contracts.js';
 export type AffordanceFamilyId='communicate'|'observe'|'approach'|'interact'|'help'|'use_item'|'follow'|'steal'|'intercept'|'attack';
 export interface AffordanceItem {key:string;label:string;kind:'canonical'|'suggestion';action?:PublicActionMeta;suggestion?:ContextActionSuggestion}
-export interface AffordanceFamily {id:AffordanceFamilyId;label:string;items:AffordanceItem[]}
+export interface AffordanceFamily {id:string;label:string;items:AffordanceItem[]}
 const labels:Record<AffordanceFamilyId,string>={communicate:'交流',observe:'观察',approach:'接近',interact:'互动',help:'帮助',use_item:'使用物品',follow:'跟踪',steal:'偷窃',intercept:'拦截',attack:'攻击'};
 const ordered=Object.keys(labels) as AffordanceFamilyId[];
 export function affordanceFamily(value:{type?:string;label?:string;intent?:string;family?:string}):AffordanceFamilyId{
@@ -18,11 +18,19 @@ export function affordanceFamily(value:{type?:string;label?:string;intent?:strin
  if(/talk|speak|social|chat|ask|交流|交谈|聊|问|招呼/.test(text))return 'communicate';
  return 'interact';
 }
-export function groupAffordances(actions:PublicActionMeta[],suggestions:ContextActionSuggestion[]):AffordanceFamily[]{
- const map=new Map<AffordanceFamilyId,AffordanceItem[]>();
- const add=(id:AffordanceFamilyId,item:AffordanceItem)=>map.set(id,[...(map.get(id)??[]),item]);
- for(const action of actions)add(affordanceFamily(action),{key:`action:${action.type}`,label:action.label,kind:'canonical',action});
- for(const [index,suggestion] of suggestions.entries())add(affordanceFamily(suggestion),{key:`suggestion:${index}:${suggestion.label}`,label:suggestion.label,kind:'suggestion',suggestion});
- return ordered.flatMap(id=>map.has(id)?[{id,label:labels[id],items:map.get(id)!}]:[]);
+export function groupAffordances(actions:PublicActionMeta[],suggestions:ContextActionSuggestion[],includeUnmatchedActions=false):AffordanceFamily[]{
+ const map=new Map<string,AffordanceFamily>();
+ const add=(id:string,label:string,item:AffordanceItem)=>{const group=map.get(id)??{id,label,items:[]};if(!group.items.some(existing=>existing.kind===item.kind&&existing.label===item.label&&existing.suggestion?.intent===item.suggestion?.intent))group.items.push(item);map.set(id,group);};
+ for(const [index,suggestion] of suggestions.entries()){
+  const category=suggestion.category?.trim();const id=category?`category:${category.normalize('NFKC').toLowerCase()}`:affordanceFamily(suggestion);
+  add(id,category??labels[affordanceFamily(suggestion)],{key:`suggestion:${index}:${suggestion.label}`,label:suggestion.label,kind:'suggestion',suggestion});
+ }
+ for(const action of actions){
+  const family=affordanceFamily(action);
+  const matching=[...map.values()].find(group=>group.items.some(item=>item.suggestion&&affordanceFamily(item.suggestion)===family));
+  if(matching)add(matching.id,matching.label,{key:`action:${action.type}`,label:action.label,kind:'canonical',action});
+  else if(includeUnmatchedActions)add(family,labels[family],{key:`action:${action.type}`,label:action.label,kind:'canonical',action});
+ }
+ return [...ordered.flatMap(id=>map.has(id)?[map.get(id)!]:[]),...[...map.values()].filter(group=>!ordered.includes(group.id as AffordanceFamilyId))];
 }
 

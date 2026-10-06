@@ -159,8 +159,9 @@ it('P1-1: recent salience is derived from canonical history and reaches the rout
   await f2.store.write(save2);
   const router=await routeContext(f2.service,'再揍她一拳','world_input');
   expect(JSON.stringify(router)).not.toMatch(/没有前文|没有 pending|interaction_context/);
-  expect(prompts.length).toBeGreaterThan(0);
-  expect(prompts.some(prompt=>prompt.includes('recent_scene')&&prompt.includes('伊芙琳'))).toBe(true);
+  expect(router).toMatchObject({destination:'WORLD_INTENT'});
+  expect(router.resolved_input).toContain('伊芙琳');
+  expect(prompts).toHaveLength(0);
 });
 
 it('P1-2: the System composer only ever holds what the player typed here',async()=>{

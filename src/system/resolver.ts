@@ -23,11 +23,14 @@ const featureWish = /(?:想|希望|需要|请)(?:加|增加|新增|开发|做)(?
 const stateMutation = /(?:改成|改为|设置为|换成|设成|重命名|改名)/;
 const mediaOutcome = /(?:生成|制作|画|绘制).{0,20}(?:图|头像|立绘)|(?:图|头像|立绘).{0,20}(?:生成|制作|画|绘制)/;
 const recurringOutcome = /(?:每周|每天|每日|每月|周[一二三四五六日天]).{0,30}(?:去|到|在|上课|开会|工作|活动)/;
+const selfNaming = /^(?:我叫|以后叫我|就叫我?|把(?:我|我的角色|玩家角色)(?:的)?名字(?:改成|改为|设为|设置为)|给玩家改名为)\s*([^，,。；;！!\s]{0,120})/;
+const entityCreate = /^(?:新增|添加|创建|加入)(?:一个|一位)?\s*(?:NPC|npc|人物|角色)\s*[：:「“]?([^，,。；;！!」”]{1,120})/;
+const entityDelete = /^(?:删除|移除)(?:人物|角色|NPC|npc)?\s*[「“]?([^，,。；;！!」”]{1,120})/;
 
 /** This gate only identifies outcome-shaped requests; it never selects or executes a capability. */
 export function isUniversalGoalCandidate(text: string) {
   if (featureWish.test(text)) return false;
-  return stateMutation.test(text) || mediaOutcome.test(text) || recurringOutcome.test(text) || /把她改一下|把他改一下/.test(text);
+  return stateMutation.test(text) || selfNaming.test(text.trim()) || entityCreate.test(text.trim()) || entityDelete.test(text.trim()) || mediaOutcome.test(text) || recurringOutcome.test(text) || /把她改一下|把他改一下/.test(text);
 }
 
 const clean = (value: string) => value.trim().replace(/[。！？!?]+$/, '').replace(/^[“"'「]|[”"'」]$/g, '').trim();
@@ -39,10 +42,16 @@ const baseGoal = (text: string, overrides: Partial<GoalSpec>): GoalSpec => ({
 
 /** Offline extraction still produces a provider-neutral goal. Composition remains a separate step. */
 export function deterministicGoal(text: string): GoalSpec | null {
+  const directSelf=selfNaming.exec(text.trim());
+  if(directSelf){const name=clean(directSelf[1]);return baseGoal(text,{targets:[{kind:'entity',reference:'我',entity_id:null}],desired_state:name?[{path:'identity.name',value:name,target_ref:'target'}]:[],desired_outputs:[{kind:'state_change',description:'玩家角色名称发生 canonical 变更'}],...(name?{}:{ambiguity:{question:'你希望使用哪个名字？也可以由我帮你选。'}})});}
+  const created=entityCreate.exec(text.trim());
+  if(created)return baseGoal(text,{targets:[{kind:'entity',reference:clean(created[1]),entity_id:null}],desired_outputs:[{kind:'entity_create',description:'在当前世界创建人物'}]});
+  const deleted=entityDelete.exec(text.trim());
+  if(deleted)return baseGoal(text,{targets:[{kind:'entity',reference:clean(deleted[1]).replace(/并清除.*$/,'').trim(),entity_id:null}],desired_outputs:[{kind:'entity_delete',description:'删除当前世界人物并清理可安全清理的引用'}]});
   const rename = text.match(/(?:把|将)?(.+?)(?:的)?(?:名字|姓名)(?:改成|改为|设置为|换成|设成)\s*(.+)$/)
     ?? text.match(/(?:把|将)?(.+?)(?:改名为|重命名为)\s*(.+)$/);
   if (rename) {
-    const reference = clean(rename[1]).replace(/^把|^将/, '') || '我', name = clean(rename[2]);
+    const reference = clean(rename[1]).replace(/^把|^将/, '') || '我', name = clean(rename[2].split(/[，,。；;！!]/)[0]);
     if (!name) return baseGoal(text, { ambiguity: { question: '要把名字改成什么？' } });
     return baseGoal(text, {
       targets: [{ kind: 'entity', reference, entity_id: null }],
@@ -73,6 +82,8 @@ export function deterministicGoal(text: string): GoalSpec | null {
 /** Compose by desired outcomes/state paths. Text wording is never used to choose a capability. */
 export function composeCapabilityPlan(goal: GoalSpec): CapabilityPlan | null {
   if (goal.ambiguity) return { goal, steps: [{ step_id: 'resolve_target', capability_id: 'entity.lookup', input: { reference: goal.targets[0]?.reference ?? '' }, depends_on: [] }] };
+  if(goal.desired_outputs.some(item=>item.kind==='entity_create'))return {goal,steps:[{step_id:'create_entity',capability_id:'entity.create',input:{name:goal.targets[0]?.reference??''},depends_on:[]}]};
+  if(goal.desired_outputs.some(item=>item.kind==='entity_delete'))return {goal,steps:[{step_id:'resolve_target',capability_id:'entity.lookup',input:{reference:goal.targets[0]?.reference??''},depends_on:[]},{step_id:'delete_entity',capability_id:'entity.delete',input:{},depends_on:['resolve_target']}]};
   const identityName = goal.desired_state.find(item => item.path === 'identity.name');
   if (identityName) return { goal, steps: [
     { step_id: 'resolve_target', capability_id: 'entity.lookup', input: { reference: goal.targets[0]?.reference ?? '' }, depends_on: [] },
@@ -83,6 +94,8 @@ export function composeCapabilityPlan(goal: GoalSpec): CapabilityPlan | null {
     {step_id:'resolve_target',capability_id:'entity.lookup',input:{reference:goal.targets[0]?.reference??''},depends_on:[]},
     {step_id:'set_balance',capability_id:'entity.wallet.balance.set',input:{amount:walletBalance.value},depends_on:['resolve_target']},
   ]};
+  const entityField=goal.desired_state.find(item=>['identity.description','character.role'].includes(item.path));
+  if(entityField)return {goal,steps:[{step_id:'resolve_target',capability_id:'entity.lookup',input:{reference:goal.targets[0]?.reference??''},depends_on:[]},{step_id:'update_entity',capability_id:'entity.update',input:{path:entityField.path,value:entityField.value},depends_on:['resolve_target']}]};
   if (goal.desired_outputs.some(item => item.kind === 'media_asset') && goal.desired_outputs.some(item => item.kind === 'avatar_assignment')) return { goal, steps: [
     { step_id: 'resolve_target', capability_id: 'entity.lookup', input: { reference: goal.targets[0]?.reference ?? '' }, depends_on: [] },
     { step_id: 'generate_image', capability_id: 'media.image.generate', input: { kind: 'avatar', description: goal.objective }, depends_on: ['resolve_target'] },
@@ -109,6 +122,15 @@ function targetEntity(view: PublicView, plan: CapabilityPlan): { entity: Entity 
   return { entity: resolved.confident ? resolved.matches[0] ?? null : null, candidates: resolved.matches };
 }
 
+/** Existing story commitments are never rewritten by an entity deletion. Return only a boolean, not secret text. */
+function protectedEntityReference(save:Awaited<ReturnType<GameService['current']>>,entity:Entity){
+  const name=String(entity.components.identity?.name??'');
+  if(save.definition.entities.some(item=>item.id===entity.id))return true;
+  const otherComponents=save.entities.filter(item=>item.id!==entity.id).map(item=>Object.fromEntries(Object.entries(item.components).filter(([key])=>key!=='relationships')));
+  const protectedState=[save.definition,save.gm_state,save.narrative_state,save.narrative_history,save.future_intents,save.routine_meta,save.last_turn,save.interaction_context,save.extensions,save.action_facts,otherComponents];
+  return protectedState.some(part=>{const serialized=JSON.stringify(part??null);return serialized.includes(`"${entity.id}"`)||Boolean(name&&serialized.includes(name));});
+}
+
 /** Preflight completes before any side effect. Canonical writes then share one receipt/revision transaction. */
 export async function executeUniversalPlan(service: GameService, plan: CapabilityPlan, envelope: UniversalRequestEnvelope = {}, options: ExecuteOptions = {}): Promise<UniversalResolution> {
   const save = await service.current(), view = service.project(save);
@@ -118,7 +140,8 @@ export async function executeUniversalPlan(service: GameService, plan: Capabilit
     ? { handled: true, kind: 'CAPABILITY_GAP', goal: plan.goal, plan, missing: validation.missing, message: '当前能力还不能完整完成这个目标。可以先补齐缺少的能力，再由你明确决定是否创建开发任务。' }
     : { handled: true, kind: 'EXECUTION_FAILURE', goal: plan.goal, plan, message: '这次计划没有通过执行前校验，世界状态没有改变。请重新描述目标后再试。', retryable: false };
   const resolved = targetEntity(view, plan);
-  if (plan.goal.targets.some(item => item.kind === 'entity') && !resolved.entity) {
+  const creating=validation.ordered.some(step=>step.capability_id==='entity.create');
+  if (!creating && plan.goal.targets.some(item => item.kind === 'entity') && !resolved.entity) {
     return { handled: true, kind: 'USER_AMBIGUITY', goal: plan.goal, question: resolved.candidates.length ? '有多个人物符合这个称呼，请指定是哪一位。' : '我还不能确定要修改哪位人物，请说出人物名字。', candidates: resolved.candidates.map(entityLabel) };
   }
   const mediaPlan=validation.ordered.some(step=>step.capability_id==='media.image.generate')&&validation.ordered.some(step=>step.capability_id==='character.avatar.assign');
@@ -129,9 +152,41 @@ export async function executeUniversalPlan(service: GameService, plan: Capabilit
     }catch(error){const reason=error instanceof Error?error.message:String(error);return {handled:true,kind:'EXECUTION_FAILURE',goal:plan.goal,plan,message:'图片生成或头像设置没有完成，头像未修改。',retryable:/timeout|timed out|fetch|network/i.test(reason),reason};}
   }
   try {
-    for (const step of validation.ordered) if (!['entity.lookup', 'entity.query', 'entity.identity.rename', 'entity.wallet.balance.set'].includes(step.capability_id)) {
+    for (const step of validation.ordered) if (!['entity.lookup', 'entity.query', 'entity.create', 'entity.update', 'entity.delete', 'entity.identity.rename', 'entity.wallet.balance.set'].includes(step.capability_id)) {
       if (!options.executeExternal) throw new Error('capability executor unavailable');
       await options.executeExternal(step);
+    }
+    const mutation=validation.ordered.find(step=>['entity.create','entity.update','entity.delete'].includes(step.capability_id));
+    if(mutation){
+      const request={game_id:save.game_id,expected_revision:envelope.expected_revision??save.state_revision,request_id:envelope.request_id??randomUUID()};
+      if(mutation.capability_id==='entity.create'){
+        const name=String(mutation.input.name??plan.goal.targets[0]?.reference??'').trim();
+        if(!name||name.length>120)return {handled:true,kind:'USER_AMBIGUITY',goal:plan.goal,question:'请说出要新增人物的名字。',candidates:[]};
+        if(view.entities.some(entity=>entityLabel(entity)===name))return {handled:true,kind:'EXECUTION_FAILURE',goal:plan.goal,plan,message:'这个名字已经属于现有人物；请先确认是否要修改现有人物。',retryable:false};
+        const entityId=`npc_${randomUUID().replaceAll('-','').slice(0,24)}`;
+        const next=await service.agentTransaction(request,{kind:'entity.create',name},draft=>{
+          if(!draft.definition.enabled_modules.includes('characters'))throw Error('当前世界没有人物能力');
+          if(draft.entities.length>=500)throw Error('人物数量已达到世界上限');
+          const player=draft.entities.find(item=>item.id===draft.player_state.entity_id)!;
+          draft.entities.push({id:entityId,type:'character',components:{identity:{name,description:'',avatar_id:null,gender:null,age:null},character:{role:'人物',traits:[]},...(player.components.location?{location:{location_id:String(player.components.location.location_id)}}:{})}});
+        });
+        return {handled:true,kind:'EXECUTED',goal:plan.goal,plan,message:`已在当前世界新增人物「${name}」。`,view:next};
+      }
+      if(mutation.capability_id==='entity.delete'&&resolved.entity){
+        if(resolved.entity.id===view.player_id||protectedEntityReference(save,resolved.entity))return {handled:true,kind:'EXECUTION_FAILURE',goal:plan.goal,plan,message:'这位人物关联已有世界设定或剧情记录，不能安全直接删除。你可以取消删除，或另行决定如何处理其后续出场；既有真相不会被改写。',retryable:false};
+        const id=resolved.entity.id;
+        const next=await service.agentTransaction(request,{kind:'entity.delete',id},draft=>{
+          draft.entities=draft.entities.filter(item=>item.id!==id);
+          for(const entity of draft.entities){const relations=entity.components.relationships as {entries?:Record<string,unknown>}|undefined;if(relations?.entries)delete relations.entries[id];}
+        });
+        return {handled:true,kind:'EXECUTED',goal:plan.goal,plan,message:`已删除人物「${entityLabel(resolved.entity)}」及其关系记录。`,view:next};
+      }
+      if(mutation.capability_id==='entity.update'&&resolved.entity){
+        const path=String(mutation.input.path??''),value=String(mutation.input.value??'').trim();
+        if(!['identity.description','character.role'].includes(path)||!value||value.length>1000)return {handled:true,kind:'EXECUTION_FAILURE',goal:plan.goal,plan,message:'这项人物资料尚不能安全修改，世界状态没有改变。',retryable:false};
+        const next=await service.agentTransaction(request,{kind:'entity.update',id:resolved.entity.id,path,value},draft=>{const entity=draft.entities.find(item=>item.id===resolved.entity!.id)!;const [component,key]=path.split('.');if(!entity.components[component])throw Error('人物缺少所需资料');entity.components[component][key]=value;});
+        return {handled:true,kind:'EXECUTED',goal:plan.goal,plan,message:`已更新「${entityLabel(resolved.entity)}」的人物资料。`,view:next};
+      }
     }
     const rename = validation.ordered.find(step => step.capability_id === 'entity.identity.rename');
     if (rename && resolved.entity) {
@@ -175,15 +230,17 @@ export async function executeUniversalPlan(service: GameService, plan: Capabilit
 export async function resolveUniversalGoal(service: GameService, text: string, envelope: UniversalRequestEnvelope = {}, options: { external_effects_confirmed?: boolean } = {}): Promise<UniversalResolution> {
   if (!isUniversalGoalCandidate(text)) return { handled: false };
   const save = await service.current(), view = service.project(save);
-  const planned = await service.ai.systemAgent(capabilityPlanSchema, save.definition.prompt_profile, {
+  const explicit=deterministicGoal(text);
+  const planned = explicit?null:await service.ai.systemAgent(capabilityPlanSchema, save.definition.prompt_profile, {
     instruction: '把请求表示为 provider-neutral GoalSpec，并从 capability_catalog 组合最小有向无环计划。不要发明 capability id。目标不明确时填写 goal.ambiguity；缺能力也保留完整计划，由程序判断 availability。功能开发愿望不属于这里。名字值只是字符串，不推断现实身份。',
     player_request: text,
     public_entities: view.entities.map(entity => ({ id: entity.id, name: entity.components.identity?.name ?? null, type: entity.type, role: entity.components.character?.role ?? null })),
     public_locations: view.locations.map(location => ({ id: location.id, name: location.name })),
     capability_catalog: service.systemCapabilities.digest(view.capabilities),
   }, save);
-  const goal = planned?.goal ?? deterministicGoal(text);
-  const selected = planned ?? (goal ? composeCapabilityPlan(goal) : null);
+  // A syntactically explicit content mutation retains its validated route even if model planning
+  // interprets nearby negation ("不要转开发任务") as a request to develop software.
+  const selected = explicit ? composeCapabilityPlan(explicit) : planned;
   if (!selected) return { handled: false };
   const preflight=validateCapabilityPlan(selected,view,service.systemCapabilities);
   if(preflight.ok&&selected.steps.some(step=>step.capability_id==='media.image.generate')&&!options.external_effects_confirmed)return {handled:false};

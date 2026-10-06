@@ -42,10 +42,10 @@ export class DeepSeekAdapter implements AIAdapter {
     this.apiKey = options.apiKey ?? process.env.DEEPSEEK_API_KEY ?? '';
     this.baseUrl = (options.baseUrl ?? process.env.DEEPSEEK_BASE_URL ?? 'https://api.deepseek.com').replace(/\/+$/, '');
     this.model = options.model ?? process.env.DEEPSEEK_MODEL ?? 'deepseek-flash';
-    this.maxOutputTokens = options.maxOutputTokens ?? Number(process.env.DEEPSEEK_MAX_OUTPUT_TOKENS ?? 12000);
+    this.maxOutputTokens = options.maxOutputTokens ?? Number(process.env.DEEPSEEK_MAX_OUTPUT_TOKENS ?? 24000);
     this.fetchImpl = options.fetchImpl ?? fetch;
   }
-  providerInfo() { return { provider: this.name, model: this.model }; }
+  providerInfo() { return { provider: this.name, model: this.model, maxOutputTokens: this.maxOutputTokens }; }
   /** A transport failure is a provider failure like any other: readable to the player, detailed in the log. */
   private async request(url: string, init: RequestInit) {
     try { return await this.fetchImpl(url, init); }
@@ -59,7 +59,7 @@ export class DeepSeekAdapter implements AIAdapter {
     if (!this.apiKey) throw new Error('DEEPSEEK_API_KEY 未设置');
     if (!Number.isInteger(this.maxOutputTokens) || this.maxOutputTokens < 1) throw new Error('DEEPSEEK_MAX_OUTPUT_TOKENS 必须是正整数');
     // Per-role budgets let the routine compiler/GM ask for more room than a short narrator line.
-    const budget = request.maxOutputTokens ?? this.maxOutputTokens;
+    const budget = Math.min(request.maxOutputTokens ?? this.maxOutputTokens, this.maxOutputTokens);
 
     const timeout = AbortSignal.timeout(180000);
     const signal = request.signal ? AbortSignal.any([request.signal, timeout]) : timeout;
@@ -118,6 +118,6 @@ export class DeepSeekAdapter implements AIAdapter {
     const usage = typeof payload.usage?.input_tokens === 'number' && typeof payload.usage?.output_tokens === 'number'
       ? { input_tokens: payload.usage.input_tokens, output_tokens: payload.usage.output_tokens } : undefined;
     try { return { data: JSON.parse(text), ...(usage?{usage}:{}) }; }
-    catch { throw providerError('invalid_json', text.slice(0, 300), 'DeepSeek 结构化输出不是合法 JSON'); }
+    catch { throw providerError('invalid_json', `chars=${text.length}`, 'DeepSeek 结构化输出不是合法 JSON'); }
   }
 }

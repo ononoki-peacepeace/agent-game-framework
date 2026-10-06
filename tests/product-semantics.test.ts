@@ -12,7 +12,7 @@ it('saving and clearing a plan preserve time, foreground choices and event RNG; 
  const {service,store,calls}=await sparseSetup();const before=await service.current();before.last_turn={narrative:'请选路线',speaker:null,dialogue:null,choices:['左','右'],context_actions:[]};await store.write(before);
  await service.turn(await envelope(service,{type:'SAVE_ROUTINE',parameters:{label:'日常',pattern:'每天正常上课'}}));let after=await service.current();
  expect(after.runtime.time).toEqual(before.runtime.time);expect(after.last_turn).toEqual(before.last_turn);expect(after.event_state).toEqual(before.event_state);expect(calls).toHaveLength(0);
- expect((await service.handoffBlocker())?.reason).toContain('选择');await service.turn(await envelope(service,{type:'CLEAR_ROUTINE',parameters:{}}));expect((await service.current()).runtime.time).toEqual(before.runtime.time);
+ expect(await service.handoffBlocker()).toBeNull();await service.turn(await envelope(service,{type:'CLEAR_ROUTINE',parameters:{}}));expect((await service.current()).runtime.time).toEqual(before.runtime.time);
 });
 it('empty plan hides stale failure; task cards preserve morning/half-day semantics without completion controls',async()=>{
  const {service}=await sparseSetup(),s=await service.current();s.routine_meta!.scheduled_tasks=[{id:'visit',label:'志愿安排',at:1920,window:'morning',duration_label:'约半天',status:'accepted',resolved:false,source:'test'}];

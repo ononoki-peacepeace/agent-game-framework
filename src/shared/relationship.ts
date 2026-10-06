@@ -3,7 +3,7 @@ import type { Entity, PublicView } from './contracts.js';
 /**
  * Single canonical relationship source.
  * The structured relationship graph wins. When a legacy save only recorded the relationship inside the
- * character profile (role / known state), that same profile text is used for BOTH the character UI and
+ * character profile (explicit relationship), that same profile text is used for BOTH the character UI and
  * the Game Agent, so the two can never contradict each other.
  */
 export interface RelationshipSummary { text: string; source: 'graph' | 'profile' | 'unknown'; tones: { key: string; value: number }[] }
@@ -18,22 +18,20 @@ export function relationshipTone(value: number) {
 export function relationshipCondition(view:PublicView,target:Entity):boolean|null{
  const summary=relationshipSummary(view,target);
  if(summary.source==='graph'){const familiarity=summary.tones.find(t=>t.key==='familiarity');return familiarity?familiarity.value>=35:null;}
- if(summary.source==='profile'){const role=profileRole(target);if(/不熟|陌生|刚认识|不算朋友/.test(role))return false;if(/朋友|熟悉|好友/.test(role))return true;}
+ if(summary.source==='profile'){const role=profileRelationship(target);if(/不熟|陌生|刚认识|不算朋友/.test(role))return false;if(/朋友|熟悉|好友/.test(role))return true;}
  return null;
 }
-function profileRole(entity: Entity) {
-  const role = String(entity.components.character?.role ?? '').trim();
-  if (role && !/^(player|导入角色卡人物|新认识的人物)$/i.test(role)) return role;
+function profileRelationship(entity: Entity) {
   const raw = String(entity.components.identity?.description ?? '').trim();
-  if (!raw.startsWith('{')) return '';
-  try {
+  if (raw.startsWith('{')) try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
-    for (const key of ['current_relationship', 'relationship', 'role']) {
+    for (const key of ['current_relationship', 'relationship']) {
       const value = parsed[key];
       if (typeof value === 'string' && value.trim()) return value.trim();
     }
   } catch { /* plain prose */ }
-  return '';
+  const role = String(entity.components.character?.role ?? '').trim();
+  return /朋友|好友|同学|同事|家人|亲人|伴侣|恋人|邻居|熟人|陌生人|刚认识|不熟/.test(role) ? role : '';
 }
 export function relationshipSummary(view: PublicView, target: Entity): RelationshipSummary {
   const player = view.entities.find(entity => entity.id === view.player_id);
@@ -42,12 +40,12 @@ export function relationshipSummary(view: PublicView, target: Entity): Relations
   const tones = relation ? Object.entries(relation).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])) : [];
   if (tones.length) {
     const toneText = tones.slice(0, 3).map(([key, value]) => `${labels[key] ?? '关系指标'}${relationshipTone(value)}`).join('、');
-    const role = profileRole(target);
+    const role = profileRelationship(target);
     return { text: role ? `你和${label(target)}是${role}；${toneText}。` : `你和${label(target)}的关系：${toneText}。`, source: 'graph', tones: tones.map(([key, value]) => ({ key, value })) };
   }
-  const role = profileRole(target);
+  const role = profileRelationship(target);
   if (role) return { text: `你和${label(target)}目前是${role}（这一层关系记录在人物资料里，还没有形成可量化的关系数值）。`, source: 'profile', tones: [] };
-  return { text: `你和${label(target)}目前还没有形成可记录的关系。`, source: 'unknown', tones: [] };
+  return { text: `你和${label(target)}的关系暂无记录。`, source: 'unknown', tones: [] };
 }
 export function label(entity: Entity) {
   return String(entity.components.identity?.name ?? entity.id);
@@ -56,6 +54,6 @@ export function label(entity: Entity) {
 export function relationshipBadge(view: PublicView, target: Entity) {
   const summary = relationshipSummary(view, target);
   if (summary.source === 'graph' && summary.tones.length) return summary.tones.slice(0, 2).map(({ key, value }) => `${labels[key] ?? '关系指标'}${relationshipTone(value)}`).join(' · ');
-  if (summary.source === 'profile') return profileRole(target);
+  if (summary.source === 'profile') return profileRelationship(target);
   return '';
 }

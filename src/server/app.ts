@@ -1,12 +1,13 @@
 import {displayDiagnostic,displayText} from '../shared/display.js';
 import {getLogger,isLogLevel} from '../observability/index.js';
+import {startTrace,runWithTrace} from '../observability/trace.js';
 import {bindDevelopmentTask,routingClarification} from '../system/session.js';
 import {developmentProjection} from '../system/development-status.js';
 import {routeContext,readContextView} from '../system/context-router.js';
 import {agentResult} from '../agent/contracts.js';
-import {handleSystemAction,handleSystemInput} from '../system/agent.js';
+import {handleSystemAction,handleSystemInput,isCharacterPersonaInput} from '../system/agent.js';
 import {planMeta} from '../system/router.js';
-import {handleAgentInput} from '../agent/executor.js';
+import {handleAgentInput,handleChoiceInput,isActiveGoalControlInput} from '../agent/executor.js';
 import {planGameRequest} from '../agent/game.js';
 import {isRefinementOf} from '../system/refinement.js';
 
@@ -28,6 +29,7 @@ import {CoreCandidateInstaller} from '../development/core-installer.js';
 import {ImageAssetRuntime,type ImageGenerationProvider} from '../media/image.js';
 import {executeUniversalPlan} from '../system/resolver.js';
 import {storyCommand} from '../narrative/runtime.js';
+import {sceneAffordances} from '../agent/scene-affordances.js';
 import {capabilityRegistry} from '../system/capabilities.js';
 import express from 'express';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -38,6 +40,7 @@ import { GameError, assert, id, profileSchema, safeParse, type WorldCreationProv
 import { providerConfigSchema, type AIProviderManager } from '../ai/providers.js';
 import { z } from 'zod';
 import {roleplayConfigSchema} from '../narrative/schema.js';
+import {ProviderError} from '../ai/failures.js';
 import {suggestLifeHorizon} from '../narrative/policy.js';
 import type { GameService } from './service.js';
 
@@ -51,12 +54,16 @@ const STARTED_AT = new Date().toISOString();
  * detailed cause stays in the local log.
  */
 export function playerFacingError(error: unknown, malformed = false) {
+  const detail=error instanceof Error?error.message:String(error);
+  if(error instanceof ProviderError)return '模型服务这次没有完整返回，操作尚未完成。请稍后重试。';
+  if(/ConditionNode|schema|validator|Framework validation|ResolutionReceipt|canonical delta|contract|条件必须由独立条件节点|框架校验|状态校验|依赖图存在循环|分支缺少条件|缺少条件/i.test(detail))
+    return '这次行动没有正常完成，世界状态没有改变，可以安全重试。';
   if (error instanceof GameError) return error.message;
   if (malformed) return 'JSON 无效或文件超过 2 MB';
   const internal = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
   const zod = error instanceof Error && error.name === 'ZodError';
   const leaks = zod || !/^[^[{]*$/.test(internal) || /invalid_type|too_big|too_small|unrecognized_keys|expected .*received|at .*\(.*:\d+:\d+\)|FREEFORM_ACTION/.test(internal);
-  if (leaks) return '这次操作没有通过框架校验，世界状态没有改变；详情见「日志」面板。';
+  if (leaks) return '这次操作没有正常完成，世界状态没有改变，可以安全重试；详情见「日志」面板。';
   return error instanceof Error && error.message ? error.message : '操作未完成';
 }
 
@@ -67,6 +74,8 @@ const unifiedInputSchema = z.strictObject({
   game_id: z.string().uuid(),
   expected_revision: z.number().int().min(0),
   input: z.string().min(1).max(12000),
+  choice_offer_id:z.string().uuid().optional(),
+  legacy_choice:z.boolean().optional(),
 });
 
 const generatedCharacterSchema = z.strictObject({
@@ -437,38 +446,55 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     res.json(await service.newGame(body.description, body.prompt_text, body.prompt_profile,provenance,body.roleplay_config));
   });
   app.post('/api/input', async (req, res) => {
+    const trace=startTrace({module:'agent',logger:service.logger,
+      request_id:typeof req.body?.request_id==='string'?req.body.request_id:null,
+      game_id:typeof req.body?.game_id==='string'?req.body.game_id:null});
+    return runWithTrace(trace,async()=>{
     const body = safeParse(unifiedInputSchema, req.body);
     const snapshot=await service.view();
     if(!snapshot||snapshot.game_id!==body.game_id)throw new GameError('游戏已切换，请刷新后操作',409);
     if(snapshot.revision!==body.expected_revision)throw new GameError('状态已更新，请重新规划',409);
-    const narrativeCommand=storyCommand(body.input);
-    if(narrativeCommand){const result=await service.narrativeCommand(body,narrativeCommand);res.json(agentResult('WORLD_ACTION',result.message,{presentation:'story',view:result.view}));return;}
+    if(body.choice_offer_id||body.legacy_choice){
+      res.json(await handleChoiceInput(service,body,body.choice_offer_id??null,body.legacy_choice===true));return;
+    }
+    if(['mock','fixture'].includes(service.ai.adapter.name)&&isActiveGoalControlInput(await service.current(),body.input)){
+      res.json(await handleAgentInput(service,body));return;
+    }
     const gate=await routeContext(service,body.input,'world_input');
+    trace.info('agent.context_route',{metadata:{source:'manual',destination:gate.destination,
+      has_speech_context:Boolean(gate.speech_target_id),has_resolved_input:Boolean(gate.resolved_input)}});
     if(gate.destination==='AMBIGUOUS'){res.json(agentResult('CLARIFICATION',gate.clarification!,{clarification:gate.clarification,view:await readContextView(service)}));return;}
+    if(gate.semantic?.kind==='read_only'){
+      res.json(agentResult('WORLD_QUERY',gate.semantic.answer!,{presentation:'assistant',view:await readContextView(service)}));return;
+    }
+    if(gate.semantic?.kind==='world_action'&&isActiveGoalControlInput(await service.current(),body.input)){
+      res.json(await handleAgentInput(service,body,undefined,null,false,gate.semantic));return;
+    }
+    const narrativeCommand=gate.semantic?null:storyCommand(body.input);
+    if(narrativeCommand){const result=await service.narrativeCommand(body,narrativeCommand);res.json(agentResult('WORLD_ACTION',result.message,{presentation:'story',view:result.view}));return;}
+    const worldBody={...body,...(gate.resolved_input?{input:gate.resolved_input}:{}),
+      ...(gate.end_conversation?{end_conversation:true}:{})};
     if(gate.destination==='SYSTEM_META_INTENT'){
-      const result=await processSystem({input:body.input,confirmed:false,request_id:body.request_id,game_id:body.game_id,expected_revision:body.expected_revision,originating_surface:'world'});
+      const result=await processSystem({input:worldBody.input,confirmed:false,request_id:body.request_id,game_id:body.game_id,expected_revision:body.expected_revision,originating_surface:'world'});
       // The System surface owns the one authoritative answer; the world column only acknowledges the handover, so
       // the same player-facing text is never carried twice in one response.
       res.json({...agentResult('SYSTEM_META_INTENT','这条内容属于系统设置，已经交给右侧「系统」处理。',{view:await service.view(),ui_actions:[{kind:'open_panel',panel:'system'}]}),system_handoff:{input:body.input,result}});return;
     }
-    if(gate.speech_target_id){
-      const view=await service.turn({request_id:body.request_id,game_id:body.game_id,expected_revision:body.expected_revision,end_conversation:gate.end_conversation,action:{type:'TALK',target_id:gate.speech_target_id,parameters:{topic:gate.world_input??body.input}}});
-      res.json(agentResult('WORLD_SPEECH',view.last_turn?.narrative??'',{presentation:'story',view}));return;
-    }
-    const ext=extensionIntent(body.input);if(ext){if(ext.kind==='extension_open'){const installed=(await extensions.list()).find(e=>e.manifest.template===ext.template&&e.can_open);if(installed){res.json({...ext,extension_id:installed.id});return;}throw new GameError('此场景没有已启用的对应扩展；请先开发安装，并到适用地点游玩');}res.json(ext);return;}
-    const routineText=body.input.trim();
+    const ext=extensionIntent(worldBody.input);if(ext){if(ext.kind==='extension_open'){const installed=(await extensions.list()).find(e=>e.manifest.template===ext.template&&e.can_open);if(installed){res.json({...ext,extension_id:installed.id});return;}throw new GameError('此场景没有已启用的对应扩展；请先开发安装，并到适用地点游玩');}res.json(ext);return;}
+    const routineText=worldBody.input.trim();
     if(!/而且|然后|并且|同时|顺便/.test(routineText)&&/^(?:继续(?:按.*(?:计划|安排))?(?:生活|日常)|继续按计划生活|就这样正常生活下去|按照原来的安排继续)/.test(routineText)){
       const save=await service.current(),routine=save.entities.find(e=>e.id===save.player_state.entity_id)?.components.routine;
       if(!routine?.pattern||routine.pattern==='未设置'){const view=await service.view();res.json({...view,notices:['尚未设置生活模式；可以先在右侧保存长期计划，也可以正常逐回合游戏。']});return;}
       res.status(202).json(await jobView(await jobs.start({request_id:body.request_id,game_id:body.game_id,expected_revision:body.expected_revision,action:{type:'CONTINUE_ROUTINE',parameters:{}}})));return;
     }
-    if (!wantsCharacterGeneration(body.input)) { res.json(await handleAgentInput(service,body,(request)=>jobs.start(request)));return; }
+    if (gate.semantic||!wantsCharacterGeneration(worldBody.input)) { res.json(await handleAgentInput(service,worldBody,(request)=>jobs.start(request),gate.speech_target_id,Boolean(gate.world_input),gate.semantic));return; }
     if (!wantsCharacterGeneration(body.input)) { res.json(await service.turn(body)); return; }
     const view = await service.view();
     if (!view) throw new GameError('当前没有已载入的世界');
     const draft = await characterFromDirective(service, body.input, view);
     const card = characterCardFromDraft(draft, body.input);
     res.json(await service.importCharacterCard(card, body.game_id, body.expected_revision));
+    });
   });
   const jobView=async(job:Awaited<ReturnType<RoutineJobs['get']>>)=>{if(!job)return null;const view=await service.view();if(view&&view.game_id!==job.game_id)return null;return {...job,message:displayDiagnostic(job.message,view?.entities??[],view?.locations??[])};};
   app.post('/api/routine/run',async(req,res)=>res.status(202).json(await jobView(await jobs.start(req.body))));
@@ -490,7 +516,9 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   app.get('/api/modules',async(_req,res)=>res.json(await service.modules()));
   app.get('/api/system/tools',async(_req,res)=>{const info=await service.modules();res.json(toolAvailability(info.capabilities));});
   app.get('/api/system/behavior',async(_req,res)=>res.json(await service.behaviorConfig()));
+  app.post('/api/characters/:id/persona',async(req,res)=>res.json(await service.setCharacterPersona({...req.body,entity_id:req.params.id})));
   app.get('/api/narrative/debug',async(_req,res)=>res.json(await service.narrativeDebug()));
+  app.get('/api/scene/affordances',async(_req,res)=>res.json(await sceneAffordances(service)));
   async function processSystem(body:any){
     if(body.development_task_id){
       // The client always sends the selected task id, so the server decides whether this really refines it. An
@@ -575,15 +603,22 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     if(body.development_task_id)return res.json(await processSystem({...body,input}));
     const gate=await routeContext(service,input,'system_input');
     if(gate.destination==='AMBIGUOUS')return res.json({category:'UNKNOWN',tool_id:null,side_effect_level:'none',needs_confirmation:false,message:gate.clarification,clarification:gate.clarification,session:await routingClarification(service,input,gate.clarification!)});
+    if(gate.semantic?.kind==='read_only'){
+      const view=await service.view();
+      return res.json({category:'SYSTEM_ANSWER',tool_id:null,side_effect_level:'none',needs_confirmation:false,
+        message:view?displayText(gate.semantic.answer!,view.entities,view.locations):gate.semantic.answer});
+    }
+    const routedInput=gate.resolved_input??input;
+    if(isCharacterPersonaInput(routedInput)&&(!gate.semantic||gate.semantic.kind==='system_operation'))return res.json(await processSystem({...body,input:routedInput}));
     if(gate.destination==='WORLD_INTENT'){
       const view=await service.view();if(!view)throw new GameError('请先载入世界');
-      const tx={input,request_id:body.request_id??randomUUID(),game_id:body.game_id??view.game_id,expected_revision:body.expected_revision??view.revision};
-      const result=gate.speech_target_id
-        ? {view:await service.turn({request_id:tx.request_id,game_id:tx.game_id,expected_revision:tx.expected_revision,end_conversation:gate.end_conversation,action:{type:'TALK',target_id:gate.speech_target_id,parameters:{topic:gate.world_input??input}}})}
-        : await handleAgentInput(service,tx,(request)=>jobs.start(request));
-      return res.json({category:'IN_WORLD_INPUT',tool_id:null,side_effect_level:'canonical',needs_confirmation:false,message:'已按世界内行动处理。',view:result.view});
+      const tx={input:routedInput,request_id:body.request_id??randomUUID(),game_id:body.game_id??view.game_id,
+        expected_revision:body.expected_revision??view.revision,
+        ...(gate.end_conversation?{end_conversation:true}:{})};
+      const result=await handleAgentInput(service,tx,(request)=>jobs.start(request),gate.speech_target_id,Boolean(gate.world_input),gate.semantic);
+      return res.json({category:'IN_WORLD_INPUT',tool_id:null,side_effect_level:result.time_advanced||result.canonical_changes?.length?'canonical':'none',needs_confirmation:false,message:result.message||result.view?.last_turn?.narrative||'当前世界没有返回可确认的结果。',view:result.view,...(result.clarification?{clarification:result.clarification}:{}),...(result.ui_actions?{ui_actions:result.ui_actions}:{})});
     }
-    return res.json(await processSystem({input,confirmed:body.confirmed??false,request_id:body.request_id??randomUUID(),game_id:body.game_id,expected_revision:body.expected_revision,originating_surface:'system',...(body.session_id?{session_id:body.session_id}:{}),...(body.development_task_id?{development_task_id:body.development_task_id}:{})}));
+    return res.json(await processSystem({input:routedInput,confirmed:body.confirmed??false,request_id:body.request_id??randomUUID(),game_id:body.game_id,expected_revision:body.expected_revision,originating_surface:'system',...(body.session_id?{session_id:body.session_id}:{}),...(body.development_task_id?{development_task_id:body.development_task_id}:{})}));
   });
   app.post('/api/system/action',async(req,res)=>res.json(await processSystem({action:req.body})));
   app.get('/api/development/tasks',async(_req,res)=>res.json(await developmentTasks.list()));

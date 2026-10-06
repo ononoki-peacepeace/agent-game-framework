@@ -12,6 +12,25 @@ export function locationById(save: SavePackage, locationId: string) {
   return currentMap(save).locations.find(location => location.id === locationId);
 }
 
+/** A direct step within the same registered location hierarchy is local, not an inter-place route. */
+export function localHierarchyTransition(save:SavePackage,from:string,to:string){
+  const locations=currentMap(save).locations,source=locations.find(location=>location.id===from),target=locations.find(location=>location.id===to);
+  return Boolean(source&&target&&(target.parent_id===source.id||source.parent_id===target.id));
+}
+
+/** Least-time path through currently traversable directed routes. No route is invented. */
+export function routePath<T extends {from:string;to:string;travel_minutes:number}>(routes:readonly T[],from:string,to:string):T[]|null {
+  if(from===to)return [];
+  const frontier:[string,number,T[]][]=[[from,0,[]]],best=new Map<string,number>();
+  while(frontier.length){
+    frontier.sort((a,b)=>a[1]-b[1]);const [at,cost,path]=frontier.shift()!;
+    if(at===to)return path;
+    if((best.get(at)??Infinity)<=cost)continue;best.set(at,cost);
+    for(const route of routes)if(route.from===at){const next=cost+route.travel_minutes;if(next<(best.get(route.to)??Infinity))frontier.push([route.to,next,[...path,route]]);}
+  }
+  return null;
+}
+
 export function ancestorIds(save: SavePackage, locationId: string) {
   const locations = currentMap(save).locations;
   const out: string[] = [];

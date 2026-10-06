@@ -24,7 +24,7 @@ async function setup(generate?:(req:AIRequest)=>Promise<any>,disk?:string){
  const player=save.entities.find(e=>e.id===save.player_state.entity_id)!,npc=save.entities.find(e=>e.id!==player.id&&e.components.character)!;
  npc.components.location=structuredClone(player.components.location);npc.components.character.traits=['谨慎','不爱冒险'];
  const calls:AIRequest[]=[],store=disk?new JsonStore(disk):new MemoryStore();await store.write(validateSave(save));
- const ai=new AIRuntime({name:'test',generate:async req=>{calls.push(req);return generate?generate(req):{data:prose};}});
+ const ai=new AIRuntime({name:'fixture',generate:async req=>{calls.push(req);return generate?generate(req):{data:prose};}});
  const service=new GameService(store,ai,save.definition);await service.current();
  const tx=async()=>{const s=await service.current();return {request_id:randomUUID(),game_id:s.game_id,expected_revision:s.state_revision};};
  const talk=async()=>service.turn({...await tx(),action:{type:'TALK',target_id:npc.id,parameters:{topic:'刚才的事你怎么看？'}}});
@@ -51,7 +51,10 @@ describe('persistent focus and atomic world undo',()=>{
   await f.service.undo(await f.tx());expect(worldImage(await f.service.current())).toEqual(worldImage(before));
  });
  it('Generic local movement Undo restores scene position, action facts and focus',async()=>{
-  const f=await setup();await f.talk();const before=await f.service.current();f.ai.adapter.generate=async()=>({data:{narrative:'你停在屋外。',minutes:1,target_id:null,facts:['来到屋外'],relationship:null}});
+  const f=await setup();await f.talk();const before=await f.service.current();f.ai.adapter.generate=async request=>({data:request.role==='gm_reasoning'
+    ?{narrative:'你停在屋外。',minutes:1,target_id:null,facts:['来到屋外'],relationship:null,
+      resolution:{type:'DETERMINISTIC',domain:'general',band:'normal',visibility:'public',stakes:'局部移动',stages:[],evidence_ids:[]}}
+    :{...prose,narrative:'你停在屋外。'}});
   await f.service.turn({...await f.tx(),input:'我出门到屋外。'});const moved=await f.service.current();expect(moved.entities.find(e=>e.id===f.player.id)!.components.scene_position.label).toBe('屋外');
   await f.service.undo(await f.tx());expect(worldImage(await f.service.current())).toEqual(worldImage(before));
  });
@@ -153,14 +156,19 @@ describe('shared context gate and production HTTP routes',()=>{
   await routeContext(f.service,'你觉得呢？','world_input');expect(f.calls.at(-1)!.prompt).toContain('"target_entity_id":"'+f.npc.id+'"');
   await routeContext(f.service,'你觉得呢？','system_input');expect(f.calls.at(-1)!.prompt).toContain('"interaction_context":null');expect(f.calls.at(-1)!.prompt).not.toContain('"target_entity_id"');
  });
- it('ambiguity and low confidence never modify the save and carry clarification context',async()=>{
+ it('ambiguity persists only pending clarification without changing canonical world state',async()=>{
   const f=await setup(async()=>({data:route('SYSTEM_META_INTENT',{confidence:.4,clarification:'对人物说，还是修改回复风格？'})}));const before=await f.service.current();
   expect((await routeContext(f.service,'你别这样说了','world_input')).destination).toBe('AMBIGUOUS');
-  await routeContext(f.service,'我说的是回复风格','world_input');expect(f.calls.at(-1)!.prompt).toContain('你别这样说了');expect(await f.service.current()).toEqual(before);
+  await routeContext(f.service,'我说的是回复风格','world_input');expect(f.calls.at(-1)!.prompt).toContain('你别这样说了');const after=await f.service.current();expect(after.state_revision).toBe(before.state_revision);expect(after.runtime.time).toEqual(before.runtime.time);expect(after.pending_world_clarification?.input).toBe('你别这样说了');
  });
  it('HTTP auto-handoff both ways, focused followup, clarification and Undo use real handlers',async()=>{
   let decision=route('SYSTEM_META_INTENT');
-  const f=await setup(async req=>{const p=(req.schema as any).properties;if(p.destination)return {data:decision};if(req.role==='narrator')return {data:prose};throw Error('fallback to existing System understanding');});
+  const f=await setup(async req=>{const p=(req.schema as any).properties;
+    if(p.destination)return {data:decision};
+    if(p.goals)return {data:{goals:[{goal_id:'speech',type:'WORLD_SPEECH',normalized_goal:'向当前交谈对象询问',
+      operation_hint:'talk',referent:null,depends_on:[],condition:null,branch:null,
+      temporal_scope:{scope:'now',day_offset:0,window:'any'},target_entities:[]}]}};
+    if(req.role==='narrator')return {data:prose};throw Error('fallback to existing System understanding');});
   const dir=await mkdtemp(join(tmpdir(),'agf-http-')),server=createApp(f.service,undefined,undefined,join(dir,'assets')).listen(0,'127.0.0.1');await once(server,'listening');
   try{
    const base='http://127.0.0.1:'+(server.address() as any).port,token=(await(await fetch(base+'/api/session')).json()).token;
@@ -172,7 +180,7 @@ describe('shared context gate and production HTTP routes',()=>{
    expect(await(await fetch(base+'/api/development/tasks')).json()).toEqual([]);
    decision=route('WORLD_INTENT',{speech_target_id:f.npc.id,world_input:'你觉得呢？'});await post('input',{...await f.tx(),input:'你觉得呢？'});
    const focused=await f.service.current();expect(focused.interaction_context?.target_entity_id).toBe(f.npc.id);
-   decision=route('AMBIGUOUS',{clarification:'你是对人物说，还是修改回复风格？'});await post('input',{...await f.tx(),input:'你别这样说了'});expect(await f.service.current()).toEqual(focused);
+   decision=route('AMBIGUOUS',{clarification:'你是对人物说，还是修改回复风格？'});await post('input',{...await f.tx(),input:'你别这样说了'});const pending=await f.service.current();expect(pending.state_revision).toBe(focused.state_revision);expect(pending.runtime.time).toEqual(focused.runtime.time);expect(pending.pending_world_clarification?.input).toBe('你别这样说了');
    const undone=await post('undo',await f.tx());expect(undone.revision).toBeGreaterThan(focused.state_revision);expect((await f.service.current()).behavior_config).not.toEqual([]);
   }finally{await new Promise<void>(r=>server.close(()=>r()));await rm(dir,{recursive:true,force:true});}
  });

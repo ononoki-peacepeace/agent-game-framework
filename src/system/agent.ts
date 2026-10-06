@@ -1,5 +1,6 @@
 import {applyFeatureGuideAction,sessionInput,type SystemExecutionContext,type SystemSession} from './session.js';
 import { z } from 'zod';
+import {randomUUID} from 'node:crypto';
 import { safeParse } from '../core/schema.js';
 import { publicView } from '../core/state.js';
 import type { GameService } from '../server/service.js';
@@ -8,10 +9,11 @@ import { toolAvailability, type ToolDescriptor } from './tools.js';
 type AvailableTool = ToolDescriptor & { available: boolean };
 import { applicationFor, behaviorSummary, detectBehaviorScopes, normalizeBehaviorScope, type BehaviorApplication, type BehaviorScope } from '../ai/behavior.js';
 import { resolveEntities } from '../agent/entities.js';
+import {GameError} from '../core/schema.js';
 import { queryRuntimeTruth } from '../agent/truth-query.js';
 import { relationshipSummary } from '../shared/relationship.js';
 import { sanitizePlayerText } from './player-copy.js';
-import { advanceFeatureGuide, featureGuideMessage, featureRequirement, isGuideConfirmation, startFeatureGuide, type FeatureGuide } from './feature-guide.js';
+import { advanceFeatureGuide, featureGuideMessage, featureRequirement, isDelegateAnswer, isGuideConfirmation, startFeatureGuide, type FeatureGuide } from './feature-guide.js';
 import { shallowUnderstanding } from './understanding.js';
 import { resolveUniversalGoal, type UniversalResolution } from './resolver.js';
 import type { DevelopmentProjection } from './development-status.js';
@@ -27,6 +29,29 @@ const behaviorScopeQuestion = '旁白叙述、人物对话，还是游戏助手�
 /** "你/你现在能做什么" always means the Assistant or the Framework, never the NPC the player last spoke to. */
 const asksAboutAssistant=(text:string)=>/你(们)?\s*(现在|目前|当前|都)?\s*(能|会|可以|支持|有|是|做|干)/.test(String(text??''))||/你(们)?\s*(能|会|可以|支持)\s*(做什么|干什么|哪些|什么)/.test(String(text??''));
 const mediaTools = ['avatar.crop','media.set_avatar','character.media.get','media.generate_image'];
+const lastPersonaTarget=new WeakMap<GameService,{game_id:string;entity_id:string}>();
+export const isCharacterPersonaInput=(text:string)=>/(说话|口吻|语气|语言习惯|句尾|性格)/.test(text)&&/(设为|设置|改成|改为|修改|更改|变得|让|取消|恢复|默认)/.test(text)&&!/(旁白|全体角色|所有角色)/.test(text);
+async function applyCharacterPersonaInput(service:GameService,body:{input:string;request_id?:string;game_id?:string;expected_revision?:number}):Promise<SystemResult>{
+  const save=await service.current(),view=publicView(save),input=body.input;
+  const matches=view.entities.filter(entity=>entity.id!==view.player_id&&entity.components.character&&input.includes(String(entity.components.identity?.name??'\u0000')));
+  if(matches.length>1)throw new GameError('这条设置涉及多个人物，请明确只修改哪一位。');
+  const remembered=lastPersonaTarget.get(service);
+  const entity=matches[0]??(/她|他|这个角色|该角色/.test(input)&&remembered?.game_id===view.game_id?view.entities.find(item=>item.id===remembered.entity_id):null);
+  if(!entity)throw new GameError('请说出要修改说话风格的人物名字。');
+  const current=entity.components.character as Record<string,unknown>;
+  const reset=/(取消|恢复默认|还原默认)/.test(input);
+  const field=/(性格)/.test(input)?'personality':/(语言习惯|句尾)/.test(input)?'verbal_habits':'speech_style';
+  const afterName=input.slice(input.indexOf(String(entity.components.identity?.name))+String(entity.components.identity?.name).length);
+  const value=afterName.replace(/^.*?(?:说话风格|说话方式|说话|语言习惯|句尾|口吻|语气|性格)/,'').replace(/^(?:设为|设置为|改成|改为|修改为|变得|更)/,'').replace(/[。！!\s]+$/,'').trim();
+  if(!reset&&!value)throw new GameError('请描述这位人物希望采用的说话方式。');
+  const next=await service.setCharacterPersona({game_id:body.game_id??view.game_id,expected_revision:body.expected_revision??view.revision,request_id:body.request_id??randomUUID(),entity_id:entity.id,
+    personality:field==='personality'?(reset?'':value):String(current.personality??''),
+    speech_style:field==='speech_style'?(reset?'':value):String(current.speech_style??''),
+    verbal_habits:field==='verbal_habits'?(reset?'':value):String(current.verbal_habits??'')});
+  lastPersonaTarget.set(service,{game_id:view.game_id,entity_id:entity.id});
+  return {category:'CHARACTER_PERSONA',tool_id:'character.persona.set',side_effect_level:'configuration',needs_confirmation:false,
+    message:`已${reset?'恢复':'更新'}${String(entity.components.identity?.name)}的${field==='personality'?'性格提示':field==='verbal_habits'?'语言习惯':'说话风格'}。`,view:next};
+}
 
 export interface SystemResult {
   session?:SystemSession;
@@ -51,6 +76,7 @@ const result = (plan: MetaPlan, message: string, toolsList: ToolDescriptor[], ex
 /** The System Agent: deterministic capability/tool layer first, model understanding where it adds real value. */
 export async function handleSystemInput(service:GameService,raw:unknown):Promise<SystemResult>{
  const body=safeParse(z.strictObject({input:z.string().min(1).max(2000),confirmed:z.boolean().default(false),session_id:z.string().uuid().nullish(),request_id:z.string().uuid().optional(),game_id:z.string().optional(),expected_revision:z.number().int().nonnegative().optional()}),raw);
+ if(isCharacterPersonaInput(body.input))return playerFacingSystemResult(await applyCharacterPersonaInput(service,body));
  const value=await sessionInput(service,body,(input,confirmed,context)=>executeSystemInput(service,{input,confirmed,request_id:body.request_id,expected_revision:body.expected_revision},context));
  const changePlan=planFrameworkChange(body.input,{surface:'system'},body.request_id);
  const enriched=changePlan?{...value,advanced:{...value.advanced,change_plan:changePlan},...(value.directive?.kind==='extension_development'?{directive:{...value.directive,change_plan:changePlan}}:{})}:value;
@@ -141,10 +167,10 @@ function clarificationMessage(understanding: SystemUnderstanding, fallback: stri
   if (understanding.understood.length) lines.push(`我理解的是：${understanding.understood.join('；')}。`);
   if (prior?.summary) lines.push(`你上一条处理的是：${prior.summary}。如果这次是要改它，直接说清楚改哪一部分就行。`);
   const first = understanding.unresolved[0];
-  if (first) lines.push(`还缺一项：${first.field}——${first.why}。`);
+  if (understanding.clarification?.question) lines.push(understanding.clarification.question);
+  else if (first) lines.push(`还缺一项：${first.field}——${first.why}。`);
   const examples = (understanding.clarification?.examples?.length ? understanding.clarification.examples : exampleLines[first?.field ?? ''] ?? []).slice(0, 3);
   if (examples.length) lines.push(`你可以直接回复：${examples.map(example => `「${example}」`).join(' / ')}。`);
-  if (understanding.clarification?.question && !first) lines.push(understanding.clarification.question);
   return sanitizePlayerText(lines.join('\n'), fallback);
 
 }
@@ -253,7 +279,8 @@ async function resolveUnderstanding(service: GameService, view: ReturnType<typeo
   // 2. Something is genuinely missing: say what was understood, what is missing, why, and how to answer.
   // "人物页显示好感度" already names one surface and existing data: the development workspace is the right place
   // to settle presentation details, so the Agent must not keep asking. Several surfaces still need one question.
-  const actionableTask = understanding.likely_workflow === 'development_task' && understanding.target_surfaces.length === 1;
+  const actionableTask = understanding.likely_workflow === 'development_task' && understanding.target_surfaces.length === 1
+    && (understanding.clarification?.needed !== true || (answering && session.workflow === 'development_task'));
   // A vague development idea is shaped by one experience question before any technical work starts. An active
   // guide owns the follow-up turns (delegate answer, adjustment, confirmation) and never writes canonical world.
   // A clear, side-effect-free request is answered immediately: no guide, no development task, no question form.
@@ -309,7 +336,7 @@ async function resolveUnderstanding(service: GameService, view: ReturnType<typeo
   }
   const guideForIdea = !answeringOtherField && (activeGuide || (wishIsDevelopment
 
-    && (understanding.unresolved.length > 0 || understanding.understood.length > 0))) && !surfacesIn(text).length
+    && (understanding.unresolved.length > 0 || understanding.understood.length > 0))) && !understanding.target_surfaces.length && !surfacesIn(text).length
     ? (session.guide && session.guide.status !== 'confirmed'
       ? (isGuideConfirmation(text) && session.guide.status === 'proposing' ? { ...session.guide, status: 'confirmed' as const } : advanceFeatureGuide(session.guide, text))
       : { ...startFeatureGuide(text), understood: understanding.understood.length ? understanding.understood.slice(0, 3) : startFeatureGuide(text).understood })
@@ -521,7 +548,15 @@ async function executeSystemInput(service: GameService, raw: unknown, context: S
   // they are not understood again from zero (and never become a different goal).
   const pendingGoal = context.session.pending_goal;
   const answersPending = Boolean(pendingGoal) && isClarificationReply(latest);
-  const universalInput = pendingGoal && answersPending ? [pendingGoal.original_input, ...pendingGoal.clarifications, latest].join('；') : latest;
+  let universalInput = pendingGoal && answersPending ? [pendingGoal.original_input, ...pendingGoal.clarifications, latest].join('；') : latest;
+  if(pendingGoal&&isDelegateAnswer(latest)){
+    const delegated=await service.ai.systemAgent(z.strictObject({resolved_request:z.string().min(1).max(600)}),save.definition.prompt_profile,{
+      instruction:'玩家已把一个低风险选择交给你。根据原请求和待回答问题自行选一个合理具体值，返回一条可执行的自然语言请求。保留原目标与对象；不要请求随机工具，不要反问，不要添加新功能或重大后果。只输出 JSON。',
+      original_request:pendingGoal.original_input,question:pendingGoal.question,player_reply:latest,
+    },save);
+    if(delegated)universalInput=delegated.resolved_request;
+    else return {category:'EXECUTION_FAILURE',tool_id:null,side_effect_level:'none',needs_confirmation:false,message:'这次没能完成你委托的选择，世界状态没有改变；稍后可以重试。',pending_goal:pendingGoal};
+  }
   const universal = await resolveUniversalGoal(service, universalInput, { request_id: body.request_id, expected_revision: body.expected_revision }, { external_effects_confirmed: body.confirmed });
   // Existing local media fallbacks (for example cropping an already stored full-body image) remain usable even
   // when the requested generation chain reports a missing provider capability.

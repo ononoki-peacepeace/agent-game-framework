@@ -79,7 +79,7 @@ it('normal HTTP queries distinguish explicit names, missing names, and canonical
 
 it('a named high-level destination uses canonical affordances and commits location plus route time through HTTP',async()=>{
   const f=await sparseSetup(),directory=await mkdtemp(join(tmpdir(),'agf-world-goal-'));
-  vi.spyOn(f.ai,'narrate').mockResolvedValue({narrative:'你沿着现有路线抵达目的地。',speaker:null,dialogue:null,choices:[],context_actions:[],patches:[],interaction:null});
+  vi.spyOn(f.ai,'narrate').mockResolvedValue({narrative:'你沿着现有路线抵达目的地。',speaker:null,dialogue:null,choices:[],context_actions:[],patches:[],interaction:null,item_claims:[],stable_locations:[]});
   const server=createApp(f.service,undefined,undefined,join(directory,'assets')).listen(0,'127.0.0.1');await once(server,'listening');
   try{
     const base=`http://127.0.0.1:${(server.address() as {port:number}).port}`,token=(await (await fetch(`${base}/api/session`)).json()).token;

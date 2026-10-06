@@ -17,7 +17,8 @@ async function setup() {
  await store.write(save);const ai=new AIRuntime(new MockAIAdapter()),service=new GameService(store,ai,save.definition);
  Object.assign(save,await service.current());return {store,save,player:save.entities.find(e=>e.id===player.id)!,npc:save.entities.find(e=>e.id===npc.id)!,ai,service};
 }
-const outcome=(target_id:string|null=null)=>({narrative:'你挥出一拳，对方退后捂住脸颊。',minutes:1,target_id,facts:['发生了一次肢体冲突。'],relationship:null});
+const outcome=(target_id:string|null=null)=>({narrative:'你挥出一拳，对方退后捂住脸颊。',minutes:1,target_id,facts:['发生了一次肢体冲突。'],relationship:null,
+ resolution:{type:'DETERMINISTIC' as const,domain:'general',band:'normal' as const,visibility:'public' as const,stakes:'仅完成这次尝试',stages:[],evidence_ids:[]}});
 async function input(f:Awaited<ReturnType<typeof setup>>,text:string,id=randomUUID()){
  const s=await f.service.current();return handleAgentInput(f.service,{input:text,game_id:s.game_id,expected_revision:s.state_revision,request_id:id});
 }
@@ -47,7 +48,7 @@ it('local movement works without a map module',()=>{
  expect(validateSave(turn.save).entities[0].components.scene_position).toEqual({label:'窗边'});expect(turn.save.definition.map).toBeUndefined();
 });
 it('a known named destination retains the dedicated MOVE action',async()=>{
- const f=await setup(),place=publicView(f.save).locations[0];
+ const f=await setup(),view=publicView(f.save),here=view.entities.find(e=>e.id===view.player_id)?.components.location?.location_id,place=view.locations.find(location=>location.id!==here)!;
  expect(await f.ai.interpret(f.save,'前往'+place.name)).toEqual({type:'MOVE',target_id:place.id,parameters:{}});
 });
 it('remote target precondition refuses mutation even if GM proposes success',async()=>{
@@ -55,13 +56,16 @@ it('remote target precondition refuses mutation even if GM proposes success',asy
  expect(()=>executeFreeform(f.save,'揍梅芙一拳',outcome(f.npc.id),randomUUID())).toThrow();
  expect(f.save.action_facts).toBeUndefined();
 });
-it('omitting a named target cannot bypass target validation',async()=>{
- const f=await setup();expect(()=>executeFreeform(f.save,'揍梅芙一拳',outcome(),randomUUID())).toThrow('对象');
+it('a unique named target is resolved canonically, while an incorrect provider target remains blocked',async()=>{
+ const f=await setup();const turn=executeFreeform(f.save,'揍梅芙一拳',outcome(),randomUUID());
+ expect(turn.save.resolution_receipts?.at(-1)?.target_id).toBe(f.npc.id);
+ expect(()=>executeFreeform(f.save,'揍梅芙一拳',outcome('wrong_person'),randomUUID())).toThrow('对象');
+ expect(f.save.action_facts).toBeUndefined();
 });
 it('schema rejects arbitrary numeric combat state and save patches',()=>{
  expect(freeformSchema.safeParse({...outcome(),hp:0}).success).toBe(false);
  expect(freeformSchema.safeParse({...outcome(),patches:[{op:'replace',path:'/entities'}]}).success).toBe(false);
- expect(freeformSchema.safeParse({...outcome(),minutes:100}).success).toBe(false);
+ expect(freeformSchema.safeParse({...outcome(),minutes:241}).success).toBe(false);
 });
 it('HTTP-style explicit actions cannot inject a resolved generic outcome',async()=>{
  const f=await setup();await expect(f.service.turn({game_id:f.save.game_id,expected_revision:f.save.state_revision,request_id:randomUUID(),action:{type:'FREEFORM_ACTION',parameters:outcome()}})).rejects.toThrow();expect(await f.service.current()).toEqual(f.save);

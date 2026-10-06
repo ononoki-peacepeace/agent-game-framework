@@ -147,7 +147,7 @@ export function shallowUnderstanding(text: string, view: PublicView): SystemUnde
 /** Canonical truths the System Agent may consult before asking the player anything. */
 export function capabilityDigest(view: PublicView, save: SavePackage) {
   return {
-    world: { title: view.title, modules: view.modules.filter(module => module.enabled).map(module => module.id), panels: view.panels.map(panel => panel.id) },
+    world: { title: view.title, modules: view.modules.filter(module => module.enabled).map(module => module.id), panels: view.panels.map(panel => panel.id), time: view.time, calendar: view.calendar??null, time_label: view.time_label??null, scheduled_tasks: view.scheduled_tasks??[] },
     characters: view.entities.filter(entity => entity.components.character).slice(0, 40).map(entity => String(entity.components.identity?.name ?? entity.id)),
     relationship_dimensions: Object.keys(save.definition.ruleset.relationship_dimensions),
     installed_extensions: Object.entries(save.extensions ?? {}).map(([id, entry]) => ({ id, name: String((entry.manifest as { name?: string }).name ?? id), version: entry.version, enabled: entry.enabled })),

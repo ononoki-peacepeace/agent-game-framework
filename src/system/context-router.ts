@@ -6,10 +6,13 @@ import {capabilityDigest,shallowUnderstanding} from './understanding.js';
 import {systemSessionContext} from './session.js';
 import {planMeta} from './router.js';
 import {fastPlan} from '../agent/planner.js';
+import {isActivePerception} from '../agent/perception.js';
 import {recentReferent} from '../core/recent-referent.js';
 import {sanitizePlayerText} from './player-copy.js';
 import {isUniversalGoalCandidate} from './resolver.js';
 import {contextEnvelope} from './context-envelope.js';
+import {resolveEntities} from '../agent/entities.js';
+import {interpretSemanticEntry,type SemanticDecision} from '../agent/semantic-entry.js';
 /** A clarification answer belongs to the message right after the question; older entries are forgotten. */
 const pendingTtlMs=10*60*1000;
 
@@ -23,17 +26,17 @@ export type SourceContext='world_input'|'system_input';
 export async function readContextView(service:GameService){const save=await service.storage.read();return save?service.project(save):null;}
 const pending=new WeakMap<GameService,Map<string,{input:string;question:string;at:number}>>();
 /** Read-only semantic gate. Failure to understand never grants permission to execute. */
-export async function routeContext(service:GameService,input:string,source:SourceContext):Promise<ContextRoute>{
+export async function routeContext(service:GameService,input:string,source:SourceContext):Promise<ContextRoute&{semantic?:SemanticDecision}>{
   const save=await service.storage.read();assert(save,'请先载入世界');
   const view=service.project(save),key=save.game_id+':'+source;
   const memory=pending.get(service)??new Map();pending.set(service,memory);
   const session=systemSessionContext(service,save.game_id);
-  const quick=fastPlan(view,input),metaPlan=planMeta(input,view.capabilities),shallowGuess=shallowUnderstanding(input,view);
-  const stored=memory.get(key);
+  const stored=source==='world_input'?save.pending_world_clarification:memory.get(key);
   // The last question stays available as *context* for a plausible answer, but an entry that outlived the
   // clarification window is forgotten. Nothing from it may execute: the executed sentence is always the
   // player's current one, and System writes are bound to their own request.
-  const fresh=Boolean(stored)&&Date.now()-(stored?.at??0)<pendingTtlMs;
+  const fresh=Boolean(stored)&&Date.now()-(stored?.at??0)<pendingTtlMs&&
+    (source!=='world_input'||save.pending_world_clarification?.created_revision===save.state_revision);
   if(!fresh)memory.delete(key);
   const previous=stored&&fresh?stored:undefined;
   const salient=recentReferent(save);
@@ -46,7 +49,57 @@ export async function routeContext(service:GameService,input:string,source:Sourc
     capability_digest:capabilityDigest(view,save),
   };
   const fixed=(destination:ContextRoute['destination']):ContextRoute=>({destination,confidence:1,clarification:null,speech_target_id:null,world_input:null,resolved_input:null,end_conversation:false});
+  const persistWorldPending=async(value:typeof save.pending_world_clarification)=>{
+    if(source!=='world_input')return;
+    const latest=await service.storage.read();
+    if(!latest||latest.game_id!==save.game_id||latest.state_revision!==save.state_revision)return;
+    if(value)latest.pending_world_clarification=value;else delete latest.pending_world_clarification;
+    await service.storage.write(latest);
+  };
+  if(stored&&!fresh&&source==='world_input')await persistWorldPending(undefined);
+  // A short clarification reply fills the unresolved target in the original action. The answer itself
+  // never becomes an independent world query or a new committed turn.
+  if(previous&&source==='world_input'){
+    const matches=resolveEntities(view,input).matches.filter(entity=>entity.id!==view.player_id);
+    const answer=matches.length===1&&input.length<100?matches[0]:null;
+    const name=String(answer?.components.identity?.name??'');
+    const slot=answer?.components.character?/她|他|ta|TA|对方|那个人/g:answer?.components.item?/它|那件东西|那个物品/g:/那里|那个地方/g;
+    if(answer&&slot.test(previous.input)){
+      await persistWorldPending(undefined);
+      return {...fixed('WORLD_INTENT'),resolved_input:previous.input.replace(slot,name)};
+    }
+  }
+  // In the live product, the model makes the first final semantic decision for both text surfaces.
+  // Fixture/mock providers retain the old local recognizers for offline regression tests only.
+  const offline=['mock','fixture'].includes(service.ai.adapter.name);
+  if(!offline){
+    const semantic=await interpretSemanticEntry(service,view,input,source==='world_input'?'WORLD':'SYSTEM',
+      previous?{input:previous.input,question:previous.question}:null,source==='system_input'?session:null);
+    if(semantic){
+      if(semantic.kind==='clarification'){
+        const question=sanitizePlayerText(semantic.clarification||'请说明你的意思。','请说明你的意思。');
+        memory.set(key,{input:previous?.input??input,question,at:Date.now()});
+        await persistWorldPending({input:previous?.input??input,question,created_revision:save.state_revision,at:Date.now()});
+        return {...fixed('AMBIGUOUS'),confidence:semantic.confidence,clarification:question,semantic};
+      }
+      memory.delete(key);
+      if(previous)await persistWorldPending(undefined);
+      return {...fixed(semantic.domain==='system'?'SYSTEM_META_INTENT':'WORLD_INTENT'),
+        confidence:semantic.confidence,speech_target_id:semantic.speech_target_id,
+        resolved_input:previous?`${previous.input}\n补充说明：${input}`:null,semantic};
+    }
+    // A failed understanding call cannot grant write authority through a keyword fallback.
+    return {...fixed('AMBIGUOUS'),confidence:0,
+      clarification:'这次没能可靠理解你的请求，世界没有改变。请再说一次。'};
+  }
+  const quick=fastPlan(view,input),metaPlan=planMeta(input,view.capabilities),shallowGuess=shallowUnderstanding(input,view);
   if(envelope.real_world_override)return fixed('SYSTEM_META_INTENT');
+  if(!previous&&isActivePerception(input))return fixed('WORLD_INTENT');
+  if(!previous&&source==='world_input'&&/[她他]|\bta\b/i.test(input)&&!resolveEntities(view,input).matches.some(entity=>entity.id!==view.player_id)){
+    const candidates=view.entities.filter(entity=>entity.id!==view.player_id&&entity.components.character&&entity.components.location?.location_id===view.entities.find(player=>player.id===view.player_id)?.components.location?.location_id);
+    const unique=candidates.length===1?candidates[0]:salient.primary&&salient.last_target?.id===salient.primary.id?candidates.find(entity=>entity.id===salient.primary!.id):null;
+    if(unique)return {...fixed('WORLD_INTENT'),resolved_input:input.replace(/她|他|\bta\b/gi,String(unique.components.identity?.name??unique.id))};
+  }
   if(!previous){
     if(isUniversalGoalCandidate(input))return fixed('SYSTEM_META_INTENT');
     const systemKnown=!['UNKNOWN','IN_WORLD_INPUT'].includes(metaPlan.category);
@@ -75,9 +128,11 @@ export async function routeContext(service:GameService,input:string,source:Sourc
     const fallbackQuestion=salient.primary?`你是指刚才的${salient.primary.name}吗？还是想调整游戏本身的设置？`:'你是在对世界中的人物说这句话，还是想修改游戏的回复方式或功能？';
     result={...result,destination:'AMBIGUOUS',speech_target_id:null,world_input:null,clarification:sanitizePlayerText(result.clarification||fallbackQuestion,fallbackQuestion)};
     memory.set(key,{input:previous?.input??input,question:result.clarification!,at:Date.now()});
+    await persistWorldPending({input:previous?.input??input,question:result.clarification!,created_revision:save.state_revision,at:Date.now()});
   }else{
     if(result.speech_target_id){assert(result.destination==='WORLD_INTENT','对话目标只允许世界请求');assert(view.entities.some(e=>e.id===result!.speech_target_id&&e.components.character&&e.id!==view.player_id),'请明确一个当前可见的交谈对象');}
     memory.delete(key);
+    if(previous)await persistWorldPending(undefined);
   }
   return result;
 }

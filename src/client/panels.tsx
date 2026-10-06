@@ -1,11 +1,14 @@
 import {endedTask,taskGroups} from './task-visibility.js';
 import type {RoutineJob} from '../routine/jobs.js';
 import type {Calendar} from '../routine/schema.js';
-import { useEffect, useMemo, useState, type ComponentType } from 'react';
+import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
 import { request } from './api.js';
 import {AvatarCropEditor} from './AvatarCropEditor.js';
 import {SystemPanel} from './SystemPanel.js';
 import {relationshipBadge, relationshipSummary} from '../shared/relationship.js';
+import {genderLabel} from '../shared/gender.js';
+import {ageLabel} from '../shared/age.js';
+import {routePath} from '../core/map.js';
 
 import {RoutinePlanPanel} from './RoutinePlanPanel.js';
 import type {AvatarCropMetadata} from '../shared/avatar.js';
@@ -15,7 +18,7 @@ export const nameOf = (entity?: Entity) => String(entity?.components.identity?.n
 export const playerOf = (view: PublicView) => view.entities.find(e => e.id === view.player_id)!;
 export const locationOf = (view: PublicView) => String(playerOf(view).components.location?.location_id ?? '');
 export interface PanelProps { onView?:(next:PublicView)=>void; onExport?:()=>void; onOpenCharacterCrop?:(entityId:string)=>void; acknowledgeTask?:(id:string,outcome:'completed'|'cancelled')=>Promise<void>;
-routineJob?:RoutineJob|null; configureCalendar?:(calendar:Calendar)=>Promise<void>; routineAuto?: boolean; pauseRoutine?: () => void; onOpenLogs?:()=>void; view: PublicView; act: (action: ActionInput) => void; busy: boolean; uploadAvatar?: (entity: Entity, file: File, crop?:AvatarCropMetadata) => Promise<void>; clearAvatar?: (entity: Entity) => Promise<void>; uploadVisualAsset?: (entity: Entity, slot: string, file: File) => Promise<void>; importCharacterCard?: (file: File) => Promise<void>; onSelectCharacter?: (entity: Entity) => void; extensionAct?: (extensionId:string,targetEntityId:string,actionType:string)=>Promise<void> }
+routineJob?:RoutineJob|null; configureCalendar?:(calendar:Calendar)=>Promise<void>; routineAuto?: boolean; pauseRoutine?: () => void; onOpenLogs?:()=>void; view: PublicView; act: (action: ActionInput) => void; busy: boolean; uploadAvatar?: (entity: Entity, file: File, crop?:AvatarCropMetadata) => Promise<void>; clearAvatar?: (entity: Entity) => Promise<void>; uploadVisualAsset?: (entity: Entity, slot: string, file: File) => Promise<void>; importCharacterCard?: (file: File) => Promise<void>; onSelectCharacter?: (entity: Entity) => void; editPersona?:(entity:Entity,persona:{personality:string;speech_style:string;verbal_habits:string})=>Promise<void>; extensionAct?: (extensionId:string,targetEntityId:string,actionType:string)=>Promise<void> }
 const numbers = (value: unknown) => (value ?? {}) as Record<string, number>;
 const inventory = (e: Entity) => numbers(e.components.inventory?.items);
 const relLabels: Record<string,string> = { familiarity:'熟悉度', trust:'信任', affection:'亲近', dependence:'依赖', protectiveness:'保护欲', suspicion:'怀疑', fear:'恐惧', respect:'尊重', romantic_interest:'恋爱倾向', leverage:'影响力' };
@@ -112,7 +115,7 @@ function visualImages(entity: Entity) {
   return (visual?.images ?? {}) as Record<string, unknown>;
 }
 
-export function CharacterDetail({ view, entity, busy, uploadAvatar, clearAvatar, uploadVisualAsset, extensionAct, onClose, initialCropOpen }: PanelProps & { entity: Entity; onClose?: () => void; initialCropOpen?:boolean }) {
+export function CharacterDetail({ view, entity, busy, uploadAvatar, clearAvatar, uploadVisualAsset, editPersona, extensionAct, onClose, initialCropOpen }: PanelProps & { entity: Entity; onClose?: () => void; initialCropOpen?:boolean }) {
   const role = String(entity.components.character?.role ?? '人物');
   const locationId = String(entity.components.location?.location_id ?? '');
   const location = view.locations.find(l => l.id === locationId);
@@ -120,6 +123,9 @@ export function CharacterDetail({ view, entity, busy, uploadAvatar, clearAvatar,
   const fullbodyId = typeof images.fullbody === 'string' ? images.fullbody : '';
   const [cropOpen,setCropOpen]=useState(Boolean(initialCropOpen));
   const card = entity.components.character_card as undefined | Record<string, unknown>;
+  const [persona,setPersona]=useState({personality:String(entity.components.character?.personality??''),speech_style:String(entity.components.character?.speech_style??''),verbal_habits:String(entity.components.character?.verbal_habits??'')});
+  const [personaSaving,setPersonaSaving]=useState(false);
+  async function savePersona(next=persona){if(!editPersona||personaSaving)return;setPersonaSaving(true);try{await editPersona(entity,next);}finally{setPersonaSaving(false)}}
   const traits = Array.isArray(entity.components.character?.traits) ? entity.components.character?.traits as unknown[] : [];
   const relEntries = (playerOf(view).components.relationships?.entries ?? {}) as Record<string, Record<string, number>>;
   const relation = relEntries[entity.id];
@@ -144,18 +150,25 @@ export function CharacterDetail({ view, entity, busy, uploadAvatar, clearAvatar,
 
     <div className="character-detail-title">
       <div className="avatar-editor"><Avatar entity={entity}/><div className="avatar-editor-actions">{clearAvatar&&Boolean(entity.components.identity?.avatar_id)&&<button type="button" className="text-button avatar-remove" disabled={busy} onClick={()=>void clearAvatar(entity)}>移除头像</button>}</div></div>
-      <div><h3>{nameOf(entity)}</h3><p>{role}</p><small>{location?.name ?? '位置未知'}</small></div>
+      <div><h3>{nameOf(entity)}</h3><p>{role}</p><p className="character-gender">性别：{genderLabel(entity.components.identity?.gender)} · 年龄：{ageLabel(entity.components.identity?.age)}</p><small>{location?.name ?? '位置未知'}</small></div>
     </div>
     {description&&<section className="character-detail-section"><h4>已知信息</h4><div className="identity-summary-lines character-summary-lines">{descriptionLines.map((line,i)=><p className="identity-summary-line" key={`${entity.id}:detail:${i}:${line}`}>{line}</p>)}</div></section>}
     {traits.length>0&&<section className="character-detail-section"><h4>特征</h4><div className="chip-row">{traits.slice(0,12).map((x,i)=><span className="chip" key={`${String(x)}:${i}`}>{String(x)}</span>)}</div></section>}
     {extensionFields.length>0&&<section className="character-detail-section extension-character-fields" aria-label="扩展人物属性"><h4>人物属性</h4><div className="extension-field-grid">{extensionFields.map(field=><div className="extension-field" data-extension-field={`${field.extension_id}:${field.field_id}`} key={`${field.extension_id}:${field.field_id}`}><span>{field.label}</span><strong>{field.type==='flag'?(field.value?'是':'否'):String(field.value)}</strong>{field.actions.length>0&&<div className="button-row compact">{field.actions.map(action=><button type="button" className="quiet" disabled={busy||!extensionAct} key={action.id} onClick={()=>void extensionAct?.(field.extension_id,entity.id,action.id)}>{action.label}</button>)}</div>}</div>)}</div></section>}
     {relationshipSummary(view,entity).source!=='unknown'&&<section className="character-detail-section"><h4>与你的关系</h4><p>{relationshipSummary(view,entity).text}</p><div className="relation-bars">{Object.entries(relation??{}).map(([key,val])=><div className="relation-row" key={key}><span>{relLabels[key]??'关系指标'}</span><div className="relation-track"><i style={{width:`${Math.max(0,Math.min(100,(val+100)/2))}%`}}/></div><b>{val}</b></div>)}</div></section>}
     {card&&<section className="character-detail-section"><h4>角色卡资料</h4>{String(card.personality??'').trim()&&<p><b>性格：</b>{String(card.personality)}</p>}{String(card.scenario??'').trim()&&<p><b>场景：</b>{String(card.scenario)}</p>}{Array.isArray(card.tags)&&card.tags.length>0&&<div className="chip-row">{(card.tags as string[]).slice(0,12).map(tag=><span className="chip" key={tag}>{tag}</span>)}</div>}</section>}
+    {entity.id!==view.player_id&&editPersona&&<section className="character-detail-section character-persona-editor" aria-label="角色表现"><h4>角色表现</h4><small>只影响这位人物的表达，不改变事实、关系或判定。</small>
+      <label>性格提示<textarea aria-label="性格提示" maxLength={2000} value={persona.personality} onChange={event=>setPersona({...persona,personality:event.target.value})}/></label>
+      <label>说话风格<textarea aria-label="说话风格" maxLength={2000} value={persona.speech_style} onChange={event=>setPersona({...persona,speech_style:event.target.value})}/></label>
+      <label>语言习惯<textarea aria-label="语言习惯" maxLength={2000} value={persona.verbal_habits} onChange={event=>setPersona({...persona,verbal_habits:event.target.value})}/></label>
+      <div className="button-row compact"><button type="button" disabled={busy||personaSaving} onClick={()=>void savePersona()}>保存角色表现</button><button type="button" className="quiet" disabled={busy||personaSaving} onClick={()=>{const empty={personality:'',speech_style:'',verbal_habits:''};setPersona(empty);void savePersona(empty);}}>恢复默认</button></div>
+    </section>}
   </div>;
 }
 
 function Status({ view, uploadAvatar, clearAvatar, uploadVisualAsset, busy, onSelectCharacter }: PanelProps) {
   const player = playerOf(view), balances = numbers(player.components.wallet?.balances);
+  const scenePosition=(player.components.scene_position as {label?:string}|undefined)?.label;
   const playerImages = visualImages(player);
   const playerFullbodyId = typeof playerImages.fullbody === 'string' ? playerImages.fullbody : '';
   const role = String(player.components.character?.role ?? '玩家角色');
@@ -166,7 +179,8 @@ function Status({ view, uploadAvatar, clearAvatar, uploadVisualAsset, busy, onSe
     <div className="world-status"><div><small>当前世界</small><strong>{view.title}</strong></div><div className="world-time"><span>第 {view.time.day} 天</span><b>{hh}:{mm}</b><small>第 {view.revision} 回合</small></div></div>
     <div className="status-hero"><div className="player-media"><div className="avatar-editor"><button type="button" className="avatar-open" title="查看自己的角色详情，可更换全身图或调整头像" onClick={()=>onSelectCharacter?.(player)}><Avatar entity={player}/></button>{clearAvatar&&Boolean(player.components.identity?.avatar_id)&&<button type="button" className="text-button avatar-remove" disabled={busy} onClick={()=>void clearAvatar(player)}>移除头像</button>}</div><div className="player-media-actions">{uploadVisualAsset&&<label className="avatar-upload">{playerFullbodyId?'更换全身图':'上传全身图'}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={e=>{const f=e.target.files?.[0];e.target.value='';if(f)void uploadVisualAsset(player,'fullbody',f)}}/></label>}</div></div><div className="player-summary"><button type="button" className="name-link" onClick={()=>onSelectCharacter?.(player)}><h3>{nameOf(player)}</h3></button><p className="player-role">{role}</p><div className="identity-summary-lines">{readableSummaryLines(player.components.identity?.description, player).map((line,i)=><small className="identity-summary-line" key={`${i}:${line}`}>{line}</small>)}</div></div></div>
     <div className="status-grid">
-      {locationOf(view)&&<div className="mini-card"><span>当前位置</span><strong>{view.locations.find(l => l.id === locationOf(view))?.name ?? '未知'}</strong></div>}
+      {locationOf(view)&&<div className="mini-card"><span>地点</span><strong>{view.locations.find(l => l.id === locationOf(view))?.name ?? '未知'}</strong></div>}
+      {scenePosition&&<div className="mini-card"><span>区域</span><strong>{scenePosition}</strong></div>}
       {Object.entries(balances).map(([key, amount]) => <div className="mini-card" key={key}><span>{view.currencies[key] ?? '货币'}</span><strong>{amount}</strong></div>)}
       {Object.entries(attrs).slice(0,6).map(([key,value]) => <div className="mini-card" key={key}><span>{labels[key] ?? '未命名属性'}</span><strong>{value}</strong></div>)}
     </div>
@@ -187,13 +201,19 @@ function Characters({ view, uploadAvatar, clearAvatar, importCharacterCard, busy
   })}</div></>;
 }
 function Relationships({ view }: PanelProps) {
- const entries=view.entities.filter(e=>e.id!==view.player_id&&e.components.character).map(entity=>({entity,summary:relationshipSummary(view,entity)})).filter(x=>x.summary.source!=='unknown');
+ const entries=view.entities.filter(e=>e.id!==view.player_id&&e.components.character).map(entity=>({entity,summary:relationshipSummary(view,entity)}));
  return entries.length?<div className="list">{entries.map(({entity,summary})=><article className="entity relationship-card" data-entity-id={entity.id} key={entity.id}><div className="person"><Avatar entity={entity}/><div><h3>{nameOf(entity)}</h3><p>{summary.text}</p></div></div>{summary.tones.map(t=><p key={t.key}>{relLabels[t.key]??'关系指标'}：{t.value}</p>)}</article>)}</div>:<p className="empty">尚无玩家可知的关系记录。</p>;
 }
 function InventoryPanel({ view }: PanelProps) {
-  const entries = Object.entries(inventory(playerOf(view))).filter(([, n]) => n > 0);
-  const weight = entries.reduce((sum, [id, n]) => sum + Number(view.entities.find(e => e.id === id)?.components.item?.weight ?? 0) * n, 0);
-  return <><p className="muted">总重量 {weight.toFixed(2)} · 来自当前持有物品</p>{entries.length ? entries.map(([id, n]) => <div className="item-row" key={id}><span>{nameOf(view.entities.find(e => e.id === id))}</span><b>× {n}</b></div>) : <p className="empty">背包为空。</p>}</>;
+  const actor=playerOf(view),entries=Object.entries(inventory(actor)).filter(([,n])=>n>0);
+  const placements=(actor.components.inventory?.placements??{}) as Record<string,string|null>;
+  const weight=entries.reduce((sum,[id,n])=>sum+Number(view.entities.find(e=>e.id===id)?.components.item?.weight??0)*n,0);
+  const children=(parent:string|null)=>entries.filter(([id])=>(placements[id]??null)===parent);
+  const renderItem=([id,n]:[string,number],depth=0):ReactNode=>{
+    const entity=view.entities.find(e=>e.id===id),nested=children(id),label=<div className="item-row"><span>{nameOf(entity)}</span><b>× {n}</b></div>;
+    return nested.length?<details key={id} className="inventory-container" style={{marginLeft:depth*12}}><summary>{label}</summary>{nested.map(entry=>renderItem(entry,depth+1))}</details>:<div key={id} style={{marginLeft:depth*12}}>{label}</div>;
+  };
+  return <><p className="muted">总重量 {weight.toFixed(2)} · 来自当前持有物品</p>{entries.length?children(null).map(entry=>renderItem(entry)):<p className="empty">背包为空。</p>}</>;
 }
 
 function descendants(locations: PublicLocation[], parent: string) {
@@ -201,12 +221,31 @@ function descendants(locations: PublicLocation[], parent: string) {
   while (queue.length) { const p = queue.shift()!; for (const l of locations.filter(x => x.parent_id === p)) if (!out.has(l.id)) { out.add(l.id); queue.push(l.id); } }
   return out;
 }
+/** Graph edges depend on the visible map level, never on the player's current node. */
+export function visibleRouteEdges(view:PublicView,nodes:PublicLocation[]){
+  const childForLeaf=(leaf:string)=>nodes.find(node=>node.id===leaf||descendants(view.locations,node.id).has(leaf));
+  const aggregate=new Map<string,{from:string;to:string;travel_minutes:number;indirect?:boolean}>();
+  for(const route of view.routes){
+    const a=childForLeaf(route.from),b=childForLeaf(route.to);if(!a||!b||a.id===b.id)continue;
+    const key=[a.id,b.id].sort().join('::'),prev=aggregate.get(key);
+    if(!prev||route.travel_minutes<prev.travel_minutes)aggregate.set(key,{from:a.id,to:b.id,travel_minutes:route.travel_minutes});
+  }
+  // Older maps can connect sibling places through their parent rather than a direct A–B route.
+  for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){
+    const a=nodes[i],b=nodes[j],key=[a.id,b.id].sort().join('::');if(aggregate.has(key))continue;
+    const candidates=[routePath(view.routes,a.id,b.id),routePath(view.routes,b.id,a.id)]
+      .filter((path):path is NonNullable<typeof path>=>!!path?.length)
+      .filter(path=>path.slice(0,-1).every(edge=>!nodes.some(node=>node.id===edge.to)));
+    const path=candidates.sort((left,right)=>left.reduce((sum,edge)=>sum+edge.travel_minutes,0)-right.reduce((sum,edge)=>sum+edge.travel_minutes,0))[0];
+    if(path)aggregate.set(key,{from:a.id,to:b.id,travel_minutes:path.reduce((sum,edge)=>sum+edge.travel_minutes,0),indirect:true});
+  }
+  return aggregate;
+}
 function ancestorChain(locations: PublicLocation[], id: string) {
   const chain: PublicLocation[] = []; let cur = locations.find(l => l.id === id); const seen = new Set<string>();
   while (cur && !seen.has(cur.id)) { seen.add(cur.id); chain.unshift(cur); cur = cur.parent_id ? locations.find(l => l.id === cur!.parent_id) : undefined; }
   return chain;
 }
-function snap(n: number) { return Math.round(n / 10) * 10; }
 function MapPanel({ view, act, busy }: PanelProps) {
   const current = locationOf(view), currentChain = ancestorChain(view.locations, current);
   const defaultScope = currentChain.length > 1 ? currentChain[currentChain.length - 2]?.id ?? null : null;
@@ -216,37 +255,39 @@ function MapPanel({ view, act, busy }: PanelProps) {
   const scopeLocation = scope ? view.locations.find(l => l.id === scope) : undefined;
   const visible = children.length ? children : (scope ? [scopeLocation!].filter(Boolean) : view.locations.filter(l => !l.parent_id));
   const rootNodes = visible.length ? visible : view.locations;
-  const idx = new Map(rootNodes.map((l,i)=>[l.id,i]));
-  const pos = (location: PublicLocation) => {
-    if (location.position) return { x:snap(location.position.x), y:snap(location.position.y) };
-    const i = idx.get(location.id) ?? 0, cols = Math.max(2, Math.ceil(Math.sqrt(rootNodes.length)));
-    return { x: 15 + (i % cols) * (70 / Math.max(1, cols - 1)), y: 18 + Math.floor(i / cols) * 28 };
-  };
-  const childForLeaf = (leaf: string) => rootNodes.find(node => node.id === leaf || descendants(view.locations,node.id).has(leaf));
-  const aggregate = new Map<string,{from:string;to:string;travel_minutes:number}>();
-  for (const route of view.routes) {
-    const a = childForLeaf(route.from), b = childForLeaf(route.to); if (!a || !b || a.id === b.id) continue;
-    const key=[a.id,b.id].sort().join('::'), prev=aggregate.get(key);
-    if (!prev || route.travel_minutes < prev.travel_minutes) aggregate.set(key,{from:a.id,to:b.id,travel_minutes:route.travel_minutes});
+  const positions=new Map<string,{x:number;y:number}>(),cols=Math.max(2,Math.ceil(Math.sqrt(rootNodes.length)));
+  const grid=(index:number)=>({x:15+(index%cols)*(70/Math.max(1,cols-1)),y:18+Math.floor(index/cols)*28});
+  const occupied=(point:{x:number;y:number})=>[...positions.values()].some(other=>Math.hypot(other.x-point.x,other.y-point.y)<12);
+  for(const [index,location] of rootNodes.entries()){
+    let point=location.position?{x:location.position.x,y:location.position.y}:grid(index);
+    if(occupied(point))for(let candidate=0;candidate<Math.max(16,rootNodes.length*2);candidate++){const alternate=grid(candidate);if(!occupied(alternate)){point=alternate;break;}}
+    positions.set(location.id,point);
   }
-  const direct = new Map(view.routes.filter(r => r.from === current).map(r => [r.to, r]));
+  const pos=(location:PublicLocation)=>positions.get(location.id)!;
+  const childForLeaf = (leaf: string) => rootNodes.find(node => node.id === leaf || descendants(view.locations,node.id).has(leaf));
+  const aggregate = visibleRouteEdges(view,rootNodes);
+  const reachable = new Map(view.locations.map(location=>[location.id,routePath(view.routes,current,location.id)]));
+  const currentNode=childForLeaf(current);
+  const connections=rootNodes.flatMap(location=>{const path=reachable.get(location.id);return path?.length?[{location,path,minutes:path.reduce((sum,edge)=>sum+edge.travel_minutes,0)}]:[];});
   const viewSize = 100 / zoom, offset = (100 - viewSize) / 2;
   const crumbs = scope ? ancestorChain(view.locations, scope) : [];
   function clickNode(location: PublicLocation) {
     const hasChildren = view.locations.some(l => l.parent_id === location.id);
     if (hasChildren) { setScope(location.id); setZoom(1); return; }
-    const route = direct.get(location.id); if (route && !busy) act({ type:'MOVE', target_id:location.id });
+    const path = reachable.get(location.id); if (path?.length && !busy) act({ type:'MOVE', target_id:location.id });
   }
   return <div className="map-panel-wrap">
     <div className="map-toolbar"><div className="breadcrumbs"><button className="crumb" onClick={()=>{setScope(null);setZoom(1)}}>世界</button>{crumbs.map(c=><button className="crumb" key={c.id} onClick={()=>{setScope(c.id);setZoom(1)}}>› {c.name}</button>)}</div><div className="zoom-controls"><button className="quiet" onClick={()=>setZoom(z=>Math.max(.7,z-.2))}>−</button><span>{Math.round(zoom*100)}%</span><button className="quiet" onClick={()=>setZoom(z=>Math.min(2.6,z+.2))}>＋</button><button className="quiet" onClick={()=>setZoom(1)}>重置</button></div></div>
     <div className="graph-map" aria-label="分层平面地图">
       <svg viewBox={`${offset} ${offset} ${viewSize} ${viewSize}`} role="img" aria-label={scopeLocation ? `${scopeLocation.name}地图` : '世界地图'}>
-        {[...aggregate.values()].map(edge=>{const a=pos(rootNodes.find(l=>l.id===edge.from)!),b=pos(rootNodes.find(l=>l.id===edge.to)!); const midX=(a.x+b.x)/2; return <g key={`${edge.from}-${edge.to}`}><path className="map-route" d={`M ${a.x} ${a.y} H ${midX} V ${b.y} H ${b.x}`}/><rect className="route-label-bg" x={midX-5.5} y={(a.y+b.y)/2-3} width="11" height="5.5" rx="1"/><text className="route-label" x={midX} y={(a.y+b.y)/2+.7}>{edge.travel_minutes}m+</text></g>})}
-        {rootNodes.map(location=>{const p=pos(location), isCurrent=location.id===current || descendants(view.locations,location.id).has(current), route=direct.get(location.id), hasChildren=view.locations.some(l=>l.parent_id===location.id), reachable=!!route; return <g key={location.id} className={`map-node ${isCurrent?'current':reachable?'reachable':''} ${hasChildren?'container-node':''}`} tabIndex={0} role="button" onKeyDown={e=>{if(e.key==='Enter'||e.key===' ')clickNode(location)}} onClick={()=>clickNode(location)}><title>{location.name}{hasChildren?'（展开）':reachable?`（${route.travel_minutes}分钟）`:''}</title><rect x={p.x-5} y={p.y-3.8} width="10" height="7.6" rx="1.2"/><text className="map-node-label" x={p.x} y={p.y+8}>{location.name}</text>{hasChildren&&<text className="map-node-plus" x={p.x+5.6} y={p.y-4}>＋</text>}</g>})}
+        {[...aggregate.values()].map(edge=>{const a=pos(rootNodes.find(l=>l.id===edge.from)!),b=pos(rootNodes.find(l=>l.id===edge.to)!); const midX=(a.x+b.x)/2; return <g key={`${edge.from}-${edge.to}`}><path className={`map-route${edge.indirect?' map-route-indirect':''}`} d={`M ${a.x} ${a.y} H ${midX} V ${b.y} H ${b.x}`}/><rect className="route-label-bg" x={midX-5.5} y={(a.y+b.y)/2-3} width="11" height="5.5" rx="1"/><text className="route-label" x={midX} y={(a.y+b.y)/2+.7}>{edge.travel_minutes}m{edge.indirect?'':'+'}</text></g>})}
+        {currentNode&&connections.filter(connection=>connection.path.length>1&&!aggregate.has([currentNode.id,connection.location.id].sort().join('::'))).map(connection=>{const from=pos(currentNode),to=pos(connection.location),midX=(from.x+to.x)/2;return <g key={`indirect:${connection.location.id}`}><path className="map-route map-route-indirect" d={`M ${from.x} ${from.y} H ${midX} V ${to.y} H ${to.x}`}/><text className="route-label" x={midX} y={(from.y+to.y)/2-2}>{connection.minutes}m</text></g>})}
+        {rootNodes.map(location=>{const p=pos(location), isCurrent=location.id===current || descendants(view.locations,location.id).has(current), path=reachable.get(location.id), hasChildren=view.locations.some(l=>l.parent_id===location.id), canReach=!!path?.length; return <g key={location.id} className={`map-node ${isCurrent?'current':canReach?'reachable':''} ${hasChildren?'container-node':''}`} tabIndex={0} role="button" onKeyDown={e=>{if(e.key==='Enter'||e.key===' ')clickNode(location)}} onClick={()=>clickNode(location)}><title>{location.name}{hasChildren?'（展开）':canReach?`（${path.reduce((sum,edge)=>sum+edge.travel_minutes,0)}分钟）`:''}</title><rect x={p.x-5} y={p.y-3.8} width="10" height="7.6" rx="1.2"/><text className="map-node-label" x={p.x} y={p.y+8}>{location.name}</text>{hasChildren&&<text className="map-node-plus" x={p.x+5.6} y={p.y-4}>＋</text>}</g>})}
       </svg>
-      <div className="map-legend"><span><i className="dot current-dot"/>当前位置所在层级</span><span><i className="dot reachable-dot"/>当前可直达</span><span>方块可展开 · 使用 ＋ / − 缩放</span></div>
+      <div className="map-legend"><span><i className="dot current-dot"/>当前位置所在层级</span><span><i className="dot reachable-dot"/>沿已知路线可达</span><span>方块可展开 · 使用 ＋ / − 缩放</span></div>
     </div>
-    <div className="map-location-list">{rootNodes.map(location=>{const route=direct.get(location.id), here=location.id===current, hasChildren=view.locations.some(l=>l.parent_id===location.id);return <article className={`map-location-card ${here?'selected':''}`} key={location.id}><div><small>{here?'当前位置':hasChildren?'包含下级地图':route?`移动 ${route.travel_minutes} 分钟`:'地图节点'}</small><h3>{location.name}</h3><p>{location.description}</p></div><button className="quiet" disabled={busy&&!hasChildren} onClick={()=>clickNode(location)}>{hasChildren?'打开地图':route?'前往':'查看'}</button></article>})}</div>
+    {connections.length>0&&<div className="map-connections" aria-label="当前可达路线">{connections.map(connection=><div key={connection.location.id} className="map-connection"><span>{currentNode?.name??'当前位置'}</span><span className="map-connection-line" aria-hidden="true"/><strong>{connection.minutes} 分钟</strong><span className="map-connection-line" aria-hidden="true"/><span>{connection.location.name}</span>{connection.path.length>1&&<small>途经 {connection.path.slice(0,-1).map(edge=>view.locations.find(place=>place.id===edge.to)?.name??edge.to).join('、')}</small>}</div>)}</div>}
+    <div className="map-location-list">{rootNodes.map(location=>{const path=reachable.get(location.id), here=location.id===current, hasChildren=view.locations.some(l=>l.parent_id===location.id);return <article className={`map-location-card ${here?'selected':''}`} key={location.id}><div><small>{here?'当前位置':hasChildren?'包含下级地图':path?.length?`移动 ${path.reduce((sum,edge)=>sum+edge.travel_minutes,0)} 分钟${path.length>1?` · 途经 ${path.slice(0,-1).map(edge=>view.locations.find(place=>place.id===edge.to)?.name??edge.to).join('、')}`:''}`:'地图节点'}</small><h3>{location.name}</h3><p>{location.description}</p></div><button className="quiet" disabled={busy&&!hasChildren} onClick={()=>clickNode(location)}>{hasChildren?'打开地图':path?.length?'前往':'查看'}</button></article>})}</div>
   </div>;
 }
 function Commerce({ view, act, busy }: PanelProps) {

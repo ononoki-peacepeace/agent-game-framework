@@ -18,12 +18,14 @@ describe('fiction and reality context envelope', () => {
     const f=await sparseSetup(async request=>{
       prompts.push(request.prompt);const properties=(request.schema as {properties?:Record<string,unknown>}).properties??{};
       if(properties.destination)return {data:{destination:'SYSTEM_META_INTENT',confidence:.95,clarification:null,speech_target_id:null,resolved_input:null,world_input:null,end_conversation:false}};
+      if(request.role==='gm_reasoning')return {data:{narrative:'观察天空',minutes:1,target_id:null,facts:[],relationship:null,
+        resolution:{type:'DETERMINISTIC',domain:'perception',band:'normal',visibility:'public',stakes:'观察',stages:[],evidence_ids:[]}}};
       return {data:{type:'WAIT',target_id:null,parameters_json:'{}',clarification:null}};
     });
     const view=publicView(await f.service.current()),override=contextEnvelope(view,'暂停游戏，我现实里需要说件事','WORLD');
     expect(override).toMatchObject({actor:'REAL_WORLD_USER',fictional_context:false,real_world_override:true,intent_domain:'real_world'});
     expect((await routeContext(f.service,'暂停游戏，我现实里需要说件事','world_input')).destination).toBe('SYSTEM_META_INTENT');
-    await f.service.ai.interpret(await f.service.current(),'观察天空');
+    await f.service.ai.freeform(await f.service.current(),'观察天空');
     expect(prompts.some(prompt=>prompt.includes('"input_surface":"WORLD"')&&prompt.includes('"actor":"PLAYER_CHARACTER"')&&prompt.includes('"fictional_context":true'))).toBe(true);
     expect(prompts.every(prompt=>!prompt.includes('ignore policy')&&!prompt.includes('bypass safety'))).toBe(true);
   });

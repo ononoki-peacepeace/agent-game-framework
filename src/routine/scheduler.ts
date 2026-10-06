@@ -7,9 +7,11 @@ import {settleRoutine,applyLifePatches} from '../server/routine-controller.js';
 import type {AIRuntime} from '../ai/runtime.js';
 import type {RoutineResult} from '../ai/routine.js';
 import {observe} from '../observability/index.js';
+import {drainBackgroundDisplay} from '../background/runtime.js';
+import {secureRng,type RNG} from '../core/dice.js';
 export const routineOf=(s:SavePackage)=>s.entities.find(e=>e.id===s.player_state.entity_id)!.components.routine;
 function pause(s:SavePackage,reason:string){const r=routineOf(s);r.active=false;r.interrupted=true;r.status='interrupted';r.last_interrupt=reason;s.last_turn={narrative:reason,speaker:null,dialogue:null,choices:[],context_actions:[]};return validateSave(s);}
-function wait(s:SavePackage,minutes:number){if(!minutes)return s;const original=s.definition.ruleset.max_wait_minutes;s.definition.ruleset.max_wait_minutes=Math.max(original,minutes);const next=executeAction(s,{type:'WAIT',parameters:{minutes}},'local-routine','player',undefined,undefined,false).save;next.definition.ruleset.max_wait_minutes=original;return next;}
+function wait(s:SavePackage,minutes:number,rng:RNG){if(!minutes)return s;const original=s.definition.ruleset.max_wait_minutes;s.definition.ruleset.max_wait_minutes=Math.max(original,minutes);const next=executeAction(s,{type:'WAIT',parameters:{minutes}},'local-routine','player',rng,undefined,false).save;next.definition.ruleset.max_wait_minutes=original;return next;}
 function pathTo(s:SavePackage,target:string){
  const start=String(s.entities.find(e=>e.id===s.player_state.entity_id)!.components.location.location_id);if(start===target)return [];
  const routes=[...(s.definition.map?.routes??[]),...s.map_state.dynamic_routes].filter(r=>r.conditions.every(c=>s.gm_state.flags[c.flag]===c.equals)&&s.map_state.known_location_ids.includes(r.to));
@@ -33,9 +35,10 @@ export function taskWindowText(task:ScheduledTask){
 function appendLocal(s:SavePackage,start:SavePackage['runtime']['time'],summary:string,rule?:ActivityRule,patches:RoutineResult['patches']=[]){const r=routineOf(s);const minutes=(s.runtime.time.day-start.day)*1440+s.runtime.time.minute-start.minute;r.elapsed_minutes=Number(r.elapsed_minutes??0)+minutes;r.cycles=Number(r.cycles??0)+1;
  const kind=rule?.kind==='social'?'social':rule?.kind==='work'?'work':rule?.kind==='training'?'training':rule?.kind==='course'||rule?.kind==='study'?'course':'rest';
  r.history=[...(Array.isArray(r.history)?r.history:[]),{start,end:s.runtime.time,summary,activities:[{kind,summary,participants:[s.player_state.entity_id]}],patches,random_results:[],interrupt:!!r.interrupted,interrupt_reason:r.last_interrupt??null}].slice(-30);
- s.last_turn={narrative:summary,speaker:null,dialogue:null,choices:[],context_actions:[]};return validateSave(s);
+ const exposed=drainBackgroundDisplay(s);
+ s.last_turn={narrative:[summary,...exposed].join('\n'),speaker:null,dialogue:null,choices:[],context_actions:[]};return validateSave(s);
 }
-export async function sparseStep(input:SavePackage,ai:AIRuntime,horizon:number,signal?:AbortSignal,onPhase?:(phase:string)=>void){
+export async function sparseStep(input:SavePackage,ai:AIRuntime,horizon:number,signal?:AbortSignal,onPhase?:(phase:string)=>void,rng:RNG=secureRng){
  let s=structuredClone(input);signal?.throwIfAborted();assert(s.calendar,'日历映射待确认，生活模拟未推进');assert(!s.routine_meta?.calendar_issue,s.routine_meta?.calendar_issue??'日历待确认');
  const r=routineOf(s),plan=routinePlanSchema.parse(r.plan);assert(!plan.clarification,plan.clarification??'计划需要澄清');
  const now=absoluteTime(s),minutesPerDay=s.definition.ruleset.minutes_per_day,windows=taskWindows(s);
@@ -56,10 +59,10 @@ export async function sparseStep(input:SavePackage,ai:AIRuntime,horizon:number,s
  // Routine trace: why this activity was selected, and whether an AI call was needed at all.
  observe('info','routine.scheduler.local_activity',{module:'routine',revision:s.state_revision,metadata:{selected:slot.rule.id,label:slot.rule.label,kind:slot.rule.kind,ai_call:branch==='ai_event',branch,slot:slot.key,start_minute:slot.start,end_minute:slot.end,due_in_minutes:slot.start-now,travel_minutes:travelCost,hard_window:hard?{id:hard.id,label:hard.label,window:hard.window,at:hard.at,end_at:hard.end_at??null}:null,reasons}});
 
- if(now<departure){const end=Math.min(departure,limit,now+1440);s=wait(s,end-now);return appendLocal(s,startTime,'按计划休息，等待下一项安排：'+slot.rule.label);}
- if(travel.length){const edge=travel[0];if(now+edge.travel_minutes>limit){if(limit>now)s=wait(s,limit-now);return hard&&limit===nextWindow!.start?pause(s,`已接受安排即将开始，停止普通行程：${hard.label}（${taskWindowText(hard)}）。`):appendLocal(s,startTime,'本批生活暂停在出发前。');}
- s=executeAction(s,{type:'MOVE',target_id:edge.to},'routine-move','player',undefined,undefined,false).save;return appendLocal(s,startTime,'按既定路线前往'+([...(s.definition.map?.locations??[]),...s.map_state.dynamic_locations].find(l=>l.id===edge.to)?.name??'目的地')+'。');}
- if(now<slot.start){s=wait(s,Math.min(slot.start,limit)-now);return appendLocal(s,startTime,'等待'+slot.rule.label+'开始。');}
+ if(now<departure){const end=Math.min(departure,limit,now+1440);s=wait(s,end-now,rng);return appendLocal(s,startTime,'按计划休息，等待下一项安排：'+slot.rule.label);}
+ if(travel.length){const edge=travel[0];if(now+edge.travel_minutes>limit){if(limit>now)s=wait(s,limit-now,rng);return hard&&limit===nextWindow!.start?pause(s,`已接受安排即将开始，停止普通行程：${hard.label}（${taskWindowText(hard)}）。`):appendLocal(s,startTime,'本批生活暂停在出发前。');}
+ s=executeAction(s,{type:'MOVE',target_id:edge.to},'routine-move','player',rng,undefined,false).save;return appendLocal(s,startTime,'按既定路线前往'+([...(s.definition.map?.locations??[]),...s.map_state.dynamic_locations].find(l=>l.id===edge.to)?.name??'目的地')+'。');}
+ if(now<slot.start){s=wait(s,Math.min(slot.start,limit)-now,rng);return appendLocal(s,startTime,'等待'+slot.rule.label+'开始。');}
  if(slot.rule.mode==='ai'){
    if(slot.end>limit)return hard&&limit===nextWindow!.start?pause(s,`已接受安排临近，开放活动暂不开始：${hard.label}（${taskWindowText(hard)}）。`):pause(s,'本批剩余时间不足以处理开放事件，可继续下一批。');
    onPhase?.('ai');
@@ -69,7 +72,7 @@ export async function sparseStep(input:SavePackage,ai:AIRuntime,horizon:number,s
    s=await settleRoutine(s,ai,slot.end-now,(candidate,max,random,planned)=>ai.sparseEvent(candidate,max,slot.rule.id,signal,random,planned,slot.rule.kind==='social'?candidates:undefined));signal?.throwIfAborted();
    routineOf(s).completed_blocks=[...completed,slot.key].slice(-300);return s;
  }
- const end=Math.min(slot.end,limit);const duration=end-now;s=wait(s,duration);
+ const end=Math.min(slot.end,limit);const duration=end-now;s=wait(s,duration,rng);
  const progress=r.block_progress as {key:string;minutes:number}|undefined;const accrued=(progress?.key===slot.key?progress.minutes:0)+duration;routineOf(s).block_progress={key:slot.key,minutes:accrued};
  if(!routineOf(s).interrupted && end===slot.end){
    const player=s.entities.find(e=>e.id===s.player_state.entity_id)!;

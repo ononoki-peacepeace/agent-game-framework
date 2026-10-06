@@ -157,6 +157,7 @@ it('an open-ended goal keeps taking real steps instead of stopping after one que
 
 it('an open-ended errand reaches the market instead of stopping at a midpoint',async()=>{
   const f=await sparseSetup(async request=>{
+    if(request.role==='narrator')return {data:{narrative:'你沿现有道路继续前行。',speaker:null,dialogue:null,choices:[],context_actions:[],patches:[]}};
     const properties=(request.schema as {properties?:Record<string,unknown>}).properties??{};
     if(properties.decision){
       const marker=request.prompt.indexOf('{"objective"');
@@ -199,9 +200,11 @@ it('an open-ended errand reaches the market instead of stopping at a midpoint',a
   expect(after.runtime.time.minute).toBeGreaterThanOrEqual(before.runtime.time.minute+24);
   expect(String(result.message)).toContain('河岸车站');
   expect(String(result.message)).toContain('街角商店');
-  // The boundary in the other direction: a bare destination is still one clear, single-step move.
-  const single=fastPlan((await f.service.view())!,'去市场');
-  expect(single?.goals.map(goal=>goal.type)).toEqual(['WORLD_ACTION']);
+  // An exact public destination is a direct single-step MOVE; an unregistered alias
+  // needs semantic planning rather than a guessed canonical ID.
+  const view=(await f.service.view())!;
+  expect(fastPlan(view,'去街角商店')?.goals.map(goal=>goal.type)).toEqual(['WORLD_ACTION']);
+  expect(fastPlan(view,'去市场')).toBeNull();
 });
 
 const memoryStorage=()=>{const map=new Map<string,string>();return {getItem:(key:string)=>map.get(key)??null,setItem:(key:string,value:string)=>{map.set(key,value);}};};
@@ -359,7 +362,7 @@ it('a system handoff carries one authoritative answer instead of repeating it in
     // Rendering seam: the client must not also print the handover as a story-column agent reply.
     const app=await readFile('src/client/App.tsx','utf8');
     expect(app).toContain("const handoff='system_handoff' in next");
-    expect(app).toMatch(/setAgentReply\(handoff\|\|next\.presentation==='story'\?null/);
+    expect(app).toMatch(/setAgentReply\(handoff\|\|next\.presentation==='story'\|\|!next\.message\.trim\(\)\?null/);
     const panel=await readFile('src/client/SystemPanel.tsx','utf8');
     expect(panel.split('className={`system-result').length-1).toBe(1);
   }finally{server.closeAllConnections();await new Promise<void>(done=>server.close(()=>done()));}

@@ -118,6 +118,30 @@ it('resolves only explicit reference fields and reports genuinely missing target
   expect(prose[0]).toMatchObject({ scope: 'prose', value: 'unknown_project', kind: 'entity' });
 });
 
+it('keeps destination bindings canonical inside choice contracts and leaves control markers opaque',()=>{
+  const view=publicView(newSave(migratedWorld()));
+  const input={choice_offers:[{id:'offer_1',text:'去station看看',intent_key:'move_to_station',
+    goal_contract:{goals:[{contract:{bindings:[
+      {role:'destination',mention:'河岸车站',entity_id:'station',status:'bound'},
+      {role:'person',mention:'梅芙·科尔',entity_id:'maeve_cole',status:'bound'},
+    ],completion:{kind:'location_at',destination_id:'station'}}}]}}]};
+  const reports=collect(()=>{
+    const shown=resolvePresentation(input,view.entities,view.locations);
+    expect(shown.choice_offers[0].text).toBe('去河岸车站看看');
+    expect(shown.choice_offers[0].id).toBe('offer_1');
+    expect(shown.choice_offers[0].intent_key).toBe('move_to_station');
+    expect(shown.choice_offers[0].goal_contract.goals[0].contract.bindings.map(binding=>binding.entity_id))
+      .toEqual(['station','maeve_cole']);
+    expect(shown.choice_offers[0].goal_contract.goals[0].contract.completion.destination_id).toBe('station');
+  });
+  expect(reports).toEqual([]);
+  const missing=collect(()=>{
+    const shown=resolvePresentation({role:'destination',entity_id:'missing_place'},view.entities,view.locations);
+    expect(shown.entity_id).toBe('未知对象');
+  });
+  expect(missing).toMatchObject([{kind:'location',key:'entity_id',value:'missing_place'}]);
+});
+
 it('diagnostic text keeps provider and scheduler tokens instead of masking them', () => {
   const view = publicView(newSave(migratedWorld()));
   const reports = collect(() => {

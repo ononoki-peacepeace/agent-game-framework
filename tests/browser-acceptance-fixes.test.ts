@@ -102,7 +102,10 @@ describe('D. System composer lifecycle', () => {
 
 describe('E. revision conflicts: read-only may auto-retry once, mutations never do', () => {
   async function staleServer() {
-    const service = new GameService(new MemoryStore(), new AIRuntime({ name: 'quiet', generate: async () => { throw Error('no AI expected'); } }), fresh().definition);
+    const service = new GameService(new MemoryStore(), new AIRuntime({ name: 'quiet', generate: async request => {
+      if(request.role==='narrator')return {data:{narrative:'你等了五分钟。',speaker:null,dialogue:null,choices:[],context_actions:[],patches:[]}};
+      throw Error('no other AI expected');
+    } }), fresh().definition);
     const server = createApp(service).listen(0, '127.0.0.1');
     await once(server, 'listening');
     const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
@@ -166,7 +169,8 @@ describe('F/G. generic world action: unknown relationship enrichment is dropped,
     npc.components.location = structuredClone(player.components.location);
     return { save, player, npc };
   }
-  const outcome = (target: string, relationship: unknown) => ({ narrative: '你挥出一拳，对方退后捂住脸颊。', minutes: 1, target_id: target, facts: ['发生了一次肢体冲突。'], relationship });
+  const outcome = (target: string, relationship: unknown) => ({ narrative: '你挥出一拳，对方退后捂住脸颊。', minutes: 1, target_id: target, facts: ['发生了一次肢体冲突。'], relationship,
+    resolution:{type:'DETERMINISTIC',domain:'general',band:'normal',visibility:'public',stakes:'仅完成这次尝试',stages:[],evidence_ids:[]} });
   it('an unknown dimension does not block the action and does not extend the schema', () => {
     const { save, player, npc } = scenario();
     const dimensions = JSON.stringify(save.definition.ruleset.relationship_dimensions);

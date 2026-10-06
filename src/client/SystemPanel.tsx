@@ -15,7 +15,7 @@ import {loadDevelopmentWorkspace,saveDevelopmentWorkspace,saveSystemDraft,saveSy
 import {ClarificationCard} from './ClarificationCard.js';
 
 type ProviderSnapshot={current:{provider:string;name?:string;model?:string|null}|null;providers:{id:string;label:string}[]};
-type SystemUnderstandingView = { understood?: string[]; unresolved?: {field:string;why:string}[]; likely_workflow?: string } | null;
+type SystemUnderstandingView = { understood?: string[]; unresolved?: {field:string;why:string}[]; likely_workflow?: string; clarification?:{needed:boolean;question:string;examples:string[]} | null } | null;
 type SystemResult = {
   session?:import('../system/session.js').SystemSession; category: string; tool_id: string | null; side_effect_level: string; needs_confirmation: boolean;
   view?:PublicView; message: string; directive?: { kind: string } & Record<string, unknown>; advanced?: Record<string, unknown>;
@@ -104,6 +104,7 @@ export function SystemPanel({ handoff, view, onView, onOpenLogs, onExport, onOpe
 
       <ClarificationCard question={sanitizePlayerText(result.guide.current_question??'你想怎么继续？','你想怎么继续？')} options={result.guide.options.filter(option=>Boolean(option.action)).map(option=>({id:option.id,label:sanitizePlayerText(option.label,'继续'),detail:sanitizePlayerText(option.detail,'')}))} onChoose={option=>{const match=result.guide!.options.find(item=>item.id===option.id);if(match?.action)void sendGuideAction(match.action);}} onAnswer={answer=>void send(false,answer)} disabled={sending}/>
     </section>}
+    {result?.clarification&&!result.guide&&result.understanding?.clarification?.question&&<ClarificationCard question={sanitizePlayerText(result.understanding.clarification.question)} options={(result.understanding.clarification.examples??[]).map((label,index)=>({id:String(index),label:sanitizePlayerText(label),detail:''}))} onChoose={option=>void send(false,option.label)} onAnswer={answer=>void send(false,answer)} disabled={sending}/>}
     {devVisible&&<section className="development-workspace"><header><span className="section-kicker">DEVELOPMENT WORKSPACE</span><h3>开发工作区</h3></header><DevelopmentPanel view={view} onView={onView} taskId={taskId} onSelect={id=>{setTaskId(id);saveDevelopmentWorkspace(view.game_id,{active_task_id:id});}} onStatus={(status,detail)=>{setDevStatus(status);setDevDetail(detail??null);}}/></section>}
     {devVisible&&<button className="quiet" onClick={()=>{setTaskId(null);setDevRequest(null);setDevStatus(null);setDevOpen(false);setResult(null);saveSystemReply(view.game_id,null);setDevDetail(null);saveDevelopmentWorkspace(view.game_id,{active_task_id:null,dev_open:false});}}>结束当前开发对话</button>}
     <section className="system-features"><ExtensionPanel view={view} intent={null} onView={v=>onView?.(v)} showDevelopment={false}/></section>

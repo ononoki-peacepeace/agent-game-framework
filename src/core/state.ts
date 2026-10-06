@@ -16,6 +16,7 @@ import { availableModules } from '../modules/index.js';
 import { defaultRoleplayConfig } from '../narrative/policy.js';
 import { initialTruthFromNotes } from '../narrative/truth.js';
 import { ensureNarrativeState } from '../narrative/runtime.js';
+import {ensureBackgroundState} from '../background/runtime.js';
 export function availableModuleIds() { return availableModules.map(module => module.id); }
 
 
@@ -39,6 +40,7 @@ export function newSave(input: unknown): SavePackage {
   // A brand new world runs the same setup hook an ENABLE_MODULE action would use.
   for (const [, module] of registry.modules.all()) module.manifest?.setup?.(save);
   ensureNarrativeState(save);
+  if(definition.background_incidents?.length||definition.world_macro_arcs?.length)ensureBackgroundState(save);
   seedKnownLocations(save);
   return validateSave(save);
 }
@@ -70,9 +72,53 @@ export function validateSave(input: unknown, suppliedRegistry?: ModuleRegistry):
   assert(save.player_state.entity_id === save.definition.player.entity_id, '玩家 ID 与世界定义不一致');
   parseDice(save.definition.ruleset.default_check);
   assert(new Set(save.definition.events.map(e => e.id)).size === save.definition.events.length, '事件 ID 重复');
+  const incidents=save.definition.background_incidents??[],background=save.background_state;
+  assert(new Set(incidents.map(item=>item.id)).size===incidents.length,'后台案件 ID 重复');
+  const macroArcs=save.definition.world_macro_arcs??[];
+  assert(new Set(macroArcs.map(item=>item.id)).size===macroArcs.length,'长期主轴 ID 重复');
+  assert(!incidents.length||Boolean(save.definition.background_event_policy?.enabled),'后台案件缺少启用策略');
+  assert(!save.definition.background_event_policy||incidents.length<=save.definition.background_event_policy.max_dormant_incidents,'后台案件超出初始容量');
+  if(background){
+    assert(background.incidents.length===incidents.length&&background.incidents.every((record,index)=>record.id===incidents[index].id),'后台案件状态与世界定义不一致');
+    assert(background.macro_arcs.length===macroArcs.length&&background.macro_arcs.every((record,index)=>record.id===macroArcs[index].id),'长期主轴状态与世界定义不一致');
+    const ids=new Set(save.entities.map(entity=>entity.id)),locations=new Set(currentMap(save).locations.map(location=>location.id));
+    const truths=new Set(save.gm_state.hidden_truth?.commitments.map(truth=>truth.id)??[]);
+    for(const arc of macroArcs){
+      assert(arc.actor_motivations.every(item=>ids.has(item.actor_id)),'长期主轴引用未知人物');
+      assert(arc.truth_refs.every(id=>truths.has(id)),'长期主轴引用未知真相');
+      assert(arc.incident_refs.every(id=>incidents.some(incident=>incident.id===id)),'长期主轴引用未知事件');
+    }
+    for(const incident of incidents){
+      assert(incident.participants.every(id=>ids.has(id)&&id!==save.player_state.entity_id),'后台案件引用未知 NPC');
+      assert(incident.locations.every(id=>locations.has(id)),'后台案件引用未知地点');
+      for(const stage of incident.stages){
+        assert(!stage.actor_id||incident.participants.includes(stage.actor_id),'阶段行动者不是案件参与者');
+        for(const effect of stage.effects){
+          if('npc_id' in effect)assert(incident.participants.includes(effect.npc_id),'后台效果引用未登记 NPC');
+          if('location_id' in effect)assert(locations.has(effect.location_id),'后台效果引用未知地点');
+        }
+        for(const exposure of stage.exposures){
+          assert(!exposure.location_id||locations.has(exposure.location_id),'案件曝光引用未知地点');
+          assert(!exposure.npc_id||incident.participants.includes(exposure.npc_id),'案件曝光引用未知 NPC');
+        }
+      }
+      const record=background.incidents.find(item=>item.id===incident.id)!;
+      assert(record.stage_index<incident.stages.length,'案件阶段索引越界');
+    }
+  }
   assert(new Set(save.event_state.fired).size === save.event_state.fired.length, '事件完成列表重复');
   for (const key of [...save.event_state.fired, ...Object.keys(save.event_state.counts)]) assert(save.definition.events.some(e => e.id === key), '存档引用未知事件');
   assert(new Set(save.runtime.receipts.map(r => r.id)).size === save.runtime.receipts.length && save.runtime.receipts.every(r => r.revision <= save.state_revision), '请求记录不一致');
+  const placedEvidence=(save.gm_state.hidden_truth?.commitments??[]).flatMap(truth=>truth.evidence).filter(evidence=>Boolean(evidence.placement));
+  if(placedEvidence.length){
+  const canonicalLocations=new Set(currentMap(save).locations.map(location=>location.id));
+  for(const evidence of placedEvidence){
+    const placement=evidence.placement!;
+    if(placement.location_id)assert(canonicalLocations.has(placement.location_id),'隐藏事实引用了不存在的地点');
+    if(placement.anchor_entity_id)assert(save.entities.some(entity=>entity.id===placement.anchor_entity_id),'隐藏事实引用了不存在的锚点实体');
+    assert(Boolean(placement.location_id||placement.anchor_entity_id||placement.scene_scope),'隐藏事实缺少场景定位');
+  }
+  }
   registry.validate(save);
   if(save.interaction_context&&!activeFocus(save))save.interaction_context.status='ended';
   // Validate the embedded initial world as well; imports must remain self-contained and valid.
@@ -84,6 +130,7 @@ export function validateSave(input: unknown, suppliedRegistry?: ModuleRegistry):
 export function publicView(save: SavePackage, registry = createRegistry(save.definition.enabled_modules)): PublicView {
   const rules = save.definition.ruleset, map = currentMap(save), known = new Set(save.map_state.known_location_ids);
   const entities: Entity[] = save.entities.filter(entity => {
+    if(save.background_state?.npc_status[entity.id]?.unavailable)return false;
     if (entity.id === save.player_state.entity_id || !entity.components.location) return true;
     return known.has(String(entity.components.location.location_id));
   }).map(entity => ({
@@ -143,6 +190,10 @@ export function publicView(save: SavePackage, registry = createRegistry(save.def
     supports_remove: true,
   }));
   return resolvePresentation({
+    ...(save.active_goal?{active_goal:{plan_id:save.active_goal.plan.plan_id,status:save.active_goal.plan.status,
+      original_intent:save.active_goal.plan.contract?.original_intent??'',
+      goals:save.active_goal.plan.goals.map(goal=>({goal_id:goal.goal_id,summary:goal.result?.summary??goal.normalized_goal,status:goal.status})),
+      waiting_question:save.active_goal.waiting_question,options:structuredClone(save.active_goal.options)}}:{}),
     interaction_context:structuredClone(activeFocus(save)),can_undo:canUndo(save),
     future_intents:structuredClone(save.future_intents??[]),
     game_id: save.game_id, revision: save.state_revision, title: save.definition.meta.title,
