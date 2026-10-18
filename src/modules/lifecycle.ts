@@ -73,7 +73,7 @@ export function stripOwnedState(save: SavePackage, path: string) {
     return;
   }
   if (path === 'definition.map') { (save.definition as { map?: unknown }).map = undefined; return; }
-  if (path === 'map_state') { save.map_state = { known_location_ids: [], dynamic_locations: [], dynamic_routes: [] }; return; }
+  if (path === 'map_state') { save.map_state = { known_location_ids: [], dynamic_locations: [], dynamic_routes: [],dynamic_regions:[] }; return; }
   if (path === 'definition.routine_rules') { (save.definition as { routine_rules?: unknown }).routine_rules = undefined; return; }
   if (path.startsWith('definition.')) { delete (save.definition as unknown as Record<string, unknown>)[path.slice('definition.'.length)]; return; }
   delete (save as unknown as Record<string, unknown>)[path];

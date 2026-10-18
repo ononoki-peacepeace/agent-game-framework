@@ -1,9 +1,11 @@
 import { z } from 'zod';
-import { contextActionSchema, id, narrativeSchema, providerEmptyArray } from '../core/schema.js';
+import { contextActionSchema, dictionary, id, narrativeSchema, providerEmptyArray,scenePresenceClaimSchema } from '../core/schema.js';
 import {backgroundIncidentSchema,worldMacroArcSchema} from '../background/schema.js';
-export type AIRole = 'world_initializer' | 'intent_interpreter' | 'narrator' | 'gm_reasoning' | 'routine_compiler';
-export interface AIRequest { role: AIRole; prompt: string; schema: unknown; threadId?: string; signal?: AbortSignal; maxOutputTokens?: number }
-export interface AIResult { data: unknown; threadId?: string; recovered?: boolean; usage?: {input_tokens:number;output_tokens:number} }
+export type AIRole = 'world_initializer' | 'intent_interpreter' | 'narrator' | 'npc_decision' | 'gm_reasoning' | 'routine_compiler';
+export interface AIRequest { role: AIRole; prompt: string; schema: unknown; threadId?: string; signal?: AbortSignal; maxOutputTokens?: number;
+  reasoningEffort?: 'none'|'low'|'high'|'max' }
+export interface AIResult { data: unknown; threadId?: string; recovered?: boolean;
+  usage?: {input_tokens:number;output_tokens:number;reasoning_tokens?:number} }
 export interface AIAdapter {
   readonly name: string; generate(request: AIRequest): Promise<AIResult>;
   // Optional, never required: providers that know their own model expose it for logging only.
@@ -15,6 +17,7 @@ export const intentResultSchema = z.strictObject({
   clarification: z.string().nullable(),
 });
 export const narrativeResultSchema = narrativeSchema.omit({choice_offers:true}).extend({
+  presence_claims:z.array(scenePresenceClaimSchema).max(20).optional(),
   choices:providerEmptyArray(z.array(z.string().min(1).max(300)).max(6)),
   context_actions:providerEmptyArray(z.array(contextActionSchema).max(20)),
   mechanical_claims:providerEmptyArray(z.array(z.strictObject({kind:z.enum(['outcome','time','activity','position','inventory','relationship','evidence','injury','death','money','state','random','progress']),
@@ -30,20 +33,42 @@ export const narrativeResultSchema = narrativeSchema.omit({choice_offers:true}).
 export const worldModuleIds = ['map','characters','relationships','inventory','commerce','attributes','aptitudes','skills','traits','equipment','quests','routine'] as const;
 import { genderValues } from '../shared/gender.js';
 import { AGE_MAX } from '../shared/age.js';
+import {personaAuthoringSchema} from '../characters/authoring.js';
+import {calendarSchema} from '../routine/schema.js';
 
 export const worldInitializationSchema = z.strictObject({
   id, title: z.string().min(1).max(120), description: z.string().max(2000),
   resolution_profile:z.enum(['classic_d20','bell_2d6','percentile_d100']).nullable().optional(),
+  capability_profiles:z.array(z.strictObject({entity_id:id,
+    attributes:dictionary(z.number().int().min(-5).max(5)),
+    skills:z.array(z.strictObject({id,name:z.string().min(1).max(100),level:z.number().int().min(0).max(5),attribute:id.nullish()})).max(12),
+    basis:z.string().min(1).max(500)})).max(65).optional(),
   // Capability selection: a world only installs what its description actually needs.
   modules: z.array(z.enum(worldModuleIds)).min(1).max(12).default(['map','characters','relationships','inventory','commerce','routine']),
 
   currency: z.strictObject({ id, name: z.string().min(1).max(80) }),
+  // Optional for older blueprints. The live initializer requires this before committing a new world.
+  opening_time:z.strictObject({minute:z.number().int().min(0).max(1439),calendar:calendarSchema}).optional(),
   // Strict providers must answer every property, so optional data may arrive as `null`; null means absent.
   player: z.strictObject({ id, name: z.string().min(1).max(120), description: z.string().max(1000), gender: z.enum(genderValues).nullable().default(null), age: z.number().int().min(0).max(AGE_MAX).nullable().default(null), location_id: id.nullish(), cash: z.number().int().min(0).max(100000) }),
-  locations: z.array(z.strictObject({ id, name: z.string().min(1).max(120), description: z.string().max(1000), parent_id: id.nullable().default(null), kind: id.default('poi'), map_level: z.number().int().min(0).max(20).default(0), known_by_default: z.boolean().default(true) })).nullish(),
-  routes: z.array(z.strictObject({ from: id, to: id, travel_minutes: z.number().int().min(1).max(120) })).nullish(),
-  characters: z.array(z.strictObject({ id, name: z.string().min(1).max(120), description: z.string().max(1000), gender: z.enum(genderValues).nullable().default(null), age: z.number().int().min(0).max(AGE_MAX).nullable().default(null), location_id: id.nullish(), role: z.string().max(100) })).min(1).max(5),
-  items: z.array(z.strictObject({ id, name: z.string().min(1).max(120), description: z.string().max(1000), weight: z.number().min(0).max(100), price: z.number().int().min(2).max(1000) })).nullish(),
+  locations: z.array(z.strictObject({ id, name: z.string().min(1).max(120), description: z.string().max(1000), parent_id: id.nullable().default(null), kind: id.default('poi'), map_level: z.number().int().min(0).max(20).default(0), known_by_default: z.boolean().default(true),
+    spatial:z.strictObject({region_id:id,x:z.number().int().min(0).max(99),y:z.number().int().min(0).max(99)}).nullish() })).nullish(),
+  regions:z.array(z.strictObject({id,name:z.string().min(1).max(120),scope_location_id:id.nullable(),
+    width:z.number().int().min(1).max(100),height:z.number().int().min(1).max(100),
+    expansion:z.enum(['closed','allowed'])})).max(100).nullish(),
+  routes: z.array(z.strictObject({ from: id, to: id, travel_minutes: z.number().int().min(1).max(120),
+    gateway:z.strictObject({from_region_id:id,to_region_id:id,
+      exit_direction:z.enum(['north','east','south','west','other']),
+      entry_direction:z.enum(['north','east','south','west','other'])}).nullish() })).nullish(),
+  characters: z.array(z.strictObject({ id, name: z.string().min(1).max(120), description: z.string().max(1000), gender: z.enum(genderValues).nullable().default(null), age: z.number().int().min(0).max(AGE_MAX).nullable().default(null), location_id: id.nullish(), role: z.string().max(100),persona:personaAuthoringSchema.optional() })).min(1).max(64),
+  initial_relationships:z.array(z.strictObject({from_id:id,to_id:id,dimension:z.enum(['trust','familiarity']),value:z.number().int()})).max(120).optional(),
+  items: z.array(z.strictObject({ id, name: z.string().min(1).max(120), description: z.string().max(1000), weight: z.number().min(0).max(100), price: z.number().int().min(2).max(1000),
+    container:z.boolean().optional() })).nullish(),
+  // Explicit current ownership, separate from biography and shop stock. Older blueprints omit it.
+  initial_possessions:z.array(z.strictObject({owner_id:id,item_id:id,
+    placement:z.enum(['carried','held','worn','inside_container','stored']),
+    container_id:id.nullable().default(null),slot:id.nullable().default(null),
+    location_id:id.nullable().default(null)})).max(100).optional(),
   shop: z.strictObject({ id, name: z.string().min(1).max(120), location_id: id.nullish(), cash: z.number().int().min(100).max(100000) }).nullish(),
 
   hidden_notes: z.string().max(2000),

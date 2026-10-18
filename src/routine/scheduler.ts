@@ -8,6 +8,7 @@ import type {AIRuntime} from '../ai/runtime.js';
 import type {RoutineResult} from '../ai/routine.js';
 import {observe} from '../observability/index.js';
 import {drainBackgroundDisplay} from '../background/runtime.js';
+import {proposeValidatedBackground} from '../background/generation.js';
 import {secureRng,type RNG} from '../core/dice.js';
 export const routineOf=(s:SavePackage)=>s.entities.find(e=>e.id===s.player_state.entity_id)!.components.routine;
 function pause(s:SavePackage,reason:string){const r=routineOf(s);r.active=false;r.interrupted=true;r.status='interrupted';r.last_interrupt=reason;s.last_turn={narrative:reason,speaker:null,dialogue:null,choices:[],context_actions:[]};return validateSave(s);}
@@ -40,6 +41,12 @@ function appendLocal(s:SavePackage,start:SavePackage['runtime']['time'],summary:
 }
 export async function sparseStep(input:SavePackage,ai:AIRuntime,horizon:number,signal?:AbortSignal,onPhase?:(phase:string)=>void,rng:RNG=secureRng){
  let s=structuredClone(input);signal?.throwIfAborted();assert(s.calendar,'日历映射待确认，生活模拟未推进');assert(!s.routine_meta?.calendar_issue,s.routine_meta?.calendar_issue??'日历待确认');
+ if(s.background_state?.needs_generation){
+   try{s=await proposeValidatedBackground(s,repair=>ai.proposeBackgroundContinuation(s,repair));}
+   catch(error){observe('warn','background.proposal_rejected',{module:'background_event',revision:s.state_revision,
+     metadata:{reason:error instanceof Error?error.message:String(error)}});}
+ }
+ assert(s.calendar,'日历映射待确认，生活模拟未推进');
  const r=routineOf(s),plan=routinePlanSchema.parse(r.plan);assert(!plan.clarification,plan.clarification??'计划需要澄清');
  const now=absoluteTime(s),minutesPerDay=s.definition.ruleset.minutes_per_day,windows=taskWindows(s);
  const active=windows.find(w=>now>=w.start&&now<w.end);
@@ -69,7 +76,7 @@ export async function sparseStep(input:SavePackage,ai:AIRuntime,horizon:number,s
    const allowed=new Set(slot.candidate_ids);const actorLocation=s.entities.find(e=>e.id===s.player_state.entity_id)!.components.location.location_id;
    const candidates=s.entities.filter(e=>e.id!==s.player_state.entity_id&&e.components.character&&(!allowed.size||allowed.has(e.id))&&e.components.location?.location_id===actorLocation).map(e=>e.id);
    if(slot.rule.kind==='social'&&!candidates.length)return pause(s,'当前没有可参加这次社交的人物，请调整时间或地点。');
-   s=await settleRoutine(s,ai,slot.end-now,(candidate,max,random,planned)=>ai.sparseEvent(candidate,max,slot.rule.id,signal,random,planned,slot.rule.kind==='social'?candidates:undefined));signal?.throwIfAborted();
+   s=await settleRoutine(s,ai,slot.end-now,(candidate,max,random,planned,repair,recoverySignal)=>ai.sparseEvent(candidate,max,slot.rule.id,signal&&recoverySignal?AbortSignal.any([signal,recoverySignal]):signal??recoverySignal,random,planned,slot.rule.kind==='social'?candidates:undefined,repair));signal?.throwIfAborted();
    routineOf(s).completed_blocks=[...completed,slot.key].slice(-300);return s;
  }
  const end=Math.min(slot.end,limit);const duration=end-now;s=wait(s,duration,rng);

@@ -1,6 +1,6 @@
 import { GameError } from '../core/schema.js';
 
-export type CharacterCardSource = 'v1' | 'v2' | 'v3';
+export type CharacterCardSource = 'v1' | 'v2' | 'v3' | 'text';
 export interface NormalizedCharacterCard {
   source_spec: CharacterCardSource;
   spec_version: string;
@@ -72,4 +72,17 @@ export function normalizeCharacterCard(input: unknown): NormalizedCharacterCard 
     extensions: asExtensions(data.extensions),
     raw,
   };
+}
+
+/** A small adapter for pasted Markdown/text cards; external text remains source material. */
+export function normalizeCharacterSource(input:unknown):NormalizedCharacterCard{
+  if(typeof input!=='string')return normalizeCharacterCard(input);
+  const source=input.trim();
+  if(!source||source.length>100_000)throw new GameError('人物卡文本必须为 1–100000 字符');
+  const first=source.split(/\r?\n/).find(line=>line.trim())?.trim()??'';
+  const name=first.replace(/^#{1,6}\s*/,'').replace(/^(?:name|姓名|名字)\s*[:：]\s*/i,'').trim().slice(0,120);
+  if(!name)throw new GameError('人物卡需要首行姓名或标题');
+  return {source_spec:'text',spec_version:'1',name,nickname:'',description:source,personality:'',scenario:'',
+    first_mes:'',mes_example:'',system_prompt:'',post_history_instructions:'',creator_notes:'',alternate_greetings:[],
+    tags:[],creator:'',character_version:'',extensions:{},raw:source};
 }

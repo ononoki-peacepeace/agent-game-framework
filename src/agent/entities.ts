@@ -31,8 +31,10 @@ export function resolveEntities(view: PublicView, text: string) {
   if (named.length) return { matches: named, confident: named.length === 1 };
   const explicit=explicitEntityReference(text);if(explicit){const exact=resolveNamedEntity(view,explicit);return {matches:exact?[exact]:[],confident:Boolean(exact)};}
   const loose = view.entities.filter(entity => {
-    const head = namesOf(entity).map(name => name.split(/[^一-龥A-Za-z0-9]+/)[0]).find(part => part && part.length >= 2) ?? '';
-    return head.length >= 2 && text.includes(head);
+    // Both family and given names are public references. Never accept an
+    // arbitrary substring; shared name parts remain ambiguous to the caller.
+    return namesOf(entity).some(name => name.split(/[\s·・／/]+/u)
+      .some(part => part.length >= 2 && text.includes(part)));
   });
   if (loose.length) return { matches: loose, confident: loose.length === 1 };
   if (PLAYER_DEIXIS.test(text)) {
@@ -44,4 +46,21 @@ export function resolveEntities(view: PublicView, text: string) {
 
 export function entityLabel(entity: Entity) {
   return nameOf(entity) || entity.id;
+}
+
+
+/** Reference completion only: preserves explicit names and the upstream authorized IDs. */
+export function resolveActionEntities(view:PublicView,text:string,authorizedIds:readonly string[]=[],focusId?:string|null){
+  if(authorizedIds.length){
+    const bound=view.entities.filter(e=>authorizedIds.includes(e.id)&&e.id!==view.player_id);
+    return {matches:bound,confident:bound.length===1&&authorizedIds.length===1};
+  }
+  const explicit=resolveEntities(view,text);
+  if(explicit.matches.length)return explicit;
+  if(!/(?<!其)[他她它]/.test(text))return explicit;
+  const here=view.entities.find(e=>e.id===view.player_id)?.components.location?.location_id;
+  const focus=focusId?view.entities.find(e=>e.id===focusId&&e.components.character):null;
+  const people=view.entities.filter(e=>e.id!==view.player_id&&e.components.character&&e.components.location?.location_id===here);
+  const matches=focus?[focus]:people;
+  return {matches,confident:matches.length===1};
 }

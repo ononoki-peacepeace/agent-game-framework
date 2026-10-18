@@ -35,7 +35,9 @@ it('HTTP isolates GM state and protects mutations/export; malformed JSON survive
 it('Codex cache failure retries once with fresh canonical prompt', async () => {
   const dir=await mkdtemp(join(tmpdir(),'agf-ai-')); let starts=0, resumes=0;
   const client={resumeThread:()=>{resumes++;return {run:async()=>{throw new Error('invalid thread');}}},startThread:()=>{starts++;return {id:'new-id',run:async(prompt:string,options:unknown)=>({finalResponse:'{"ok":true}',items:[]})}}} as unknown as Codex;
-  try { const out=await new CodexAdapter(dir,client).generate({role:'narrator',prompt:'canonical context',schema:{},threadId:'invalid'}); expect(out.recovered).toBe(true); expect(out.threadId).toBe('new-id'); expect([starts,resumes]).toEqual([1,1]); }
+  try { const out=await new CodexAdapter(dir,client).generate({role:'narrator',prompt:'canonical context',
+    schema:{type:'object',properties:{ok:{type:'boolean'}},required:['ok'],additionalProperties:false},threadId:'invalid'});
+    expect(out.recovered).toBe(true); expect(out.threadId).toBe('new-id'); expect([starts,resumes]).toEqual([1,1]); }
   finally {await rm(dir,{recursive:true,force:true});}
 });
 
@@ -50,6 +52,32 @@ it('Codex receives the compiled strict schema rather than the optional domain sc
   const client={startThread:()=>({id:'x',run:async()=>({finalResponse:'{}',items:[{type:'file_change'}]})})} as unknown as Codex;
   try {await expect(new CodexAdapter(dir,client).generate({role:'narrator',prompt:'test',schema:{}})).rejects.toThrow('AI_TOOL_BOUNDARY');}
   finally {await rm(dir,{recursive:true,force:true});}
+});
+
+it('Codex rejects an unsupported dynamic-key schema locally before starting a thread', async()=>{
+  const dir=await mkdtemp(join(tmpdir(),'agf-ai-'));let starts=0;
+  const client={startThread:()=>{starts++;return {run:async()=>({finalResponse:'{}',items:[]})}}} as unknown as Codex;
+  try{
+    await expect(new CodexAdapter(dir,client).generate({role:'gm_reasoning',prompt:'test',
+      schema:z.toJSONSchema(z.strictObject({value:z.json()}))})).rejects.toMatchObject({reason:'invalid_provider_schema'});
+    expect(starts).toBe(0);
+  }finally{await rm(dir,{recursive:true,force:true});}
+});
+
+it('Codex wraps an array output for its object-root transport and restores the canonical result', async()=>{
+  const dir=await mkdtemp(join(tmpdir(),'agf-ai-'));let outputSchema:any,prompt='';
+  const client={startThread:()=>({id:'array',run:async(input:string,options:any)=>{
+    prompt=input;outputSchema=options.outputSchema;
+    return {finalResponse:'{"result":[{"ok":true}]}',items:[]};
+  }})} as unknown as Codex;
+  try{
+    const out=await new CodexAdapter(dir,client).generate({role:'gm_reasoning',prompt:'return a list',
+      schema:z.toJSONSchema(z.array(z.strictObject({ok:z.boolean()})))});
+    expect(outputSchema.type).toBe('object');
+    expect(outputSchema.properties.result.type).toBe('array');
+    expect(prompt).toContain('result');
+    expect(out.data).toEqual([{ok:true}]);
+  }finally{await rm(dir,{recursive:true,force:true});}
 });
 it('initializer compiles structured blueprint to independently portable save', async () => {
   const blueprint=JSON.parse(await readFile('content/worlds/town-blueprint.json','utf8'));
@@ -87,6 +115,25 @@ it('DeepSeek adapter uses server-side API key and structured Responses output', 
   expect(body.model).toBe('deepseek-flash');
   expect(body.text.format.type).toBe('json_schema');
   expect(body.text.format.schema.properties.ok.type).toBe('boolean');
+});
+
+it('DeepSeek body timeout pauses immediate repeat calls without treating headers as a completed response', async () => {
+  let calls=0;
+  const fakeFetch:typeof fetch=async (_input,init) => {
+    calls++;
+    const signal=init?.signal;
+    return new Response(new ReadableStream<Uint8Array>({
+      start(controller){signal?.addEventListener('abort',()=>controller.error(signal.reason),{once:true});},
+    }),{status:200});
+  };
+  const {DeepSeekAdapter}=await import('../src/ai/deepseek.js');
+  const adapter=new DeepSeekAdapter({apiKey:'test-secret',fetchImpl:fakeFetch,
+    model:'deepseek-flash',timeoutMs:25,cooldownMs:1000});
+  const request={role:'gm_reasoning' as const,prompt:'test',
+    schema:{type:'object',properties:{ok:{type:'boolean'}},required:['ok'],additionalProperties:false}};
+  await expect(adapter.generate(request)).rejects.toMatchObject({name:'TimeoutError'});
+  await expect(adapter.generate(request)).rejects.toMatchObject({reason:'provider_cooldown'});
+  expect(calls).toBe(1);
 });
 
 it('LAN mode accepts private RFC1918 Host while default mode rejects it', async () => {

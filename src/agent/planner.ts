@@ -1,4 +1,5 @@
 import {randomUUID} from 'node:crypto';
+import {z} from 'zod';
 import type {PublicView} from '../shared/contracts.js';
 import {blueprintSchema,type AgentPlan,type GoalInput} from './plan-schema.js';
 import {resolveEntities} from './entities.js';
@@ -6,7 +7,9 @@ import {planGameRequest} from './game.js';
 import {localDestination,localDurationIntent,isPhysicalAction,requestsItemRelocation} from '../core/freeform.js';
 import {isActivePerception} from './perception.js';
 import type {AIRuntime} from '../ai/runtime.js';
-import {hasMultipleClauses} from './goal-contract.js';
+import {hasMultipleClauses,hasInteractionDependentClause} from './goal-contract.js';
+import type {GoalSpec} from '../system/goals.js';
+import {CandidateValidationError,schemaIssues,type SchemaRepairIssue} from '../ai/failures.js';
 
 export const hasUserCondition=(text:string)=>/如果|假如|要是|(?:^|[，,。；;])若(?:是)?|只要|当.{1,60}时|除非|满足.{1,40}才|.{1,40}的话(?:就|[，,])|趁.{1,60}(?:时|候|[，,])|等.{1,60}(?:就|[，,])|.{1,40}一.{1,30}就/.test(text);
 function conditionalActionText(text:string){
@@ -18,14 +21,20 @@ function conditionalActionText(text:string){
   return onset?.[1]?.trim()||text;
 }
 const temporal=(text:string):GoalInput['temporal_scope']=>({scope:/明天|后天|之后|打算|计划|以后/.test(text)?(/上午|下午|晚上|放学后/.test(text)?'scheduled':'future'):'now',day_offset:/后天/.test(text)?2:/明天/.test(text)?1:0,window:/放学后/.test(text)?'after_school':/上午/.test(text)?'morning':/下午/.test(text)?'afternoon':/晚上/.test(text)?'evening':'any'});
+/**
+ * A deferred runtime reference may only read the result of a preceding goal that can observe the world in this
+ * same input. Reading a scene ("is anybody there") therefore qualifies as a source even though it changes
+ * nothing: the reference is resolved from what that goal actually committed, never from narrative expectation.
+ */
+const resultProducingGoalTypes=new Set(['WORLD_ACTION','WORLD_SPEECH','WORLD_GOAL','WORLD_LOOKUP','WORLD_QUERY']);
 export function validatePlan(raw:unknown):AgentPlan {
  const {goals}=blueprintSchema.parse(raw),ids=new Set(goals.map(g=>g.goal_id));if(ids.size!==goals.length)throw Error('重复 goal_id');
- for(const g of goals){if(g.depends_on.some(id=>!ids.has(id)||id===g.goal_id))throw Error('无效依赖');if(g.branch&&!g.depends_on.some(id=>goals.find(x=>x.goal_id===id)?.type==='CONDITIONAL_INTENT'))throw Error('分支缺少条件依赖');if(g.type==='CONDITIONAL_INTENT'&&!g.condition)throw Error('缺少条件');if(g.condition&&g.type!=='CONDITIONAL_INTENT')throw Error('条件必须由独立条件节点判定');if(['WORLD_ACTION','WORLD_SPEECH','WORLD_GOAL','CONTINUE_ROUTINE','EXECUTE_FUTURE'].includes(g.type)&&g.temporal_scope.scope!=='now')throw Error('未来意图不能作为当前行动');}
+ for(const g of goals){if(g.depends_on.some(id=>!ids.has(id)||id===g.goal_id))throw Error('无效依赖');if(g.result_ref&&(!g.depends_on.includes(g.result_ref.from_goal_id)||!goals.some(previous=>previous.goal_id===g.result_ref!.from_goal_id&&resultProducingGoalTypes.has(previous.type))))throw Error('运行时引用必须依赖同一次输入中能观察到该结果的公开世界目标');if(g.branch&&!g.depends_on.some(id=>goals.find(x=>x.goal_id===id)?.type==='CONDITIONAL_INTENT'))throw Error('分支缺少条件依赖');if(g.type==='CONDITIONAL_INTENT'&&!g.condition)throw Error('缺少条件');if(g.condition&&g.type!=='CONDITIONAL_INTENT')throw Error('条件必须由独立条件节点判定');if(['WORLD_ACTION','WORLD_SPEECH','WORLD_GOAL','CONTINUE_ROUTINE','EXECUTE_FUTURE'].includes(g.type)&&g.temporal_scope.scope!=='now')throw Error('未来意图不能作为当前行动');}
  const order:string[]=[],remaining=new Set(ids);while(remaining.size){const ready=goals.filter(g=>remaining.has(g.goal_id)&&g.depends_on.every(id=>order.includes(id)));if(!ready.length)throw Error('依赖图存在循环');for(const g of ready){order.push(g.goal_id);remaining.delete(g.goal_id);}}
  return {plan_id:randomUUID(),goals:goals.map(g=>({...g,status:'pending',side_effect_level:['FUTURE_INTENT','SCHEDULED_INTENT','CANCEL_FUTURE'].includes(g.type)?'player_plan':['WORLD_ACTION','WORLD_SPEECH','WORLD_GOAL','CONTINUE_ROUTINE','EXECUTE_FUTURE'].includes(g.type)?'world':'none',requires_confirmation:false})),dependencies:goals.flatMap(g=>g.depends_on.map(from=>({from,to:g.goal_id}))),execution_order:order,ui_policy:'one_primary_panel',status:'pending'};
 }
 export class PlanConversionError extends Error {
-  constructor(readonly originalInput:string,readonly reason:string,readonly proposedGoals:unknown){
+  constructor(readonly originalInput:string,readonly reason:string,readonly proposedGoals:unknown,readonly issues:SchemaRepairIssue[]=[]){
     super(`无法转换原始请求的完整计划：${reason}`);
     this.name='PlanConversionError';
   }
@@ -44,7 +53,11 @@ export function localCompoundSteps(view:PublicView,text:string,plan:AgentPlan):s
  const source=text.replace(/[\s，,。；;！!？?]/g,'');
  if(explicit.length<2&&!base.every(step=>source.includes(step.replace(/[\s，,。；;！!？?]/g,''))))return null;
  const steps=base.flatMap(step=>{
-   const destination=localDestination(step),at=destination?step.indexOf(destination):-1;
+   // A walk-and-sit phrase is not itself a durable position update. When the
+   // planner has a bounded local sequence, split it into the actual walk and
+   // the following activity so each receives its own Core evidence.
+   const destination=localDestination(step)??step.match(/(?:走到|回到|来到)([^，,。；;!！?？]{1,80}?)(?=坐下|躺下|休息)/)?.[1],
+     at=destination?step.indexOf(destination):-1;
    if(at<0)return [step];
    const after=step.slice(at+destination!.length).replace(/[。！!？?]+$/,'').trim();
    return /^(?:待|坐|站|歇|休息|伸|整理)/.test(after)?[step.slice(0,at+destination!.length),after]:[step];
@@ -67,7 +80,7 @@ export function fastPlan(view:PublicView,text:string):AgentPlan|null {
    // to the semantic planner instead of forcing the generic look-around path.
    if(targets.matches.some(entity=>entity.components.character&&entity.id!==view.player_id)&&
      /在不在|是否在|有没有在|在场|在哪里/.test(text))return null;
-   add('WORLD_ACTION',text);return validatePlan({goals});
+   add('WORLD_ACTION',text,{operation_hint:'activity'});return validatePlan({goals});
  }
  if(isPhysicalAction(text)&&!hasUserCondition(text)){add('WORLD_ACTION',text);return validatePlan({goals});}
  if(localDurationIntent(text,{day:view.time.day,minute:view.time.minute},view.minutes_per_day)&&!hasUserCondition(text)){add('WORLD_ACTION',text,{target_entities:[]});return validatePlan({goals});}
@@ -126,14 +139,67 @@ export function fastPlan(view:PublicView,text:string):AgentPlan|null {
  // registered tool is authorized, or which completion receipt the player's goal requires.
  return null;
 }
-export async function createAgentPlan(ai:AIRuntime,view:PublicView,text:string,recentScene?:unknown,forceSemantic=false){
+export async function createAgentPlan(ai:AIRuntime,view:PublicView,text:string,recentScene?:unknown,forceSemantic=false,save?:import('../core/schema.js').SavePackage){
  // A discourse connector only opts into semantic planning; it never determines the steps itself.
- const sequential=hasMultipleClauses(text);
- const quick=sequential||forceSemantic?null:fastPlan(view,text);if(quick)return quick;
- const proposal=await ai.planGoals(view,text,blueprintSchema,recentScene);
+ const sequential=hasMultipleClauses(text)||hasInteractionDependentClause(view,text);
+ const semanticGoal=(recentScene as {semantic_goal?:GoalSpec}|null)?.semantic_goal;
+ // Local physical stages are one bounded Core attempt, not separate guaranteed goals.
+ const here=view.entities.find(e=>e.id===view.player_id)?.components.location?.location_id;
+ if(semanticGoal?.physical_intent?.source_quote.trim()===text.trim()&&
+    ['interact','other'].includes(semanticGoal.play_action??'')&&!semanticGoal.ambiguity&&!semanticGoal.external_artifact&&
+    !semanticGoal.temporal.at&&!semanticGoal.temporal.recurrence&&semanticGoal.targets.every(t=>!t.entity_id||t.entity_id===here||
+      view.entities.some(e=>e.id===t.entity_id&&e.components.location?.location_id===here))){
+   return validatePlan({goals:[{goal_id:'g1',type:'WORLD_ACTION',normalized_goal:text,depends_on:[],condition:null,branch:null,
+     temporal_scope:{scope:'now',day_offset:0,window:'any'},target_entities:semanticGoal.targets.flatMap(t=>t.entity_id?[t.entity_id]:[])}]});
+ }
+ // A stop condition bounds an immediate sequence; it is not a prerequisite
+ // which must become true before the first attempt may execute.
+ if(semanticGoal?.repetition&&(!semanticGoal.multi_step||Boolean(semanticGoal.physical_intent))&&(!semanticGoal.dependencies?.length||Boolean(semanticGoal.physical_intent))&&!semanticGoal.ambiguity&&!semanticGoal.external_artifact&&
+    !semanticGoal.temporal.at&&!semanticGoal.temporal.recurrence){
+   return validatePlan({goals:[{goal_id:'g1',type:'WORLD_ACTION',normalized_goal:text,
+     depends_on:[],condition:null,branch:null,temporal_scope:{scope:'now',day_offset:0,window:'any'},
+     target_entities:semanticGoal.targets.flatMap(target=>target.entity_id?[target.entity_id]:[])}]});
+ }
+ // The single semantic owner can identify a complete in-place perception act even
+ // when its wording is outside the old fastPlan vocabulary. The receipt-checked
+ // activity runner and pre-commit goal alignment still decide execution.
+ if(semanticGoal?.play_action==='perceive'&&!semanticGoal.multi_step&&
+    !hasUserCondition(text)&&!sequential){
+   const targets=semanticGoal.targets.flatMap(target=>target.entity_id&&
+     view.entities.some(entity=>entity.id===target.entity_id)?[target.entity_id]:[]);
+   return validatePlan({goals:[{goal_id:'g1',type:'WORLD_ACTION',normalized_goal:text,
+     operation_hint:'activity',depends_on:[],condition:null,branch:null,
+     temporal_scope:{scope:'now',day_offset:0,window:'any'},target_entities:targets}]});
+ }
+ // The semantic owner has already authorized one immediate attempt. Replanning
+ // its wording can turn that attempt into an unsupported promise of final success.
+ // Keep the request intact; binding, prerequisites, RNG and receipts remain downstream.
+ if(semanticGoal&&!(recentScene as {recovery?:unknown}|null)?.recovery&&
+    ['interact','take','use','other'].includes(semanticGoal.play_action??'')&&
+    !semanticGoal.multi_step&&!semanticGoal.ambiguity&&!semanticGoal.external_artifact&&
+    !semanticGoal.dependencies.length&&!semanticGoal.temporal.at&&!semanticGoal.temporal.recurrence&&
+    !hasUserCondition(text)&&!sequential&&text.length<=2000){
+   const targets=semanticGoal.targets.flatMap(target=>target.entity_id&&
+     view.entities.some(entity=>entity.id===target.entity_id)?[target.entity_id]:[]);
+   return validatePlan({goals:[{goal_id:'g1',type:'WORLD_ACTION',normalized_goal:text,
+     depends_on:[],condition:null,branch:null,
+     temporal_scope:{scope:'now',day_offset:0,window:'any'},target_entities:targets}]});
+ }
+ // A complete, single perception request already has a bounded executable contract.
+ // Semantic world_action must not force it through an open-ended model plan.
+ const directPerception=isActivePerception(text)&&!hasUserCondition(text)&&!sequential&&
+   (!semanticGoal||semanticGoal.play_action==='perceive'&&!semanticGoal.multi_step);
+ const quick=sequential||forceSemantic&&!directPerception?null:fastPlan(view,text);if(quick)return quick;
+ let proposal:unknown;
+ try{proposal=await ai.planGoals(view,text,blueprintSchema,recentScene,save);}
+ catch(error){
+   if(error instanceof CandidateValidationError)throw new PlanConversionError(text,error.detail,error.previousOutput,error.issues);
+   if(error instanceof z.ZodError)throw new PlanConversionError(text,conversionReason(error),null,schemaIssues(error));
+   throw error;
+ }
  let raw:ReturnType<typeof blueprintSchema.parse>;
  try{raw=blueprintSchema.parse(proposal);}catch(error){
-   throw new PlanConversionError(text,conversionReason(error),proposal);
+   throw new PlanConversionError(text,conversionReason(error),proposal,error instanceof z.ZodError?schemaIssues(error):[]);
  }
  try{
  // Models sometimes attach a condition directly to an action. Compile that proposal into the existing
@@ -146,7 +212,9 @@ export async function createAgentPlan(ai:AIRuntime,view:PublicView,text:string,r
    if(only.type==='WORLD_GOAL'&&!view.locations.some(location=>text.includes(location.name))&&only.normalized_goal.trim()!==text.trim())only.type='WORLD_ACTION';
    if(only.type==='WORLD_ACTION'&&only.normalized_goal.trim()!==text.trim())only.normalized_goal=text.trim();
  }
- if(hasUserCondition(text)&&!goals.some(goal=>goal.type==='CONDITIONAL_INTENT')){
+ // Legacy syntax adaptation is only for callers without the unified semantic
+ // contract. A timing expression cannot invent or erase a condition downstream.
+ if(!semanticGoal&&hasUserCondition(text)&&!goals.some(goal=>goal.type==='CONDITIONAL_INTENT')){
    const action=goals.find(goal=>['WORLD_ACTION','WORLD_SPEECH'].includes(goal.type));
    if(action){
      const candidate=resolveEntities(view,text),target=candidate.confident?candidate.matches[0]?.id:view.player_id;
@@ -159,7 +227,7 @@ export async function createAgentPlan(ai:AIRuntime,view:PublicView,text:string,r
    }
  }
  for(const goal of goals){
-   if(['WORLD_ACTION','WORLD_SPEECH'].includes(goal.type)&&goal.branch==='then'&&hasUserCondition(goal.normalized_goal))goal.normalized_goal=conditionalActionText(goal.normalized_goal);
+   if(!semanticGoal&&['WORLD_ACTION','WORLD_SPEECH'].includes(goal.type)&&goal.branch==='then'&&hasUserCondition(goal.normalized_goal))goal.normalized_goal=conditionalActionText(goal.normalized_goal);
    if(['WORLD_ACTION','WORLD_SPEECH'].includes(goal.type)&&goal.target_entities.length===1){
      const target=view.entities.find(entity=>entity.id===goal.target_entities[0]);
      if(target?.components.identity?.name)goal.normalized_goal=goal.normalized_goal.replace(/她|他|\bta\b|对方/gi,String(target.components.identity.name));
@@ -172,9 +240,9 @@ export async function createAgentPlan(ai:AIRuntime,view:PublicView,text:string,r
  const plan=validatePlan({goals});
  const compound=localCompoundSteps(view,text,plan);
  if(compound)plan.local_compound={steps:compound};
- if(hasUserCondition(text)&&!plan.goals.some(goal=>goal.type==='CONDITIONAL_INTENT'))throw Error('条件行动未能完整规划；世界状态没有改变，请重试。');
+ if(!semanticGoal&&hasUserCondition(text)&&!plan.goals.some(goal=>goal.type==='CONDITIONAL_INTENT'))throw Error('条件行动未能完整规划；世界状态没有改变，请重试。');
  if(plan.goals.some(goal=>goal.type==='CONDITIONAL_INTENT'&&goal.condition?.kind==='observed_event'&&!goal.depends_on.some(id=>plan.goals.find(previous=>previous.goal_id===id)?.side_effect_level==='world')))throw Error('事件条件必须在前置世界行动之后判断；世界状态没有改变，请重试。');
- if(!hasUserCondition(text)&&plan.goals.some(g=>g.type==='CONDITIONAL_INTENT')){
+ if(!semanticGoal&&!hasUserCondition(text)&&plan.goals.some(g=>g.type==='CONDITIONAL_INTENT')){
  const removed=new Set(plan.goals.filter(g=>g.type==='CONDITIONAL_INTENT'||g.branch==='else').map(g=>g.goal_id));
  const goals=plan.goals.filter(g=>!removed.has(g.goal_id)).map(({status,side_effect_level,requires_confirmation,...g})=>({...g,depends_on:g.depends_on.filter(id=>!removed.has(id)),branch:null,condition:null}));
  return validatePlan({goals});

@@ -34,11 +34,15 @@ export interface ModuleStatus {
 }
 export interface ActionInput { type: string; target_id?: string; parameters?: Record<string, unknown> }
 export interface ContextActionSuggestion { target_id: string; label: string; intent: string; family?: 'communicate'|'observe'|'approach'|'interact'|'help'|'use_item'|'follow'|'steal'|'intercept'|'attack'; category?: string|null }
-export interface Narrative { narrative: string; speaker: string | null; dialogue: string | null; choices: string[]; choice_offers?:import('../core/schema.js').ChoiceOffer[]; context_actions?: ContextActionSuggestion[] }
+export interface Narrative { narrative: string; speaker: string | null; dialogue: string | null;
+  scene_beats?:({kind:'narration';text:string}|{kind:'speech';speaker_id:string;utterance:string})[];
+  choices: string[]; choice_offers?:import('../core/schema.js').ChoiceOffer[]; context_actions?: ContextActionSuggestion[] }
 export interface MapPosition { x: number; y: number }
 export interface PublicLocation {
   id: string; name: string; description: string; tags: string[]; position?: MapPosition;
   parent_id?: string | null; kind?: string; map_level?: number; known_by_default?: boolean;
+  spatial?:{region_id:string;x:number;y:number};
+  status?: 'active'|'closed';
 }
 export interface PublicActionMeta {
   type: string;
@@ -50,6 +54,7 @@ export interface PublicActionMeta {
   module?: string;
 }
 export interface PublicView {
+  known_evidence?:{id:string;description:string}[];
   active_goal?:{plan_id:string;status:import('../agent/plan-schema.js').AgentPlan['status'];original_intent:string;
     goals:{goal_id:string;summary:string;status:import('../agent/plan-schema.js').GoalStatus}[];
     waiting_question:string|null;options:{candidate_id:string;label:string}[]};
@@ -63,7 +68,11 @@ export interface PublicView {
   world_provenance?: import('../core/schema.js').WorldCreationProvenance;
   time: { day: number; minute: number }; minutes_per_day: number;
   entities: Entity[]; locations: PublicLocation[];
-  routes: { from: string; to: string; travel_minutes: number }[];
+  regions?:{id:string;name:string;scope_location_id:string|null;width:number;height:number}[];
+  routes: { from: string; to: string; travel_minutes: number;
+    gateway?:{from_region_id:string;to_region_id:string;exit_direction:'north'|'east'|'south'|'west'|'other';
+      entry_direction:'north'|'east'|'south'|'west'|'other'}}[];
+  recent_movement_route?:{location_ids:string[];total_minutes:number};
   panels: PanelMeta[]; actions: PublicActionMeta[]; currencies: Record<string, string>;
   /** Installed/enabled module lifecycle, so the UI only shows capabilities that really exist. */
   modules: ModuleStatus[];

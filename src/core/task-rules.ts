@@ -1,6 +1,7 @@
 import type {Action,SavePackage} from './schema.js';
 // Only authored mechanical rules supply completion evidence. Text, acknowledgements and LLM claims do not.
 export function settleTaskObjectives(save:SavePackage,action:Action){
+  if(action.actor_id!==save.player_state.entity_id)return;
   const player=save.entities.find(e=>e.id===save.player_state.entity_id)!;
   const now=save.runtime.time.day*save.definition.ruleset.minutes_per_day+save.runtime.time.minute;
   for(const rule of save.definition.task_rules??[]){

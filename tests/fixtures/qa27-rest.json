@@ -1,0 +1,73 @@
+{
+  "trace_id": "tr_db7e0fdb5912",
+  "request_id": "92de44a0-5d67-424a-973c-f3fb5d1d3839",
+  "input": "我走到中央大厅一侧的长椅坐下，安静休息十分钟。不主动打扰任何人，也不刻意调查刚才听到的传闻。周围的人照常做自己的事情。",
+  "plan": {
+    "plan_id": "92de44a0-5d67-424a-973c-f3fb5d1d3839",
+    "goals": [
+      {
+        "goal_id": "g_rest_bench",
+        "type": "WORLD_ACTION",
+        "normalized_goal": "我走到中央大厅一侧的长椅坐下，安静休息十分钟。不主动打扰任何人，也不刻意调查刚才听到的传闻。周围的人照常做自己的事情。",
+        "depends_on": [],
+        "condition": null,
+        "branch": null,
+        "temporal_scope": {
+          "scope": "now",
+          "day_offset": 0,
+          "window": "any"
+        },
+        "target_entities": [],
+        "operation_hint": "activity",
+        "referent": "中央大厅一侧的长椅",
+        "speech_recipients": null,
+        "item_destination": null,
+        "quantity": null,
+        "side_effect_level": "world",
+        "requires_confirmation": false,
+        "status": "blocked",
+        "contract": {
+          "bindings": [],
+          "required_capabilities": [],
+          "completion": {
+            "kind": "activity_occurred"
+          },
+          "availability": "ready",
+          "evidence_refs": []
+        },
+        "result": {
+          "summary": "动作已返回，但缺少对应完成证据。"
+        }
+      }
+    ],
+    "dependencies": [],
+    "execution_order": [
+      "g_rest_bench"
+    ],
+    "ui_policy": "one_primary_panel",
+    "status": "blocked",
+    "contract": {
+      "source": "manual",
+      "original_intent": "我走到中央大厅一侧的长椅坐下，安静休息十分钟。不主动打扰任何人，也不刻意调查刚才听到的传闻。周围的人照常做自己的事情。",
+      "offer_id": null,
+      "execution_mode": "atomic_local",
+      "source_revision": 348,
+      "last_observed_revision": 349,
+      "execution_availability": "ready"
+    }
+  },
+  "outcome": {
+    "type": "engine_failure",
+    "code": "invariant_failure",
+    "stage": "contract_step",
+    "committed_steps": [],
+    "receipt_ids": [],
+    "revision": 349,
+    "state_certain": false
+  },
+  "missing": [
+    "full Semantic",
+    "Freeform proposal",
+    "full Narrator response"
+  ]
+}

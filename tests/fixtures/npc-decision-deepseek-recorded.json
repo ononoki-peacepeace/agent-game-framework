@@ -1,0 +1,36 @@
+{
+  "source_trace_id": "tr_ab0e111beb22",
+  "source_request_id": "ed32094d-b623-4d12-a114-8e661d509c26",
+  "source_fixture": "repository town.json clone, no formal world data",
+  "raw_model_output": {
+    "kind": "proposed_action",
+    "speech": "新住民，早。公告栏这边还堆着几天的通知，我先理一理，按日子贴上。你要是想问什么，直接说就行。",
+    "vote_target": null,
+    "intent": "继续在广场整理社区公告，同时回应在场的新住民",
+    "proposed_action": {
+      "type": "HOLD",
+      "target_id": null,
+      "reason": "整理广场公告栏：清掉过期通知，把本周公告按日期重新贴上",
+      "duration_minutes": 45
+    },
+    "evidence_refs": [
+      "action:943c5db8-9f00-4b1a-a8f5-7bbffab5178a",
+      "daily:1:square"
+    ],
+    "belief_updates": [],
+    "goal_updates": [],
+    "plan_updates": null,
+    "goal_proposals": [
+      {
+        "id": "goal_lin_notice_board",
+        "description": "把广场公告栏整理干净，并贴好本周的社区通知",
+        "horizon": "short",
+        "priority": 4
+      }
+    ],
+    "plan_proposals": null,
+    "decision_summary": "广场仍无人手替换公告栏，自己刚查看过没有新线索，继续按志愿者职责整理公告；对在场的新住民简要说一声。",
+    "social_response": null
+  },
+  "evidence_gap": "Prompt and disposable world were not saved; replay reconstructs the documented repository fixture and uses the recorded request_id to reproduce deterministic evidence references."
+}

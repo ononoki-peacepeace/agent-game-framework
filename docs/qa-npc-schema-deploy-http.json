@@ -1,0 +1,25 @@
+{
+  "runtime": {
+    "version": "0.1.19",
+    "pid": 13624,
+    "started_at": "2026-10-17T22:58:34.047Z",
+    "execution": "compiled",
+    "code_sha256": "dfcf49da2b87b34b9d5824002213f8835fe5c825e47b716dd6f223f753d9e3c7"
+  },
+  "provider": {
+    "provider": "deepseek",
+    "model": "deepseek-flash",
+    "api_key_configured": true,
+    "persisted": true
+  },
+  "health_ok": true,
+  "http_status": 200,
+  "revision": 389,
+  "time": {
+    "day": 1,
+    "minute": 1068
+  },
+  "save_sha256": "119585428F0739A55865F97A1372879007BFDFC6893E10EDB42179F42B60B75C",
+  "save_unchanged": true,
+  "lock": "13624"
+}

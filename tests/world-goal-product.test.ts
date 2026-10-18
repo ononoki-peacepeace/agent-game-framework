@@ -41,7 +41,8 @@ it('open-ended goals discover declared affordances and execute a real first stag
   expect(work.result).toMatchObject({intent:'WORLD_GOAL',plan:{status:'completed'}});
   expect(work.after.state_revision).toBeGreaterThan(work.before.state_revision);
   expect(work.after.runtime.time.minute).toBeGreaterThan(work.before.runtime.time.minute);
-  expect(work.result.message).toContain('先沿已知路线');
+  expect(work.result.results?.[0]?.summary).toContain('先沿已知路线');
+  expect(work.result.message).toBe(work.after.last_turn?.narrative);
 
   const inquiry=await runGoal('找人打听最近的消息',save=>{
     const player=save.entities.find(entity=>entity.id===save.player_state.entity_id)!;

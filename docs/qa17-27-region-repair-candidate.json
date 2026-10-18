@@ -1,0 +1,38 @@
+{
+  "status": "proposal_only_not_applied",
+  "preconditions": {
+    "sha256": "ffab8b36afe8ffcb055da9b054cbbd786e8442e85f5addb762ab097551da72ce",
+    "revision": 349,
+    "time": {
+      "day": 1,
+      "minute": 936
+    },
+    "entity_id": "pc_asano",
+    "location": {
+      "location_id": "hall_great"
+    }
+  },
+  "changes": [
+    {
+      "entity_id": "pc_asano",
+      "component": "scene_position",
+      "expected_value": {
+        "label": "中央大厅一侧的长椅坐下"
+      },
+      "operation": "remove_component",
+      "evidence": {
+        "prior_turn": "80dd086b-e8d4-4f10-94d1-aa7d609360ce",
+        "prior_value": null
+      }
+    }
+  ],
+  "preserve": [
+    "game_time",
+    "RNG",
+    "rest_receipt",
+    "NPC_move_receipts",
+    "all_other_entities",
+    "historical_events"
+  ],
+  "commit_strategy": "Only with explicit authorization: existing metadata transaction, new revision/receipt/checkpoint; no direct JSON edit; never repeat the rest turn."
+}

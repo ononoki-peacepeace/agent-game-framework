@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import type { SavePackage } from './schema.js';
 
 /** Configuration, presentation and external extension state are deliberately outside World Undo. */
-export const worldKeys=['schema_version','framework_version','module_versions','modules','game_id','definition','entities','player_state','gm_state','narrative_state','background_state','event_state','runtime','map_state','last_turn','action_facts','future_intents','active_goal','task_progress','foreground','calendar','routine_meta','interaction_context','narrative_history','resolution_history','resolution_receipts','event_roll_history'] as const;
+export const worldKeys=['schema_version','framework_version','module_versions','modules','game_id','definition','entities','player_state','gm_state','narrative_state','background_state','event_state','runtime','map_state','last_turn','action_facts','future_intents','active_goal','paused_goals','task_progress','foreground','calendar','routine_meta','interaction_context','narrative_history','npc_agent_state','npc_autonomy_last_at','npc_daily_last_at','resolution_history','resolution_receipts','event_roll_history','environment_state'] as const;
 /** The snapshot travels inside `z.record(z.string(), z.json())`, which rejects `undefined` values. */
 function jsonSafe(value:any):any{
   if(Array.isArray(value))return value.map(jsonSafe);
@@ -10,8 +10,14 @@ function jsonSafe(value:any):any{
   return value;
 }
 export function worldImage(save:SavePackage):Record<string,any>{
-  const copy=structuredClone(save) as Record<string,any>;
-  for(const key of Object.keys(copy))if(!(worldKeys as readonly string[]).includes(key))delete copy[key];
+  // Select before cloning: history/audit contain previous world images and can be
+  // much larger than the live world. They are never part of an Undo checksum.
+  // Empty/absent paused lists are equivalent. Older checkpoints without a saved
+  // nonempty paused list cannot reconstruct that history; their checksum must
+  // fail safely rather than silently preserve the wrong set of goals.
+  const selected=Object.fromEntries(worldKeys.filter(key=>Object.hasOwn(save,key)&&
+    (key!=='paused_goals'||save.paused_goals?.length)).map(key=>[key,save[key]]));
+  const copy=structuredClone(selected) as Record<string,any>;
   delete copy.runtime.receipts;
   for(const e of copy.entities){delete e.components.visual_assets;if(e.components.identity)delete e.components.identity.avatar_id;}
   return jsonSafe(copy);

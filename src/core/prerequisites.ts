@@ -7,13 +7,14 @@ import type {Inventory} from '../modules/inventory.js';
 export const requirementSchema=z.strictObject({
   kind:z.enum(['entity_exists','same_location','item_held','item_accessible','destination_reachable','capability']),
   subject_id:z.string().min(1).max(100),
+  scene_reference:z.strictObject({location_id:id,quote:z.string().min(2).max(300)}).optional(),
 });
 export type Requirement=z.infer<typeof requirementSchema>;
 export type PrerequisiteResult={status:'EXECUTABLE'|'CONDITIONALLY_EXECUTABLE'|'NOT_EXECUTABLE';
   checked:{kind:string;subject_id:string|null;satisfied:true}[];reason:string|null};
 
 /** Pure canonical check shared by free actions and structured choice visibility. */
-export function evaluateWorldPrerequisites(save:SavePackage,input:{target_id?:string|null;requirements?:Requirement[];item_move?:{item_id:string;to:'held'|'scene'|'target'}|null}):PrerequisiteResult{
+export function evaluateWorldPrerequisites(save:SavePackage,input:{target_id?:string|null;requirements?:Requirement[];item_move?:{item_id:string;to:'held'|'scene'|'target'}|null;scene_description_access?:boolean}):PrerequisiteResult{
   const player=save.entities.find(entity=>entity.id===save.player_state.entity_id)!;
   const here=player.components.location?.location_id?String(player.components.location.location_id):undefined;
   const inventory=(player.components.inventory as Inventory|undefined)?.items??{};
@@ -38,8 +39,18 @@ export function evaluateWorldPrerequisites(save:SavePackage,input:{target_id?:st
   for(const requirement of requirements){
     const subject=save.entities.find(entity=>entity.id===requirement.subject_id);
     let valid=false,reason='行动所需的世界条件尚未成立';
+    // Described scenery may be looked at; this grants no item ownership, use,
+    // damage or movement capability and never creates an entity.
+    const scene=map.locations.find(location=>location.id===here);
+    const reference=requirement.scene_reference;
+    const observedScenery=Boolean(input.scene_description_access&&!subject&&
+      ['entity_exists','same_location'].includes(requirement.kind)&&
+      (reference?reference.location_id===here&&scene?.description.includes(reference.quote)&&
+        reference.quote.includes(requirement.subject_id):
+        requirement.subject_id.length>=2&&scene?.description.includes(requirement.subject_id)));
+    if(observedScenery){checked.push({kind:'scene_description',subject_id:requirement.subject_id,satisfied:true});continue;}
     switch(requirement.kind){
-      case 'entity_exists':valid=Boolean(subject);reason='所需对象在当前世界状态中不存在';break;
+      case 'entity_exists':valid=Boolean(subject)||locations.has(requirement.subject_id);reason='所需对象在当前世界状态中不存在';break;
       case 'same_location':valid=Boolean(here&&(locations.has(requirement.subject_id)?requirement.subject_id===here:subject?.components.location?.location_id===here));reason='所需对象不在当前场景';break;
       case 'item_held':valid=Boolean(subject?.components.item&&(inventory[subject.id]??0)>0);reason='角色没有持有所需物品';break;
       case 'item_accessible':valid=Boolean(subject?.components.item&&((inventory[subject.id]??0)>0||Boolean(here&&subject.components.location?.location_id===here)));reason='所需物品不在角色可触及的范围';break;

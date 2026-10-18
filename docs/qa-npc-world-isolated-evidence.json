@@ -1,0 +1,122 @@
+{
+  "formal_sha256": "95527b7bc9fa7968e77d44843ee3e3217b347bdcd6530e2eda500dab61fea144",
+  "formal_revision": 388,
+  "source_before_image": "16:17 before REV386",
+  "synthetic_provider": true,
+  "model_policy": "no_action；只验证实际机会和Core结算，不假装模型选择了工作",
+  "paid_calls": 0,
+  "steps": [
+    {
+      "action": "WAIT",
+      "from": {
+        "day": 1,
+        "minute": 977
+      },
+      "to": {
+        "day": 1,
+        "minute": 1007
+      },
+      "revision": 386,
+      "decisions": [
+        "n_fujimura",
+        "n_hayase"
+      ],
+      "npc_actions": [
+        {
+          "actor": "n_nikaido",
+          "type": "INSPECT",
+          "cost": 1
+        },
+        {
+          "actor": "n_shimada",
+          "type": "INSPECT",
+          "cost": 1
+        }
+      ],
+      "incident_statuses": [
+        "cancelled",
+        "active"
+      ],
+      "arc_statuses": [
+        "developing"
+      ]
+    },
+    {
+      "action": "MOVE",
+      "from": {
+        "day": 1,
+        "minute": 1007
+      },
+      "to": {
+        "day": 1,
+        "minute": 1008
+      },
+      "revision": 387,
+      "decisions": [
+        "n_kamishiro",
+        "n_komiyama"
+      ],
+      "npc_actions": [
+        {
+          "actor": "n_shiratori",
+          "type": "INSPECT",
+          "cost": 1
+        },
+        {
+          "actor": "n_tachibana",
+          "type": "INSPECT",
+          "cost": 1
+        }
+      ],
+      "incident_statuses": [
+        "cancelled",
+        "active"
+      ],
+      "arc_statuses": [
+        "developing"
+      ]
+    },
+    {
+      "action": "WAIT",
+      "from": {
+        "day": 1,
+        "minute": 1008
+      },
+      "to": {
+        "day": 1,
+        "minute": 1048
+      },
+      "revision": 388,
+      "decisions": [
+        "n_makabe",
+        "n_miyake"
+      ],
+      "npc_actions": [
+        {
+          "actor": "n_todo",
+          "type": "INSPECT",
+          "cost": 1
+        },
+        {
+          "actor": "n_miyake",
+          "type": "INSPECT",
+          "cost": 1
+        }
+      ],
+      "incident_statuses": [
+        "cancelled",
+        "active"
+      ],
+      "arc_statuses": [
+        "developing"
+      ]
+    }
+  ],
+  "unique_decision_opportunities": 6,
+  "reload_equal": true,
+  "undo_time": {
+    "day": 1,
+    "minute": 1008
+  },
+  "formal_unchanged": true
+}

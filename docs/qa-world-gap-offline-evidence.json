@@ -1,0 +1,97 @@
+{
+  "kind": "offline_http_reconstruction",
+  "real_provider": false,
+  "input": "我检查桌上是否有充电器，有的话拿起来。",
+  "stages": [
+    "semantic",
+    "planner",
+    "goal_alignment",
+    "freeform",
+    "environment_adjudication",
+    "narrator",
+    "narrative_audit"
+  ],
+  "provider_calls": 7,
+  "runtime_counter": 5,
+  "revision_before": 0,
+  "revision_after": 1,
+  "time_before": {
+    "day": 1,
+    "minute": 0
+  },
+  "time_after": {
+    "day": 1,
+    "minute": 2
+  },
+  "receipt": {
+    "request_id": "9c02ed71-04b6-45cd-a97a-52df48c6e546",
+    "action_id": "9c02ed71-04b6-45cd-a97a-52df48c6e546",
+    "actor_id": "player",
+    "target_id": null,
+    "semantic_action": "我检查桌上是否有充电器，有的话拿起来。",
+    "kind": "DETERMINISTIC",
+    "prerequisites": [
+      {
+        "kind": "registered_action",
+        "subject_id": "FREEFORM_ACTION",
+        "satisfied": true
+      }
+    ],
+    "check_id": "check_cc8b148aec3d9b51a6bf7d9e",
+    "rolls": [],
+    "outcome": "success",
+    "time_cost": 2,
+    "canonical_facts": [
+      "你找到了充电器，并将这件物品收好。",
+      "本次检查经过 2 分钟。"
+    ],
+    "effects": [
+      "time",
+      "inventory"
+    ],
+    "result_entities": {
+      "items": [
+        "item_1f16cad98201cc2fe25e7089ec58e79e"
+      ]
+    },
+    "environment": {
+      "resolution_id": "env_1f16cad98201cc2fe25e7089ec58e79e",
+      "status": "present",
+      "entity_id": "item_1f16cad98201cc2fe25e7089ec58e79e",
+      "taken": true,
+      "reason": "taken"
+    },
+    "at": {
+      "day": 1,
+      "minute": 2
+    },
+    "commit_status": "committed"
+  },
+  "resolution": {
+    "resolutions": [
+      {
+        "id": "env_1f16cad98201cc2fe25e7089ec58e79e",
+        "location_id": "square",
+        "name": "充电器",
+        "aliases": [],
+        "status": "present",
+        "classification": "ordinary_item",
+        "entity_id": "item_1f16cad98201cc2fe25e7089ec58e79e",
+        "description": "充电器，本次普通环境检查确认的日常物品。",
+        "take_allowed": true,
+        "source_request_id": "9c02ed71-04b6-45cd-a97a-52df48c6e546",
+        "at": {
+          "day": 1,
+          "minute": 2
+        }
+      }
+    ]
+  },
+  "narrative": "你找到了充电器，并将这件物品收好。 本次检查经过 2 分钟。",
+  "item": {
+    "id": "item_1f16cad98201cc2fe25e7089ec58e79e",
+    "name": "充电器",
+    "owner": "player",
+    "inventory_quantity": 1
+  }
+}

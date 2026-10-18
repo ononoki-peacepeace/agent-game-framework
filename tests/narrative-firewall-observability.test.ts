@@ -12,6 +12,15 @@ const narration=(text:string)=>({narrative:text,speaker:null,dialogue:null,choic
   patches:[],interaction:null,item_claims:[],stable_locations:[],mechanical_claims:[]});
 
 describe('Narrative Firewall pattern diagnostics',()=>{
+  it('accepts clear non-movement statements without rewriting prose, but still rejects asserted movement',async()=>{
+    const {service}=await sparseSetup(),save=await service.current();
+    const receipt=executeFreeform(save,'简单整理一下房间',proposal,randomUUID()).save.resolution_receipts!.at(-1)!;
+    for(const text of ['他没有离开，仍留在这里。','他尚未真正离开。','他准备离开，但还在原地。','这个想法没有变成离开。']){
+      const result=narration(text);expect(()=>validateResolvedNarrative(receipt,result,false)).not.toThrow();expect(result.narrative).toBe(text);
+    }
+    for(const text of ['他没有犹豫地离开。','他没有阻止同伴离开。','他没有离开，随后走到窗外。','他准备离开，随后进入走廊。'])
+      expect(()=>validateResolvedNarrative(receipt,narration(text),false)).toThrow(NarrativePatternError);
+  });
   it('retains the rejection and reports a bounded match without retaining the whole narration',async()=>{
     const {service}=await sparseSetup(),save=await service.current();
     const receipt=executeFreeform(save,'简单整理一下房间',proposal,randomUUID()).save.resolution_receipts!.at(-1)!;

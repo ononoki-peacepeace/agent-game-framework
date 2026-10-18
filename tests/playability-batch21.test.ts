@@ -124,6 +124,6 @@ describe('Batch 2.1 scene, narration and map consistency',()=>{
     addDynamicLocation(save,{id:'child_b',name:'子区乙',description:'',tags:[],parent_id:here,known_by_default:true,position:{x:24,y:20}},[{from:'child_a',to:'child_b',travel_minutes:8,conditions:[]}]);
     const view=f.service.project(save),children=view.locations.filter(location=>location.parent_id===here);
     expect(view.entities.find(e=>e.id===view.player_id)?.components.location?.location_id).toBe(here);
-    expect(visibleRouteEdges(view,children).get('child_a::child_b')).toEqual({from:'child_a',to:'child_b',travel_minutes:8});
+    expect(visibleRouteEdges(view,children).get('child_a::child_b')).toEqual({from:'child_a',to:'child_b',forward_minutes:8,reverse_minutes:null});
   });
 });

@@ -1,0 +1,31 @@
+{
+  "runtime": {
+    "version": "0.1.19",
+    "pid": 15852,
+    "started_at": "2026-10-17T21:03:21.116Z",
+    "execution": "compiled",
+    "code_sha256": "be109f04bdfbadafbfa6f263f69026cc3e58f90a3accd51a9a84f6df1475502c"
+  },
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "credentials_configured": true,
+  "provider_persisted": true,
+  "health_ok": true,
+  "health_legacy_version": "0.1.16",
+  "http_state_revision": 388,
+  "http_time": {
+    "day": 1,
+    "minute": 1048
+  },
+  "assets": [
+    {
+      "path": "/assets/index-CfQLBTb4.js",
+      "status": 200
+    },
+    {
+      "path": "/assets/index-B0uiJ4G6.css",
+      "status": 200
+    }
+  ],
+  "save_sha256": "95527b7bc9fa7968e77d44843ee3e3217b347bdcd6530e2eda500dab61fea144"
+}

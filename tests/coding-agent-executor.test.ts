@@ -41,7 +41,9 @@ describe('Core Development Executor clean repository lifecycle', () => {
     const runner = async (file: string, args: string[], cwd: string, signal?: AbortSignal) => {
       if (file === 'where.exe') return { stdout: 'fixture-codex.exe\r\n', stderr: '' };
       if (/npm\.cmd$/i.test(file)) {
-        const npmCli = process.env.npm_execpath;
+        // The isolated executor must run npm even when the suite itself is started without npm (npm_execpath is
+        // only set by npm). Fall back to the npm CLI shipped next to the running Node binary.
+        const npmCli = process.env.npm_execpath ?? process.execPath.replace(/[^\\/]+$/, 'node_modules/npm/bin/npm-cli.js');
         if (!npmCli) throw new Error('npm_execpath is unavailable');
         return exec(process.execPath, [npmCli, ...args], { cwd, signal, timeout: 60_000, maxBuffer: 1024 * 1024 });
       }

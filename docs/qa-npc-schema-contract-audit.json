@@ -1,0 +1,1960 @@
+[
+  {
+    "path": "kind",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "enum": [
+        "speech",
+        "vote",
+        "no_action",
+        "proposed_action"
+      ]
+    },
+    "provider_schema": {
+      "type": "string",
+      "enum": [
+        "speech",
+        "vote",
+        "no_action",
+        "proposed_action"
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "speech",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 600
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provider_schema": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 600
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "vote_target",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provider_schema": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "intent",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "provider_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "proposed_action",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "target_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "duration_minutes": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 240
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "environment_query": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 2,
+                      "maxLength": 80,
+                      "pattern": "[\\p{L}\\p{N}]"
+                    },
+                    "source_quote": {
+                      "type": "string",
+                      "minLength": 2,
+                      "maxLength": 2000
+                    },
+                    "intent": {
+                      "type": "string",
+                      "enum": [
+                        "observe",
+                        "take_if_available"
+                      ]
+                    },
+                    "container_id": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^[a-zA-Z][a-zA-Z0-9_-]{0,79}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "source_quote",
+                    "intent"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "target_id",
+            "reason"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provider_schema": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "target_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "duration_minutes": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 240
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "environment_query": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 2,
+                      "maxLength": 80,
+                      "pattern": "[\\p{L}\\p{N}]"
+                    },
+                    "source_quote": {
+                      "type": "string",
+                      "minLength": 2,
+                      "maxLength": 2000
+                    },
+                    "intent": {
+                      "type": "string",
+                      "enum": [
+                        "observe",
+                        "take_if_available"
+                      ]
+                    },
+                    "container_id": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^[a-zA-Z][a-zA-Z0-9_-]{0,79}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "source_quote",
+                    "intent",
+                    "container_id"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "target_id",
+            "reason",
+            "duration_minutes",
+            "environment_query"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "proposed_action.type",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "provider_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "proposed_action.target_id",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provider_schema": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "proposed_action.reason",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "provider_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "proposed_action.duration_minutes",
+    "input_required": false,
+    "output_required": false,
+    "input_schema": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 240
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provider_schema": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 240
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "proposed_action.environment_query",
+    "input_required": false,
+    "output_required": false,
+    "input_schema": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 80,
+              "pattern": "[\\p{L}\\p{N}]"
+            },
+            "source_quote": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2000
+            },
+            "intent": {
+              "type": "string",
+              "enum": [
+                "observe",
+                "take_if_available"
+              ]
+            },
+            "container_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z][a-zA-Z0-9_-]{0,79}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "source_quote",
+            "intent"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provider_schema": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 80,
+              "pattern": "[\\p{L}\\p{N}]"
+            },
+            "source_quote": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2000
+            },
+            "intent": {
+              "type": "string",
+              "enum": [
+                "observe",
+                "take_if_available"
+              ]
+            },
+            "container_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z][a-zA-Z0-9_-]{0,79}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "source_quote",
+            "intent",
+            "container_id"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "proposed_action.environment_query.name",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 80,
+      "pattern": "[\\p{L}\\p{N}]"
+    },
+    "provider_schema": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 80,
+      "pattern": "[\\p{L}\\p{N}]"
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "proposed_action.environment_query.source_quote",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 2000
+    },
+    "provider_schema": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 2000
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "proposed_action.environment_query.intent",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "enum": [
+        "observe",
+        "take_if_available"
+      ]
+    },
+    "provider_schema": {
+      "type": "string",
+      "enum": [
+        "observe",
+        "take_if_available"
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "proposed_action.environment_query.container_id",
+    "input_required": false,
+    "output_required": false,
+    "input_schema": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_-]{0,79}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provider_schema": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9_-]{0,79}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "evidence_refs",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "maxItems": 12,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 120
+      }
+    },
+    "provider_schema": {
+      "maxItems": 12,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 120
+      }
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "belief_updates",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "maxItems": 6,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "proposition": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "stance": {
+            "type": "string",
+            "enum": [
+              "believed",
+              "suspected",
+              "doubted",
+              "rejected",
+              "unknown"
+            ]
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "evidence_refs": {
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            }
+          }
+        },
+        "required": [
+          "id",
+          "proposition",
+          "stance",
+          "confidence",
+          "evidence_refs"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "provider_schema": {
+      "maxItems": 6,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "proposition": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "stance": {
+            "type": "string",
+            "enum": [
+              "believed",
+              "suspected",
+              "doubted",
+              "rejected",
+              "unknown"
+            ]
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "evidence_refs": {
+            "maxItems": 12,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            }
+          }
+        },
+        "required": [
+          "id",
+          "proposition",
+          "stance",
+          "confidence",
+          "evidence_refs"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "belief_updates.id",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "provider_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "belief_updates.proposition",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "provider_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "belief_updates.stance",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "enum": [
+        "believed",
+        "suspected",
+        "doubted",
+        "rejected",
+        "unknown"
+      ]
+    },
+    "provider_schema": {
+      "type": "string",
+      "enum": [
+        "believed",
+        "suspected",
+        "doubted",
+        "rejected",
+        "unknown"
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "belief_updates.confidence",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "provider_schema": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "belief_updates.evidence_refs",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "maxItems": 12,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 120
+      }
+    },
+    "provider_schema": {
+      "maxItems": 12,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 120
+      }
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "goal_updates",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "maxItems": 4,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "goal_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "completed",
+              "abandoned"
+            ]
+          }
+        },
+        "required": [
+          "goal_id",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "provider_schema": {
+      "maxItems": 4,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "goal_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "completed",
+              "abandoned"
+            ]
+          }
+        },
+        "required": [
+          "goal_id",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "goal_updates.goal_id",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "provider_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "goal_updates.status",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "enum": [
+        "active",
+        "completed",
+        "abandoned"
+      ]
+    },
+    "provider_schema": {
+      "type": "string",
+      "enum": [
+        "active",
+        "completed",
+        "abandoned"
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "plan_updates",
+    "input_required": false,
+    "output_required": false,
+    "input_schema": {
+      "maxItems": 3,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "plan_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "status": {
+            "type": "string",
+            "const": "abandoned"
+          }
+        },
+        "required": [
+          "plan_id",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "provider_schema": {
+      "anyOf": [
+        {
+          "maxItems": 3,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "plan_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "status": {
+                "type": "string",
+                "const": "abandoned"
+              }
+            },
+            "required": [
+              "plan_id",
+              "status"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "plan_updates.plan_id",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "provider_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "plan_updates.status",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "const": "abandoned"
+    },
+    "provider_schema": {
+      "type": "string",
+      "const": "abandoned"
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "goal_proposals",
+    "input_required": false,
+    "output_required": true,
+    "input_schema": {
+      "default": [],
+      "maxItems": 3,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "horizon": {
+            "type": "string",
+            "enum": [
+              "short",
+              "long"
+            ]
+          },
+          "priority": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10
+          }
+        },
+        "required": [
+          "id",
+          "description",
+          "horizon",
+          "priority"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "provider_schema": {
+      "anyOf": [
+        {
+          "maxItems": 3,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "horizon": {
+                "type": "string",
+                "enum": [
+                  "short",
+                  "long"
+                ]
+              },
+              "priority": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10
+              }
+            },
+            "required": [
+              "id",
+              "description",
+              "horizon",
+              "priority"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "goal_proposals.id",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "provider_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "goal_proposals.description",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "provider_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "goal_proposals.horizon",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "enum": [
+        "short",
+        "long"
+      ]
+    },
+    "provider_schema": {
+      "type": "string",
+      "enum": [
+        "short",
+        "long"
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "goal_proposals.priority",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10
+    },
+    "provider_schema": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "plan_proposals",
+    "input_required": false,
+    "output_required": true,
+    "input_schema": {
+      "default": [],
+      "maxItems": 3,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "goal_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "intention": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "steps": {
+            "minItems": 1,
+            "maxItems": 6,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "MOVE",
+                    "INSPECT",
+                    "TALK",
+                    "HOLD"
+                  ]
+                },
+                "target_id": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500
+                },
+                "duration_minutes": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 240
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "speech": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1000
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "type",
+                "target_id",
+                "description",
+                "duration_minutes",
+                "speech"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "not_before": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "day": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "minute": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "day",
+                  "minute"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "goal_id",
+          "intention"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "provider_schema": {
+      "anyOf": [
+        {
+          "maxItems": 3,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "goal_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "intention": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "steps": {
+                "anyOf": [
+                  {
+                    "minItems": 1,
+                    "maxItems": 6,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "MOVE",
+                            "INSPECT",
+                            "TALK",
+                            "HOLD"
+                          ]
+                        },
+                        "target_id": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 120
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "description": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 500
+                        },
+                        "duration_minutes": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 240
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "speech": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "target_id",
+                        "description",
+                        "duration_minutes",
+                        "speech"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "not_before": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "day": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "minute": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "day",
+                      "minute"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "condition": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "goal_id",
+              "intention",
+              "steps",
+              "not_before",
+              "condition"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "plan_proposals.id",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "provider_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "plan_proposals.goal_id",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "provider_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "plan_proposals.intention",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "provider_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "plan_proposals.steps",
+    "input_required": false,
+    "output_required": false,
+    "input_schema": {
+      "minItems": 1,
+      "maxItems": 6,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "MOVE",
+              "INSPECT",
+              "TALK",
+              "HOLD"
+            ]
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "duration_minutes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 240
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "speech": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "target_id",
+          "description",
+          "duration_minutes",
+          "speech"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "provider_schema": {
+      "anyOf": [
+        {
+          "minItems": 1,
+          "maxItems": 6,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "MOVE",
+                  "INSPECT",
+                  "TALK",
+                  "HOLD"
+                ]
+              },
+              "target_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "duration_minutes": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 240
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "speech": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "type",
+              "target_id",
+              "description",
+              "duration_minutes",
+              "speech"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "plan_proposals.steps.type",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "enum": [
+        "MOVE",
+        "INSPECT",
+        "TALK",
+        "HOLD"
+      ]
+    },
+    "provider_schema": {
+      "type": "string",
+      "enum": [
+        "MOVE",
+        "INSPECT",
+        "TALK",
+        "HOLD"
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "plan_proposals.steps.target_id",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provider_schema": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "plan_proposals.steps.description",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "provider_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "plan_proposals.steps.duration_minutes",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 240
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provider_schema": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 240
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "plan_proposals.steps.speech",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provider_schema": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "plan_proposals.not_before",
+    "input_required": false,
+    "output_required": false,
+    "input_schema": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "day": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "minute": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "day",
+            "minute"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provider_schema": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "day": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "minute": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "day",
+            "minute"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "plan_proposals.not_before.day",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "provider_schema": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "plan_proposals.not_before.minute",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "provider_schema": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "plan_proposals.condition",
+    "input_required": false,
+    "output_required": false,
+    "input_schema": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provider_schema": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "decision_summary",
+    "input_required": true,
+    "output_required": true,
+    "input_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "provider_schema": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  },
+  {
+    "path": "social_response",
+    "input_required": false,
+    "output_required": true,
+    "input_schema": {
+      "default": null,
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "accept",
+            "decline",
+            "conditional"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "provider_schema": {
+      "default": null,
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "accept",
+            "decline",
+            "conditional"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "conversion": "Only input-optional, non-nullable property null is restored to absence; original Zod parse applies declared defaults."
+  }
+]

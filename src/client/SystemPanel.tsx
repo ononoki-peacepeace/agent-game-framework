@@ -6,7 +6,9 @@ import { DevelopmentPanel } from './DevelopmentPanel.js';
 import { request,clientRequestId } from './api.js';
 import { clearSystemError, initialSystemInput, submitFailed, submitStarted, submitSucceeded, type SystemInputState } from './system-input.js';
 import { behaviorSummary, type BehaviorRule } from '../ai/behavior.js';
+import {contentAllowanceSummary} from '../narrative/policy.js';
 import { sanitizePlayerText } from '../system/player-copy.js';
+import type {BehaviorPatch} from '../ai/guidance.js';
 
 
 import type { PublicView } from '../shared/contracts.js';
@@ -37,19 +39,21 @@ type SystemResult = {
  */
 export function SystemPanel({ handoff, view, onView, onOpenLogs, onExport, onOpenCharacterCrop, busy, act }: PanelProps & {handoff?:{input:string;result:SystemResult}|null}) {
   const workspace=loadDevelopmentWorkspace(view.game_id);
-  const [behavior,setBehavior]=useState<BehaviorRule[]>([]),[devStatus,setDevStatus]=useState<DevelopmentProjection|null>(null),[provider,setProvider]=useState<ProviderSnapshot|null>(null);
+  const [behavior,setBehavior]=useState<BehaviorRule[]>([]),[guidancePatches,setGuidancePatches]=useState<BehaviorPatch[]>([]),[contentAllowances,setContentAllowances]=useState<string[]>([]),[devStatus,setDevStatus]=useState<DevelopmentProjection|null>(null),[provider,setProvider]=useState<ProviderSnapshot|null>(null);
   const [composer,setComposer]=useState<SystemInputState>(submitStarted(initialSystemInput,workspace.system_draft)),[result,setResult]=useState<SystemResult|null>(workspace.system_reply?{...workspace.system_reply} as SystemResult:null),[devDetail,setDevDetail]=useState<{name:string;requiresAnswer:boolean}|null>(null),[sending,setSending]=useState(false),[devRequest,setDevRequest]=useState<string|null>(null),[taskId,setTaskId]=useState<string|null>(workspace.active_task_id),[devOpen,setDevOpen]=useState(workspace.dev_open||Boolean(workspace.active_task_id));
   const [narrativeDebug,setNarrativeDebug]=useState<unknown>(null);
   const input=composer.value,error=composer.error,setInput=(value:string)=>{saveSystemDraft(view.game_id,value);setComposer(state=>submitStarted(state,value));};
   // The System surface is the only place the style configuration is summarised; the assistant body never shows it.
-  useEffect(()=>{void (async()=>{try{setBehavior(await request<BehaviorRule[]>('system/behavior'));}catch{/* no world loaded yet */}try{setProvider(await request<ProviderSnapshot>('ai/providers'));}catch{/* provider status remains unknown */}})();},[]);
+  useEffect(()=>{void (async()=>{try{setBehavior(await request<BehaviorRule[]>('system/behavior'));setGuidancePatches(await request<BehaviorPatch[]>('system/behavior-guidance'));setContentAllowances(await request<string[]>('system/content'));}catch{/* no world loaded yet */}try{setProvider(await request<ProviderSnapshot>('ai/providers'));}catch{/* provider status remains unknown */}})();},[view.game_id]);
   // A handed-off request was already executed by the other input box: show its result, but never put the text
   // back into this composer, otherwise a successfully consumed request looks unsent.
   useEffect(()=>{const saved=loadDevelopmentWorkspace(view.game_id);setTaskId(saved.active_task_id);setDevOpen(saved.dev_open||Boolean(saved.active_task_id));},[view.game_id]);
-  useEffect(()=>{if(!handoff)return;setResult(handoff.result);setDevStatus(handoff.result.development??null);const d=handoff.result.directive;if(d?.kind==='extension_development'){const id=String(d.task_id??'');setDevRequest(String(d.request??handoff.input));setTaskId(id||null);setDevOpen(true);saveDevelopmentWorkspace(view.game_id,{active_task_id:id||null,dev_open:true});}if(d?.kind==='open_crop_editor'&&typeof d.entity_id==='string')onOpenCharacterCrop?.(d.entity_id);},[handoff]);
+  useEffect(()=>{if(!handoff)return;setResult(handoff.result);if(Array.isArray(handoff.result.advanced?.behavior))setBehavior(handoff.result.advanced.behavior as BehaviorRule[]);if(Array.isArray(handoff.result.advanced?.behavior_patches))setGuidancePatches(handoff.result.advanced.behavior_patches as BehaviorPatch[]);if(Array.isArray(handoff.result.advanced?.content_allowances))setContentAllowances(handoff.result.advanced.content_allowances as string[]);setDevStatus(handoff.result.development??null);const d=handoff.result.directive;if(d?.kind==='extension_development'){const id=String(d.task_id??'');setDevRequest(String(d.request??handoff.input));setTaskId(id||null);setDevOpen(true);saveDevelopmentWorkspace(view.game_id,{active_task_id:id||null,dev_open:true});}if(d?.kind==='open_crop_editor'&&typeof d.entity_id==='string')onOpenCharacterCrop?.(d.entity_id);},[handoff]);
   function receive(next:SystemResult,text:string){
     if(next.view)onView?.(next.view);setResult(next);saveSystemDraft(view.game_id,'');saveSystemReply(view.game_id,{category:next.category,tool_id:next.tool_id,needs_confirmation:next.needs_confirmation,message:next.message,title:next.title??null,clarification:next.clarification??null,workflow:next.workflow??null,pending_field:next.pending_field??null,expression:next.expression});if(next.development)setDevStatus(next.development);setComposer(state=>submitSucceeded(state));
     if(Array.isArray(next.advanced?.behavior))setBehavior(next.advanced.behavior as BehaviorRule[]);
+    if(Array.isArray(next.advanced?.behavior_patches))setGuidancePatches(next.advanced.behavior_patches as BehaviorPatch[]);
+    if(Array.isArray(next.advanced?.content_allowances))setContentAllowances(next.advanced.content_allowances as string[]);
     if(next.directive?.kind==='export_save')onExport?.();
     if(next.directive?.kind==='open_crop_editor'&&typeof next.directive.entity_id==='string')onOpenCharacterCrop?.(next.directive.entity_id);
     if(next.directive?.kind==='extension_development'){const id=String(next.directive.task_id??'');setDevRequest(String(next.directive.request??text));setTaskId(id||null);setDevOpen(true);saveDevelopmentWorkspace(view.game_id,{active_task_id:id||null,dev_open:true});}
@@ -64,6 +68,15 @@ export function SystemPanel({ handoff, view, onView, onOpenLogs, onExport, onOpe
 
       receive(next,text);
     }catch(e){setComposer(state=>submitFailed(state,(e as Error).message));}
+    finally{setSending(false);}
+  }
+  async function managePatch(patch:BehaviorPatch,operation:'toggle'|'remove'){
+    if(sending)return;setSending(true);
+    try{
+      const updated=await request<{view:PublicView;patches:BehaviorPatch[]}>(`system/behavior-guidance/${encodeURIComponent(patch.id)}/${operation==='remove'?'remove':'enabled'}`,
+        operation==='remove'?{}:{enabled:!patch.enabled});
+      setGuidancePatches(updated.patches);onView?.(updated.view);
+    }catch(error){setComposer(state=>submitFailed(state,(error as Error).message));}
     finally{setSending(false);}
   }
   async function capabilityAction(action:NonNullable<SystemResult['capability_guidance']>['options'][number]['action']){
@@ -114,6 +127,13 @@ export function SystemPanel({ handoff, view, onView, onOpenLogs, onExport, onOpe
       <p>待补充字段：{result?.pending_field??result?.session?.pending_field??'（无）'}</p>
       <p>查看不会改动世界；写入只在你确认后进行。</p>
       <p>当前风格配置：{behaviorSummary(behavior)}</p>
+      <section aria-label="AI 行为指导"><strong>AI 行为指导</strong><p>默认推理原则由 Framework 提供；这里管理你通过 System 保存的补充指导。</p>
+        {(['session','world','global'] as const).map(scope=><div key={scope}><h4>{scope==='session'?'当前会话':scope==='world'?'当前世界':'全局'}</h4>
+          {guidancePatches.filter(patch=>patch.scope===scope).length===0?<p>暂无补充指导。</p>:
+            <ul>{guidancePatches.filter(patch=>patch.scope===scope).map(patch=><li key={patch.id}><strong>{patch.title}</strong> · {patch.category} · {patch.enabled?'启用':'停用'}<p>{patch.preferred_behavior}</p><small>来源：{patch.source_text}</small><div className="button-row compact"><button type="button" className="quiet" disabled={sending} onClick={()=>void managePatch(patch,'toggle')}>{patch.enabled?'停用':'启用'}</button><button type="button" className="quiet" disabled={sending} onClick={()=>void managePatch(patch,'remove')}>删除</button></div></li>)}</ul>}
+        </div>)}
+      </section>
+      <p>当前世界题材允许范围：{contentAllowanceSummary(contentAllowances)}。允许不代表强制出现。</p>
       {!!behavior.length&&<button type="button" className="quiet" disabled={sending} onClick={()=>void send(false,'恢复默认风格配置')}>恢复默认风格</button>}
       {!devVisible&&<button type="button" className="quiet" onClick={event=>{(event.currentTarget.closest('details') as HTMLDetailsElement|null)?.removeAttribute('open');setDevOpen(true);saveDevelopmentWorkspace(view.game_id,{dev_open:true});}}>打开开发工作区</button>}
       <button type="button" className="quiet" onClick={()=>void onOpenLogs?.()}>打开日志面板</button>

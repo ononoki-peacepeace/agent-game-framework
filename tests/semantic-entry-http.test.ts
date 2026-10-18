@@ -28,10 +28,19 @@ async function setup(recoverEvidence=false){
   const ai=new AIRuntime({name:'semantic-fixture',generate:async request=>{
     if(request.role!=='gm_reasoning')throw Error('unexpected provider call');
     const properties=(request.schema as {properties?:Record<string,unknown>})?.properties??{};
+    if('preserved' in properties)return {data:{preserved:true,reason:'候选保留原始请求'}};
+    if('aligned' in properties)return {data:{aligned:true,reason:'请求与设置目标一致'}};
     if('verdict' in properties){
       const data=JSON.parse(request.prompt.split('\n\n').at(-1)!) as {original_request:string};
       return {data:{verdict:data.original_request==='尝试打开仓库的锁'?'incomplete':'aligned',
         explanation:'核对原请求与完整计划。'}};
+    }
+    if('decision' in properties){
+      const context=JSON.parse(request.prompt.split('\n\n').at(-1)!) as {scene?:{location?:string}};
+      const moving=context.scene?.location==='square';
+      return {data:{decision:moving?'transaction':'done',transaction:moving?
+        {kind:'move',destination:'河岸车站',minutes:null,reason:'前往目标地点'}:null,
+        reason:null,question:null}};
     }
     if('message' in properties&&Object.keys(properties).length===1)return {data:{message:'风格设置已按实际结果处理。'}};
     const prompt=request.prompt;
@@ -40,19 +49,30 @@ async function setup(recoverEvidence=false){
     seen.push(input.input);
     contexts.push(input);
     if(input.input==='请缩短此后旁白')return {data:{domain:'system',kind:'system_operation',confidence:.98,
-      answer:null,answer_basis:null,evidence_ids:[],clarification:null,speech_target_id:null}};
+      answer:null,answer_basis:null,evidence_ids:[],clarification:null,speech_target_id:null,
+      operation_plane:'system_management',goal_spec:{objective:input.input,targets:[],desired_state:[],
+        desired_outputs:[],constraints:[],persistence:'canonical',temporal:{at:null,recurrence:null},
+        dependencies:[],world_mutation:false,external_artifact:false,multi_step:false,ambiguity:null}}};
     if(input.input==='前一回合和谁交谈'){
       const fact=input.public_evidence.find(entry=>entry.id==='last_dialogue');
       return {data:{domain:'world',kind:'read_only',confidence:.98,
         answer:`前一回合与${fact?.value.speaker??'未登记人物'}交谈。`,answer_basis:'world_fact',
         evidence_ids:['last_dialogue'],clarification:null,speech_target_id:null}};
     }
+    if(input.input==='我刚才问了什么？'){
+      const turn=input.public_evidence.find(entry=>entry.id==='recent_turn:0');
+      const utterance=turn?.value.speech_events?.find((event:{provenance:string})=>event.provenance!=='npc_response')?.utterance;
+      return {data:{domain:'world',kind:'read_only',confidence:.98,
+        answer:utterance?`你刚才问了：“${utterance}”`:'旧对话记录没有保存玩家发言，无法确认当时说了什么。',
+        answer_basis:utterance?'world_fact':'unknown',evidence_ids:utterance?['recent_turn:0']:[],
+        clarification:null,speech_target_id:null}};
+    }
     if(input.input==='盘点身上所有已登记物品')return {data:{domain:'world',kind:'read_only',confidence:.98,
       answer:'目前背包为空。',answer_basis:'world_fact',
       evidence_ids:['entity:player.inventory.items'],clarification:null,speech_target_id:null}};
     if(input.input==='谈谈乔宁所在位置')return {data:{domain:'world',kind:'read_only',confidence:.98,
-      answer:'乔宁在market，玩家在square，林舟也在square。',answer_basis:'world_fact',
-      evidence_ids:['entity:npc_qiao.location.location_id','entity:player.location.location_id'],clarification:null,speech_target_id:null}};
+      answer:'乔宁目前的位置无法确认；玩家在square，林舟也在square。',answer_basis:'world_fact',
+      evidence_ids:['entity:npc_lin.location.location_id','entity:player.location.location_id'],clarification:null,speech_target_id:null}};
     if(input.input==='你别这样说了')return {data:{domain:'ambiguous',kind:'clarification',confidence:.55,
       answer:null,answer_basis:null,evidence_ids:[],clarification:'你是在询问，还是要求修改回复风格？',speech_target_id:null}};
     if(input.input==='我说的是回复风格')return {data:{domain:'system',kind:'read_only',confidence:.96,
@@ -158,6 +178,25 @@ it('answers committed conversation history and an empty inventory without a worl
   expect(after.resolution_receipts).toEqual(seed.resolution_receipts);
 });
 
+it('uses recorded player speech for a read-only recall and treats legacy gaps as unknown',async()=>{
+  const env=await setup(),seed=await env.service.current();
+  seed.narrative_history=[{request_id:randomUUID(),narrative:'你们交谈。',dialogue:'刚回来。',speaker:'npc_lin',facts:[],
+    player_input:'你今天怎么这么早就在家？',speech_events:[
+      {speaker_id:'player',utterance:'你今天怎么这么早就在家？',provenance:'verbatim_player_input',source_intent:null},
+      {speaker_id:'npc_lin',utterance:'刚回来。',provenance:'npc_response',source_intent:null}]}];
+  await env.service.storage.write(seed);
+  const answer=await env.post('/api/input','我刚才问了什么？');
+  expect(answer.body.message).toContain('你今天怎么这么早就在家？');
+  expect(env.contexts[0].public_evidence.find((entry:{id:string})=>entry.id==='recent_turn:0')?.value.speech_events).toHaveLength(2);
+  expect((await env.service.current()).state_revision).toBe(seed.state_revision);
+  const old=await env.service.current();
+  old.narrative_history=[{request_id:randomUUID(),narrative:'你们交谈。',dialogue:'刚回来。',speaker:'npc_lin',facts:[]}];
+  await env.service.storage.write(old);
+  const unknown=await env.post('/api/input','我刚才问了什么？');
+  expect(unknown.body.message).toContain('没有保存玩家发言');
+  expect(unknown.body.message).not.toContain('你没有');
+});
+
 it('passes the complete public location and route catalog as citable read-only evidence',async()=>{
   const env=await setup(),before=await env.service.current(),view=await env.service.view();
   const result=await env.post('/api/system','谈谈乔宁所在位置');
@@ -237,21 +276,25 @@ it('preserves a final goal after its preparation and blocks unsupported completi
   expect(result.body.plan?.goals.map((goal:GoalInput)=>goal.normalized_goal)).toEqual(['前往河岸车站','领取寄存的行李']);
   expect(result.body.plan?.goals[1].depends_on).toEqual(['travel']);
   expect(result.body.plan?.goals[1].status).toBe('blocked');
-  expect(result.body.message).toContain('领取寄存的行李');
-  expect(result.body.message).toContain('缺少可验证的执行或完成方式');
+  expect(result.body.outcome).toMatchObject({type:'game',kind:'partial_progress'});
+  expect(result.body.message).toContain('后续目标仍未发生');
+  expect(result.body.message).not.toMatch(/capability|runtime_gap|已注册结算/);
   const after=await env.service.current();
-  expect(after.state_revision).toBe(before.state_revision);
-  expect(after.runtime.time).toEqual(before.runtime.time);
-  expect(after.resolution_receipts).toEqual(before.resolution_receipts);
-  expect(after.entities).toEqual(before.entities);
+  expect(after.state_revision).toBeGreaterThan(before.state_revision);
+  expect(after.runtime.time.minute).toBeGreaterThan(before.runtime.time.minute);
+  expect(after.resolution_receipts?.filter(receipt=>receipt.semantic_action==='MOVE')).toHaveLength(1);
+  expect(after.entities.find(entity=>entity.id==='player')?.components.location?.location_id).toBe('station');
 });
 
-it('reports conversion failure against the original request rather than calling preparation a complete plan',async()=>{
+it('reports conversion failure in the player’s own words and never as an internal diagnostic',async()=>{
   const env=await setup(),before=await env.service.current();
   const result=await env.post('/api/input','去河岸车站并签收包裹');
   expect(result.response.ok,JSON.stringify(result.body)).toBe(true);
-  expect(result.body.message).toContain('去河岸车站并签收包裹');
-  expect(result.body.message).toContain('无效依赖');
+  expect(result.body.outcome).toMatchObject({type:'engine_failure',code:'schema_failure'});
+  expect(result.body.message).not.toContain('去河岸车站并签收包裹');
+  // Internal plan structure stays in the log; the player only gets a natural account of their own request.
+  expect(result.body.message).not.toContain('无效依赖');
+  expect(result.body.message).not.toMatch(/ZodError|result_ref|goal_id|from_goal_id|runtime_gap|needs_binding|capability_gap|PlanConversion|execution_availability|stepContract/i);
   expect(result.body.message).not.toContain('只规划出准备步骤');
   const after=await env.service.current();
   expect(after.state_revision).toBe(before.state_revision);
@@ -264,8 +307,9 @@ it('resolves known entity IDs in read-only answers on both composers and in acti
   for(const path of ['/api/input','/api/system']){
     const result=await env.post(path,'谈谈乔宁所在位置');
     expect(result.response.ok,JSON.stringify(result.body)).toBe(true);
-    expect(result.body.message).toContain('街角商店');
+    expect(result.body.message).toContain('无法确认');
     expect(result.body.message).toContain('中央广场');
+    expect(result.body.message).not.toContain('街角商店');
     expect(result.body.message).not.toMatch(/\b(?:market|square)\b/);
   }
   const feedback=agentResult('WORLD_ACTION','已在station看到npc_lin。',{view:publicView(before)});
@@ -285,7 +329,8 @@ it('keeps provider truncation diagnostics out of the HTTP action result',async()
     'DeepSeek 响应未完成：输出达到最大 Token 限制（max_output_tokens），响应未完成'));
   const result=await env.post('/api/input','在院内尝试攀墙');
   expect(result.response.ok,JSON.stringify(result.body)).toBe(true);
-  expect(result.body.message).toContain('模型响应未完整生成');
+  expect(result.body.outcome).toMatchObject({type:'engine_failure'});
+  expect(result.body.message).toContain('没有完成安全结算');
   expect(JSON.stringify(result.body)).not.toContain('max_output_tokens');
   const after=await env.service.current();
   expect(after.state_revision).toBe(before.state_revision);

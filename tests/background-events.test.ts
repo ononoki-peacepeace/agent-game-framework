@@ -10,6 +10,8 @@ import {sparsePlan,sparseWorld} from './sparse-fixture.js';
 import {sparseStep} from '../src/routine/scheduler.js';
 import {AIRuntime} from '../src/ai/runtime.js';
 import {reviewWorldNovelty} from '../src/world/novelty.js';
+import {applyBackgroundProposal} from '../src/background/generation.js';
+import {worldCandidateIssues} from '../src/ai/world-initializer-repair.js';
 import {readFile} from 'node:fs/promises';
 import {readProfile} from '../src/ai/profiles.js';
 
@@ -48,6 +50,63 @@ function advanceTo(initial:SavePackage,target:{day:number;minute:number}){
  return save;
 }
 describe('Background World Event Simulation v0.1',()=>{
+ it('cancelled seeds are terminal, request one cooled continuation, and never revive',()=>{
+   const w=world(),seed=w.background_incidents![0];seed.activation_chance=0;
+   w.world_macro_arcs=[{id:'pressure',title:'持续压力',summary:'不同人的目标仍相互影响',
+     underlying_pressure:'现有资源越来越紧张',actor_motivations:[{actor_id:seed.participants[0],motivation:'维持自己的工作'}],
+     resource_constraint:'人手不足',historical_cause:'旧安排没有更新',social_relationship:'周围人依赖旧安排',
+     trigger:'日常安排变化',unintended_consequence:'新的冲突逐渐出现',truth_refs:[],incident_refs:[seed.id],horizon:'long'}];
+   let save=advanceTo(newSave(w),time(2,600));
+   expect(save.background_state?.incidents[0]).toMatchObject({status:'cancelled',stage_index:-1,ended_at:time(2,600)});
+   expect(save.background_state?.event_log.map(event=>event.kind)).toContain('cancelled');
+   expect(save.background_state?.macro_arcs[0].status).toBe('latent');
+   save=advanceTo(save,time(2,661));expect(save.background_state?.needs_generation).toBe(true);
+   const quiet=applyBackgroundProposal(save,{decision:'quiet',incident:null,reason:'暂时不安排后续'});
+   expect(quiet.background_state?.needs_generation).toBe(false);
+   expect(advanceTo(quiet,time(2,722)).background_state?.needs_generation).toBe(true);
+   const next=structuredClone(seed);next.id='independent_followup';next.title='后续独立变化';
+   next.source='WORLD_RUNTIME';next.causal_parent_id=null;next.created_at=save.runtime.time;
+   next.earliest_activation=save.runtime.time;next.activation_chance=1;
+   next.causal_basis={underlying_pressure:'现有资源持续紧张',actor_motivation:'继续维持日常工作',
+     resource_constraint:'人手仍然不足',historical_cause:'过去的安排留下缺口',
+     social_relationship:'既有人物还需要协作',trigger:'新一轮工作安排',unintended_consequence:'有人重新讨论优先顺序'};
+   save=applyBackgroundProposal(save,{decision:'propose',incident:next,reason:'从现存压力继续，而非引用已取消事件'});
+   expect(save.definition.background_incidents).toHaveLength(2);
+   expect(save.definition.world_macro_arcs?.[0].incident_refs).toContain(next.id);
+   expect(save.background_state?.incidents[0].status).toBe('cancelled');
+   expect(save.background_state?.needs_generation).toBe(false);
+   save=wait(save,1);expect(save.definition.background_incidents).toHaveLength(2);
+ });
+ it('public area broadcast reaches a registered parent area, while private sight and rumors retain their carrier',()=>{
+   const w=world(),seed=w.background_incidents![0],npc=w.entities.find(entity=>entity.id===seed.participants[0])!;
+   seed.earliest_activation=time(1,600);seed.stages=seed.stages.slice(0,1);seed.stages[0].terminal='resolved';
+   seed.stages[0].exposures=[{id:'broadcast',channel:'public_notice',location_id:'station',npc_id:null,
+     delivery_scope:'parent_area',text:'区域公告传来一项公开变化。',interrupt:false,open_loop_label:null}];
+   const station=w.map!.locations.find(location=>location.id==='station')!;
+   const player=w.entities.find(entity=>entity.id===w.player.entity_id)!;
+   const origin=w.map!.locations.find(location=>location.id===player.components.location?.location_id)!;
+   w.map!.locations.push({...origin,id:'area_root',name:'区域',parent_id:null,map_level:0});
+   station.parent_id=origin.parent_id='area_root';station.map_level=origin.map_level=1;
+   let save=advanceTo(newSave(w),time(1,600));
+   expect(save.background_state?.exposure_log.map(item=>item.id)).toHaveLength(1);
+   const legacyWorld=structuredClone(w);
+   delete legacyWorld.background_incidents![0].stages[0].exposures[0].delivery_scope;
+   save=advanceTo(newSave(legacyWorld),time(1,600));
+   expect(save.background_state?.exposure_log).toHaveLength(1);
+   const anchorWorld=structuredClone(w);
+   anchorWorld.background_incidents![0].stages[0].exposures[0].delivery_scope='anchor';
+   save=advanceTo(newSave(anchorWorld),time(1,600));
+   expect(save.background_state?.exposure_log).toHaveLength(0);
+   const privateWorld=structuredClone(w);privateWorld.background_incidents![0].stages[0].exposures[0]={
+     id:'private_sight',channel:'same_location',location_id:'station',npc_id:null,
+     text:'只有现场才能看到。',interrupt:false,open_loop_label:null};
+   save=advanceTo(newSave(privateWorld),time(1,600));
+   expect(save.background_state?.exposure_log).toHaveLength(0);
+   privateWorld.background_incidents![0].stages[0].exposures[0]={id:'carrier',channel:'rumor',
+     location_id:'station',npc_id:npc.id,text:'有人口头传来消息。',interrupt:false,open_loop_label:null};
+   save=advanceTo(newSave(privateWorld),time(1,600));
+   expect(save.background_state?.exposure_log).toHaveLength(0);
+ });
  it('A/B: activates through ordinary WAIT and advances while the player is elsewhere',()=>{
    let save=advanceTo(newSave(world()),time(2,600));
    expect(save.background_state?.incidents[0]).toMatchObject({status:'active',stage_index:0,player_exposed:false});
@@ -136,13 +195,16 @@ describe('Background World Event Simulation v0.1',()=>{
      currency:{id:'yen',name:'元'},player:{id:'player',name:'玩家',description:'学生',location_id:'square',cash:0},
      locations:[{id:'square',name:'住处',description:'',parent_id:null,kind:'poi',map_level:0,known_by_default:true},{id:'station',name:'学校',description:'',parent_id:null,kind:'poi',map_level:0,known_by_default:true}],
      routes:[{from:'square',to:'station',travel_minutes:10},{from:'station',to:'square',travel_minutes:10}],
-     characters:[{id:seed.participants[0],name:'角色甲',description:'',location_id:'station',role:'student'}],
+     characters:[{id:seed.participants[0],name:'角色甲',description:'',location_id:'station',role:'student',
+       persona:{personality:'好奇但审慎',behavior_tendencies:['先提问再行动'],speech_style:'简短而礼貌',
+         example_dialogues:['我想先确认细节。']}}],
      items:null,shop:null,hidden_notes:'',hidden_truths:[],background_incidents:[seed],opening:'开学了。',
    });
    const compiled=compileWorld(blueprint,demo.prompt_profile),save=newSave(compiled);
    expect(compiled.background_incidents).toHaveLength(1);
    expect(save.background_state?.incidents[0].status).toBe('dormant');
    expect(save.definition.background_incidents?.[0].stages).toHaveLength(4);
+   expect(save.entities.find(e=>e.id===seed.participants[0])?.components.character?.speech_style).toBe('简短而礼貌');
  });
  it('Macro Arc is optional, causal, and tracks only its linked incident',()=>{
    const ordinary=world();

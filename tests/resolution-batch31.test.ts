@@ -15,6 +15,16 @@ import {classifyChoiceExecution} from '../src/core/choice-availability.js';
 import {createRegistry} from '../src/modules/index.js';
 import {executeAction} from '../src/core/runtime.js';
 import {addDynamicLocation} from '../src/core/map.js';
+import type {SavePackage} from '../src/core/schema.js';
+
+function withKnownDesk(save:SavePackage){
+  const here=String(save.entities.find(entity=>entity.id===save.player_state.entity_id)!.components.location!.location_id);
+  save.definition.map!.locations.find(location=>location.id===here)!.description='测试起居室设有书桌。';
+  save.environment_state={resolutions:[{id:'env_resolution_desk',location_id:here,name:'书桌前',aliases:[],
+    status:'present',classification:'environment_detail',entity_id:null,description:'起居室内书桌前',
+    take_allowed:false,source_request_id:randomUUID(),at:structuredClone(save.runtime.time),
+    known_by:[String(save.player_state.entity_id)]}]};
+}
 
 const semantics=(type:'DETERMINISTIC'|'SIMPLE_CHECK'|'GRADED_CHECK'='DETERMINISTIC')=>({
   type,domain:'general',band:'normal' as const,visibility:'public' as const,stakes:'这次行动尝试',stages:[],evidence_ids:[],
@@ -85,7 +95,7 @@ describe('Batch 3.1 resolution closure',()=>{
     expect(committed.entities).toEqual(before.entities);
   });
   it('does not commit when a compound local goal lacks activity completion evidence',async()=>{
-    const f=await sparseSetup(),before=await f.service.current();
+    const f=await sparseSetup(),before=await f.service.current();withKnownDesk(before);await f.store.write(before);
     const input='回到书桌前，把作业本下一页写完';
     vi.spyOn(f.ai,'interpret').mockResolvedValue({type:'FREEFORM_ACTION',parameters:{}});
     vi.spyOn(f.ai,'freeform').mockResolvedValue(proposal({minutes:5,resolution:semantics('SIMPLE_CHECK')}));
@@ -103,7 +113,7 @@ describe('Batch 3.1 resolution closure',()=>{
     expect(save.action_facts).toBeUndefined();
   });
   it('rejects a quantified milestone even if the proposal claims it completed',async()=>{
-    const f=await sparseSetup(),save=await f.service.current(),requestId=randomUUID();
+    const f=await sparseSetup(),save=await f.service.current(),requestId=randomUUID();withKnownDesk(save);
     const input='回到书桌前，把作业本下一页写完';
     const before=structuredClone(save);
     expect(()=>executeFreeform(save,input,proposal({completion_quote:'把作业本下一页写完'}),requestId)).toThrow('完整目标');
@@ -115,9 +125,20 @@ describe('Batch 3.1 resolution closure',()=>{
     vi.spyOn(f.ai,'freeform').mockResolvedValue(proposal());
     const narrator=vi.spyOn(f.ai,'narrate').mockResolvedValue(narration('你拿起了未登记的宝物。'));
     const request={request_id:randomUUID(),game_id:before.game_id,expected_revision:before.state_revision,input:'我检查眼前的物件'};
-    await expect(f.service.turn(request)).rejects.toThrow('尚未提交');
+    // The program settles the original request independently of the narrator: the mechanical claim is rejected
+    // three times, then a safe narrative derived from the committed receipt is used. The receipt below is the
+    // authoritative settlement of "我检查眼前的物件"; nothing about the rejected claim is committed.
+    await f.service.turn(request);
     expect(narrator).toHaveBeenCalledTimes(3);
-    expect(await f.service.current()).toEqual(before);
+    const after=await f.service.current();
+    const receipts=after.resolution_receipts??[];
+    expect(receipts.length).toBe((before.resolution_receipts??[]).length+1);
+    expect(receipts.at(-1)).toMatchObject({semantic_action:'我检查眼前的物件',kind:'DETERMINISTIC',outcome:'success'});
+    expect(after.state_revision).toBe(before.state_revision+1);
+    expect(after.runtime.time.minute).toBe(before.runtime.time.minute+1);
+    expect(after.entities.some(entity=>String(entity.components.identity?.name??'').includes('宝物'))).toBe(false);
+    expect(String(after.last_turn?.narrative??'')).not.toContain('宝物');
+    expect(String(after.last_turn?.narrative??'')).not.toContain('未登记的');
   });
   it('keeps a zero-component wait valid without requiring progress or position',async()=>{
     const f=await sparseSetup(),before=await f.service.current();

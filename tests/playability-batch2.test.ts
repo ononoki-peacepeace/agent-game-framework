@@ -149,6 +149,7 @@ describe('Batch 2 canonical scene claims and safety',()=>{
     view.routes=[{from:here,to:middle.id,travel_minutes:3},{from:middle.id,to:destination.id,travel_minutes:7}];
     const html=renderToStaticMarkup(createElement(panelRegistry.map,{view,busy:false} as any));
     expect(routePath(view.routes,here,destination.id)?.map(edge=>edge.to)).toEqual([middle.id,destination.id]);
-    expect(html).toContain('10 分钟');expect(html).toContain('途经');expect(html).toContain('map-route-indirect');
+    expect(html).toContain('10 分钟');expect(html).toContain(`中央广场 → ${middle.name} → 远处广场`);
+    expect(html).not.toContain('data-route-from="square" data-route-to="fixture_destination"');
   });
 });

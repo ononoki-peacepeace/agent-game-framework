@@ -36,16 +36,22 @@ it('genuine conditional punch keeps punch intent instead of becoming an invitati
 });
 it.each(['假如','要是','若','只要','除非'])('recognizes explicit %s user condition',word=>expect(hasUserCondition(word+'对方在场，就说话')).toBe(true));
 it('does not infer a player condition from an ordinary action',()=>expect(hasUserCondition('狠狠揍梅芙一拳')).toBe(false));
-it('local exit has no map transaction or node creation',async()=>{
- const f=await setup();vi.spyOn(f.ai,'freeform').mockResolvedValue({...outcome(),narrative:'你走出门，停在屋外。',facts:['你走到屋外。']});
- const result=await input(f,'我出门到屋外。'),next=await f.service.current();
- expect(next.entities.find(e=>e.id===f.player.id)!.components.scene_position).toEqual({label:'屋外'});
+it('a confirmed local fixture permits movement without a map transaction',async()=>{
+ const f=await setup(),before=await f.service.current(),here=String(f.player.components.location!.location_id);
+ before.environment_state={resolutions:[{id:'env_bench_edge',location_id:here,name:'长椅旁',aliases:[],
+  status:'present',classification:'environment_detail',entity_id:null,description:'广场边的长椅',
+  take_allowed:false,source_request_id:randomUUID(),at:structuredClone(before.runtime.time),known_by:[String(f.player.id)]}]};
+ await f.store.write(before);
+ vi.spyOn(f.ai,'freeform').mockResolvedValue({...outcome(),narrative:'你走到长椅旁。',facts:['你来到长椅旁。']});
+ const result=await input(f,'我走到长椅旁。'),next=await f.service.current();
+ expect(next.entities.find(e=>e.id===f.player.id)!.components.scene_position).toEqual({label:'长椅旁'});
  expect(next.map_state).toEqual(f.save.map_state);expect(next.definition.map).toEqual(f.save.definition.map);expect(result.time_advanced).toBe(1);
 });
-it('local movement works without a map module',()=>{
+it('an empty shell does not invent an unadjudicated local position',()=>{
  const save=newSave(emptyWorld(fresh().definition.prompt_profile));
- const turn=executeFreeform(save,'我走到窗边',{...outcome(),narrative:'你停在窗边。'},randomUUID());
- expect(validateSave(turn.save).entities[0].components.scene_position).toEqual({label:'窗边'});expect(turn.save.definition.map).toBeUndefined();
+ const before=structuredClone(save);
+ expect(()=>executeFreeform(save,'我走到窗边',{...outcome(),narrative:'你停在窗边。'},randomUUID())).toThrow();
+ expect(save).toEqual(before);expect(validateSave(save).definition.map).toBeUndefined();
 });
 it('a known named destination retains the dedicated MOVE action',async()=>{
  const f=await setup(),view=publicView(f.save),here=view.entities.find(e=>e.id===view.player_id)?.components.location?.location_id,place=view.locations.find(location=>location.id!==here)!;

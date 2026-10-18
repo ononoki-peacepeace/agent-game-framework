@@ -2,7 +2,7 @@ import {describe,it,expect,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
 import {once} from 'node:events';
 import {sparseSetup} from './sparse-fixture.js';
-import {makeChoiceOffers,checkChoiceOffer} from '../src/core/choice-offer.js';
+import {makeChoiceOffers,makeCompiledChoiceOffers,checkChoiceOffer} from '../src/core/choice-offer.js';
 import {handleChoiceInput} from '../src/agent/executor.js';
 import {classifyChoiceExecution} from '../src/core/choice-availability.js';
 import {validateSave} from '../src/core/state.js';
@@ -24,6 +24,14 @@ function addItem(save:SavePackage,id:string,name:string,container=false){
 }
 async function offered(text:string,withItems=false){
   const f=await sparseSetup(),save=await f.service.current();
+  if(text.includes('厨房')){
+    const here=String(save.entities.find(entity=>entity.id===save.player_state.entity_id)!.components.location!.location_id);
+    save.definition.map!.locations.find(location=>location.id===here)!.description='测试起居室设有开放厨房。';
+    save.environment_state={resolutions:[{id:'env_choice_kitchen',location_id:here,name:'厨房',aliases:[],
+      status:'present',classification:'environment_detail',entity_id:null,description:'室内开放厨房',
+      take_allowed:false,source_request_id:randomUUID(),at:structuredClone(save.runtime.time),
+      known_by:[String(save.player_state.entity_id)]}]};
+  }
   if(withItems){addItem(save,'test_wood','木片');addItem(save,'test_pouch','小袋',true);}
   const offers=makeChoiceOffers(save,[text],[{index:0,intent_key:'act',consequence_key:'perform',target_id:null}]);
   save.last_turn={narrative:'眼前的普通场景。',speaker:null,dialogue:null,choices:offers.map(offer=>offer.text),
@@ -40,6 +48,47 @@ function mockActivity(f:Awaited<ReturnType<typeof offered>>){
 }
 
 describe('Phase 4 structured choice offers',()=>{
+  it('does not block a settled turn on optional semantic compilation of the next choices',async()=>{
+    const f=await sparseSetup(),save=await f.service.current();
+    const planner=vi.spyOn(f.ai,'planGoals').mockRejectedValue(new Error('optional provider unavailable'));
+    const offers=await makeCompiledChoiceOffers(save,[activityText,'做一件无法本地验证的后续事情'],[],f.ai,true);
+    expect(planner).not.toHaveBeenCalled();
+    expect(offers.some(offer=>offer.text===activityText&&offer.goal_contract)).toBe(true);
+    expect(offers.some(offer=>offer.text.includes('无法本地验证'))).toBe(false);
+  });
+  it('reports a running input, retains its terminal result, and deduplicates the same request ID',async()=>{
+    const f=await offered(activityText);mockActivity(f);
+    let entered=false,release:(value:ReturnType<typeof genericProposal>)=>void=()=>{};
+    vi.spyOn(f.ai,'freeform').mockImplementation(()=>new Promise(resolve=>{entered=true;release=resolve;}));
+    const server=createApp(f.service).listen(0,'127.0.0.1');await once(server,'listening');
+    try{
+      const base='http://127.0.0.1:'+(server.address() as {port:number}).port;
+      const token=(await(await fetch(base+'/api/session')).json()).token;
+      const headers={'Content-Type':'application/json','X-Game-Token':token};
+      const body={...request(f.save,activityText),choice_offer_id:f.offer.id};
+      const post=()=>fetch(base+'/api/input',{method:'POST',headers,body:JSON.stringify(body)});
+      const first=post();
+      for(let i=0;i<100&&!entered;i++)await new Promise(resolve=>setTimeout(resolve,5));
+      expect(entered).toBe(true);
+      const status=()=>fetch(`${base}/api/input/status/${body.request_id}?game_id=${body.game_id}`,{headers}).then(r=>r.json());
+      const running=await status();
+      expect(running.state).toBe('running');
+      expect(running.phase_history).toContain('interpreting');
+      expect(running).not.toHaveProperty('hidden_world_facts');
+      const duplicate=post();
+      release(genericProposal());
+      const [firstResponse,duplicateResponse]=await Promise.all([first,duplicate]);
+      expect(firstResponse.status).toBe(200);expect(duplicateResponse.status).toBe(200);
+      expect((await firstResponse.json()).view.revision).toBe((await duplicateResponse.json()).view.revision);
+      const completed=await status();
+      expect(completed.state).toBe('completed');
+      expect(completed.phase_history).toContain('finalizing');
+      expect(completed.committed_revision).toBe(f.save.state_revision+1);
+      const after=await f.service.current();
+      expect(after.state_revision).toBe(f.save.state_revision+1);
+      expect(after.resolution_receipts?.filter(receipt=>receipt.commit_status==='committed')).toHaveLength(1);
+    }finally{server.close();}
+  });
   it('persists a lightweight offer with a stable ID and no bound entity ID',async()=>{
     const f=await offered(storageText,true),loaded=validateSave(await f.service.current());
     expect(f.offer).toMatchObject({id:expect.any(String),text:storageText,source_revision:f.save.state_revision,

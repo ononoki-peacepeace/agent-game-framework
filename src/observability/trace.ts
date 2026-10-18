@@ -10,6 +10,7 @@ export interface SpanHandle { end: (extra?: Record<string, unknown>) => number }
 export interface TraceInit {
   module: string; logger?: StructuredLogger; request_id?: string | null; job_id?: string | null;
   game_id?: string | null; revision?: number | null;
+  onEvent?:(event:string,fields:LogFields)=>void;
 }
 function round(value: number) { return Math.round(value * 1000) / 1000; }
 
@@ -22,6 +23,7 @@ export class Trace {
     readonly module: string, readonly logger: StructuredLogger,
     readonly request_id: string | null = null, readonly job_id: string | null = null,
     readonly game_id: string | null = null, readonly revision: number | null = null,
+    private readonly onEvent?:(event:string,fields:LogFields)=>void,
   ) {}
   span(name: string, metadata: Record<string, unknown> = {}): SpanHandle {
     const start = performance.now();
@@ -41,6 +43,7 @@ export class Trace {
   warn(event: string, fields: LogFields = {}) { return this.log('warn', event, fields); }
   error(event: string, fields: LogFields = {}) { return this.log('error', event, fields); }
   log(level: LogLevel, event: string, fields: LogFields = {}) {
+    this.onEvent?.(event,fields);
     return this.logger.log(level, event, {
       module: fields.module ?? this.module, trace_id: this.trace_id, request_id: this.request_id,
       job_id: this.job_id, revision: fields.revision ?? this.revision,
@@ -61,7 +64,7 @@ export class Trace {
 
 const storage = new AsyncLocalStorage<Trace>();
 export function startTrace(init: TraceInit) {
-  return new Trace(init.module, init.logger ?? getLogger(), init.request_id ?? null, init.job_id ?? null, init.game_id ?? null, init.revision ?? null);
+  return new Trace(init.module, init.logger ?? getLogger(), init.request_id ?? null, init.job_id ?? null, init.game_id ?? null, init.revision ?? null,init.onEvent);
 }
 export function runWithTrace<T>(trace: Trace, run: () => T): T { return storage.run(trace, run); }
 export function currentTrace() { return storage.getStore(); }

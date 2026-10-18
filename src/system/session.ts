@@ -20,6 +20,7 @@ export interface SystemSession {
 }
 /** Everything the executor may need that was resolved by the session (entity, scope, module, previous request). */
 export interface SystemExecutionContext {
+ requestEnvelope?:import('./resolver.js').UniversalRequestEnvelope;
  entityId?:string;behaviorScope?:BehaviorScope;behaviorApplication?:BehaviorApplication;moduleId?:string;preferredNames?:string[];
  session:SystemSession;previous?:ResolvedSystemRequest|null;
  /** The player's latest sentence (the answer to a clarification), which is not always the session goal. */

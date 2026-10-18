@@ -1,21 +1,68 @@
 import { randomUUID } from 'node:crypto';
+import {z} from 'zod';
 import type { GameService } from '../server/service.js';
 import type { PublicView, Entity } from '../shared/contracts.js';
 import { publicView } from '../core/state.js';
 import { resolveEntities, entityLabel } from '../agent/entities.js';
 import { capabilityPlanSchema, type CapabilityPlan, type GoalSpec } from './goals.js';
 import { capabilityRegistry, validateCapabilityPlan, type CapabilityRegistry } from './capabilities.js';
+import {personaAuthoringSchema,authoredCharacter} from '../characters/authoring.js';
+import {genderValues} from '../shared/gender.js';
+import {AGE_MAX} from '../shared/age.js';
+import {currentTrace} from '../observability/trace.js';
+import {executeGoalControl} from '../agent/executor.js';
+import {openGoalControlSchema} from '../agent/plan-schema.js';
 
 export type UniversalResolution =
   | { handled: false }
   | { handled: true; kind: 'EXECUTED'; goal: GoalSpec; plan: CapabilityPlan; message: string; view: PublicView; details?: Record<string, unknown> }
   | { handled: true; kind: 'USER_AMBIGUITY'; goal: GoalSpec | null; question: string; candidates: string[] }
-  | { handled: true; kind: 'CAPABILITY_GAP'; goal: GoalSpec; plan: CapabilityPlan; missing: string[]; message: string }
-  | { handled: true; kind: 'EXECUTION_FAILURE'; goal: GoalSpec; plan: CapabilityPlan; message: string; retryable: boolean; reason?: string };
+  | { handled: true; kind: 'CAPABILITY_GAP'; goal: GoalSpec; plan: CapabilityPlan; missing: string[]; message: string; recoverable?:boolean }
+  | { handled: true; kind: 'EXECUTION_FAILURE'; goal: GoalSpec; plan: CapabilityPlan; message: string; retryable: boolean; recoverable?:boolean; reason?: string;view?:PublicView|null;details?:Record<string,unknown> };
 
-export interface UniversalRequestEnvelope { request_id?: string; expected_revision?: number }
+const goalCoverageSchema=z.strictObject({covered:z.boolean(),uncovered:z.array(z.string().min(1).max(160)).max(8)});
+const creationProfileSchema=z.strictObject({
+  description:z.string().max(2000).optional(),gender:z.enum(genderValues).nullable().optional(),
+  age:z.number().int().min(0).max(AGE_MAX).nullable().optional(),role:z.string().max(200).optional(),
+  traits:z.array(z.string().max(100)).max(10).optional(),persona:personaAuthoringSchema.partial().optional(),
+});
+const creationPaths=new Set(['identity.name','identity.description','identity.gender','identity.age','character.role',
+  'character.traits',...Object.keys(personaAuthoringSchema.shape).map(key=>`character.${key}`)]);
+function creationProfile(goal:GoalSpec){
+  const profile:Record<string,unknown>={},persona:Record<string,unknown>={};
+  for(const change of goal.desired_state){
+    if(change.path==='identity.description')profile.description=change.value;
+    else if(change.path==='identity.gender')profile.gender=change.value;
+    else if(change.path==='identity.age')profile.age=change.value;
+    else if(change.path==='character.role')profile.role=change.value;
+    else if(change.path==='character.traits')profile.traits=change.value;
+    else if(change.path.startsWith('character.'))persona[change.path.slice('character.'.length)]=change.value;
+  }
+  if(Object.keys(persona).length)profile.persona=persona;
+  // Values originate in GoalSpec's JSON-valued desired_state and are parsed by
+  // creationProfileSchema again immediately before the transaction.
+  return profile as unknown as z.infer<typeof capabilityPlanSchema>['steps'][number]['input'][string];
+}
+function projectedEffects(plan:CapabilityPlan){
+  return plan.steps.flatMap(step=>{
+    if(step.capability_id!=='entity.create')return [];
+    const profile=step.input.profile&&typeof step.input.profile==='object'&&!Array.isArray(step.input.profile)
+      ?step.input.profile as Record<string,unknown>:{};
+    const persona=profile.persona&&typeof profile.persona==='object'&&!Array.isArray(profile.persona)
+      ?profile.persona as Record<string,unknown>:{};
+    return [{path:'identity.name',value:step.input.name},
+      ...(['description','gender','age'] as const).filter(key=>key in profile)
+        .map(key=>({path:`identity.${key}`,value:profile[key]})),
+      ...(['role','traits'] as const).filter(key=>key in profile)
+        .map(key=>({path:`character.${key}`,value:profile[key]})),
+      ...Object.entries(persona).map(([key,value])=>({path:`character.${key}`,value}))];
+  });
+}
+
+export interface UniversalRequestEnvelope { request_id?: string; expected_revision?: number;game_id?:string }
 export interface ExecuteOptions {
   registry?: CapabilityRegistry;
+  permissions?:string[];
   executeExternal?: (step: CapabilityPlan['steps'][number]) => Promise<unknown>;
 }
 
@@ -81,8 +128,14 @@ export function deterministicGoal(text: string): GoalSpec | null {
 
 /** Compose by desired outcomes/state paths. Text wording is never used to choose a capability. */
 export function composeCapabilityPlan(goal: GoalSpec): CapabilityPlan | null {
+  if(goal.goal_control)return {goal,steps:[{step_id:'manage_goal',capability_id:`open_goal.${goal.goal_control.kind}`,
+    input:{target:goal.goal_control.target},depends_on:[]}]};
   if (goal.ambiguity) return { goal, steps: [{ step_id: 'resolve_target', capability_id: 'entity.lookup', input: { reference: goal.targets[0]?.reference ?? '' }, depends_on: [] }] };
-  if(goal.desired_outputs.some(item=>item.kind==='entity_create'))return {goal,steps:[{step_id:'create_entity',capability_id:'entity.create',input:{name:goal.targets[0]?.reference??''},depends_on:[]}]};
+  if(goal.desired_outputs.some(item=>item.kind==='entity_create')){
+    const explicitName=goal.desired_state.find(item=>item.path==='identity.name')?.value;
+    return {goal,steps:[{step_id:'create_entity',capability_id:'entity.create',
+      input:{name:typeof explicitName==='string'?explicitName:goal.targets[0]?.reference??'',profile:creationProfile(goal)},depends_on:[]}]};
+  }
   if(goal.desired_outputs.some(item=>item.kind==='entity_delete'))return {goal,steps:[{step_id:'resolve_target',capability_id:'entity.lookup',input:{reference:goal.targets[0]?.reference??''},depends_on:[]},{step_id:'delete_entity',capability_id:'entity.delete',input:{},depends_on:['resolve_target']}]};
   const identityName = goal.desired_state.find(item => item.path === 'identity.name');
   if (identityName) return { goal, steps: [
@@ -132,13 +185,67 @@ function protectedEntityReference(save:Awaited<ReturnType<GameService['current']
 }
 
 /** Preflight completes before any side effect. Canonical writes then share one receipt/revision transaction. */
+function goalControlAuthorization(plan:CapabilityPlan,ordered:CapabilityPlan['steps']){
+  const step=ordered[0],control=openGoalControlSchema.safeParse({kind:step?.capability_id.slice('open_goal.'.length),target:step?.input.target});
+  const checks:{field:string;expected:unknown;actual:unknown;ok:boolean}[]=[];
+  const check=(field:string,expected:unknown,actual:unknown,ok=actual===expected)=>checks.push({field,expected,actual,ok});
+  check('steps.length',1,ordered.length);
+  check('control.valid',true,control.success);
+  check('goal.goal_control.present',true,Boolean(plan.goal.goal_control));
+  check('control.kind',plan.goal.goal_control?.kind??null,control.success?control.data.kind:null);
+  check('control.target',plan.goal.goal_control?.target??null,control.success?control.data.target:null);
+  check('goal.desired_state.length',0,plan.goal.desired_state.length);
+  // desired_outputs describes results; it is not an additional execution grant.
+  // A state_change summary is bound to this *single typed control*. Keep it in
+  // the plan for audit, rather than deleting it or parsing its prose for tools.
+  // Other output kinds require their own operation and must not be swallowed.
+  const independentOutputs=plan.goal.desired_outputs.map((output,index)=>({index,kind:output.kind})).filter(output=>output.kind!=='state_change');
+  check('goal.desired_outputs.independent',[],independentOutputs,independentOutputs.length===0);
+  check('goal.external_artifact',false,plan.goal.external_artifact);
+  check('goal.dependencies.length',0,plan.goal.dependencies.length);
+  check('goal.multi_step',false,plan.goal.multi_step);
+  check('goal.play_action',[null,'other'],plan.goal.play_action??null,!plan.goal.play_action||plan.goal.play_action==='other');
+  check('goal.targets.length',0,plan.goal.targets.length);
+  check('goal.repetition.present',false,Boolean(plan.goal.repetition));
+  check('goal.physical_intent.present',false,Boolean(plan.goal.physical_intent));
+  check('goal.temporal.at',null,plan.goal.temporal.at);
+  check('goal.temporal.recurrence',null,plan.goal.temporal.recurrence);
+  return {control,checks,issues:checks.filter(check=>!check.ok)};
+}
 export async function executeUniversalPlan(service: GameService, plan: CapabilityPlan, envelope: UniversalRequestEnvelope = {}, options: ExecuteOptions = {}): Promise<UniversalResolution> {
   const save = await service.current(), view = service.project(save);
   if (plan.goal.ambiguity) return { handled: true, kind: 'USER_AMBIGUITY', goal: plan.goal, question: plan.goal.ambiguity.question, candidates: [] };
-  const validation = validateCapabilityPlan(plan, view, options.registry ?? service.systemCapabilities);
+  const validation = validateCapabilityPlan(plan, view, options.registry ?? service.systemCapabilities,
+    options.permissions?{permissions:options.permissions}:undefined);
   if (!validation.ok) return validation.kind === 'CAPABILITY_GAP'
     ? { handled: true, kind: 'CAPABILITY_GAP', goal: plan.goal, plan, missing: validation.missing, message: '当前能力还不能完整完成这个目标。可以先补齐缺少的能力，再由你明确决定是否创建开发任务。' }
     : { handled: true, kind: 'EXECUTION_FAILURE', goal: plan.goal, plan, message: '这次计划没有通过执行前校验，世界状态没有改变。请重新描述目标后再试。', retryable: false };
+  if(envelope.game_id&&envelope.game_id!==save.game_id)return {handled:true,kind:'EXECUTION_FAILURE',goal:plan.goal,plan,
+    message:'游戏已切换，目标操作尚未执行。',retryable:false};
+  if(validation.ordered.some(step=>step.capability_id.startsWith('open_goal.'))){
+    const {control,checks,issues}=goalControlAuthorization(plan,validation.ordered);
+    if(issues.length||!control.success){
+      const reason_code='goal_control_authorization_mismatch';
+      currentTrace()?.warn('system.goal_control.rejected',{metadata:{reason_code,issues}});
+      return {handled:true,kind:'EXECUTION_FAILURE',goal:plan.goal,plan,
+        message:'目标管理操作与已确认授权不一致，尚未执行。',retryable:false,
+        reason:reason_code,details:{reason_code,authorization_issues:issues}};
+    }
+    currentTrace()?.info('system.goal_control.authorized',{metadata:{kind:control.data.kind,target:control.data.target,
+      checks,output_kinds:plan.goal.desired_outputs.map(output=>output.kind),output_scope:'single_goal_control_result'}});
+    try{
+      const result=await executeGoalControl(service,{game_id:save.game_id,expected_revision:envelope.expected_revision??save.state_revision,
+        request_id:envelope.request_id??randomUUID(),input:plan.goal.objective},control.data);
+      const details={goal_control:result.goal_control,outcome:result.outcome};
+      currentTrace()?.info('system.goal_control.result',{metadata:details});
+      if(!result.goal_control||['not_found','blocked'].includes(result.goal_control.status)||result.outcome.type==='engine_failure')
+        return {handled:true,kind:'EXECUTION_FAILURE',goal:plan.goal,plan,message:result.message,retryable:false,
+          ...{view:result.view,details}};
+      return {handled:true,kind:'EXECUTED',goal:plan.goal,plan,message:result.message,view:result.view!,details};
+    }catch(error){return {handled:true,kind:'EXECUTION_FAILURE',goal:plan.goal,plan,
+      message:'目标操作没有取得可确认的提交结果，请查询当前目标状态；不会自动重复执行。',retryable:false,
+      reason:error instanceof Error?error.message:String(error)};}
+  }
   const resolved = targetEntity(view, plan);
   const creating=validation.ordered.some(step=>step.capability_id==='entity.create');
   if (!creating && plan.goal.targets.some(item => item.kind === 'entity') && !resolved.entity) {
@@ -163,12 +270,21 @@ export async function executeUniversalPlan(service: GameService, plan: Capabilit
         const name=String(mutation.input.name??plan.goal.targets[0]?.reference??'').trim();
         if(!name||name.length>120)return {handled:true,kind:'USER_AMBIGUITY',goal:plan.goal,question:'请说出要新增人物的名字。',candidates:[]};
         if(view.entities.some(entity=>entityLabel(entity)===name))return {handled:true,kind:'EXECUTION_FAILURE',goal:plan.goal,plan,message:'这个名字已经属于现有人物；请先确认是否要修改现有人物。',retryable:false};
+        const profile=creationProfileSchema.safeParse(mutation.input.profile??{});
+        if(!profile.success)return {handled:true,kind:'EXECUTION_FAILURE',goal:plan.goal,plan,
+          message:'人物资料没有通过提交前校验，世界没有改变。',retryable:false,recoverable:true,
+          reason:profile.error.issues.map(issue=>issue.path.join('.')==='gender'
+            ?'identity.gender 只允许 male、female、nonbinary 或 null；未明确指定时保持 null'
+            :`${issue.path.join('.')}:${issue.code}`).slice(0,6).join('; ')};
         const entityId=`npc_${randomUUID().replaceAll('-','').slice(0,24)}`;
         const next=await service.agentTransaction(request,{kind:'entity.create',name},draft=>{
           if(!draft.definition.enabled_modules.includes('characters'))throw Error('当前世界没有人物能力');
           if(draft.entities.length>=500)throw Error('人物数量已达到世界上限');
           const player=draft.entities.find(item=>item.id===draft.player_state.entity_id)!;
-          draft.entities.push({id:entityId,type:'character',components:{identity:{name,description:'',avatar_id:null,gender:null,age:null},character:{role:'人物',traits:[]},...(player.components.location?{location:{location_id:String(player.components.location.location_id)}}:{})}});
+          draft.entities.push({id:entityId,type:'character',components:{identity:{name,
+            description:profile.data.description??'',avatar_id:null,gender:profile.data.gender??null,age:profile.data.age??null},
+            character:{...authoredCharacter(profile.data.role??'人物',profile.data.persona??{}),traits:profile.data.traits??[]},
+            ...(player.components.location?{location:{location_id:String(player.components.location.location_id)}}:{})}});
         });
         return {handled:true,kind:'EXECUTED',goal:plan.goal,plan,message:`已在当前世界新增人物「${name}」。`,view:next};
       }
@@ -227,22 +343,58 @@ export async function executeUniversalPlan(service: GameService, plan: Capabilit
   }
 }
 
-export async function resolveUniversalGoal(service: GameService, text: string, envelope: UniversalRequestEnvelope = {}, options: { external_effects_confirmed?: boolean } = {}): Promise<UniversalResolution> {
-  if (!isUniversalGoalCandidate(text)) return { handled: false };
+export async function resolveUniversalGoal(service: GameService, text: string, envelope: UniversalRequestEnvelope = {}, options: { external_effects_confirmed?: boolean; authoritativeGoal?:GoalSpec;capabilityScope?:'open_goals' } = {}): Promise<UniversalResolution> {
+  if (!options.authoritativeGoal&&!options.capabilityScope&&!isUniversalGoalCandidate(text)) return { handled: false };
   const save = await service.current(), view = service.project(save);
-  const explicit=deterministicGoal(text);
+  const explicit=options.authoritativeGoal??(options.capabilityScope?null:deterministicGoal(text));
   const planned = explicit?null:await service.ai.systemAgent(capabilityPlanSchema, save.definition.prompt_profile, {
-    instruction: '把请求表示为 provider-neutral GoalSpec，并从 capability_catalog 组合最小有向无环计划。不要发明 capability id。目标不明确时填写 goal.ambiguity；缺能力也保留完整计划，由程序判断 availability。功能开发愿望不属于这里。名字值只是字符串，不推断现实身份。',
+    instruction: '把请求表示为 provider-neutral GoalSpec，并从 capability_catalog 组合最小有向无环计划。不要发明 capability id。目标不明确时填写 goal.ambiguity；缺能力也保留完整计划，由程序判断 availability。功能开发愿望不属于这里。Open Goal 管理需用 goal.goal_control={kind,target} 与匹配的 open_goal.query/cancel/resume 步骤；target 是实际 UUID 或明确的 current/paused，只处理一项，不混同 Quest。名字值只是字符串，不推断现实身份。',
     player_request: text,
     public_entities: view.entities.map(entity => ({ id: entity.id, name: entity.components.identity?.name ?? null, type: entity.type, role: entity.components.character?.role ?? null })),
     public_locations: view.locations.map(location => ({ id: location.id, name: location.name })),
-    capability_catalog: service.systemCapabilities.digest(view.capabilities),
+    capability_catalog: service.systemCapabilities.digest(view.capabilities).filter(item=>!options.capabilityScope||item.id.startsWith('open_goal.')),
+    open_goals:[...(save.active_goal?[{scope:'current',plan:save.active_goal.plan}]:[]),...(save.paused_goals??[]).map(item=>({scope:'paused',plan:item.plan}))].map(({scope,plan})=>({scope,id:plan.plan_id,status:plan.status})),
   }, save);
   // A syntactically explicit content mutation retains its validated route even if model planning
   // interprets nearby negation ("不要转开发任务") as a request to develop software.
   const selected = explicit ? composeCapabilityPlan(explicit) : planned;
   if (!selected) return { handled: false };
+  if(options.authoritativeGoal&&selected.steps.some(step=>step.capability_id==='entity.create')){
+    const missing=options.authoritativeGoal.desired_state.filter(change=>!creationPaths.has(change.path)).map(change=>change.path);
+    const name=selected.steps.find(step=>step.capability_id==='entity.create')?.input.name;
+    const conflictingName=options.authoritativeGoal.desired_state.some(change=>change.path==='identity.name'&&change.value!==name);
+    if(missing.length||conflictingName)return {handled:true,kind:'CAPABILITY_GAP',goal:selected.goal,plan:selected,
+      missing:[...missing,...(conflictingName?['identity.name:conflicting_target']:[])],
+      message:'当前人物创建能力不能原子完成请求中的全部资料，世界没有改变。'};
+  }
+  if(options.capabilityScope&&selected.steps.some(step=>!step.capability_id.startsWith('open_goal.')))return {handled:false};
   const preflight=validateCapabilityPlan(selected,view,service.systemCapabilities);
   if(preflight.ok&&selected.steps.some(step=>step.capability_id==='media.image.generate')&&!options.external_effects_confirmed)return {handled:false};
+  // An authoritative GoalSpec can contain more than the first available capability
+  // actually writes. This audit may veto a partial plan, but never edits the goal or
+  // grants a different operation plane. It runs before any world or external effect.
+  if(options.authoritativeGoal&&preflight.ok&&!selected.goal.goal_control){
+    let coverage:z.infer<typeof goalCoverageSchema>|null=null;
+    let previousUncovered:string[]=[];
+    for(let attempt=0;attempt<2;attempt++){
+      coverage=await service.ai.systemAgent(goalCoverageSchema,save.definition.prompt_profile,{
+        instruction:'只审核能力计划能否完整实现原始请求中明确要求的效果。仅依据真实 capability 的输入与效果；entity.create 的 profile 输入会在同一个事务中写入明确字段，未提供的字段才使用默认值。不要假设描述文字会自动写入未列出的字段。若只实现一部分，covered=false 并简述遗漏；若计划确实已写入所有明确字段，covered=true。不要修改目标、改选操作平面或执行动作。',
+        original_user_request:text,authoritative_goal:options.authoritativeGoal,
+        implemented_effects:projectedEffects(selected),
+        proposed_steps:selected.steps.map(step=>({capability_id:step.capability_id,input:step.input,
+          implemented_capability:service.systemCapabilities.get(step.capability_id)})),
+        ...(attempt?{review:{previous_uncovered:previousUncovered,
+          instruction:'重新核对所称遗漏是否已由真实 profile 输入覆盖；不要为了通过而忽略明确要求。'}}:{}),
+      },{...save,ai:{threads:{}}});
+      currentTrace()?.info('system.goal_coverage',{metadata:{attempt:attempt+1,covered:coverage?.covered??null,
+        uncovered:coverage?.uncovered??[],revision:save.state_revision}});
+      if(coverage?.covered)break;
+      previousUncovered=coverage?.uncovered??[];
+    }
+    if(!coverage)return {handled:true,kind:'EXECUTION_FAILURE',goal:selected.goal,plan:selected,
+      message:'提交前未能确认能力计划覆盖完整请求；世界没有改变。请稍后重试。',retryable:true};
+    if(!coverage.covered)return {handled:true,kind:'CAPABILITY_GAP',goal:selected.goal,plan:selected,
+      missing:coverage.uncovered,message:'当前能力计划只能完成目标的一部分，因此没有修改世界。',recoverable:true};
+  }
   return executeUniversalPlan(service, selected, envelope);
 }

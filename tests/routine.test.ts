@@ -16,7 +16,11 @@ function result(req:AIRequest):RoutineResult {
 }
 async function setup(transform:(r:RoutineResult,req:AIRequest)=>RoutineResult=(r)=>r) {
  const calls:AIRequest[]=[];const store=new MemoryStore();
- const service=new GameService(store,new AIRuntime({name:'fixture',generate:async req=>{if(req.role==='routine_compiler')return {data:eventPlan};calls.push(req);return {data:transform(result(req),req),threadId:'routine-thread'};}}),eventWorld());
+ const service=new GameService(store,new AIRuntime({name:'fixture',generate:async req=>{if(req.role==='routine_compiler')return {data:eventPlan};
+  if(req.role==='npc_decision')return {data:{kind:'no_action',speech:null,vote_target:null,intent:'继续日常',
+    proposed_action:null,evidence_refs:[],belief_updates:[],goal_updates:[],goal_proposals:[],
+    plan_proposals:[],decision_summary:'继续当前安排'}};
+  calls.push(req);return {data:transform(result(req),req),threadId:'routine-thread'};}}),eventWorld());
  await service.newGame();await service.current();
  return {service,store,calls};
 }

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Entity, PanelMeta, ComponentData } from '../shared/contracts.js';
-import { assert, safeParse, type Action, type SavePackage, type GameEvent } from './schema.js';
+import { assert, safeParse, type Action, type SavePackage, type GameEvent, type MovementRoute } from './schema.js';
 import type { RNG } from './dice.js';
 
 export class Registry<T> {
@@ -13,16 +13,21 @@ export class Registry<T> {
 export interface ActionContext {
   save: SavePackage; store: EntityStore; action: Action; rng: RNG;
   emit(event: GameEvent): void; advance(minutes: number): void; facts: string[];
+  result_entities:Record<string,string[]>;
+  movement_route?:MovementRoute;
+  next_time_boundary?:()=>number|null;
+  npc_time_budget?:{plan_actions:number;scope_id:string};
+  shared_world_interval?:boolean;
 }
 export interface ComponentSpec { schema: z.ZodType; project?: (data: ComponentData, entity: Entity, save: SavePackage) => ComponentData | undefined }
 /** Program-facing discovery contract for a registered action. The agent still binds public
  * entities and validates the action schema; this metadata never grants model authority. */
 export interface ActionCapabilitySpec {
-  intent: 'move' | 'purchase' | 'talk' | 'item_move';
+  intent: 'move' | 'purchase' | 'talk' | 'item_move' | 'interact';
   description: string;
-  target_role: 'destination' | 'shop' | 'person' | 'item';
+  target_role: 'destination' | 'shop' | 'person' | 'item' | 'interactable';
   parameter_roles: Record<string, 'item' | 'quantity' | 'text' | 'destination'>;
-  completion_kind: 'location_at' | 'purchase' | 'conversation_attempted' | 'item_location';
+  completion_kind: 'location_at' | 'purchase' | 'conversation_attempted' | 'item_location' | 'interaction_performed';
 }
 export interface ActionSpec {
   parameters: z.ZodType; execute(ctx: ActionContext): void;
@@ -73,6 +78,9 @@ export interface Module {
   manifest?: Partial<ModuleManifest>;
   components?: Record<string, ComponentSpec>; actions?: Record<string, ActionSpec>;
   handlers?: Partial<Record<GameEvent['type'], (ctx: ActionContext, event: GameEvent) => void>>;
+  /** Deterministic simulation boundaries; never Provider calls or independent commits. */
+  next_time_boundary?: (save:SavePackage,ctx:ActionContext)=>number|null;
+  settle_time_window?: (ctx:ActionContext,from:SavePackage['runtime']['time'])=>boolean;
   validate?: (save: SavePackage) => void; panels?: PanelMeta[]; prompt?: string;
   patches?: Record<string, (save: SavePackage, patch: Patch, action: Action) => void>;
 }

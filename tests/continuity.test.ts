@@ -51,11 +51,15 @@ describe('persistent focus and atomic world undo',()=>{
   await f.service.undo(await f.tx());expect(worldImage(await f.service.current())).toEqual(worldImage(before));
  });
  it('Generic local movement Undo restores scene position, action facts and focus',async()=>{
-  const f=await setup();await f.talk();const before=await f.service.current();f.ai.adapter.generate=async request=>({data:request.role==='gm_reasoning'
-    ?{narrative:'你停在屋外。',minutes:1,target_id:null,facts:['来到屋外'],relationship:null,
+  const f=await setup();const prepared=await f.service.current(),here=String(f.player.components.location!.location_id);
+  prepared.environment_state={resolutions:[{id:'env_undo_bench',location_id:here,name:'长椅旁',aliases:[],
+    status:'present',classification:'environment_detail',entity_id:null,description:'广场边的长椅',
+    take_allowed:false,source_request_id:randomUUID(),at:structuredClone(prepared.runtime.time),known_by:[String(f.player.id)]}]};
+  await f.store.write(prepared);await f.talk();const before=await f.service.current();f.ai.adapter.generate=async request=>({data:request.role==='gm_reasoning'
+    ?{narrative:'你停在长椅旁。',minutes:1,target_id:null,facts:['来到长椅旁'],relationship:null,
       resolution:{type:'DETERMINISTIC',domain:'general',band:'normal',visibility:'public',stakes:'局部移动',stages:[],evidence_ids:[]}}
-    :{...prose,narrative:'你停在屋外。'}});
-  await f.service.turn({...await f.tx(),input:'我出门到屋外。'});const moved=await f.service.current();expect(moved.entities.find(e=>e.id===f.player.id)!.components.scene_position.label).toBe('屋外');
+    :{...prose,narrative:'你停在长椅旁。'}});
+  await f.service.turn({...await f.tx(),input:'我走到长椅旁。'});const moved=await f.service.current();expect(moved.entities.find(e=>e.id===f.player.id)!.components.scene_position.label).toBe('长椅旁');
   await f.service.undo(await f.tx());expect(worldImage(await f.service.current())).toEqual(worldImage(before));
  });
  it('a canonical NPC departure invalidates focus permanently until a new interaction',async()=>{

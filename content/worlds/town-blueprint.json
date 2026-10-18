@@ -1,6 +1,7 @@
 {
   "id": "harbor_town", "title": "港湾日常", "description": "初到港湾镇，在车站、广场和街角商店之间开始一段普通生活。",
   "currency": { "id": "credit", "name": "点" },
+  "opening_time": { "minute": 540, "calendar": { "version": 1, "anchor_day": 1, "anchor_month": 1, "anchor_date": 1, "anchor_weekday": 1, "month_lengths": [31,28,31,30,31,30,31,31,30,31,30,31], "source": "示例世界开局日历" } },
   "player": { "id": "player", "name": "新住民", "description": "刚刚搬到港湾镇，正在熟悉街区。", "location_id": "square", "cash": 100 },
   "locations": [
     { "id": "square", "name": "中央广场", "description": "树影落在石砖上，来往的居民在长椅旁停下脚步。" },

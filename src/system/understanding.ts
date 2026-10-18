@@ -7,6 +7,8 @@ import { moduleFromText } from './router.js';
 import { toolAvailability } from './tools.js';
 import { behaviorSummary, cleanBehaviorInstruction, detectBehaviorScope, normalizeBehaviorScope } from '../ai/behavior.js';
 import { classifyFrameworkChange } from '../change/classifier.js';
+import {capabilityRegistry,type CapabilityRegistry} from './capabilities.js';
+import {openGoalControlSchema} from '../agent/plan-schema.js';
 
 /**
  * System Agent understanding layer.
@@ -15,8 +17,8 @@ import { classifyFrameworkChange } from '../change/classifier.js';
  * clarification wording. The program does the bookkeeping: real capabilities, canonical state, tools,
  * transactions and persistence. This module only *reads*; it never mutates the save.
  */
-export const surfaceValues = ['character_page','status_page','map','relationships_panel','story_text','system_reply','inventory','quests','other'] as const;
-export const workflowValues = ['behavior_config','module_management','media_asset','development_task','diagnostic','feedback','capability_question','correction','unclear'] as const;
+export const surfaceValues = ['character_page','status_page','map','relationships_panel','story_text','system_reply','inventory','quests','open_goals','other'] as const;
+export const workflowValues = ['behavior_config','module_management','media_asset','development_task','diagnostic','feedback','capability_question','correction','goal_management','unclear'] as const;
 export const understandingScopeValues = ['narration','dialogue','assistant'] as const;
 export const understandingApplicationValues = ['per_sentence','per_paragraph','per_message','final_sentence'] as const;
 
@@ -27,6 +29,9 @@ export const systemUnderstandingSchema = z.strictObject({
   unresolved: z.array(z.strictObject({ field: z.string().max(60), why: z.string().max(300) })).max(4).default([]),
   entities: z.array(z.string().max(80)).max(4).default([]),
   likely_workflow: z.enum(workflowValues),
+  goal_control:openGoalControlSchema.nullish(),
+  style_target:z.enum(['world','character']).nullable().default(null),
+  configuration_kind:z.enum(['style','topic','behavior_patch','character_persona']).nullable().default(null),
   side_effect_class: z.enum(['none','configuration','canonical','development']).default('none'),
   confidence: z.number().min(0).max(1).default(0.5),
   correction: z.strictObject({
@@ -37,6 +42,12 @@ export const systemUnderstandingSchema = z.strictObject({
   }).nullable().default(null),
   clarification: z.strictObject({ needed: z.boolean(), question: z.string().max(600), examples: z.array(z.string().max(120)).max(4).default([]) }).nullable().default(null),
   response_hint: z.string().max(400).nullable().default(null),
+  narrative_preference: z.strictObject({
+    scopes:z.array(z.enum(['narration','dialogue','assistant'])).max(3),
+    tone:z.enum(['literary','concise','natural','plain','first_person','third_person','mature']).nullable(),
+    mode:z.enum(['allow','require','exclude']).nullable(),
+    topics:z.array(z.enum(['violence','crime','romance','adult_intimacy','substance_use','politics','trauma'])).max(7),
+  }).nullable().default(null),
 });
 export type SystemUnderstanding = z.infer<typeof systemUnderstandingSchema>;
 export type SystemWorkflow = (typeof workflowValues)[number];
@@ -82,6 +93,7 @@ export function surfacesIn(text: string) {
  */
 export function shallowUnderstanding(text: string, view: PublicView): SystemUnderstanding {
   const clean = cleanBehaviorInstruction(text);
+  const narrativePreference=shallowNarrativePreference(clean);
   const entities = resolveEntities(view, text).matches.slice(0, 4).map(entity => String(entity.components.identity?.name ?? entity.id));
   const surfaces = surfacesIn(clean);
   const relationshipWords = /(好感|关系|亲密度|信任|熟悉度)/.test(clean);
@@ -101,7 +113,7 @@ export function shallowUnderstanding(text: string, view: PublicView): SystemUnde
   const question = /(有哪些|为什么|怎么回事|是不是|有没有|清单|列表|能做什么|有什么能力|介绍.{0,8}(能力|功能))/.test(clean) || asksForDevelopmentCapability;
   // "把地图上的人物卡加上好感度" mentions a module word but is a UI change; a module intent needs a real module verb.
   const moduleVerb = /(启用|开启|打开|恢复|重新启用|需要|加入|不需要|不用|关闭|停用|禁用|隐藏|移除|删除|不要)/.test(clean);
-  const likely: SystemWorkflow = media ? 'media_asset' : styleLike ? 'behavior_config' : uiChange || development ? 'development_task'
+  const likely: SystemWorkflow = media ? 'media_asset' : narrativePreference||styleLike ? 'behavior_config' : uiChange || development ? 'development_task'
     : moduleId && moduleVerb ? 'module_management' : diagnostic ? 'diagnostic' : feedback ? 'feedback' : question ? 'capability_question' : 'unclear';
   const understood: string[] = [];
   if (media) understood.push(/(裁|调整)/.test(clean) ? '你希望调整人物的图片/头像' : '你希望为人物的图片/头像生成或替换资源');
@@ -127,7 +139,7 @@ export function shallowUnderstanding(text: string, view: PublicView): SystemUnde
     unresolved.push({ field: '要调整的系统', why: '启用或停用只作用于一个具体系统' });
     examples.push('关闭生活模式', '启用地图');
   }
-  if (likely === 'behavior_config' && !scopeInText(clean) && detectBehaviorScope(clean) === null) {
+  if (likely === 'behavior_config' && !narrativePreference && !scopeInText(clean) && detectBehaviorScope(clean) === null) {
     unresolved.push({ field: '作用范围', why: '同一句话加在旁白、人物对话还是游戏助手上，效果完全不同' });
     examples.push('旁白', '人物对话', '助手');
   }
@@ -140,18 +152,40 @@ export function shallowUnderstanding(text: string, view: PublicView): SystemUnde
     : { needed: false, question: '', examples: [] };
   return {
     understood: understood.slice(0, 6), requested_change: clean.slice(0, 600) || null, target_surfaces: surfaces, unresolved, entities,
-    likely_workflow: likely, side_effect_class: likely === 'development_task' ? 'development' : likely === 'media_asset' || likely === 'behavior_config' || likely === 'module_management' ? 'configuration' : 'none',
+    likely_workflow: likely, style_target:null, configuration_kind:null, side_effect_class: likely === 'development_task' ? 'development' : likely === 'media_asset' || likely === 'behavior_config' || likely === 'module_management' ? 'configuration' : 'none',
     confidence: likely === 'unclear' ? 0.2 : 0.35, correction: null, clarification, response_hint: null,
+    narrative_preference:narrativePreference,
   };
 }
+function shallowNarrativePreference(text:string):SystemUnderstanding['narrative_preference']{
+  if(/[?？]$|是否|能不能|可不可以/.test(text))return null;
+  const configuring=/(设置|配置|调整|放宽|收紧|改成|改为|要求|希望|请|允许|接受|容许|可以出现|可涉及|不必回避|不限制)/.test(text);
+  if(!configuring)return null;
+  const topicPatterns=[['violence',/暴力|血腥|打斗/],['crime',/犯罪|违法|黑帮/],
+    ['romance',/恋爱|爱情|感情关系/],['adult_intimacy',/成年.{0,8}(性关系|亲密关系|性行为)|成人.{0,8}(性关系|亲密关系)|性关系/],
+    ['substance_use',/药物滥用|酗酒|毒品/],['politics',/政治|权力斗争/],['trauma',/创伤|心理创伤/]] as const;
+  const topics=topicPatterns.filter(([,pattern])=>pattern.test(text)).map(([topic])=>topic);
+  const mature=/(成人向|成熟题材|成熟风格|成熟叙事|更成熟|nsfw)/i.test(text);
+  const style=/(语言|文风|风格|语气|口吻|旁白|叙述|对话|描写)/.test(text);
+  const world=/(世界|题材|内容|尺度|范围|情节|出现|涉及)/.test(text);
+  if(!((style&&mature)||(world&&topics.length)))return null;
+  const scopes:('narration'|'dialogue'|'assistant')[]=style&&mature?
+    [...(/叙事|叙述|旁白|文风|语言|风格|描写/.test(text)?['narration' as const]:[]),
+      ...(/对话|对白|台词|语言风格/.test(text)?['dialogue' as const]:[])]:[];
+  const mode=topics.length?(/必须出现|每回合|强制|一定要/.test(text)?'require':/禁止|不得出现|不要出现/.test(text)?'exclude':'allow'):null;
+  return {scopes:scopes.length?scopes:style&&mature?['narration']:[],tone:style&&mature?'mature':null,mode,topics};
+}
 /** Canonical truths the System Agent may consult before asking the player anything. */
-export function capabilityDigest(view: PublicView, save: SavePackage) {
+export function capabilityDigest(view: PublicView, save: SavePackage,registry:CapabilityRegistry=capabilityRegistry) {
   return {
     world: { title: view.title, modules: view.modules.filter(module => module.enabled).map(module => module.id), panels: view.panels.map(panel => panel.id), time: view.time, calendar: view.calendar??null, time_label: view.time_label??null, scheduled_tasks: view.scheduled_tasks??[] },
     characters: view.entities.filter(entity => entity.components.character).slice(0, 40).map(entity => String(entity.components.identity?.name ?? entity.id)),
     relationship_dimensions: Object.keys(save.definition.ruleset.relationship_dimensions),
     installed_extensions: Object.entries(save.extensions ?? {}).map(([id, entry]) => ({ id, name: String((entry.manifest as { name?: string }).name ?? id), version: entry.version, enabled: entry.enabled })),
     style_rules: behaviorSummary(save.behavior_config ?? []),
+    executable_capabilities:registry.digest(view.capabilities),
+    open_goals:[...(save.active_goal?[{scope:'current',plan:save.active_goal.plan}]:[]),
+      ...(save.paused_goals??[]).map(item=>({scope:'paused',plan:item.plan}))].map(({scope,plan})=>({scope,id:plan.plan_id,status:plan.status})),
     tools: toolAvailability(view.capabilities).map(tool => ({ id: tool.tool_id, name: tool.name, available: tool.available, side_effect: tool.side_effect_level, requires: tool.required_capabilities })),
   };
 }
@@ -170,6 +204,9 @@ const instruction = [
   '不要为了走流程而澄清：信息足够时 clarification.needed=false。',
   '如果玩家是在修正上一条想法的范围（例如“不是游戏助手，是故事的最后一句”），likely_workflow=correction，并填写 correction（scope 用 narration/dialogue/assistant，application 用 per_sentence/per_paragraph/per_message/final_sentence）。',
   '范围必须归一到 canonical 值：故事/剧情/旁白→narration，人物对话/NPC 对话→dialogue，游戏助手/助手→assistant。不要发明新的 scope 名字。',
+  'style_target 单独判断配置对象：对整个世界的叙事或所有人物对白的共同表达原则填 world；只有请求修改一位明确人物自己的性格、说话方式或口癖时填 character。全局对白原则不能抹去每位人物的性格与自主性；world 配置不要索要人物名字。与风格无关时填 null。',
+  'configuration_kind 区分现有配置职责：style 是旁白或对白的整体语气、成熟度等表达风格；topic 是允许出现的世界题材边界；behavior_patch 是要求 AI 未来如何理解、规划、生成或避免重复模板的行为原则；character_persona 只修改明确人物自己的说话方式或性格。若一条请求同时有 style 与 topic，可填 style 并在 narrative_preference 分别给 tone/scopes 与 mode/topics。不要把题材许可或整体风格编译成 Behavior Patch；不要把具体的反问收尾等行为纠正降格成宽泛的语气标签。与这些配置无关时填 null。',
+  '当玩家明确配置文风或世界题材允许范围时填写 narrative_preference；这属于 behavior_config 而不是模块开关。scopes/tone 表示写法，mode/topics 表示世界题材边界；允许=allow，要求必然出现= require，明确禁止=exclude。允许不意味着强制出现或提高概率。不要把普通游戏讨论或问句当配置。不要把用户整句填为风格值。没有对应偏好则填 null。',
   '你绝不执行任何操作、不修改世界状态、不声称已经完成。只输出符合 schema 的 JSON。',
 ].join('\n');
 export async function understandSystemRequest(service: GameService, view: PublicView, save: SavePackage, text: string, sessionContext: unknown): Promise<{ understanding: SystemUnderstanding; source: 'model' | 'deterministic' }> {
@@ -178,7 +215,7 @@ export async function understandSystemRequest(service: GameService, view: Public
   if (!adapter?.generate || adapter.name === 'mock') return { understanding: shallow, source: 'deterministic' };
   const parsed = await service.ai.systemAgent(systemUnderstandingSchema, save.definition.prompt_profile, {
 
-    instruction, player_request: text, capability_digest: capabilityDigest(view, save), session: sessionContext,
+    instruction:instruction+' Open Goal 是玩家的持久行动计划，不是 Quest、NPC 目标、开发任务或配置。查询、指定取消、指定恢复使用真实 open_goal.* 能力，填 goal_control={kind,target}；target 为已知计划 UUID 或明确的 current/paused。只取消一项必须绑定这一项，不能扩展到其他计划。不确定对象则澄清，不宣布操作已成功。', player_request: text, capability_digest: capabilityDigest(view, save,service.systemCapabilities), session: sessionContext,
   }, save);
   if (!parsed) return { understanding: shallow, source: 'deterministic' };
   // A model that understood something is trusted about what is *not* missing: an empty unresolved list is an
@@ -191,6 +228,7 @@ export async function understandSystemRequest(service: GameService, view: Public
       entities: parsed.entities.length ? parsed.entities : shallow.entities,
       target_surfaces: parsed.target_surfaces.length ? parsed.target_surfaces : shallow.target_surfaces,
       unresolved: modelUnderstood ? parsed.unresolved : shallow.unresolved,
+      narrative_preference:parsed.narrative_preference??shallow.narrative_preference,
     },
     source: 'model',
   };

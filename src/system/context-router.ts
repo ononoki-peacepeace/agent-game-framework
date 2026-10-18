@@ -13,6 +13,7 @@ import {isUniversalGoalCandidate} from './resolver.js';
 import {contextEnvelope} from './context-envelope.js';
 import {resolveEntities} from '../agent/entities.js';
 import {interpretSemanticEntry,type SemanticDecision} from '../agent/semantic-entry.js';
+import type {NpcConversationContext} from '../shared/interaction-context.js';
 /** A clarification answer belongs to the message right after the question; older entries are forgotten. */
 const pendingTtlMs=10*60*1000;
 
@@ -26,7 +27,7 @@ export type SourceContext='world_input'|'system_input';
 export async function readContextView(service:GameService){const save=await service.storage.read();return save?service.project(save):null;}
 const pending=new WeakMap<GameService,Map<string,{input:string;question:string;at:number}>>();
 /** Read-only semantic gate. Failure to understand never grants permission to execute. */
-export async function routeContext(service:GameService,input:string,source:SourceContext):Promise<ContextRoute&{semantic?:SemanticDecision}>{
+export async function routeContext(service:GameService,input:string,source:SourceContext,interaction?:NpcConversationContext):Promise<ContextRoute&{semantic?:SemanticDecision}>{
   const save=await service.storage.read();assert(save,'请先载入世界');
   const view=service.project(save),key=save.game_id+':'+source;
   const memory=pending.get(service)??new Map();pending.set(service,memory);
@@ -38,7 +39,7 @@ export async function routeContext(service:GameService,input:string,source:Sourc
   const fresh=Boolean(stored)&&Date.now()-(stored?.at??0)<pendingTtlMs&&
     (source!=='world_input'||save.pending_world_clarification?.created_revision===save.state_revision);
   if(!fresh)memory.delete(key);
-  const previous=stored&&fresh?stored:undefined;
+  const previous=!interaction&&stored&&fresh?stored:undefined;
   const salient=recentReferent(save);
   const envelope=contextEnvelope(view,input,source==='world_input'?'WORLD':'SYSTEM');
   const context={source_context:source,context_envelope:envelope,input,pending:previous?{input:previous.input,question:previous.question}:null,
@@ -46,7 +47,7 @@ export async function routeContext(service:GameService,input:string,source:Sourc
     interaction_context:source==='world_input'?view.interaction_context??null:null,
     recent_scene:{primary:salient.primary?.name??null,primary_id:salient.primary?.id??null,last_target:salient.last_target?.name??null,conflict_target:salient.conflict_target?.name??null,last_event:salient.last_event??null,recent_turns:(save.narrative_history??[]).slice(-2).map(entry=>({narrative:String(entry.narrative??'').slice(0,240),dialogue:entry.dialogue??null,speaker:entry.speaker??null}))},
     public_scene:{characters:view.entities.filter(e=>e.components.character).map(e=>({id:e.id,name:e.components.identity?.name,location:e.components.location??null})),player_location:view.entities.find(e=>e.id===view.player_id)?.components.location??null},
-    capability_digest:capabilityDigest(view,save),
+    capability_digest:capabilityDigest(view,save,service.systemCapabilities),
   };
   const fixed=(destination:ContextRoute['destination']):ContextRoute=>({destination,confidence:1,clarification:null,speech_target_id:null,world_input:null,resolved_input:null,end_conversation:false});
   const persistWorldPending=async(value:typeof save.pending_world_clarification)=>{
@@ -57,6 +58,7 @@ export async function routeContext(service:GameService,input:string,source:Sourc
     await service.storage.write(latest);
   };
   if(stored&&!fresh&&source==='world_input')await persistWorldPending(undefined);
+  if(interaction&&stored&&source==='world_input')await persistWorldPending(undefined);
   // A short clarification reply fills the unresolved target in the original action. The answer itself
   // never becomes an independent world query or a new committed turn.
   if(previous&&source==='world_input'){
@@ -74,7 +76,7 @@ export async function routeContext(service:GameService,input:string,source:Sourc
   const offline=['mock','fixture'].includes(service.ai.adapter.name);
   if(!offline){
     const semantic=await interpretSemanticEntry(service,view,input,source==='world_input'?'WORLD':'SYSTEM',
-      previous?{input:previous.input,question:previous.question}:null,source==='system_input'?session:null);
+      previous?{input:previous.input,question:previous.question}:null,source==='system_input'?session:null,undefined,interaction);
     if(semantic){
       if(semantic.kind==='clarification'){
         const question=sanitizePlayerText(semantic.clarification||'请说明你的意思。','请说明你的意思。');
@@ -85,12 +87,13 @@ export async function routeContext(service:GameService,input:string,source:Sourc
       memory.delete(key);
       if(previous)await persistWorldPending(undefined);
       return {...fixed(semantic.domain==='system'?'SYSTEM_META_INTENT':'WORLD_INTENT'),
-        confidence:semantic.confidence,speech_target_id:semantic.speech_target_id,
-        resolved_input:previous?`${previous.input}\n补充说明：${input}`:null,semantic};
+        confidence:semantic.confidence,speech_target_id:interaction?.target_id??semantic.speech_target_id,
+        resolved_input:previous&&semantic.clarification_resolution==='continue_prior'?`${previous.input}\n补充说明：${input}`:null,semantic};
     }
-    // A failed understanding call cannot grant write authority through a keyword fallback.
+    // The live semantic owner failed. A keyword recognizer may not assume a different
+    // operation plane or grant a write; keep the original request available for retry.
     return {...fixed('AMBIGUOUS'),confidence:0,
-      clarification:'这次没能可靠理解你的请求，世界没有改变。请再说一次。'};
+      clarification:'语义处理暂时没有完成，世界没有改变。稍后可重试原请求，无需重新措辞。'};
   }
   const quick=fastPlan(view,input),metaPlan=planMeta(input,view.capabilities),shallowGuess=shallowUnderstanding(input,view);
   if(envelope.real_world_override)return fixed('SYSTEM_META_INTENT');

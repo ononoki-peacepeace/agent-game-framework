@@ -106,6 +106,7 @@ interface QueryEvidence {id:string;kind:'state'|'observation'|'rule';value:unkno
 export function worldQueryEvidence(view:PublicView,text:string):QueryEvidence[]{
   const player=view.entities.find(entity=>entity.id===view.player_id);
   const evidence:QueryEvidence[]=[
+    ...(view.known_evidence??[]).map(evidence=>({id:`known_evidence:${evidence.id}`,kind:'observation' as const,value:evidence.description})),
     {id:'time',kind:'state',value:{...view.time,label:view.time_label??null}},
     {id:'calendar',kind:'state',value:view.calendar??null},
     ...(view.last_turn?.narrative?[{id:'scene',kind:'observation' as const,value:view.last_turn.narrative.slice(0,1800)}]:[]),
@@ -131,7 +132,9 @@ export function worldQueryEvidence(view:PublicView,text:string):QueryEvidence[]{
   }
   for(const id of subjects){
     const entity=view.entities.find(item=>item.id===id)!;
-    addFields(`entity:${id}`,entity.components);
+    // Canonical state must survive the field budget ahead of long profile/card arrays.
+    const {identity,location,condition,physical_state,inventory,equipment,...detail}=entity.components;
+    addFields(`entity:${id}`,{identity,location,condition,physical_state,inventory,equipment,...detail});
   }
   evidence.push(...fields);
   const rules=[...(view.world_provenance?.declared_rules??[]),
@@ -143,8 +146,22 @@ export function worldQueryEvidence(view:PublicView,text:string):QueryEvidence[]{
 export async function deriveWorldQuery(service:GameService,view:PublicView,text:string):Promise<TruthQueryResult>{
   const save=await service.current();
   const evidence=worldQueryEvidence(view,text);
+  // Player-visible companionship evidence: the recorded travel intention (the outcome of a public statement) and
+  // the lines that produced it. NPC-private state (beliefs/plans/goals/private_facts) is never added here, so the
+  // answer can cite who agreed, refused or asked for a condition, without exposing hidden motives.
+  for(const [npcId,state] of Object.entries(save.npc_agent_state??{})){
+    const intent=state.travel_intent;if(!intent)continue;
+    evidence.push({id:`travel_intent:${npcId}`,kind:'state',value:{npc_id:npcId,status:intent.status,
+      origin_location_id:intent.origin_location_id,recorded_revision:intent.recorded_revision}});
+  }
+  for(const [turnIndex,entry] of (save.narrative_history??[]).slice(-6).entries()){
+    for(const [speechIndex,speech] of (entry.speech_events??[]).entries()){
+      evidence.push({id:`speech:${turnIndex}:${speechIndex}`,kind:'observation',
+        value:{speaker_id:speech.speaker_id,utterance:String(speech.utterance).slice(0,300),provenance:speech.provenance}});
+    }
+  }
   const answer=await service.ai.systemAgent(derivedQuerySchema,save.definition.prompt_profile,{
-    instruction:'只查询给定的已登记、玩家可见资料，不执行调查、观察、行动或状态修改。我/自己默认指 player_id。kind=fact 表示直接读取属性、身份、时间、日期、位置、余额、背包或已知关系；inference 表示结合已有公开证据推导；rule_judgment 表示资格、法律、年龄门槛或其他规则适用判断。实体存在不等于没有更多信息，必须检查其具体字段。当前结构化状态优先于旧场景描写。null、未提供字段及不完整名单不能证明事实为否。FOUND 必须引用实际支持答案的 evidence_ids；rule_judgment 还必须引用明确适用的 kind=rule 证据到 rule_evidence_ids。不能仅凭世界标题、现代/日本等题材标签或模型常识引入法律和门槛；不能将一个活动的年龄门槛用于另一个活动，多个冲突规则也不能自行挑选。规则或事实不足时 status=UNKNOWN，missing_information 说明缺少什么，answer 可以同时告知有证据支持的已知部分。不能推断秘密、执行主动感知或虚构调查结果。不要把人物内部 ID 或字段路径展示给玩家。仅输出 JSON。',
+    instruction:'只查询给定的已登记、玩家可见资料，不执行调查、观察、行动或状态修改。我/自己默认指 player_id。kind=fact 表示直接读取属性、身份、时间、日期、位置、余额、背包或已知关系；inference 表示结合已有公开证据推导；rule_judgment 表示资格、法律、年龄门槛或其他规则适用判断。实体存在不等于没有更多信息，必须检查其具体字段。当前结构化状态优先于旧场景描写。null、未提供字段及不完整名单不能证明事实为否。FOUND 必须引用实际支持答案的 evidence_ids；rule_judgment 还必须引用明确适用的 kind=rule 证据到 rule_evidence_ids。不能仅凭世界标题、现代/日本等题材标签或模型常识引入法律和门槛；不能将一个活动的年龄门槛用于另一个活动，多个冲突规则也不能自行挑选。规则或事实不足时 status=UNKNOWN，missing_information 说明缺少什么，answer 可以同时告知有证据支持的已知部分。不能推断秘密、执行主动感知或虚构调查结果。不要把人物内部 ID 或字段路径展示给玩家。若问题涉及人物是否答应同行、为什么没有跟来、同伴去了哪里，必须优先引用 travel_intent 与 speech 证据，如实说明该人物的公开表态是 willing（明确同意）、conditional（附条件，条件内容以 speech 中本人原话为准）还是 declined（明确拒绝），以及是否形成过明确同意；没有跟来但与 travel_intent 无关时，只能说"没有已提交的同行移动记录"，不得据此推断人物自己决定留下，也不得在已有公开表态证据时声称完全没有可确认信息。绝不引用 beliefs/plans/goals/private_facts 等内部字段，也不得泄露隐藏动机。仅输出 JSON。',
     question:text,evidence,player_id:view.player_id,public_entities:view.entities.map(entity=>({id:entity.id,name:entity.components.identity?.name??null,role:entity.components.character?.role??null,location:entity.components.location??null})),
   },{...save,ai:{threads:{}}});
   const valid=Boolean(answer&&answer.evidence_ids.every(id=>evidence.some(item=>item.id===id))&&

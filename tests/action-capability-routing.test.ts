@@ -66,6 +66,82 @@ async function setup(plan:(input:string)=>{goals:GoalInput[]},speechTarget:strin
 }
 
 describe('registered Action capability through the ordinary HTTP input',()=>{
+  it.each(['观察房间','先观察房间','环顾四周','看看周围有什么','看看周围的环境'])(
+    'commits one ambient observation for %s without a model plan or named target',async text=>{
+      const env=await setup(()=>{throw Error('single observation must not become a model preparation plan');},null,'square');
+      env.freeform.mockImplementationOnce(async()=>({narrative:'你环顾当前空间，没有发现新的关键物品。',minutes:2,
+        target_id:'npc_qiao',facts:[],relationship:null,item_move:null,storage_move:null,completion_quote:null,
+        required_conditions:[],resolution:{type:'DETERMINISTIC',domain:'general',band:'normal',visibility:'public',
+          stakes:'普通观察',stages:[],evidence_ids:[]}}));
+      const {body,before,after}=await env.input(text);
+      expect(body.outcome,JSON.stringify(body)).toMatchObject({type:'game',kind:'completed'});
+      expect(body.plan?.goals[0]).toMatchObject({status:'completed',contract:{completion:{kind:'activity_occurred'}}});
+      expect(after.resolution_receipts?.at(-1)?.semantic_action).toBe(text);
+      expect(after.resolution_receipts?.at(-1)?.effects).toContain('activity');
+      expect(after.resolution_receipts?.at(-1)?.activity?.occurred).toBe(true);
+      expect(after.state_revision).toBe(before.state_revision+1);
+      expect(after.runtime.time.minute).toBeGreaterThan(before.runtime.time.minute);
+      expect(body.message).toBeTruthy();
+      expect(body.message).not.toMatch(/只规划出准备步骤|安全结算/);
+      expect(env.planned).not.toHaveBeenCalled();
+    });
+  it('does not commit a truncated observation proposal or narrate it as completed',async()=>{
+    const env=await setup(()=>{throw Error('single observation should not invoke the goal model');},null,'square');
+    env.freeform.mockRejectedValueOnce(new Error('incomplete provider response'));
+    const {body,before,after}=await env.input('先观察房间');
+    expect(body.outcome?.type).toBe('engine_failure');
+    expect(body.message).not.toMatch(/已完成：|你已经完成/);
+    expect(after.state_revision).toBe(before.state_revision);
+    expect(after.runtime.time).toEqual(before.runtime.time);
+    expect(after.resolution_receipts).toEqual(before.resolution_receipts);
+  });
+  it('observes a place with no registered nearby person or object and no discovery',async()=>{
+    const env=await setup(()=>{throw Error('ambient observation should use its direct contract');},null,'square');
+    const empty=await env.service.current();
+    for(const entity of empty.entities)if(entity.id!==empty.player_state.entity_id&&
+      entity.components.location?.location_id==='square')entity.components.location.location_id='market';
+    await env.service.storage.write(empty);
+    const before=await env.service.current();
+    expect(before.entities.filter(entity=>entity.id!==before.player_state.entity_id&&
+      entity.components.location?.location_id==='square')).toHaveLength(0);
+    const {body,after}=await env.input('先观察房间');
+    expect(body.outcome).toMatchObject({type:'game',kind:'completed'});
+    expect(after.resolution_receipts?.at(-1)?.activity?.occurred).toBe(true);
+    expect(after.state_revision).toBe(before.state_revision+1);
+    expect(after.entities).toEqual(before.entities);
+    expect(after.resolution_receipts?.at(-1)?.effects).not.toContain('item');
+  });
+  it('deduplicates one committed observation request and rejects a stale second client',async()=>{
+    const env=await setup(()=>{throw Error('single observation should not invoke the goal model');},null,'square');
+    const before=await env.service.current(),requestId=randomUUID();
+    const send=(id:string)=>fetch(`${env.base}/api/input`,{method:'POST',headers:{'Content-Type':'application/json',
+      'X-Game-Token':env.token},body:JSON.stringify({request_id:id,game_id:before.game_id,
+        expected_revision:before.state_revision,input:'先观察房间'})});
+    const first=await send(requestId);
+    expect(first.ok).toBe(true);
+    const committed=await env.service.current();
+    const retry=await send(requestId);
+    expect(retry.status).toBe(200);
+    expect((await retry.json()).view.revision).toBe(committed.state_revision);
+    expect((await env.service.current()).state_revision).toBe(committed.state_revision);
+    expect((await env.service.current()).resolution_receipts).toEqual(committed.resolution_receipts);
+    const stale=await send(randomUUID());
+    expect(stale.status).toBe(409);
+    expect((await env.service.current()).state_revision).toBe(committed.state_revision);
+  });
+  it('serializes two clients acting on the same world revision',async()=>{
+    const env=await setup(()=>{throw Error('single observation should not invoke the goal model');},null,'square');
+    const before=await env.service.current();
+    const send=(requestId:string)=>fetch(`${env.base}/api/input`,{method:'POST',headers:{'Content-Type':'application/json',
+      'X-Game-Token':env.token},body:JSON.stringify({request_id:requestId,game_id:before.game_id,
+        expected_revision:before.state_revision,input:'环顾四周'})});
+    const [a,b]=await Promise.all([send(randomUUID()),send(randomUUID())]);
+    expect([a.status,b.status].sort()).toEqual([200,409]);
+    const after=await env.service.current();
+    expect(after.state_revision).toBe(before.state_revision+1);
+    expect(after.resolution_receipts?.length).toBe((before.resolution_receipts?.length??0)+1);
+    expect(after.runtime.time.minute).toBe(before.runtime.time.minute+2);
+  });
   it('does not let conversation context turn an authorized purchase into TALK or Freeform',async()=>{
     const env=await setup(input=>({goals:[goal('buy',input,'purchase','幕内便当')]}));
     const {response,body,before,after,requestId}=await env.input('买一份幕内便当。');
@@ -173,7 +249,8 @@ describe('registered Action capability through the ordinary HTTP input',()=>{
   it('reports an unavailable registered capability without falling back to invented trade prose',async()=>{
     const env=await setup(input=>({goals:[goal('buy',input,'purchase','幕内便当')]}),null,'market',true);
     const {body,before,after}=await env.input('买一份幕内便当。');
-    expect(body.presentation).toBe('failure');
+    expect(body.presentation).toBe('story');
+    expect(body.outcome).toMatchObject({type:'game',kind:'unavailable'});
     expect(body.plan?.goals[0].contract?.availability).toBe('capability_gap');
     expect(after.state_revision).toBe(before.state_revision);
     expect(after.resolution_receipts).toEqual(before.resolution_receipts);

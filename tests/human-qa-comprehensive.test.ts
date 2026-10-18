@@ -103,6 +103,7 @@ describe('human QA comprehensive closure',()=>{
   const plan=await createAgentPlan(f.ai,publicView(save),'趁角色甲转身时推她一下');
   const turn=vi.spyOn(f.service,'turn');const result=await executePlan(f.service,{request_id:randomUUID(),game_id:save.game_id,expected_revision:save.state_revision,input:'趁角色甲转身时推她一下'},plan);
   expect(turn).not.toHaveBeenCalled();expect(result.message).toContain('条件目前没有出现');
+  expect(result.outcome).toMatchObject({type:'game',kind:'condition_false'});
   expect(result.message).not.toMatch(/ConditionNode|validator|框架校验/);expect((await f.service.current()).state_revision).toBe(save.state_revision);
   expect((await f.service.current()).runtime.time).toEqual(save.runtime.time);
  });

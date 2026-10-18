@@ -16,7 +16,7 @@ export interface LogFields {
   module?: string; trace_id?: string | null; request_id?: string | null; job_id?: string | null;
   revision?: number | null; duration_ms?: number | null; metadata?: Record<string, unknown>;
 }
-export interface LogQuery { level?: LogLevel; module?: string; event?: string; eventPrefix?: string; trace_id?: string; job_id?: string; limit?: number }
+export interface LogQuery { level?: LogLevel; module?: string; event?: string; eventPrefix?: string; trace_id?: string; request_id?: string; exclude_event?: string; job_id?: string; limit?: number }
 export interface TraceSpanSummary { name: string; duration_ms: number }
 export interface TraceSummary {
   trace_id: string; module: string; started_at: string; total_ms: number;
@@ -102,6 +102,8 @@ export class StructuredLogger {
       (!query.event || entry.event === query.event) &&
       (!query.eventPrefix || entry.event.startsWith(query.eventPrefix)) &&
       (!query.trace_id || entry.trace_id === query.trace_id) &&
+      (!query.request_id || entry.request_id === query.request_id) &&
+      (!query.exclude_event || entry.event !== query.exclude_event) &&
       (!query.job_id || entry.job_id === query.job_id));
     const limit = Math.min(Math.max(query.limit ?? 200, 1), this.history);
     return matched.slice(-limit).map(entry => structuredClone(entry));
@@ -113,14 +115,18 @@ export class StructuredLogger {
   flush() { return this.pending; }
 
   // Restart-friendly viewer source: the newest log file on disk when the in-memory buffer is cold.
-  async readHistory(limit = 200): Promise<LogEntry[]> {
+  async readHistory(limit = 200, query:LogQuery={}): Promise<LogEntry[]> {
     if (!this.directory) return [];
     try {
       const files = (await readdir(this.directory)).filter(name => /^game-\d{4}-\d{2}-\d{2}(?:\.\d+)?\.log$/.test(name)).sort();
       const newest = files.at(-1);
       if (!newest) return [];
-      const lines = (await readFile(join(this.directory, newest), 'utf8')).split('\n').filter(Boolean).slice(-Math.max(limit, 1));
-      return lines.flatMap(line => { try { return [JSON.parse(line) as LogEntry]; } catch { return []; } });
+      const lines = (await readFile(join(this.directory, newest), 'utf8')).split('\n').filter(Boolean);
+      return lines.flatMap(line => { try { return [JSON.parse(line) as LogEntry]; } catch { return []; } })
+        .filter(entry=>(!query.trace_id||entry.trace_id===query.trace_id)&&(!query.request_id||entry.request_id===query.request_id)&&
+          (!query.event||entry.event===query.event)&&(!query.level||entry.level===query.level)&&
+          (!query.module||entry.module===query.module)&&(!query.job_id||entry.job_id===query.job_id)&&entry.event!==query.exclude_event)
+        .slice(-Math.max(limit,1));
     } catch { return []; }
   }
 

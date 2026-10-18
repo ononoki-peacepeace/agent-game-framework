@@ -9,6 +9,7 @@ coverage/
 /imports/
 /saves/
 /checkpoints/
+/.codex-checkpoints/
 /exports/
 /assets/avatars/
 /assets/uploads/
@@ -36,6 +37,10 @@ test-results/
 playwright-report/
 playwright/.cache/
 blob-report/
+/qa*-test-results.json
+/qa*-final-tests.json
+/docs/qa-npc-schema-deploy-path.txt
+/docs/qa-npc-world-runtime.json
 
 # Local overlay instructions (not project documentation)
 /覆盖说明.txt

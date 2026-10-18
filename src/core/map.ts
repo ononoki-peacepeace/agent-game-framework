@@ -5,6 +5,7 @@ export function currentMap(save: SavePackage) {
   return {
     locations: [...map.locations, ...save.map_state.dynamic_locations],
     routes: [...map.routes, ...save.map_state.dynamic_routes],
+    regions:[...(map.regions??[]),...(save.map_state.dynamic_regions??[])],
   };
 }
 

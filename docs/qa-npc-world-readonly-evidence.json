@@ -1,0 +1,398 @@
+{
+  "snapshot": {
+    "revision": 388,
+    "time": {
+      "day": 1,
+      "minute": 1048
+    },
+    "sha256": "95527b7bc9fa7968e77d44843ee3e3217b347bdcd6530e2eda500dab61fea144"
+  },
+  "registered": {
+    "npcs": 12,
+    "npc_goals": 0,
+    "executable_plans": 0,
+    "never_deep_serviced": 11,
+    "incidents": [
+      {
+        "status": "cancelled",
+        "stage_index": -1
+      },
+      {
+        "status": "active",
+        "stage_index": 0
+      }
+    ],
+    "arcs": [
+      {
+        "status": "developing"
+      }
+    ],
+    "stage_advances": 1
+  },
+  "logs": [
+    {
+      "timestamp": "2026-10-17T11:24:21.876Z",
+      "level": "info",
+      "event": "save.commit",
+      "module": "agent",
+      "trace_id": "tr_3a660e4c82f4",
+      "request_id": "d1ff9b68-6879-4066-8181-89ffc48f7b00",
+      "job_id": null,
+      "revision": 384,
+      "duration_ms": null,
+      "metadata": {
+        "step_request_id": "814b9ce1-121c-4bc2-a12e-d51a302a2b6f",
+        "revision_before": 383,
+        "revision_after": 384,
+        "validation": "accepted",
+        "action": "FREEFORM_ACTION",
+        "source": "ai",
+        "modules": [
+          "resolution_receipts",
+          "resolution_history",
+          "interaction_context",
+          "narrative_history",
+          "turn_checkpoint",
+          "turn_history",
+          "active_turn_id",
+          "action_facts",
+          "state_revision",
+          "narrative_state",
+          "background_state",
+          "runtime",
+          "last_turn"
+        ],
+        "components": [],
+        "components_truncated": false
+      }
+    },
+    {
+      "timestamp": "2026-10-17T11:26:02.844Z",
+      "level": "debug",
+      "event": "background_event.evaluated",
+      "module": "background_event",
+      "trace_id": "tr_4273fd2b5b91",
+      "request_id": "3844c0ea-c15f-4cd9-8853-f7cef3120a8b",
+      "job_id": null,
+      "revision": 384,
+      "duration_ms": null,
+      "metadata": {
+        "game_time": {
+          "day": 1,
+          "minute": 974
+        },
+        "trigger": "time_advance",
+        "active": 1,
+        "dormant": 0,
+        "generation_pending": false,
+        "capacity_reached": false,
+        "player_exposure": false
+      }
+    },
+    {
+      "timestamp": "2026-10-17T11:26:02.844Z",
+      "level": "debug",
+      "event": "background_event.evaluated",
+      "module": "background_event",
+      "trace_id": "tr_4273fd2b5b91",
+      "request_id": "3844c0ea-c15f-4cd9-8853-f7cef3120a8b",
+      "job_id": null,
+      "revision": 384,
+      "duration_ms": null,
+      "metadata": {
+        "game_time": {
+          "day": 1,
+          "minute": 976
+        },
+        "trigger": "time_advance",
+        "active": 1,
+        "dormant": 0,
+        "generation_pending": false,
+        "capacity_reached": false,
+        "player_exposure": false
+      }
+    },
+    {
+      "timestamp": "2026-10-17T11:26:02.845Z",
+      "level": "debug",
+      "event": "background_event.evaluated",
+      "module": "background_event",
+      "trace_id": "tr_4273fd2b5b91",
+      "request_id": "3844c0ea-c15f-4cd9-8853-f7cef3120a8b",
+      "job_id": null,
+      "revision": 384,
+      "duration_ms": null,
+      "metadata": {
+        "game_time": {
+          "day": 1,
+          "minute": 977
+        },
+        "trigger": "time_advance",
+        "active": 1,
+        "dormant": 0,
+        "generation_pending": false,
+        "capacity_reached": false,
+        "player_exposure": false
+      }
+    },
+    {
+      "timestamp": "2026-10-17T11:26:37.162Z",
+      "level": "info",
+      "event": "save.commit",
+      "module": "agent",
+      "trace_id": "tr_4273fd2b5b91",
+      "request_id": "3844c0ea-c15f-4cd9-8853-f7cef3120a8b",
+      "job_id": null,
+      "revision": 385,
+      "duration_ms": null,
+      "metadata": {
+        "step_request_id": "e741c4da-3f33-4765-889e-2eeb4cbade9b",
+        "revision_before": 384,
+        "revision_after": 385,
+        "validation": "accepted",
+        "action": "MOVE",
+        "source": "player",
+        "modules": [
+          "resolution_receipts",
+          "interaction_context",
+          "narrative_history",
+          "turn_checkpoint",
+          "turn_history",
+          "active_turn_id",
+          "state_revision",
+          "entities",
+          "background_state",
+          "runtime",
+          "last_turn"
+        ],
+        "components": [
+          "pc_asano.location"
+        ],
+        "components_truncated": false
+      }
+    },
+    {
+      "timestamp": "2026-10-17T11:29:00.244Z",
+      "level": "debug",
+      "event": "background_event.evaluated",
+      "module": "background_event",
+      "trace_id": "tr_a79e71f7ac23",
+      "request_id": "b5590059-9909-4edf-8b82-0d3e74759873",
+      "job_id": null,
+      "revision": 385,
+      "duration_ms": null,
+      "metadata": {
+        "game_time": {
+          "day": 1,
+          "minute": 1007
+        },
+        "trigger": "time_advance",
+        "active": 1,
+        "dormant": 0,
+        "generation_pending": false,
+        "capacity_reached": false,
+        "player_exposure": false
+      }
+    },
+    {
+      "timestamp": "2026-10-17T11:29:08.406Z",
+      "level": "info",
+      "event": "npc_agent.daily_action",
+      "module": "agent",
+      "trace_id": "tr_a79e71f7ac23",
+      "request_id": "b5590059-9909-4edf-8b82-0d3e74759873",
+      "job_id": null,
+      "revision": 385,
+      "duration_ms": null,
+      "metadata": {
+        "npc_id": "n_nikaido",
+        "action_type": "INSPECT",
+        "receipt_id": "4e53982d-372c-4bde-a9a3-dad79cb62762",
+        "model_calls": 0
+      }
+    },
+    {
+      "timestamp": "2026-10-17T11:29:10.875Z",
+      "level": "info",
+      "event": "npc_agent.daily_action",
+      "module": "agent",
+      "trace_id": "tr_a79e71f7ac23",
+      "request_id": "b5590059-9909-4edf-8b82-0d3e74759873",
+      "job_id": null,
+      "revision": 385,
+      "duration_ms": null,
+      "metadata": {
+        "npc_id": "n_shimada",
+        "action_type": "INSPECT",
+        "receipt_id": "d3ea882b-c544-42cf-ae25-97261f3f117b",
+        "model_calls": 0
+      }
+    },
+    {
+      "timestamp": "2026-10-17T11:29:10.875Z",
+      "level": "info",
+      "event": "npc_agent.daily_batch",
+      "module": "agent",
+      "trace_id": "tr_a79e71f7ac23",
+      "request_id": "b5590059-9909-4edf-8b82-0d3e74759873",
+      "job_id": null,
+      "revision": 385,
+      "duration_ms": null,
+      "metadata": {
+        "elapsed_world_minutes": 86,
+        "executed": 2,
+        "skipped": 4,
+        "model_calls": 0,
+        "output_tokens": 0
+      }
+    },
+    {
+      "timestamp": "2026-10-17T11:29:29.892Z",
+      "level": "info",
+      "event": "save.commit",
+      "module": "agent",
+      "trace_id": "tr_a79e71f7ac23",
+      "request_id": "b5590059-9909-4edf-8b82-0d3e74759873",
+      "job_id": null,
+      "revision": 386,
+      "duration_ms": null,
+      "metadata": {
+        "step_request_id": "b5590059-9909-4edf-8b82-0d3e74759873",
+        "revision_before": 385,
+        "revision_after": 386,
+        "validation": "accepted",
+        "action": "WAIT",
+        "source": "player",
+        "modules": [
+          "resolution_receipts",
+          "resolution_history",
+          "narrative_history",
+          "npc_agent_state",
+          "npc_daily_last_at",
+          "turn_checkpoint",
+          "turn_history",
+          "active_turn_id",
+          "state_revision",
+          "background_state",
+          "runtime",
+          "last_turn"
+        ],
+        "components": [],
+        "components_truncated": false
+      }
+    },
+    {
+      "timestamp": "2026-10-17T11:31:44.929Z",
+      "level": "debug",
+      "event": "background_event.evaluated",
+      "module": "background_event",
+      "trace_id": "tr_acca136d0ae1",
+      "request_id": "7d1abc6b-9399-47bb-b93b-37845103d8a5",
+      "job_id": null,
+      "revision": 386,
+      "duration_ms": null,
+      "metadata": {
+        "game_time": {
+          "day": 1,
+          "minute": 1008
+        },
+        "trigger": "time_advance",
+        "active": 1,
+        "dormant": 0,
+        "generation_pending": false,
+        "capacity_reached": false,
+        "player_exposure": false
+      }
+    },
+    {
+      "timestamp": "2026-10-17T11:31:59.129Z",
+      "level": "info",
+      "event": "save.commit",
+      "module": "agent",
+      "trace_id": "tr_acca136d0ae1",
+      "request_id": "7d1abc6b-9399-47bb-b93b-37845103d8a5",
+      "job_id": null,
+      "revision": 387,
+      "duration_ms": null,
+      "metadata": {
+        "step_request_id": "2ed5b90c-b6b3-47a1-942f-b7a812f96c5f",
+        "revision_before": 386,
+        "revision_after": 387,
+        "validation": "accepted",
+        "action": "MOVE",
+        "source": "player",
+        "modules": [
+          "resolution_receipts",
+          "narrative_history",
+          "turn_checkpoint",
+          "turn_history",
+          "active_turn_id",
+          "state_revision",
+          "entities",
+          "background_state",
+          "runtime",
+          "last_turn"
+        ],
+        "components": [
+          "pc_asano.location"
+        ],
+        "components_truncated": false
+      }
+    },
+    {
+      "timestamp": "2026-10-17T11:34:13.622Z",
+      "level": "debug",
+      "event": "background_event.evaluated",
+      "module": "background_event",
+      "trace_id": "tr_c79f630ef9c5",
+      "request_id": "3408e4cc-f6c2-4700-ab91-eba4ca660069",
+      "job_id": null,
+      "revision": 387,
+      "duration_ms": null,
+      "metadata": {
+        "game_time": {
+          "day": 1,
+          "minute": 1048
+        },
+        "trigger": "time_advance",
+        "active": 1,
+        "dormant": 0,
+        "generation_pending": false,
+        "capacity_reached": false,
+        "player_exposure": false
+      }
+    },
+    {
+      "timestamp": "2026-10-17T11:34:35.576Z",
+      "level": "info",
+      "event": "save.commit",
+      "module": "agent",
+      "trace_id": "tr_c79f630ef9c5",
+      "request_id": "3408e4cc-f6c2-4700-ab91-eba4ca660069",
+      "job_id": null,
+      "revision": 388,
+      "duration_ms": null,
+      "metadata": {
+        "step_request_id": "3408e4cc-f6c2-4700-ab91-eba4ca660069",
+        "revision_before": 387,
+        "revision_after": 388,
+        "validation": "accepted",
+        "action": "WAIT",
+        "source": "player",
+        "modules": [
+          "resolution_receipts",
+          "narrative_history",
+          "turn_checkpoint",
+          "turn_history",
+          "active_turn_id",
+          "state_revision",
+          "background_state",
+          "runtime",
+          "last_turn"
+        ],
+        "components": [],
+        "components_truncated": false
+      }
+    }
+  ]
+}

@@ -55,7 +55,8 @@ export function makeChoiceOffers(save:SavePackage,choices:string[],meanings:Choi
 }
 
 /** Authoring-side compilation shares the manual Planner; unsupported staged goals remain saved but hidden. */
-export async function makeCompiledChoiceOffers(save:SavePackage,choices:string[],meanings:ChoiceMeaning[],ai:AIRuntime):Promise<ChoiceOffer[]>{
+export async function makeCompiledChoiceOffers(save:SavePackage,choices:string[],meanings:ChoiceMeaning[],ai:AIRuntime,
+  deferSemantic=false):Promise<ChoiceOffer[]>{
   const view=publicView(save),offers=makeChoiceOffers(save,choices,meanings.map(meaning=>({...meaning,target_id:null})));
   const legacyIds=new Set(offers.map(offer=>offer.id));
   // An offered cross-scene goal may mention a person reachable only after MOVE. Compile its full
@@ -72,7 +73,19 @@ export async function makeCompiledChoiceOffers(save:SavePackage,choices:string[]
     // already-settled turn are outside this boundary and must still fail normally.
     try{
     let plan:AgentPlan;
-    try{plan=await createAgentPlan(ai,view,offer.text);}
+    // Suggested next actions are optional. Their model planning must never hold the
+    // already-settled turn hostage; unresolved offers are compiled when selected.
+    const quick=deferSemantic&&!hasMultipleClauses(offer.text)?fastPlan(view,offer.text):null;
+    if(deferSemantic&&!quick){
+      // A local availability check already accepted these offers. Do not display
+      // speculative fallback suggestions that require semantic proof we deferred.
+      if(legacyIds.has(offer.id)&&offer.step_hints.length&&offer.step_hints.every(step=>{
+        const part=fastPlan(view,step);
+        return part?.goals.length===1&&part.goals[0].type==='WORLD_ACTION';
+      }))compiled.push(offer);
+      continue;
+    }
+    try{plan=quick??await createAgentPlan(ai,view,offer.text);}
     catch(error){
       // A failed semantic compile must never turn a multi-clause offer into an executable text-only guess.
       if(hasMultipleClauses(offer.text))throw error;

@@ -1,0 +1,58 @@
+import {chromium,expect} from '@playwright/test';
+import {once} from 'node:events';
+import {readFile,mkdir,writeFile} from 'node:fs/promises';
+import {resolve,join} from 'node:path';
+import {JsonStore} from '../src/storage/json-store.js';
+import {GameService} from '../src/server/service.js';
+import {AIRuntime} from '../src/ai/runtime.js';
+import {configureDefaultLogger,StructuredLogger} from '../src/observability/logger.js';
+import {createApp} from '../src/server/app.js';
+const source=resolve('.tmp/qa-final-narrator-real-1792186064938');
+const root=resolve(`.tmp/qa-final-narrator-browser-${Date.now()}`);await mkdir(root,{recursive:true});
+let save=JSON.parse(await readFile(join(source,'current.json'),'utf8'));
+const firstCommitted=save.turn_history?.[1]?.before;
+if(!firstCommitted)throw Error('missing actual first committed snapshot');
+const committedRequests=save.runtime.receipts.filter((receipt:any)=>receipt.revision<=1);
+save={...save,...firstCommitted,state_revision:1,turn_history:save.turn_history.slice(0,1)};
+save.runtime.receipts=committedRequests;
+expect(save.entities.find((e:any)=>e.id==='npc_lin').components.location.location_id).toBe(save.entities.find((e:any)=>e.id===save.player_state.entity_id).components.location.location_id);
+const real=JSON.parse(await readFile(join(source,'report.json'),'utf8'));
+save.last_turn={...save.last_turn,narrative:real.turns[0].narrative,scene_beats:real.turns[0].scene_beats,speaker:null,dialogue:null};
+const store=new JsonStore(root);await store.write(save);
+const logger=new StructuredLogger({directory:join(root,'logs'),level:'debug',echo:false});
+logger.warn('qa.validation.failure',{trace_id:'tr_isolated_288',request_id:'isolated-288',metadata:{reason:'isolated UI filter check'}});
+configureDefaultLogger(logger);
+for(let n=0;n<30;n++)logger.debug('save.read',{module:'storage'});
+let calls=0;const attempts:any[]=[];const service=new GameService(store,new AIRuntime({name:'fixture',generate:async request=>{calls++;attempts.push({role:request.role,schema_keys:Object.keys((request.schema as any)?.properties??{})});throw Error('browser acceptance must not call Provider');}}),save.definition,[],logger);
+const server=createApp(service,resolve('dist/client')).listen(0,'127.0.0.1');await once(server,'listening');
+const base=`http://127.0.0.1:${(server.address() as any).port}`;
+const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'}),results:any[]=[];
+try{for(const width of [1366,390]){
+ const page=await browser.newPage({viewport:{width,height:844}});let posts=0;
+ page.on('request',request=>{if(request.method()==='POST'&&request.url().endsWith('/api/input'))posts++;});
+ await page.goto(base);await page.getByRole('button',{name:'继续当前世界',exact:true}).click();
+ await expect(page.locator('.scene-performance')).toBeVisible();
+ await expect(page.getByText('v0.1.19',{exact:true})).toHaveText('v0.1.19');if(width>600)await expect(page.getByText('v0.1.19',{exact:true})).toBeVisible();
+ const identity=await (await page.request.get(base+'/api/session')).json();expect(identity.runtime.code_sha256).toMatch(/^[a-f0-9]{64}$/);
+ const expected=save.last_turn.scene_beats.filter((b:any)=>b.kind==='speech');
+ await expect(page.locator('.scene-beat-speech')).toHaveCount(expected.length);
+ for(const beat of expected)await expect(page.locator('.scene-beat-speech p').filter({hasText:beat.utterance})).toBeVisible();
+ const complete=await page.locator('.scene-performance').innerText();
+ let prose=save.last_turn.narrative;
+ for(const beat of expected)for(const [open,close] of [['“','”'],['「','」'],['『','』'],['\"','\"']])prose=prose.split(open+beat.utterance+close).join('\n\n');
+ for(const paragraph of prose.split(/\n\s*\n/).filter((p:string)=>p.trim()))expect(complete).toContain(paragraph.trim());
+ expect(await page.locator('.scene-speaker .avatar').count()).toBeGreaterThan(0);
+ expect(posts).toBe(0);await page.screenshot({path:join(root,`story-${width}.png`),fullPage:true});
+ if(width===390){await page.locator('.scene-beat-speech').first().evaluate(el=>el.scrollIntoView({block:'center'}));await page.screenshot({path:join(root,'speech-mobile-viewport.png')});}
+ if(width===390){await page.getByRole('button',{name:'更多',exact:true}).click();await page.getByRole('region',{name:'更多面板'}).getByRole('button',{name:'日志',exact:true}).click();}
+ else await page.getByRole('navigation',{name:'世界面板'}).getByRole('button',{name:'日志',exact:true}).click();
+ await expect(page.locator('.log-panel')).toBeVisible();
+ await expect(page.locator('.log-event').filter({hasText:'save.read'})).toHaveCount(0);
+ await page.getByLabel('显示高频存档读取').check();
+ await expect(page.locator('.log-event').filter({hasText:'save.read'}).first()).toBeVisible();
+ await page.getByLabel('筛选 Trace 或请求').fill('tr_isolated_288');
+ await expect(page.locator('.log-event')).toHaveCount(1);
+ await expect(page.locator('.log-event')).toHaveText('qa.validation.failure');
+ await page.screenshot({path:join(root,`logs-${width}.png`),fullPage:true});
+ results.push({width,runtime:identity.runtime,speech_count:expected.length,full_prose:true,posts,logs_filter:true,passed:true});await page.close();
+}}finally{await browser.close();server.closeAllConnections();await new Promise<void>(done=>server.close(()=>done()));await writeFile(join(root,'report.json'),JSON.stringify({results,fixture_generate_attempts:calls,real_provider_calls:0,attempts},null,2));console.log(JSON.stringify({root,results,fixture_generate_attempts:calls,real_provider_calls:0,attempts}));}

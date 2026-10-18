@@ -1,6 +1,7 @@
 import type {SavePackage} from '../core/schema.js';
 import {publicView} from '../core/state.js';
 import {relationshipSummary} from '../shared/relationship.js';
+import {composePersonaContext} from '../characters/persona.js';
 import {ProviderError} from './failures.js';
 
 export const continuityGuidance='保持人物人格、记忆、关系和行为连续性。结合近期事件和当下首要目标作出反应，不使用固定情绪顺序。不强迫讲话或最低字数；沉默、逃离、僵住、拒绝均可，关键是符合人物和刚发生的事。只采用公开可观察信息；人物不能知道不在场时的私密事件。interaction 只描述交流是否持续：NPC 主动交谈可返回 active；明确结束、离开、不能交流可返回 ended，否则 null；target_id 必须是给定人物。安全边界优先，必要时概括或淡出，禁止把模型拒绝说明写作人物台词。';
@@ -10,7 +11,10 @@ export function characterContext(save:SavePackage,targetId?:string){
   return {
     scene:{time:view.time,location:player?.components.location??null,local_position:player?.components.scene_position??null},
     conversation_focus:view.interaction_context??null,
-    characters:characters.map(e=>({id:e.id,name:e.components.identity?.name,profile:e.components.character,allowed_persona:{description:String(e.components.character_card?.description??e.components.identity?.description??'').slice(0,1800),personality:(String(e.components.character?.personality??'').trim()||String(e.components.character_card?.personality??'')).slice(0,1800),speech_style:String(e.components.character?.speech_style??'').slice(0,1800),verbal_habits:String(e.components.character?.verbal_habits??'').slice(0,1800),dialogue_examples:String(e.components.character_card?.mes_example??'').slice(0,1200)},traits:e.components.traits??null,observable_condition:e.components.condition??null,relationship:relationshipSummary(view,e).text,
+    characters:characters.map(e=>({id:e.id,name:e.components.identity?.name,
+      allowed_persona:composePersonaContext(save,e.id,1000)?.fields??{},
+      public_description:String(e.components.identity?.description??'').slice(0,500),traits:e.components.traits??null,
+      observable_condition:e.components.condition??null,relationship:relationshipSummary(view,e).text,
       knowledge_boundary:'只知道自身公开资料、现场可观察事实和以下与自己直接相关的互动；其余公开记录是叙述者上下文，不等同于该人物亲历。',
       recent_interactions:(save.action_facts??[]).filter(f=>f.target_id===e.id).slice(-4).map(f=>({facts:f.facts,time:f.time}))})),
     recent_turns:(save.narrative_history??[]).slice(-5).map(h=>({narrative:h.narrative.slice(0,1400),dialogue:h.dialogue?.slice(0,600)??null,facts:h.facts})),

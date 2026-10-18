@@ -56,8 +56,7 @@ export type ActivityRule=z.infer<typeof activityRuleSchema>;
 export type Calendar=z.infer<typeof calendarSchema>;
 export type ScheduledTask=z.infer<typeof scheduledTaskSchema>;
 
-// Day 1 = 1月1日 周一, non-leap Gregorian month lengths. Used as the deterministic anchor for new worlds,
-// so a normal new player never has to confirm a calendar years later.
+// Legacy fallback for worlds authored before an explicit opening calendar was recorded.
 export function defaultCalendar(source='framework default calendar anchor：第1天为1月1日周一，采用非闰年公历月长'):Calendar{
   return {version:1,anchor_day:1,anchor_month:1,anchor_date:1,anchor_weekday:1,month_lengths:[31,28,31,30,31,30,31,31,30,31,30,31],source};
 }

@@ -14,7 +14,7 @@ try{
  assert(started,'Own test server did not start');
  browser=await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE}:{})});
  const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto(base);await page.getByRole('button',{name:'选择 JSON 文件',exact:true}).waitFor();
+ await page.goto(base);await page.getByRole('heading',{name:'载入、创建，或继续一个世界。'}).waitFor();
  const importer=page.locator('input[type=file][accept=".json,application/json"]');
  await importer.setInputFiles(resolve('content/worlds/town.json'));await page.locator('.world-status').getByText('港湾日常',{exact:true}).waitFor();
  await page.getByRole('button',{name:'地图',exact:true}).click();
@@ -23,17 +23,23 @@ try{
  await page.getByRole('button',{name:'商店',exact:true}).click();await page.getByRole('button',{name:'买入 · 6 点',exact:true}).click();
  await page.getByRole('button',{name:'商店',exact:true}).click();await page.locator('article.product').filter({hasText:'饮用水'}).getByText('库存 9 · 持有 1',{exact:true}).waitFor();
  await page.getByRole('button',{name:'卖出 · 3',exact:true}).click();
- const target=page.locator('article.context-entity').filter({hasText:'乔宁'});
- await target.getByRole('button',{name:'查看操作',exact:true}).click();await target.getByRole('button',{name:'交流',exact:true}).click();
- await page.locator('#action').fill('你好，今天店里怎么样？');await page.getByRole('button',{name:'确认并执行 →',exact:true}).click();
- await page.locator('.dialogue-card').waitFor();await page.screenshot({path:directory+'/desktop.png'});
- await page.reload();await page.getByRole('button',{name:'继续当前世界',exact:true}).click();await page.locator('.dialogue-card').waitFor();
+ await page.locator('article.product').filter({hasText:'饮用水'}).getByText('库存 10 · 持有 0',{exact:true}).waitFor();
+ const beforeRevision=await page.locator('.scene-heading-meta small').textContent();
+ await page.locator('#action').fill('观察周围');await page.getByRole('button',{name:'发送 →',exact:true}).click();
+ await page.locator('.agent-reply.failure').waitFor({timeout:90000});
+ assert.equal(await page.locator('.scene-heading-meta small').textContent(),beforeRevision,
+   'failed free input must not commit a world action');
+ await page.getByText('已自动保存',{exact:true}).waitFor();await page.screenshot({path:directory+'/desktop.png'});
+ await page.reload();await page.getByRole('button',{name:'继续当前世界',exact:true}).click();await page.locator('.story').waitFor();
+ const mobile=await browser.newPage({viewport:{width:390,height:844}});await mobile.goto(base);
+ await mobile.getByRole('button',{name:'继续当前世界',exact:true}).click();await mobile.locator('#action').waitFor();
+ await mobile.screenshot({path:directory+'/mobile.png'});await mobile.close();
  await page.getByRole('button',{name:'存档',exact:true}).click();await page.getByRole('button',{name:'保存检查点',exact:true}).click();
  const downloadEvent=page.waitForEvent('download');await page.getByRole('button',{name:'导出存档 JSON',exact:true}).click();
  await (await downloadEvent).saveAs(directory+'/export.json');
  await page.locator('.save-actions').getByRole('button',{name:'返回启动页',exact:true}).click();await importer.setInputFiles(directory+'/export.json');
  await page.locator('.world-status').getByText('港湾日常',{exact:true}).waitFor();assert.deepEqual(errors,[]);
- console.log('DESKTOP SMOKE PASS: public world import, MOVE/BUY/SELL/TALK, refresh, checkpoint and export/import. '+directory);
+ console.log('BROWSER SMOKE PASS: desktop import, MOVE/BUY/SELL, visible failed mock input without world commit, refresh, checkpoint and export/import; mobile game input. '+directory);
 }finally{
  await browser?.close();if(child.exitCode===null&&child.signalCode===null){const stopped=once(child,'exit');child.send('shutdown');await stopped;}
 }

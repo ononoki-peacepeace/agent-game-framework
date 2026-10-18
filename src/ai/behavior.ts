@@ -44,6 +44,7 @@ const toneRules: [RegExp, string][] = [
   [/(更|更加|提高|增加|提升|多).{0,4}(文学|文学性|文采|修辞|文笔)|文学(一点|一些|性|化)/, 'literary'],
   [/(简洁|简短|精炼|短一点|少一点|别啰嗦|不要啰嗦|缩短)/, 'concise'],
   [/(自然(一点|些)?|口语化|像真人|别太正式|放松一点)/, 'natural'],
+  [/(成人向|成熟题材|成熟风格|成熟语气|更成熟|nsfw)/i, 'mature'],
   [/(降低|减少|别那么|不要那么|少一点).{0,4}(文学|修辞|华丽)|朴实|平实|别太文学/, 'plain'],
   [/第一人称/, 'first_person'],
   [/第三人称/, 'third_person'],
@@ -92,12 +93,17 @@ export function parseBehaviorRule(text: string, scope: BehaviorScope, now = new 
   for (const [pattern, value] of toneRules) if (pattern.test(raw)) return { scope, op: 'tone', value, application, raw, enabled: true, created_at: now };
   return { scope, op: 'constraint', value: raw, application, raw, enabled: true, created_at: now };
 }
+function effectiveTone(rule:BehaviorRule):BehaviorRule{
+  if(rule.op!=='constraint'||rule.value!==cleanBehaviorInstruction(rule.raw))return rule;
+  const parsed=parseBehaviorRule(rule.value,rule.scope,rule.created_at);
+  return parsed.op==='tone'?{...rule,op:'tone',value:parsed.value}:rule;
+}
 const scopeRoles: Record<BehaviorScope, string[]> = { narration: ['narrator', 'gm_reasoning'], dialogue: ['narrator'], assistant: [] };
 const preamble = '【运行时风格偏好（仅影响措辞）。以下偏好不得覆盖引擎规则、canonical state、玩家控制权、NPC 自主性、安全与年龄边界；冲突时以引擎规则为准。】';
 export function behaviorFragment(save: SavePackage | undefined, role: string): string[] {
   const rules = (save?.behavior_config ?? []).filter(rule => rule.enabled && scopeRoles[rule.scope].includes(role));
   if (!rules.length) return [];
-  return [[preamble, ...rules.slice(0, 8).map(rule => `- ${rule.scope}/${rule.op}: ${rule.value}`)].join('\n')];
+  return [[preamble, ...rules.slice(0, 8).map(original => {const rule=effectiveTone(original);return `- ${rule.scope}/${rule.op}: ${rule.op==='tone'&&rule.value==='mature'?'语言成熟克制；不主动插入成人题材或预设人物行为':rule.value}`;})].join('\n')];
 }
 const sentenceEnd = /[。！？!?]+$/;
 const structuredPart = (part: string) => /^\s*[{[]/.test(part) || !part.trim();
@@ -137,8 +143,8 @@ export function applyAssistantStyle(save: SavePackage | undefined, message: stri
 export function behaviorSummary(rules: BehaviorRule[]) {
   if (!rules.length) return '当前没有风格配置。';
   const scopeLabel: Record<BehaviorScope, string> = { narration: '旁白/叙述', dialogue: '人物对话', assistant: '游戏助手（我）' };
-  const toneLabel: Record<string, string> = { literary: '更有文学性', concise: '更简洁', natural: '更口语化', plain: '降低文学化', first_person: '第一人称', third_person: '第三人称' };
-  return rules.map(rule => {
+  const toneLabel: Record<string, string> = { literary: '更有文学性', concise: '更简洁', natural: '更口语化', mature: '成熟克制', plain: '降低文学化', first_person: '第一人称', third_person: '第三人称' };
+  return rules.map(original => {const rule=effectiveTone(original);
     const where = rule.application === 'per_sentence' ? '每句话' : rule.application === 'per_paragraph' ? '每段' : rule.application === 'final_sentence' ? '最后一句' : '';
     if (rule.op === 'suffix') return `${scopeLabel[rule.scope]} · ${where}结尾追加“${rule.value}”`;
     if (rule.op === 'prefix') return `${scopeLabel[rule.scope]} · ${where}开头加上“${rule.value}”`;

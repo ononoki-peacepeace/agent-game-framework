@@ -7,7 +7,9 @@ import {AIRuntime} from '../src/ai/runtime.js';
 import {GameService} from '../src/server/service.js';
 import {JsonStore} from '../src/storage/json-store.js';
 import {sparseSetup,sparseWorld} from './sparse-fixture.js';
-import {handleAgentInput,handleChoiceInput} from '../src/agent/executor.js';
+import {handleAgentInput,handleChoiceInput,executePlan} from '../src/agent/executor.js';
+import {validatePlan} from '../src/agent/planner.js';
+import {compileGoalContract} from '../src/agent/goal-contract.js';
 import {makeCompiledChoiceOffers} from '../src/core/choice-offer.js';
 import {committedGoalEvidence} from '../src/agent/affordances.js';
 import {validateSave} from '../src/core/state.js';
@@ -33,6 +35,25 @@ async function launch(service:GameService){const save=await service.current();
 const actor=(save:Awaited<ReturnType<GameService['current']>>)=>save.entities.find(entity=>entity.id===save.player_state.entity_id)!;
 
 describe('persistent multi-step goal coordination',()=>{
+  it('parks an old waiting goal for a new independent sequence and can resume it without replaying MOVE',async()=>{
+    const f=await memory();await launch(f.service);
+    const waiting=await f.service.current(),oldId=waiting.active_goal!.plan.plan_id;
+    const input='去河岸车站，再回到中央广场';
+    const plan=compileGoalContract(f.service.project(waiting),validatePlan({goals:[
+      goal('station','WORLD_ACTION','前往河岸车站','move','河岸车站'),
+      goal('square','WORLD_ACTION','返回中央广场','move','中央广场',['station'])]}),
+      {kind:'manual',text:input});
+    const result=await executePlan(f.service,{request_id:randomUUID(),game_id:waiting.game_id,
+      expected_revision:waiting.state_revision,input},plan);
+    const after=await f.service.current();
+    expect(result.plan?.status).toBe('completed');
+    expect(after.paused_goals?.at(-1)?.plan.plan_id).toBe(oldId);
+    expect(after.resolution_receipts?.filter(receipt=>receipt.semantic_action==='MOVE')).toHaveLength(3);
+    const resumed=await handleAgentInput(f.service,{request_id:randomUUID(),game_id:after.game_id,
+      expected_revision:after.state_revision,input:'恢复之前目标'});
+    expect(resumed.plan_id).toBe(oldId);
+    expect((await f.service.current()).resolution_receipts?.filter(receipt=>receipt.semantic_action==='MOVE')).toHaveLength(3);
+  });
   it('atomically saves MOVE evidence and resumes BUY after a real JsonStore restart',async()=>{
     const directory=await mkdtemp(join(tmpdir(),'agent-goal-batch3-'));
     try{
@@ -54,6 +75,9 @@ describe('persistent multi-step goal coordination',()=>{
       const finished=await handleAgentInput(restarted,{request_id:randomUUID(),game_id:saved.game_id,
         expected_revision:saved.state_revision,input:'面包'}),after=await restarted.current();
       expect(finished.plan?.status).toBe('completed');
+      expect(finished.message).toBe(after.last_turn?.narrative);
+      expect(finished.message).not.toContain('temporary narrator interruption');
+      expect(finished.message).not.toContain('尚未完成：');
       expect(after.active_goal?.plan.goals.map(goal=>goal.status)).toEqual(['completed','completed','completed']);
       expect(after.resolution_receipts?.filter(receipt=>receipt.semantic_action==='MOVE')).toHaveLength(1);
       expect(after.resolution_receipts?.filter(receipt=>receipt.semantic_action==='BUY')).toHaveLength(1);
@@ -109,6 +133,10 @@ describe('persistent multi-step goal coordination',()=>{
       expected_revision:changed.state_revision,input:'面包'});
     const after=await f.service.current();
     expect(result.plan?.goals.find(goal=>goal.goal_id==='buy')?.status).toBe('blocked');
+    expect(result.outcome).toMatchObject({type:'game',kind:'partial_progress'});
+    expect(result.presentation).toBe('assistant');
+    expect(result.message).toContain('所选行动不在当前合法候选中');
+    expect(result.message).not.toContain('移动至 街角商店，用时');
     expect(after.resolution_receipts?.filter(receipt=>receipt.semantic_action==='BUY')).toHaveLength(0);
     expect((actor(after).components.wallet as {balances:Record<string,number>}).balances.credit).toBe(funds);
   });
@@ -118,6 +146,8 @@ describe('persistent multi-step goal coordination',()=>{
     await handleAgentInput(f.service,{request_id,game_id:save.game_id,expected_revision:save.state_revision,input});
     const retry=await handleAgentInput(f.service,{request_id,game_id:save.game_id,expected_revision:save.state_revision,input});
     expect(retry.plan?.goals[0].status).toBe('completed');
+    expect(retry.message).toContain('已完成：');
+    expect(retry.message).toContain('尚未完成：');
     expect((await f.service.current()).resolution_receipts?.filter(receipt=>receipt.semantic_action==='MOVE')).toHaveLength(1);
   });
 
@@ -133,6 +163,9 @@ describe('persistent multi-step goal coordination',()=>{
     const result=await handleAgentInput(f.service,{request_id:randomUUID(),game_id:waiting.game_id,
       expected_revision:waiting.state_revision,input:'面包'}),after=await f.service.current();
     expect(result.plan?.status).toBe('completed');
+    expect(result.message).toBe(after.last_turn?.narrative);
+    expect(result.message).not.toContain('response lost after commit');
+    expect(result.message).not.toContain('尚未完成：');
     expect(after.resolution_receipts?.filter(receipt=>receipt.semantic_action==='BUY')).toHaveLength(1);
     expect((actor(after).components.inventory as {items:Record<string,number>}).items.bread).toBe(1);
     expect((actor(after).components.wallet as {balances:Record<string,number>}).balances.credit).toBeLessThan(funds);
@@ -177,14 +210,49 @@ describe('persistent multi-step goal coordination',()=>{
     expect(after.resolution_receipts?.filter(receipt=>receipt.semantic_action==='BUY')).toHaveLength(0);
   });
 
-  it('a real unavailable-action failure is not presented as a normal handoff',async()=>{
+  it('a real unavailable action is a world outcome rather than an engine error',async()=>{
     const f=await memory(),before=await f.service.current();
     (before.entities.find(entity=>entity.id==='corner_shop')!.components.shop as
       {stock:Record<string,number>}).stock={};
     await f.store.write(before);
     const result=await launch(f.service);
     expect(result.plan?.status).toBe('blocked');
+    expect(result.presentation).toBe('assistant');
+    expect(result.outcome).toMatchObject({type:'game',kind:'partial_progress'});
+    expect(result.story).toBe((await f.service.current()).last_turn?.narrative);
+    expect(result.message).toContain('当前世界没有可用于这个步骤');
+    expect(result.message).not.toContain('后续目标仍未发生');
+    expect(result.message).not.toMatch(/capability|runtime_gap|schema/);
+    expect((await f.service.current()).resolution_receipts?.filter(receipt=>receipt.semantic_action==='MOVE')).toHaveLength(1);
+    expect((await f.service.current()).resolution_receipts?.filter(receipt=>receipt.semantic_action==='BUY')).toHaveLength(0);
+  });
+
+  it('a pre-commit step failure reports failure without claiming a completed action',async()=>{
+    const f=await memory(),before=await f.service.current();
+    vi.spyOn(f.service,'turn').mockRejectedValueOnce(Error('simulated pre-commit failure'));
+    const result=await launch(f.service),after=await f.service.current();
+    expect(result.plan?.status).toBe('blocked');
     expect(result.presentation).toBe('failure');
+    expect(result.outcome).toMatchObject({type:'engine_failure',code:'transaction_failure'});
+    expect(result.message).not.toContain('simulated pre-commit failure');
+    expect(result.message).not.toContain('已完成：');
+    expect(after.resolution_receipts??[]).toHaveLength(0);
+    expect(after.runtime.time).toEqual(before.runtime.time);
+  });
+
+  it('a binding clarification without a committed action reports only unfinished work',async()=>{
+    const f=await memory(),before=await f.service.current();
+    actor(before).components.location={location_id:'market'};
+    await f.store.write(before);
+    vi.mocked(f.ai.planGoals).mockResolvedValue({goals:[goal('buy','WORLD_ACTION','买点吃的','purchase','食物')]});
+    const result=await handleAgentInput(f.service,{request_id:randomUUID(),game_id:before.game_id,
+      expected_revision:before.state_revision,input:'买点吃的'}),after=await f.service.current();
+    expect(result.plan?.status).toBe('waiting_for_player');
+    expect(result.message).toContain('尚未完成：');
+    expect(result.message).toContain('需要你决定：');
+    expect(result.message).not.toContain('已完成：');
+    expect(after.resolution_receipts??[]).toHaveLength(0);
+    expect(after.runtime.time).toEqual(before.runtime.time);
   });
 
   it('cancel preserves committed MOVE and terminates only remaining goals',async()=>{
@@ -230,7 +298,8 @@ describe('persistent multi-step goal coordination',()=>{
     const f=await memory();await launch(f.service);const waiting=await f.service.current();
     const unrelated=await handleAgentInput(f.service,{request_id:randomUUID(),game_id:waiting.game_id,
       expected_revision:waiting.state_revision,input:'我现在在哪？'});
-    expect(unrelated.message).toContain('此前的连续目标仍保持暂停');
+    expect(unrelated.message).toContain('街角商店');
+    expect(unrelated.message).not.toContain('此前的连续目标仍保持暂停');
     const after=await f.service.current();
     expect(after.active_goal?.plan.status).toBe('waiting_for_player');
     await expect(handleAgentInput(f.service,{request_id:randomUUID(),game_id:after.game_id,

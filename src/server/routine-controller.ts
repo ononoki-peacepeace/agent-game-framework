@@ -3,17 +3,18 @@ import { executeAction } from '../core/runtime.js';
 import { validateSave } from '../core/state.js';
 import { rollDice, parseDice } from '../core/dice.js';
 import type { AIRuntime } from '../ai/runtime.js';
-import type { RoutineResult } from '../ai/routine.js';
+import {routineResultSchema,type RoutineResult} from '../ai/routine.js';
+import {CandidateValidationError,schemaIssues,rejectCandidate,generationRepair,generationBudget,takeGeneration,type GenerationRepair} from '../ai/failures.js';
 import {drainBackgroundDisplay} from '../background/runtime.js';
 
 // Operates exclusively on the uncommitted turn candidate. Any error discards it.
-export async function settleRoutine(candidate: SavePackage, ai: AIRuntime, maxMinutes: number, generate?: (save:SavePackage,max:number,random?:unknown[],planned?:unknown)=>Promise<RoutineResult>) {
+export async function settleRoutine(candidate: SavePackage, ai: AIRuntime, maxMinutes: number, generate?: (save:SavePackage,max:number,random?:unknown[],planned?:unknown,repair?:GenerationRepair,signal?:AbortSignal)=>Promise<RoutineResult>) {
   const start = structuredClone(candidate.runtime.time), dayLength = candidate.definition.ruleset.minutes_per_day;
   const elapsed = (r:RoutineResult) => (r.segment.end.day-start.day)*dayLength+r.segment.end.minute-start.minute;
   function checkTime(r:RoutineResult) {
-    assert(r.segment.start.day===start.day && r.segment.start.minute===start.minute, '生活段起点与当前正史不一致');
-    assert(r.segment.end.minute<dayLength && elapsed(r)>=0 && elapsed(r)<=maxMinutes, '生活段结束时间越界');
-    assert(r.interrupt === Boolean(r.interrupt_reason), '生活模式中断原因与状态不一致');
+    if(r.segment.start.day!==start.day||r.segment.start.minute!==start.minute)rejectCandidate('routine',r,'segment.start','当前权威时间','生活段起点与当前正史不一致');
+    if(r.segment.end.minute>=dayLength||elapsed(r)<0||elapsed(r)>maxMinutes)rejectCandidate('routine',r,'segment.end',`本次已授权的0..${maxMinutes}分钟，且日内minute<${dayLength}`,'生活段结束时间越界');
+    if(r.interrupt!==Boolean(r.interrupt_reason))rejectCandidate('routine',r,'interrupt_reason','与interrupt状态一致的原因','生活模式中断原因与状态不一致');
   }
   const actor=candidate.entities.find(e=>e.id===candidate.player_state.entity_id)!;
   if(actor.components.routine.interrupted) {
@@ -25,7 +26,39 @@ export async function settleRoutine(candidate: SavePackage, ai: AIRuntime, maxMi
     const hp=description.match(/HP\s*(\d+)(?:\/100)?/i), stamina=description.match(/体力\s*(\d+)(?:\/100)?/), stress=description.match(/压力\s*(\d+)(?:\/100)?/);
     if(hp && stamina && stress && [hp,stamina,stress].every(m=>Number(m[1])<=100)) actor.components.condition={hp:Number(hp[1]),stamina:Number(stamina[1]),stress:Number(stress[1])};
   }
-  let result = await (generate??ai.routine.bind(ai))(candidate,maxMinutes); checkTime(result);
+  const budget=generationBudget(3);let corrections=0;
+  const requestResult=async(random:unknown[]=[],planned?:RoutineResult['segment'],visits?:string[]):Promise<RoutineResult>=>{
+    let feedback:GenerationRepair|null=null;
+    for(;;){
+      let value:RoutineResult|undefined;
+      try{
+        const generationSave=structuredClone(candidate);
+        value=await (generate??ai.routine.bind(ai))(generationSave,maxMinutes,random,planned,feedback??undefined,takeGeneration(budget));
+        const checked=routineResultSchema.strip().safeParse(value);
+        if(!checked.success)throw new CandidateValidationError('routine',schemaIssues(checked.error),value);
+        value=checked.data;checkTime(value);
+        if(planned&&(JSON.stringify(value.segment.start)!==JSON.stringify(planned.start)||JSON.stringify(value.segment.end)!==JSON.stringify(planned.end)))
+          rejectCandidate('routine',value,'segment','保持掷骰前已确认的同一时间段','随机结算不得改变生活段区间');
+        if(visits&&JSON.stringify(value.visits)!==JSON.stringify(visits))rejectCandidate('routine',value,'visits','保持掷骰前已确认的同一路线','随机结算不得改变行程');
+        if(random.length&&value.checks.length)rejectCandidate('routine',value,'checks','已有正式随机结果，不得再次请求检查','同一生活段不能无限请求随机检查');
+        if(value.checks.length){
+          if(value.activities.length||value.patches.length)rejectCandidate('routine',value,'activities','随机结果结算前activities和patches必须为空','随机结果尚未生成，不能提前结算');
+          if(new Set(value.checks.map(c=>c.id)).size!==value.checks.length)rejectCandidate('routine',value,'checks.id','唯一检查ID','重复随机检查');
+          // Parse and validate all expressions before the first RNG draw.
+          for(const c of value.checks){const dice=parseDice(c.expression);assert(dice.count<=10&&dice.sides<=100,'生活模式随机检查过大');}
+        }else{
+          if(!value.activities.length&&!(value.interrupt&&elapsed(value)===0))rejectCandidate('routine',value,'activities','合法生活经历，或零时间交还控制权','AI 未返回有效生活结果，本段未推进时间');
+          if(elapsed(value)===0&&(!value.interrupt||value.patches.length||value.activities.length||value.visits.length))rejectCandidate('routine',value,'segment','零时间只能交还控制权','零时间不能获得收益');
+          // Actual resources, permissions and unreachable routes are terminal world constraints.
+          applyLifePatches(structuredClone(candidate),value);
+        }
+        candidate.ai.threads=structuredClone(generationSave.ai.threads);
+        return value;
+      }catch(error){feedback=generationRepair(error);if(!feedback||corrections>=1||budget.remaining<=0)throw error;
+        corrections++;}
+    }
+  };
+  let result=await requestResult();
   const randomResults: (ReturnType<typeof rollDice> & {id:string;reason:string})[] = [];
   if(result.checks.length) {
     assert(!result.activities.length && !result.patches.length, '随机结果尚未生成，不能提前结算');
@@ -36,7 +69,7 @@ export async function settleRoutine(candidate: SavePackage, ai: AIRuntime, maxMi
       randomResults.push({...rollDice(check.expression), id:check.id, reason:check.reason});
     }
     const planned=result.segment, plannedVisits=result.visits;
-    result=await (generate??ai.routine.bind(ai))(candidate,maxMinutes,randomResults,planned);checkTime(result);
+    result=await requestResult(randomResults,planned,plannedVisits);
     assert(JSON.stringify(result.visits)===JSON.stringify(plannedVisits),'随机结算不得改变行程');
     assert(!result.checks.length, '同一生活段不能无限请求随机检查');
     assert(JSON.stringify(result.segment.start)===JSON.stringify(planned.start) && JSON.stringify(result.segment.end)===JSON.stringify(planned.end), '随机结算不得改变生活段区间');

@@ -2,16 +2,36 @@ import { z } from 'zod';
 import {avatarCropSchema} from '../shared/avatar.js';
 import { assert, id, text } from '../core/schema.js';
 import type { Module } from '../core/registry.js';
+import {prepareCheck,resolveCheck} from '../core/resolution.js';
+import {nextNpcPlanBoundary,settleNpcPlanWindow} from '../agent/npc-agent.js';
 export const charactersModule: Module = {
   id: 'characters', version: '0.1.0', requires: ['core'],
-  manifest: { api_version:'1', provides:['character.identity','character.profile','character.visuals'], state_ownership:['components.character','components.character_card','components.visual_assets'], state_schema_version:'characters.v1', migration_version:1, supports_enable_disable:false, supports_remove:false },
+  next_time_boundary:nextNpcPlanBoundary,
+  settle_time_window:settleNpcPlanWindow,
+  manifest: { api_version:'1', provides:['character.identity','character.profile','character.visuals'], state_ownership:['components.character','components.character_card','components.character_import','components.visual_assets','components.residence','components.world_resident','components.physical_state'], state_schema_version:'characters.v1', migration_version:1, supports_enable_disable:false, supports_remove:false },
   components: {
+    physical_state:{schema:z.strictObject({awareness:z.enum(['unknown','unaware','alert']).default('unknown'),
+      alert_to_ids:z.array(id).max(20).default([]),restrained_by:id.nullable().default(null)}),project:d=>d},
+    residence:{schema:z.strictObject({home_location_id:id,door_id:id,tenure:z.enum(['owner','tenant','guest','staff']),answer_policy:z.enum(['always','never','chance'])}),project:()=>undefined},
+    world_resident:{schema:z.strictObject({origin_incident_id:id,entrance_reason:z.string().min(1).max(300),created_at:z.strictObject({day:z.number().int().min(0),minute:z.number().int().min(0)}),entered_world_at:z.strictObject({day:z.number().int().min(0),minute:z.number().int().min(0)}),importance:z.enum(['minor','recurring','major']),lifecycle:z.enum(['active','away','departed','deceased']),home_location_id:id.nullable(),motivation:z.string().max(300)}),project:()=>undefined},
     character: { schema: z.strictObject({ role: z.string().max(200), traits: z.array(z.string().max(100)).max(10),
-      personality:z.string().max(2000).optional(),speech_style:z.string().max(2000).optional(),verbal_habits:z.string().max(2000).optional() }), project: d => d },
+      personality:z.string().max(2000).optional(),speech_style:z.string().max(2000).optional(),verbal_habits:z.string().max(2000).optional(),
+      behavior_tendencies:z.array(z.string().min(1).max(240)).max(8).optional(),
+      values:z.array(z.string().min(1).max(160)).max(6).optional(),
+      motivations:z.array(z.string().min(1).max(200)).max(5).optional(),
+      fears:z.array(z.string().min(1).max(160)).max(5).optional(),
+      social_style:z.string().max(400).optional(),
+      emotional_patterns:z.array(z.string().min(1).max(240)).max(5).optional(),
+      example_dialogues:z.array(z.string().min(1).max(240)).max(6).optional(),
+    }), project: d => ({role:d.role,traits:d.traits,personality:d.personality,speech_style:d.speech_style,
+      verbal_habits:d.verbal_habits,social_style:d.social_style}) },
+    character_import:{schema:z.strictObject({source_format:z.enum(['v1','v2','v3','text']),source_hash:z.string().regex(/^[a-f0-9]{64}$/),
+      adapted_at:z.strictObject({day:z.number().int().nonnegative(),minute:z.number().int().nonnegative()}),
+      adaptation_summary:z.string().max(500)}),project:()=>undefined},
     visual_assets: { schema: z.strictObject({ images: z.record(id, id).default({}),avatar_crop:avatarCropSchema.optional() }), project: d => d },
     character_card: {
       schema: z.strictObject({
-        source_spec: z.enum(['v1','v2','v3']), spec_version: z.string().max(30), name: z.string().min(1).max(120),
+        source_spec: z.enum(['v1','v2','v3','text']), spec_version: z.string().max(30), name: z.string().min(1).max(120),
         nickname: z.string().max(120), description: text, personality: text, scenario: text,
         first_mes: text, mes_example: text, system_prompt: text, post_history_instructions: text,
         creator_notes: text, alternate_greetings: z.array(text).max(100), tags: z.array(z.string().max(120)).max(100),
@@ -23,14 +43,45 @@ export const charactersModule: Module = {
           source_spec: d.source_spec, spec_version: d.spec_version, name: cut(d.name, 120), nickname: cut(d.nickname, 120),
           description: cut(d.description, 12000), personality: cut(d.personality, 12000), scenario: cut(d.scenario, 12000),
           first_mes: cut(d.first_mes, 5000), mes_example: cut(d.mes_example, 12000),
-          system_prompt: cut(d.system_prompt, 8000), post_history_instructions: cut(d.post_history_instructions, 8000),
           tags: Array.isArray(d.tags) ? d.tags.slice(0, 100) : [], creator: cut(d.creator, 300), character_version: cut(d.character_version, 100),
         };
       },
     },
   },
+  validate(save){
+    for(const entity of save.entities){
+      const state=entity.components.physical_state;if(!state)continue;
+      assert(entity.components.character,'身体状态只能属于人物');
+      for(const id of state.alert_to_ids as string[])
+        assert(save.entities.some(candidate=>candidate.id===id&&candidate.components.character),'警觉对象引用未知人物');
+      if(state.restrained_by){const holder=save.entities.find(candidate=>candidate.id===state.restrained_by);
+        assert(holder?.components.character&&holder.id!==entity.id&&
+          holder.components.location?.location_id===entity.components.location?.location_id,'身体控制缺少同场有效人物');}
+    }
+  },
   panels: [{ id: 'characters', label: '人物', module: 'characters', order: 40, mobile_group: 'primary', presentation_type: 'panel' }],
-  actions: { TALK: { ui: { label: '交流', visibility: 'contextual', target_component: 'character', requires_text: true, text_parameter: 'topic' },
+  actions: { BREAK_FREE:{ui:{label:'尝试挣脱',visibility:'internal'},
+    capability:{intent:'interact',description:'通过对抗尝试脱离当前真实的身体控制；不保证成功，也不自动移动',target_role:'person',parameter_roles:{},completion_kind:'interaction_performed'},
+    parameters:z.strictObject({}),execute(c){
+      const actor=c.store.entity(c.action.actor_id),holderId=actor.components.physical_state?.restrained_by;
+      assert(typeof holderId==='string'&&holderId===c.action.target_id,'本人没有受到该人物的身体控制');
+      assert(Number(actor.components.condition?.hp??100)>0,'当前身体状态不能主动挣脱');
+      const check=prepareCheck(c.save,c.action.id,{type:'OPPOSED_CHECK',domain:'physique',opposition_domain:'physique',
+        band:'normal',target_id:holderId,physical:true,stakes:'尝试挣脱已有身体控制，不包含移动或伤害'},actor.id);
+      const result=resolveCheck(c.save,check,c.rng);
+      c.advance(1);
+      if(result.outcome==='success'||result.outcome==='strong_success'){
+        actor.components.physical_state!.restrained_by=null;c.facts.push('已通过对抗挣脱身体控制，仍在原地点。');
+      }else c.facts.push('尝试挣脱身体控制，但这次未能脱离，仍在原地点。');
+    }}, RELEASE_CONTROL:{ui:{label:'松开控制',visibility:'internal'},
+    capability:{intent:'interact',description:'主动解除本人已建立的身体控制',target_role:'person',parameter_roles:{},completion_kind:'interaction_performed'},
+    parameters:z.strictObject({}),execute(c){
+      assert(c.action.target_id,'请选择被控制的人物');
+      const target=c.store.entity(c.action.target_id);
+      assert(target.components.physical_state?.restrained_by===c.action.actor_id,'本人没有控制该人物');
+      target.components.physical_state.restrained_by=null;
+      c.facts.push('本人已经松开对目标的身体控制。');
+    }}, TALK: { ui: { label: '交流', visibility: 'contextual', target_component: 'character', requires_text: true, text_parameter: 'topic' },
     capability:{intent:'talk',description:'与当前地点的指定人物交谈',target_role:'person',parameter_roles:{topic:'text'},completion_kind:'conversation_attempted'},
     parameters: z.strictObject({ topic: z.string().min(1).max(2000) }), execute(c) {
     assert(c.action.target_id && c.action.target_id !== c.action.actor_id, '请选择另一位角色');

@@ -43,13 +43,16 @@ describe('Batch 3 free action resolution',()=>{
   });
   it('executes a full local day through the normal player request chain without a route lookup',async()=>{
     const f=await sparseSetup(async request=>{
+      if(request.role==='npc_decision')return {data:{kind:'no_action',speech:null,vote_target:null,
+        intent:'继续自己的日常',proposed_action:null,evidence_refs:[],belief_updates:[],goal_updates:[],
+        goal_proposals:[],plan_proposals:[],decision_summary:'当前无需额外行动'}};
       expect(request.role).toBe('narrator');return {data:prose};
     });
     const before=await f.service.current(),input='原地不动一整天';
     const result=await f.service.turn({request_id:randomUUID(),game_id:before.game_id,expected_revision:before.state_revision,input});
     expect(result.time).toEqual({day:before.runtime.time.day+1,minute:before.runtime.time.minute});
     expect(result.entities.find(entity=>entity.id===result.player_id)?.components.location?.location_id).toBe(before.entities.find(entity=>entity.id===before.player_state.entity_id)?.components.location?.location_id);
-    expect(f.calls.map(call=>call.role)).toEqual(['narrator']);
+    expect(f.calls.map(call=>call.role)).toEqual(['npc_decision','npc_decision','narrator']);
   });
   it('performs a deterministic held-item pickup without a formal check roll',async()=>{
     const f=await sparseSetup(),save=await f.service.current(),player=save.entities.find(entity=>entity.id===save.player_state.entity_id)!;

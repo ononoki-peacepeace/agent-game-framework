@@ -200,9 +200,17 @@ describe('System Agent: partial understanding, workflow routing and precise clar
 });
 
 describe('Character-panel speech and honest System expression', () => {
-  it('G. optional enrichment cannot discard the narration and the narrator sees the current scene', async () => {
+  it.each([true, false])('G. optional enrichment preserves narration; prior scene context requires a location anchor (%s)', async (anchored) => {
     const logger = configureDefaultLogger(new StructuredLogger({ directory: null, level: 'debug' }));
     const f = await fixture();
+    // A last_turn alone does not establish where its prose occurred. Production
+    // commits bind history to a location; only that history may anchor this scene.
+    if (anchored) {
+      f.save.narrative_history = [{ request_id: randomUUID(), narrative: f.save.last_turn!.narrative,
+        speaker: null, dialogue: null, facts: [], time: structuredClone(f.save.runtime.time),
+        location_id: String(f.save.entities.find(entity => entity.id === f.playerId)!.components.location!.location_id) }];
+      await f.store.write(f.save);
+    }
     const prompts: string[] = [];
     const adapter = {
       name: 'narrator-probe',
@@ -221,7 +229,8 @@ describe('Character-panel speech and honest System expression', () => {
       const prompt = prompts.at(-1)!;
       expect(prompt).toContain('scene_context');
       expect(prompt).toContain('怎么，这就跑了');
-      expect(prompt).toContain('教室里的书还没有收完');
+      if (anchored) expect(prompt).toContain('教室里的书还没有收完');
+      else expect(prompt).not.toContain('教室里的书还没有收完');
       expect(((await service.current()).entities.find(entity => entity.id === f.playerId)!.components.relationships?.entries ?? {})).toEqual({});
     } finally { configureDefaultLogger(new StructuredLogger({ directory: null })); }
   });

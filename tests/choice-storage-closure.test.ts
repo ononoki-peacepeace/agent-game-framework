@@ -25,6 +25,21 @@ function addStorageItem(save:SavePackage,id:string,name:string,container=false,l
 function addStoragePair(save:SavePackage){addStorageItem(save,'qa_notebook','作业本');addStorageItem(save,'qa_bag','书包',true);}
 
 describe('generated choice and ordinary storage settlement',()=>{
+  it('stores an item in a scene container without silently taking the container',async()=>{
+    const f=await sparseSetup(),save=await f.service.current();
+    addStoragePair(save);
+    const input='我把作业本放进书包';
+    const turn=executeFreeform(save,input,{...storageProposal(),completion_quote:input},randomUUID());
+    const checked=validateSave(turn.save);
+    const player=checked.entities.find(entity=>entity.id===checked.player_state.entity_id)!;
+    const notebook=checked.entities.find(entity=>entity.id==='qa_notebook')!;
+    const bag=checked.entities.find(entity=>entity.id==='qa_bag')!;
+    expect(bag.components.location?.location_id).toBe(player.components.location?.location_id);
+    expect(notebook.components.item?.container_id).toBe(bag.id);
+    expect(notebook.components.location?.location_id).toBe(bag.components.location?.location_id);
+    expect((player.components.inventory as Inventory).items[bag.id]).toBeUndefined();
+    expect(checked.resolution_receipts?.at(-1)?.storage).toEqual({item_id:notebook.id,container_id:bag.id});
+  });
   it('preserves the full generated choice through planning and commits both storage and preparation evidence',async()=>{
     const f=await sparseSetup(),save=await f.service.current();
     addStoragePair(save);
@@ -94,7 +109,7 @@ describe('generated choice and ordinary storage settlement',()=>{
       location:{location_id:'elsewhere'},item:{weight:0.3,stackable:false},
     }});
     const before=structuredClone(save);
-    expect(()=>executeFreeform(save,choice,storageProposal(),randomUUID())).toThrow('当前不可接触');
+    expect(()=>executeFreeform(save,choice,storageProposal(),randomUUID())).toThrow('没有对应实体');
     expect(save).toEqual(before);
   });
   it('ignores invented IDs only when public names and grounding independently validate, but rejects a conflicting real ID',async()=>{
@@ -155,7 +170,7 @@ describe('generated choice and ordinary storage settlement',()=>{
     expect(turn.save.resolution_receipts?.at(-1)?.effects).not.toContain('progress');
     expect(turn.save.action_facts?.at(-1)?.facts).not.toContain(`已完成玩家目标：${input}`);
   });
-  it('can take an accessible key and actually exit when the player asks to leave',async()=>{
+  it('can take an accessible key without inventing an unregistered outside position',async()=>{
     const f=await sparseSetup(),save=await f.service.current(),here=save.entities.find(entity=>entity.id===save.player_state.entity_id)!.components.location!.location_id;
     save.entities.push({id:'qa_key',type:'item',components:{identity:{name:'钥匙',description:'普通钥匙',avatar_id:null},
       location:{location_id:here},item:{weight:0.1,stackable:false}}});
@@ -164,8 +179,11 @@ describe('generated choice and ordinary storage settlement',()=>{
       item_move:{item_id:'qa_key',to:'held' as const,position_label:null}},randomUUID());
     const player=turn.save.entities.find(entity=>entity.id===save.player_state.entity_id)!;
     expect((player.components.inventory as Inventory|undefined)?.items.qa_key).toBe(1);
-    expect(player.components.scene_position?.label).toBe('屋外');
-    expect(turn.save.resolution_receipts?.at(-1)?.effects).toEqual(expect.arrayContaining(['inventory','position']));
+    // A request to exit is not evidence that an outside region / route exists.
+    // Actual travel uses the map MOVE/lifecycle path, not a free-text area label.
+    expect(player.components.scene_position).toEqual(save.entities.find(e=>e.id===save.player_state.entity_id)?.components.scene_position);
+    expect(turn.save.resolution_receipts?.at(-1)?.effects).toContain('inventory');
+    expect(turn.save.resolution_receipts?.at(-1)?.effects).not.toContain('position');
     expect(turn.save.resolution_receipts?.at(-1)?.effects).not.toContain('progress');
   });
 });
@@ -206,6 +224,7 @@ describe('shared canonical storage binding',()=>{
     const remote=save.definition.map!.locations.find(location=>location.id!==here)!.id;
     save.map_state.known_location_ids.push(remote);
     addStorageItem(save,'qa_bag','书包',true,remote);
+    save.entities.find(entity=>entity.id==='qa_bag')!.components.discovery={known_to_player:true};
     const before=structuredClone(save),binding=bindStorageAction(save,choice);
     expect(binding.container).toMatchObject({status:'bound',known:true,visible:false,reachable:false,
       usableForAction:false,possession:'elsewhere'});
@@ -247,6 +266,7 @@ describe('shared canonical storage binding',()=>{
     addStoragePair(save);
     expect(classifyChoiceExecution(save,choice)).toBe('CONDITIONALLY_EXECUTABLE');
     save.last_turn={narrative:'物品在眼前。',speaker:null,dialogue:null,choices:[choice],context_actions:[]};
+    save.entities.find(entity=>entity.id==='qa_bag')!.components.discovery={known_to_player:true};
     save.entities.find(entity=>entity.id==='qa_bag')!.components.location={location_id:'station'};
     const before=structuredClone(save),binding=bindStorageAction(save,choice);
     expect(binding.container).toMatchObject({status:'bound',reachable:false,usableForAction:false});

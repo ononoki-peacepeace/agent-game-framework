@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import {createHash} from 'node:crypto';
 import {settleTaskObjectives} from './task-rules.js';
 import { actionSchema, assert, safeParse, type Action, type GameEvent, type SavePackage } from './schema.js';
 import { EntityStore, type ActionContext, type ModuleRegistry, type Patch } from './registry.js';
@@ -10,67 +11,100 @@ import { revealLocation } from './map.js';
 import { observe, errorText } from '../observability/index.js';
 import {resolutionKindSchema} from './resolution.js';
 import {evaluateBackgroundTime,evaluateBackgroundLocation} from '../background/runtime.js';
+import {recordNpcActionExperience} from '../agent/npc-experience.js';
 
 /** One bounded world tick: registered module handlers, authored events and schedules share the same clock. */
 export function advanceWorldSegment(c:ActionContext,minutes:number){
   assert(Number.isInteger(minutes)&&minutes>0,'世界推进时长必须大于零');
+  // A concurrent NPC pays from its checked personal time credit. Player-only
+  // appointments and foreground UI blockers are not this actor's schedule.
+  if(c.shared_world_interval){c.advance(minutes);return {elapsed:minutes,interrupted:false};}
   const length=c.save.definition.ruleset.minutes_per_day;
   const now=c.save.runtime.time.day*length+c.save.runtime.time.minute;
   const due=(c.save.routine_meta?.scheduled_tasks??[]).filter(task=>!task.resolved&&task.status==='accepted'&&task.at>=now&&task.at<=now+minutes).sort((a,b)=>a.at-b.at)[0];
   if(due?.at===now){c.save.foreground={blocker:'task',reason:`已到安排时间：${due.label}`};return {elapsed:0,interrupted:true};}
-  const step=Math.min(minutes,due?due.at-now:minutes);
+  const step=Math.min(minutes,due?due.at-now:minutes,c.next_time_boundary?.()??minutes);
   const interruptCounts=new Map(c.save.definition.events.filter(event=>event.interrupt_automation).map(event=>[event.id,c.save.event_state.counts[event.id]??0]));
   c.advance(step); // The existing event bus invokes all installed on_time_advance handlers.
   const interrupted=c.save.definition.events.find(event=>event.interrupt_automation&&(c.save.event_state.counts[event.id]??0)>(interruptCounts.get(event.id)??0));
+  const taskReached=Boolean(due&&now+step>=due.at);
   if(interrupted)c.save.foreground={blocker:'interrupt',reason:interrupted.public_text||'发生了需要你处理的事情'};
-  else if(due)c.save.foreground={blocker:'task',reason:`已到安排时间：${due.label}`};
-  return {elapsed:step,interrupted:Boolean(interrupted||due||c.save.foreground?.blocker)};
+  else if(taskReached)c.save.foreground={blocker:'task',reason:`已到安排时间：${due!.label}`};
+  return {elapsed:step,interrupted:Boolean(interrupted||taskReached||c.save.foreground?.blocker)};
 }
 
-export function executeAction(current: SavePackage, input: unknown, requestId: string, source: Action['source'] = 'player', rng: RNG = secureRng, registry: ModuleRegistry = createRegistry(current.definition.enabled_modules), lifecycle = true) {
+export function executeAction(current: SavePackage, input: unknown, requestId: string, source: Action['source'] = 'player', rng: RNG = secureRng, registry: ModuleRegistry = createRegistry(current.definition.enabled_modules), lifecycle = true, actorId?:string, sharedWorldInterval=false) {
   const save = structuredClone(current), actionInput = safeParse(actionSchema, input);
   const spec = registry.actions.get(actionInput.type);
-  const action: Action = { ...actionInput, parameters: safeParse(spec.parameters, actionInput.parameters) as Action['parameters'], id: requestId, actor_id: save.player_state.entity_id, source, time_cost: 0 };
+  const action: Action = { ...actionInput, parameters: safeParse(spec.parameters, actionInput.parameters) as Action['parameters'], id: requestId, actor_id: actorId??save.player_state.entity_id, source, time_cost: 0 };
+  assert(save.entities.some(entity=>entity.id===action.actor_id),'行动者不存在');
   const events: GameEvent[] = [], facts: string[] = [];
   const ctx: ActionContext = {
-    save, action, store: new EntityStore(save, registry), rng, facts,
+    save, action, store: new EntityStore(save, registry), rng, facts,result_entities:{},
+    npc_time_budget:{plan_actions:0,scope_id:`npc-time:${createHash('sha256').update(`${requestId}:${current.runtime.time.day}:${current.runtime.time.minute}`).digest('hex').slice(0,32)}`},shared_world_interval:sharedWorldInterval,
+    next_time_boundary(){
+      const boundaries=registry.modules.all().map(([,module])=>module.next_time_boundary?.(save,ctx))
+        .filter((value):value is number=>typeof value==='number'&&Number.isInteger(value)&&value>0);
+      return boundaries.length?Math.min(...boundaries):null;
+    },
     emit(event) {
       assert(events.length < 1000, '事件链超出上限'); events.push(event); registry.events.emit(ctx, event);
       for (const def of save.definition.events) {
-        if (def.hook !== event.type || (def.once && save.event_state.fired.includes(def.id)) || (def.location_id && def.location_id !== event.location_id)) continue;
+        if (def.hook !== event.type || (def.once && save.event_state.fired.includes(def.id)) ||
+          (def.location_id && def.location_id !== event.location_id) ||
+          (action.actor_id!==save.player_state.entity_id&&def.actor_scope!=='any')) continue;
         const random = rng(); assert(random >= 0 && random < 1, '无效 RNG');
         save.event_roll_history=[...(save.event_roll_history??[]),{request_id:action.id,event_id:def.id,hook:def.hook,sample:random,probability:def.probability,fired:random<def.probability}].slice(-500);
         if (random >= def.probability) continue;
         if (def.once) save.event_state.fired.push(def.id);
         save.event_state.counts[def.id] = (save.event_state.counts[def.id] ?? 0) + 1;
         if (def.set_flag) save.gm_state.flags[def.set_flag] = true;
-        if (def.reveal_location_id) {
+        if (def.reveal_location_id && action.actor_id===save.player_state.entity_id) {
           const revealed = revealLocation(save, def.reveal_location_id);
           facts.push(`发现新地点：${revealed.name}。`);
         }
         if (def.public_text) facts.push(def.public_text);
         if (def.interrupt_automation) ctx.emit({ type: 'on_interrupt', event_id: def.id, reason: def.public_text || '发生了需要你处理的事情' });
       }
-      if(event.type==='on_location_enter')evaluateBackgroundLocation(ctx);
+      if(event.type==='on_location_enter'&&action.actor_id===save.player_state.entity_id)evaluateBackgroundLocation(ctx);
     },
     advance(minutes) {
+      // A background NPC acts concurrently inside time already paid by the player's turn.
+      // Record the actor's cost, but never charge the world clock or re-run time hooks.
+      if(sharedWorldInterval){action.time_cost+=minutes;return;}
       const from=structuredClone(save.runtime.time),oldDay=from.day;
       save.runtime.time = advanceTime(save.runtime.time, minutes, save.definition.ruleset.minutes_per_day);
       action.time_cost += minutes; ctx.emit({ type: 'on_time_advance', minutes });
       for (let d = oldDay; d < save.runtime.time.day; d++) ctx.emit({ type: 'on_day_changed' });
       evaluateBackgroundTime(ctx,from,save.runtime.time);
+      let settled=false;
+      for(const [,module] of registry.modules.all())if(module.settle_time_window?.(ctx,from))settled=true;
+      // New NPC facts take effect now, never retroactively at earlier points in the interval.
+      if(settled)evaluateBackgroundTime(ctx,save.runtime.time,save.runtime.time);
     },
   };
   const settings=['SAVE_ROUTINE','CLEAR_ROUTINE','CANCEL_ROUTINE','PAUSE_ROUTINE'].includes(action.type);
-  if (lifecycle&&!settings) ctx.emit({ type: 'on_action_start' });
+  if ((lifecycle||sharedWorldInterval)&&!settings) ctx.emit({ type: 'on_action_start' });
   spec.execute(ctx);
-  if (lifecycle&&!settings) ctx.emit({ type: 'on_action_complete' });
+  if(action.type==='MOVE'){
+    const here=save.entities.find(entity=>entity.id===action.actor_id)?.components.location?.location_id;
+    const route=ctx.movement_route;
+    assert(route&&route.origin_id===current.entities.find(entity=>entity.id===action.actor_id)?.components.location?.location_id&&
+      route.destination_id===here&&route.total_minutes===action.time_cost&&
+      route.edges.length===route.location_ids.length-1&&
+      route.edges.every((edge,index)=>edge.from===route.location_ids[index]&&edge.to===route.location_ids[index+1])&&
+      route.edges.reduce((sum,edge)=>sum+edge.travel_minutes,0)===route.total_minutes,
+      'MOVE 路线与权威结算不一致');
+    ctx.result_entities.observed_entities=save.entities.filter(entity=>entity.id!==action.actor_id&&
+      entity.components.character&&entity.components.location?.location_id===here).map(entity=>entity.id);
+  }
+  if ((lifecycle||sharedWorldInterval)&&!settings) ctx.emit({ type: 'on_action_complete' });
   if(lifecycle&&!settings)settleTaskObjectives(save,action);
-  if(lifecycle&&!settings&&spec.resolution_mode!=='self'&&spec.resolution_mode!=='workflow'){
+  if((lifecycle||sharedWorldInterval)&&!settings&&spec.resolution_mode!=='self'&&spec.resolution_mode!=='workflow'){
     const check=save.resolution_history?.find(entry=>entry.request_id===requestId);
     const kind=check?resolutionKindSchema.exclude(['EVENT_ROLL']).safeParse(check.spec.resolution_type).data??'SIMPLE_CHECK':'DETERMINISTIC';
-    const actorBefore=current.entities.find(entity=>entity.id===current.player_state.entity_id);
-    const actorAfter=save.entities.find(entity=>entity.id===save.player_state.entity_id);
+    const actorBefore=current.entities.find(entity=>entity.id===action.actor_id);
+    const actorAfter=save.entities.find(entity=>entity.id===action.actor_id);
     const changed=(key:string)=>JSON.stringify(actorBefore?.components[key]??null)!==JSON.stringify(actorAfter?.components[key]??null);
     const effects:Array<'time'|'position'|'inventory'|'relationship'|'evidence'|'money'|'injury'|'death'|'state'>=[];
     if(action.time_cost)effects.push('time');
@@ -79,15 +113,26 @@ export function executeAction(current: SavePackage, input: unknown, requestId: s
     if(changed('relationships'))effects.push('relationship');
     if(changed('wallet'))effects.push('money');
     if(changed('condition'))effects.push('injury');
-    if(JSON.stringify(current.gm_state.hidden_truth?.commitments.map(truth=>truth.evidence.map(entry=>entry.discovered_by)))!==
-      JSON.stringify(save.gm_state.hidden_truth?.commitments.map(truth=>truth.evidence.map(entry=>entry.discovered_by))))effects.push('evidence');
+    const targetChanged=(key:string)=>Boolean(action.target_id)&&
+      JSON.stringify(current.entities.find(entity=>entity.id===action.target_id)?.components[key]??null)!==
+      JSON.stringify(save.entities.find(entity=>entity.id===action.target_id)?.components[key]??null);
+    if(targetChanged('condition')&&!effects.includes('injury'))effects.push('injury');
+    if(changed('physical_state')||targetChanged('physical_state'))effects.push('state');
+    if(targetChanged('item')||changed('equipment'))effects.push('state');
+    if(targetChanged('inventory')&&!effects.includes('inventory'))effects.push('inventory');
+    if(JSON.stringify(current.gm_state.hidden_truth?.commitments.map(truth=>truth.evidence.map(entry=>[entry.status,entry.discovered_by])))!==
+      JSON.stringify(save.gm_state.hidden_truth?.commitments.map(truth=>truth.evidence.map(entry=>[entry.status,entry.discovered_by]))))effects.push('evidence');
     save.resolution_receipts=[...(save.resolution_receipts??[]),{
       request_id:requestId,action_id:action.id,actor_id:action.actor_id,target_id:action.target_id??null,
       semantic_action:action.type,kind,prerequisites:[{kind:'registered_action',subject_id:action.type,satisfied:true as const}],
       check_id:check?.check_id??'',rolls:check?.rolls??[],outcome:check?.outcome??'success',time_cost:action.time_cost,
-      canonical_facts:facts.slice(0,12).map(fact=>fact.slice(0,500)),effects,commit_status:'pending' as const,
+      canonical_facts:facts.slice(0,12).map(fact=>fact.slice(0,500)),effects,
+      ...(ctx.movement_route?{movement_route:ctx.movement_route}:{}),
+      result_entities:Object.fromEntries(Object.entries(ctx.result_entities).map(([key,ids])=>[key,[...new Set(ids)].slice(0,20)])),
+      at:structuredClone(save.runtime.time),commit_status:'pending' as const,
     }].slice(-200);
   }
+  recordNpcActionExperience(save,requestId,action.actor_id,action.type,facts);
   return { save: validateSave(save, registry), action, facts, events, registry };
 }
 const patchSchema = z.strictObject({ op: z.string(), entity_id: z.string(), target_id: z.string(), dimension: z.string(), delta: z.number().int() });

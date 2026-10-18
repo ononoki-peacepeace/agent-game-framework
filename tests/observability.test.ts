@@ -160,3 +160,24 @@ it('exposes the local log snapshot through the debug endpoint', async () => {
     configureDefaultLogger(new StructuredLogger({ directory: null }));
   }
 });
+
+
+it('filters noisy reads before applying the visible limit and isolates a request ID',()=>{
+  const logger=new StructuredLogger({echo:false,level:'debug'});
+  logger.error('freeform.physical_contract.rejected',{request_id:'wanted',trace_id:'tr_wanted'});
+  for(let i=0;i<30;i++)logger.debug('save.read',{request_id:'wanted'});
+  logger.error('other.failure',{request_id:'other'});
+  expect(logger.entries({request_id:'wanted',exclude_event:'save.read',limit:1}).map(e=>e.event)).toEqual(['freeform.physical_contract.rejected']);
+});
+
+
+it('finds a failed request on disk even when later read noise exceeds the display limit',async()=>{
+  const directory=await mkdtemp(join(tmpdir(),'agf-logs-query-'));
+  try{
+    const logger=new StructuredLogger({directory,level:'debug',fileLevel:'debug',echo:false});
+    logger.error('binding.rejected',{request_id:'isolated-query',trace_id:'tr_query'});
+    for(let i=0;i<30;i++)logger.debug('save.read');await logger.flush();
+    const restarted=new StructuredLogger({directory,level:'debug',echo:false});
+    expect((await restarted.readHistory(1,{request_id:'isolated-query',exclude_event:'save.read'})).map(e=>e.event)).toEqual(['binding.rejected']);
+  }finally{await rm(directory,{recursive:true,force:true});}
+});

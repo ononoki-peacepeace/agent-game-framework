@@ -24,6 +24,7 @@ export const roleplayConfigSchema = z.strictObject({
   major_arc_soft_cap: integer.min(1).max(8).default(3),
   major_open_loop_soft_cap: integer.min(1).max(12).default(5),
   life_horizon: lifeHorizonSchema,
+  content_allowances: z.array(z.enum(['violence','crime','romance','adult_intimacy','substance_use','politics','trauma'])).max(7).default([]),
 });
 
 export const truthCommitmentSchema = z.strictObject({
@@ -33,6 +34,7 @@ export const truthCommitmentSchema = z.strictObject({
   evidence: z.array(z.strictObject({
     id, status: z.enum(['EXISTS','CAUSALLY_CREATED','DESTROYED']), description: text,
     event_ref: z.string().max(100).nullable(), discovered_by: z.array(id).max(100),
+    destroyed_event_ref:z.string().max(100).optional(),
     placement:z.strictObject({location_id:id.nullable(),anchor_entity_id:id.nullable(),scene_scope:z.string().max(120).nullable(),
       discoverability:z.strictObject({domain:id,difficulty:z.enum(['trivial','easy','normal','hard','very_hard','extreme'])})}).optional(),
   })).max(100),

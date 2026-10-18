@@ -133,6 +133,25 @@ describe('program-owned affordance and completion evidence',()=>{
       result.evidence_request_id!)).toBe(false);
   });
 
+  it('accepts a committed no-discovery perception attempt without treating an unrelated failed activity as complete',async()=>{
+    const f=await setup(),before=await f.service.current();
+    vi.spyOn(f.ai,'freeform').mockResolvedValue({narrative:'你查看了房间，暂时没有发现新线索。',minutes:5,target_id:null,
+      facts:[],relationship:null,item_move:null,storage_move:null,completion_quote:null,required_conditions:[],
+      resolution:{type:'SIMPLE_CHECK',domain:'perception',band:'extreme',visibility:'public',
+        stakes:'观察当前环境',stages:[],evidence_ids:[]}});
+    const goal=compiled(before,[step('look','WORLD_ACTION','观察一下房间','activity','当前房间')]).goals[0];
+    const requestId=randomUUID(),result=await executeContractStep(f.service,before,goal,requestId);
+    expect(result.status).toBe('completed');
+    const receipt=result.candidate.resolution_receipts?.find(entry=>entry.request_id===requestId);
+    expect(receipt).toMatchObject({kind:'SIMPLE_CHECK',commit_status:'committed'});
+    expect(['critical_failure','failure','partial_success']).toContain(receipt?.outcome);
+    expect(receipt?.activity).toBeUndefined();
+    expect(result.candidate.state_revision).toBe(before.state_revision+1);
+    const other=compiled(before,[step('other','WORLD_ACTION','伸个懒腰','activity','自身')]).goals[0];
+    expect(verifyContractCompletion(before,result.candidate,other,
+      discoverContractCandidates(before,publicView(before),other)[0],requestId)).toBe(false);
+  });
+
   it('a stale source revision cannot run a selected action or mutate state',async()=>{
     const f=await setup(),before=await f.service.current(),goal=compiled(before,[step('move','WORLD_ACTION','去街角商店','move','街角商店')]).goals[0];
     const newer=structuredClone(before);newer.state_revision++;await f.store.write(newer);

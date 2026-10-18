@@ -1,0 +1,102 @@
+{
+  "provenance": {
+    "trace_id": "tr_676bb7e898db",
+    "request_id": "d6157e54-cd32-4b4f-afe2-956283bf72fa",
+    "source": "data/input-requests/67907fa0-29a9-43b7-a957-3704e2ed6ef4/d6157e54-cd32-4b4f-afe2-956283bf72fa.json",
+    "recorded": [
+      "input",
+      "goal",
+      "plan",
+      "failure_message"
+    ],
+    "missing": [
+      "full semantic response",
+      "plane alignment response",
+      "separate System Understanding (not invoked)"
+    ]
+  },
+  "input": "取消目标 216f8f82-269f-4d6b-a481-d20dddde98d3。\n\n只取消这个受阻目标，保留其他三个暂停目标，不执行任何游戏内行动，也不推进游戏时间。",
+  "goal": {
+    "objective": "取消玩家计划 216f8f82-269f-4d6b-a481-d20dddde98d3（当前 blocked 目标），其余三个暂停目标保持不变，不执行游戏内行动、不推进世界时间",
+    "goal_control": {
+      "kind": "cancel",
+      "target": "216f8f82-269f-4d6b-a481-d20dddde98d3"
+    },
+    "play_action": null,
+    "repetition": null,
+    "physical_intent": null,
+    "targets": [],
+    "desired_state": [],
+    "desired_outputs": [
+      {
+        "kind": "state_change",
+        "description": "目标 216f8f82-269f-4d6b-a481-d20dddde98d3 被取消，其余三个暂停计划保持原状态"
+      }
+    ],
+    "constraints": [
+      "只取消用户点名的这一个受阻目标",
+      "保留 9b529fd1-9ae6-4de2-b7eb-61fb772227d7、16b5e048-f481-4b56-b48a-84a03273db4d、81ca6789-9e95-4fc8-9faf-e199e59f47e4 这三个暂停目标",
+      "不执行任何游戏内行动",
+      "不推进游戏时间",
+      "不改变角色位置、物品、金钱或身体状况"
+    ],
+    "persistence": "none",
+    "temporal": {
+      "at": null,
+      "recurrence": null
+    },
+    "dependencies": [],
+    "world_mutation": false,
+    "external_artifact": false,
+    "multi_step": false,
+    "ambiguity": null
+  },
+  "plan": {
+    "goal": {
+      "objective": "取消玩家计划 216f8f82-269f-4d6b-a481-d20dddde98d3（当前 blocked 目标），其余三个暂停目标保持不变，不执行游戏内行动、不推进世界时间",
+      "goal_control": {
+        "kind": "cancel",
+        "target": "216f8f82-269f-4d6b-a481-d20dddde98d3"
+      },
+      "play_action": null,
+      "repetition": null,
+      "physical_intent": null,
+      "targets": [],
+      "desired_state": [],
+      "desired_outputs": [
+        {
+          "kind": "state_change",
+          "description": "目标 216f8f82-269f-4d6b-a481-d20dddde98d3 被取消，其余三个暂停计划保持原状态"
+        }
+      ],
+      "constraints": [
+        "只取消用户点名的这一个受阻目标",
+        "保留 9b529fd1-9ae6-4de2-b7eb-61fb772227d7、16b5e048-f481-4b56-b48a-84a03273db4d、81ca6789-9e95-4fc8-9faf-e199e59f47e4 这三个暂停目标",
+        "不执行任何游戏内行动",
+        "不推进游戏时间",
+        "不改变角色位置、物品、金钱或身体状况"
+      ],
+      "persistence": "none",
+      "temporal": {
+        "at": null,
+        "recurrence": null
+      },
+      "dependencies": [],
+      "world_mutation": false,
+      "external_artifact": false,
+      "multi_step": false,
+      "ambiguity": null
+    },
+    "steps": [
+      {
+        "step_id": "manage_goal",
+        "capability_id": "open_goal.cancel",
+        "input": {
+          "target": "216f8f82-269f-4d6b-a481-d20dddde98d3"
+        },
+        "depends_on": []
+      }
+    ]
+  },
+  "failure_message": "目标管理操作与已确认授权不一致，尚未执行。"
+}

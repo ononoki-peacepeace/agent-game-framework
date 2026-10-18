@@ -84,6 +84,11 @@ describe('QA-37 public fact queries',()=>{
     });
     expect(f.queries).toHaveLength(10);
     expect(f.service.logger.entries({limit:200}).some(entry=>entry.event==='agent.query.evaluated')).toBe(true);
+    const completed=f.service.logger.entries({event:'skill.completed'}).filter(entry=>
+      entry.metadata.skill_id==='public_world_query');
+    expect(completed.length).toBeGreaterThan(0);
+    expect(completed.every(entry=>entry.metadata.revision_before===entry.metadata.revision_after&&
+      entry.metadata.receipt_ids instanceof Array&&entry.metadata.receipt_ids.length===0)).toBe(true);
   });
 
   it.each([{age:19,threshold:18,expected:true},{age:19,threshold:21,expected:false},{age:26,threshold:25,expected:true}])(

@@ -151,8 +151,9 @@ it('an open-ended goal keeps taking real steps instead of stopping after one que
   expect(walk.after.runtime.time.minute).toBeGreaterThan(walk.before.runtime.time.minute);
   const credit=(state:typeof walk.after)=>Number((state.entities.find(entity=>entity.id===state.player_state.entity_id)!.components.wallet as {balances?:Record<string,number>}|undefined)?.balances?.credit??0);
   expect(credit(walk.after)).toBeGreaterThan(credit(walk.before));
-  expect(String(walk.result.message)).toContain('打听');
-  expect(String(walk.result.message)).toContain('固定兼职');
+  expect(String(walk.result.results?.[0]?.summary)).toContain('打听');
+  expect(String(walk.result.results?.[0]?.summary)).toContain('固定兼职');
+  expect(walk.result.message).toBe(walk.after.last_turn?.narrative);
 });
 
 it('an open-ended errand reaches the market instead of stopping at a midpoint',async()=>{
@@ -198,8 +199,9 @@ it('an open-ended errand reaches the market instead of stopping at a midpoint',a
   expect(location(after)).toBe('market');
   expect(after.state_revision).toBeGreaterThan(before.state_revision+1);
   expect(after.runtime.time.minute).toBeGreaterThanOrEqual(before.runtime.time.minute+24);
-  expect(String(result.message)).toContain('河岸车站');
-  expect(String(result.message)).toContain('街角商店');
+  expect(String(result.results?.[0]?.summary)).toContain('河岸车站');
+  expect(String(result.results?.[0]?.summary)).toContain('街角商店');
+  expect(result.message).toBe(after.last_turn?.narrative);
   // An exact public destination is a direct single-step MOVE; an unregistered alias
   // needs semantic planning rather than a guessed canonical ID.
   const view=(await f.service.view())!;
@@ -362,7 +364,7 @@ it('a system handoff carries one authoritative answer instead of repeating it in
     // Rendering seam: the client must not also print the handover as a story-column agent reply.
     const app=await readFile('src/client/App.tsx','utf8');
     expect(app).toContain("const handoff='system_handoff' in next");
-    expect(app).toMatch(/setAgentReply\(handoff\|\|next\.presentation==='story'\|\|!next\.message\.trim\(\)\?null/);
+    expect(app).toContain('agentPresentation(view,next,handoff)');
     const panel=await readFile('src/client/SystemPanel.tsx','utf8');
     expect(panel.split('className={`system-result').length-1).toBe(1);
   }finally{server.closeAllConnections();await new Promise<void>(done=>server.close(()=>done()));}

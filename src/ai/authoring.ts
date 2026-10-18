@@ -5,6 +5,7 @@ import { AGE_MAX, isAge } from '../shared/age.js';
 import { suggestLifeHorizon } from '../narrative/policy.js';
 import { defaultCalendar } from '../routine/schema.js';
 import type { worldInitializationSchema } from './contracts.js';
+import {authoredCharacter} from '../characters/authoring.js';
 import { defaultRoleplayConfig } from '../narrative/policy.js';
 import { hiddenTruthStateSchema } from '../narrative/schema.js';
 
@@ -63,11 +64,28 @@ export function compileWorld(b: z.infer<typeof worldInitializationSchema>, profi
   const startDay = 1;
   const locations = b.locations ?? [], routes = b.routes ?? [], items = b.items ?? [], shop = b.shop ?? null;
   const positions = layoutLocations(locations);
-  const modules = resolveModules(b.modules ?? ['map','characters','relationships','inventory','commerce','routine']);
+  const possessions=b.initial_possessions??[],capabilities=b.capability_profiles??[];
+  const capabilityLabels={strength:'力量',agility:'敏捷',endurance:'耐力',perception:'感知',cognition:'认知',willpower:'意志'};
+  const modules = resolveModules([...(b.modules ?? ['map','characters','relationships','inventory','commerce','routine']),
+    ...(possessions.length?['inventory']:[]),
+    ...(capabilities.length?['attributes']:[]),...(capabilities.some(p=>p.skills.length)?['skills']:[]),
+    ...(possessions.some(entry=>entry.placement==='held'||entry.placement==='worn')?['equipment']:[])]);
   const has = (id: string) => modules.includes(id);
+  const capabilityDomains:NonNullable<WorldPackage['ruleset']['capability_domains']>={};
+  for(const key of ['strength','agility','endurance','perception','cognition','willpower','physique'])
+    capabilityDomains[key]={attribute:key==='physique'?'strength':key,skills:[],
+      condition_sensitive:['strength','agility','endurance','physique'].includes(key),
+      exertion_cost:['strength','agility','endurance','physique'].includes(key)?1:0};
+  for(const profile of capabilities)for(const skill of profile.skills){
+    const physical=['strength','agility','endurance'].includes(skill.attribute??'');
+    capabilityDomains[skill.id]={attribute:skill.attribute??null,skills:[skill.id],condition_sensitive:physical,exertion_cost:physical?1:0};
+  }
+
   const home = b.player.location_id ?? locations[0]?.id ?? 'start';
   const place = (locationId?: string | null) => has('map') && (locationId ?? locations[0]?.id) ? { location: { location_id: locationId ?? locations[0].id } } : {};
   const shops = has('commerce') && shop ? [shop] : [];
+  const possessedItemIds=new Set(possessions.map(entry=>entry.item_id));
+  const shopItems=items.filter(item=>!possessedItemIds.has(item.id));
 
 
   const playerComponents: Record<string, unknown> = { identity: identity(b.player.name, b.player.description, b.player.gender, b.player.age) };
@@ -83,14 +101,52 @@ export function compileWorld(b: z.infer<typeof worldInitializationSchema>, profi
   const entity = (id: string, type: string, components: Record<string, unknown>) => ({ id, type, components } as Entity);
   const entities: Entity[] = [entity(b.player.id, 'character', playerComponents)];
   if (has('characters')) for (const character of b.characters) {
-    entities.push(entity(character.id, 'character', { identity: identity(character.name, character.description, character.gender, character.age), character: { role: character.role, traits: [] }, ...place(character.location_id) }));
+    entities.push(entity(character.id, 'character', { identity: identity(character.name, character.description, character.gender, character.age), character: authoredCharacter(character.role,character.persona),
+      ...(possessions.some(entry=>entry.owner_id===character.id)?{inventory:{items:{}}}:{}),...place(character.location_id) }));
   }
+  // Authored capability values are stable modifiers, not a scale guessed during play.
+  for(const profile of capabilities){
+    const actor=entities.find(entity=>entity.id===profile.entity_id);
+    if(!actor)throw new Error('能力资料引用了不存在的人物');
+    actor.components.attributes={values:{strength:0,agility:0,endurance:0,perception:0,cognition:0,willpower:0,...profile.attributes},labels:{...capabilityLabels},initial_source:profile.basis};
+    if(profile.skills.length)actor.components.skills={entries:Object.fromEntries(profile.skills.map(skill=>[skill.id,
+      {name:skill.name,level:skill.level,xp:0,next_xp:100,aptitude_ref:null,tags:[],source:profile.basis}]))};
+  }
+  if(has('attributes'))for(const actor of entities.filter(e=>e.components.character||e.id===b.player.id))
+    actor.components.attributes??={values:{strength:0,agility:0,endurance:0,perception:0,cognition:0,willpower:0},labels:{...capabilityLabels},initial_source:'世界默认中性基准；未登记额外训练差异'};
   if (has('inventory')) for (const item of items) {
-    entities.push(entity(item.id, 'item', { identity: identity(item.name, item.description), item: { weight: item.weight, stackable: true } }));
+    entities.push(entity(item.id, 'item', { identity: identity(item.name, item.description), item: { weight: item.weight, stackable: !possessedItemIds.has(item.id),
+      ...(item.container?{container:true}:{}) } }));
+  }
+  for(const possession of possessions){
+    const owner=entities.find(entry=>entry.id===possession.owner_id)!;
+    const item=entities.find(entry=>entry.id===possession.item_id)!;
+    const itemState=item.components.item!;
+    itemState.owner_id=owner.id;itemState.tracking='tracked';
+    if(possession.placement==='stored'){
+      item.components.location={location_id:possession.location_id!};
+      continue;
+    }
+    const inventory=(owner.components.inventory??={items:{}}) as {items:Record<string,number>;placements?:Record<string,string|null>};
+    inventory.items[item.id]=1;
+    inventory.placements??={};inventory.placements[item.id]=possession.placement==='inside_container'?possession.container_id!:null;
+    if(possession.placement==='held'||possession.placement==='worn'){
+      const slot=possession.slot??(possession.placement==='held'?'hand':'body');
+      const equipment=(owner.components.equipment??={slots:{},labels:{}}) as {slots:Record<string,string|null>;labels:Record<string,string>};
+      equipment.slots[slot]=item.id;
+      equipment.labels[slot]=possession.placement==='held'?'手持':'穿戴';
+      item.components.equipment_item={allowed_slots:[slot],modifiers:{},effect:''};
+    }
   }
   if (shops.length) {
     const store = shops[0];
-    entities.push(entity(store.id, 'shop', { identity: identity(store.name, ''), ...place(store.location_id), wallet: { balances: { [b.currency.id]: store.cash } }, shop: { currency_id: b.currency.id, stock: Object.fromEntries(items.map(i => [i.id, 10])), prices: Object.fromEntries(items.map(i => [i.id, { buy: i.price, sell: Math.floor(i.price / 2) }])) } }));
+    entities.push(entity(store.id, 'shop', { identity: identity(store.name, ''), ...place(store.location_id), wallet: { balances: { [b.currency.id]: store.cash } }, shop: { currency_id: b.currency.id, stock: Object.fromEntries(shopItems.map(i => [i.id, 10])), prices: Object.fromEntries(shopItems.map(i => [i.id, { buy: i.price, sell: Math.floor(i.price / 2) }])) } }));
+  }
+  if(has('relationships'))for(const relation of b.initial_relationships??[]){
+    const source=entities.find(item=>item.id===relation.from_id);
+    if(!source)continue; // worldCandidateIssues rejects unknown IDs before compilation.
+    const component=(source.components.relationships??={entries:{}}) as {entries:Record<string,Record<string,number>>};
+    (component.entries[relation.to_id]??={})[relation.dimension]=relation.value;
   }
 
   const structuredTruth=hiddenTruthStateSchema.parse({version:1,commitments:(b.hidden_truths??[]).map(truth=>({
@@ -113,20 +169,22 @@ export function compileWorld(b: z.infer<typeof worldInitializationSchema>, profi
     // measured with a human 70–100 yardstick. It stays a pacing range, never a death date.
     roleplay_config:{...defaultRoleplayConfig(),life_horizon:suggestLifeHorizon({premise:b.description})},
     enabled_modules: modules,
-    calendar: defaultCalendar(),
+    calendar: b.opening_time?.calendar ?? defaultCalendar(),
     ...(has('routine') ? { routine_rules: defaultRoutineRules(home) } : {}),
-    ruleset: { minutes_per_day: 1440, max_wait_minutes: 1440, talk_minutes: 5, trade_minutes: 2, default_check: '2d6+1',resolution_profile:{version:1,kind:b.resolution_profile??'bell_2d6'},
+    ruleset: { ...(capabilities.length?{capability_domains:capabilityDomains}:{}), minutes_per_day: 1440, max_wait_minutes: 1440, talk_minutes: 5, trade_minutes: 2, default_check: '2d6+1',resolution_profile:{version:1,kind:b.resolution_profile??'bell_2d6'},
       currencies: { [b.currency.id]: b.currency.name }, relationship_dimensions: { trust: { min: -100, max: 100, initial: 0 }, familiarity: { min: 0, max: 100, initial: 0 } } },
     prompt_profile: profile, world: { description: b.description },
     entities,
-    ...(has('map') ? { map: { locations: locations.map(l => ({ ...l, tags: [], position: positions[l.id] })), routes: routes.map(r => ({ ...r, conditions: [] })) } } : {}),
+    ...(has('map') ? { map: { locations: locations.map(l => ({ ...l,spatial:l.spatial??undefined, tags: [], position: positions[l.id] })),
+      routes: routes.map(r => ({ ...r,gateway:r.gateway??undefined, conditions: [] })),
+      ...(b.regions?.length?{regions:b.regions}:{}), } } : {}),
     events: [],
     ...(b.background_incidents?.length?{
       background_event_policy:{enabled:true,target_active_incidents:1,max_dormant_incidents:3,minimum_gap_minutes:1440,replenishment:true},
       background_incidents:b.background_incidents.map(incident=>({...incident,source:'WORLD_CREATION' as const})),
     }:{}),
     ...(b.world_macro_arcs?.length?{world_macro_arcs:b.world_macro_arcs}:{}),
-    player: { entity_id: b.player.id }, gm_state: { notes: b.hidden_notes, flags: {}, ...(structuredTruth.commitments.length?{hidden_truth:structuredTruth}:{}) }, runtime: { time: { day: startDay, minute: 540 } },
+    player: { entity_id: b.player.id }, gm_state: { notes: b.hidden_notes, flags: {}, ...(structuredTruth.commitments.length?{hidden_truth:structuredTruth}:{}) }, runtime: { time: { day: startDay, minute: b.opening_time?.minute ?? 540 } },
   };
 }
 

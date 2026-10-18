@@ -2,14 +2,14 @@ import { z } from 'zod';
 import { dictionary } from '../core/schema.js';
 import type { Module } from '../core/registry.js';
 
-export type Attributes = { values: Record<string, number>; labels?: Record<string, string> };
+export type Attributes = { values: Record<string, number>; labels?: Record<string, string>; initial_source?:string };
 
 export const attributesModule: Module = {
   id: 'attributes', version: '0.1.0', requires: ['core'],
   manifest: { api_version:'1', provides:['character.attributes'], state_ownership:['components.attributes'], state_schema_version:'attributes.v1', migration_version:1, supports_enable_disable:true, supports_remove:true },
   components: {
     attributes: {
-      schema: z.strictObject({ values: dictionary(z.number().min(-1_000_000).max(1_000_000)), labels: dictionary(z.string().min(1).max(120)).default({}) }),
+      schema: z.strictObject({ values: dictionary(z.number().min(-1_000_000).max(1_000_000)), labels: dictionary(z.string().min(1).max(120)).default({}),initial_source:z.string().max(500).optional() }),
       project: (d, e, s) => e.id === s.player_state.entity_id ? d : undefined,
     },
   },

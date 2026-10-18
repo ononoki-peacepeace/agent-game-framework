@@ -1,0 +1,21 @@
+import {readFile,mkdir,writeFile} from 'node:fs/promises';
+import {resolve} from 'node:path';import {createHash} from 'node:crypto';
+import {readPersistedProviderConfig,AIProviderManager} from '../src/ai/providers.js';
+import {AIRuntime} from '../src/ai/runtime.js';import {GameService} from '../src/server/service.js';
+import {MemoryStore,demo} from '../tests/helpers.js';import {newSave,publicView} from '../src/core/state.js';
+import {interpretSemanticEntry} from '../src/agent/semantic-entry.js';
+const hash=async()=>createHash('sha256').update(await readFile('data/current.json')).digest('hex'),before=await hash();
+const config=await readPersistedProviderConfig(resolve('data'));if(config?.provider!=='deepseek')throw Error('Expected configured DeepSeek');
+const root=resolve(`.tmp/qa-stop-semantics-${Date.now()}`);await mkdir(root,{recursive:true});
+const manager=new AIProviderManager(root,config),generate=manager.generate.bind(manager),calls:any[]=[];let count=0;const outputs:any[]=[];
+manager.generate=async request=>{if(count>=1)throw Error('CUMULATIVE_REAL_BUDGET_12_EXHAUSTED');count++;const start=performance.now();
+ try{const result=await generate({...request,signal:AbortSignal.any([AbortSignal.timeout(90000),...(request.signal?[request.signal]:[])])});
+ calls.push({ms:Math.round(performance.now()-start),usage:result.usage,ok:true});outputs.push(result.data);return result;
+ }catch(e){calls.push({ms:Math.round(performance.now()-start),ok:false,reason:(e as {reason?:string}).reason??null});throw e;}};
+const save=newSave(demo);save.entities.find(e=>e.id==='npc_lin')!.components.identity.name='林 舟舟';
+const store=new MemoryStore();await store.write(save);const service=new GameService(store,new AIRuntime(manager),save.definition);
+const input='我现在立即尝试连续挥拳攻击舟舟，在接下来的十秒内反复出拳。如果他成功逃离攻击范围，或者我无法继续攻击，就停止。';
+const decision=await interpretSemanticEntry(service,publicView(save),input,'WORLD');
+const result={mode:'semantic-only / no action or world commit',cumulative_paid_calls:11+count,calls,decision,outputs,
+ termination_mode:decision?.goal_spec?.repetition?.termination_mode,production_unchanged:before===await hash()};
+await writeFile(resolve(root,'report.json'),JSON.stringify(result,null,2));console.log(JSON.stringify({root,calls,kind:decision?.kind,termination_mode:result.termination_mode,production_unchanged:result.production_unchanged}));

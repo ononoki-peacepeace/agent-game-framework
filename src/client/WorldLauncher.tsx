@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { request } from './api.js';
+import {appendWorldPrompt,readWorldPromptFile,validatedWorldPrompt,MAX_WORLD_PROMPT_LENGTH,type PromptProfile,type WorldPromptFile} from './world-prompt-file.js';
 import type { PublicView } from '../shared/contracts.js';
 import './world.css';
 import './world-v2.css';
@@ -22,13 +23,18 @@ const viewTitles: Record<Exclude<View, 'home'>, string> = { templates: '从模�
  * Three strictly separated entries (templates / AI idea / custom), then a preview card. Only "开始这个世界"
  * creates a world; 调整 and 换一个 never do. Each entry owns its own screen, so nothing is mixed together.
  */
-export function WorldLauncher({ busy, onCreated, onCustom, promptName, onImportPrompt, onRemovePrompt }: { busy: boolean; onCreated: (view: PublicView) => void; onCustom: (description: string,config:CreationRoleplayConfig) => void; promptName?: string; onImportPrompt?: () => void; onRemovePrompt?: () => void }) {
+export function WorldLauncher({ busy, onCreated, onCustom }: { busy: boolean; onCreated: (view: PublicView) => void; onCustom: (description: string,config:CreationRoleplayConfig,profile?:PromptProfile) => Promise<void> | void }) {
   const [view, setView] = useState<View>('home');
   const [origin, setOrigin] = useState<Exclude<View, 'home' | 'preview' | 'editing'>>('templates');
   const [templates, setTemplates] = useState<TemplateSummary[]>([]);
   const [showAll, setShowAll] = useState(false);
   const [idea, setIdea] = useState('');
   const [custom, setCustom] = useState('');
+  const [promptFile,setPromptFile]=useState<WorldPromptFile|null>(null);
+  const [pendingPrompt,setPendingPrompt]=useState<WorldPromptFile|null>(null);
+  const [fileState,setFileState]=useState<'idle'|'reading'|'ready'|'error'>('idle');
+  const [fileError,setFileError]=useState('');
+  const fileInput=useRef<HTMLInputElement>(null),fileReadSequence=useRef(0),customSubmitting=useRef(false);
   const [chips, setChips] = useState<Chip[]>([]);
   const [picked, setPicked] = useState<string[]>([]);
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
@@ -79,6 +85,36 @@ export function WorldLauncher({ busy, onCreated, onCustom, promptName, onImportP
     finally { setPending(null); }
   };
   const busyAll = busy || pending !== null;
+  const choosePromptFile=async(file:File)=>{
+    const sequence=++fileReadSequence.current;
+    setFileState('reading');setFileError('');setPendingPrompt(null);
+    try{
+      const result=await readWorldPromptFile(file);
+      if(sequence!==fileReadSequence.current)return;
+      if(result.kind==='description'&&custom.trim()){
+        setPendingPrompt(result);setFileState('ready');
+      }else{
+        setPromptFile(result);setFileState('ready');
+        if(result.kind==='description')setCustom(result.description);
+      }
+    }catch(error){if(sequence===fileReadSequence.current){setFileState('error');setFileError((error as Error).message);}}
+  };
+  const applyPendingPrompt=(mode:'replace'|'append')=>{
+    if(!pendingPrompt||pendingPrompt.kind!=='description')return;
+    try{
+      setCustom(mode==='replace'?pendingPrompt.description:appendWorldPrompt(custom,pendingPrompt.description));
+      setPromptFile(pendingPrompt);setPendingPrompt(null);setFileError('');setFileState('ready');
+    }catch(error){setFileError((error as Error).message);setFileState('error');}
+  };
+  const createCustom=async()=>{
+    if(customSubmitting.current||busyAll||pendingPrompt||fileState==='reading')return;
+    try{
+      const description=validatedWorldPrompt(custom);
+      customSubmitting.current=true;setPending('confirm');setNote('');
+      await onCustom(description,roleplayConfig(),promptFile?.kind==='profile'?promptFile.profile:undefined);
+    }catch(error){setNote((error as Error).message);}
+    finally{customSubmitting.current=false;setPending(null);}
+  };
   const list = showAll ? templates : templates.slice(0, 6);
   return <section className="world-launcher">
     {view !== 'home' && <button type="button" className="quiet" disabled={busyAll} onClick={() => setView(view === 'preview' || view === 'editing' ? origin : 'home')}>← 返回</button>}
@@ -111,10 +147,14 @@ export function WorldLauncher({ busy, onCreated, onCustom, promptName, onImportP
       </div>
     </div>}
     {view === 'custom' && <div className="world-idea">
-      <textarea aria-label="自己描述世界" value={custom} maxLength={12000} onChange={event => setCustom(event.target.value)} placeholder="例如：现代城市背景，以社会关系、学习和职业为核心。玩家刚刚搬入一座陌生城市。" />
-      {onImportPrompt&&<div className="prompt-slot"><div><strong>{promptName??'可选：导入 Prompt'}</strong><small>{promptName?promptName:'支持 .txt / .md / Prompt Profile .json；它会随新世界保存。'}</small></div><div className="button-row compact"><button type="button" className="quiet" disabled={busyAll} onClick={()=>onImportPrompt()}>导入提示词</button>{promptName&&<button type="button" className="quiet" disabled={busyAll} onClick={()=>onRemovePrompt?.()}>移除</button>}</div></div>}
+      <textarea aria-label="自己描述世界" value={custom} maxLength={MAX_WORLD_PROMPT_LENGTH} onChange={event => setCustom(event.target.value)} placeholder="例如：现代城市背景，以社会关系、学习和职业为核心。玩家刚刚搬入一座陌生城市。" />
+      <div className="prompt-slot"><div><strong>{promptFile?.name??'导入创作提示词'}</strong><small>{fileState==='reading'?'正在读取文件…':fileState==='error'?fileError:pendingPrompt?'文件已读取，请选择替换或追加后再创建。':promptFile?.kind==='description'?`已读取 ${promptFile.description.length} 字符；创建将使用上方文本框中的内容。`:promptFile?.kind==='profile'?`已读取 Prompt Profile ${promptFile.profile.id}；它只配置引擎，仍需填写世界描述。`:'支持 UTF-8 的 .txt / .md / .json 创作提示词；世界存档请使用「读取存档」。'}</small></div><div className="button-row compact"><button type="button" className="quiet" disabled={busyAll||fileState==='reading'} onClick={()=>fileInput.current?.click()}>导入提示词</button>{promptFile&&<button type="button" className="quiet" disabled={busyAll} onClick={()=>{++fileReadSequence.current;if(promptFile.kind==='description'&&custom===promptFile.description)setCustom('');setPromptFile(null);setPendingPrompt(null);setFileState('idle');setFileError('');}}>移除文件</button>}</div></div>
+      <input ref={fileInput} hidden type="file" aria-label="选择提示词文件" accept=".txt,.md,.markdown,.json,text/plain,text/markdown,application/json" onChange={event=>{const file=event.target.files?.[0];event.target.value='';if(file)void choosePromptFile(file);}}/>
+      {pendingPrompt?.kind==='description'&&<div className="prompt-import-choice" role="group" aria-label="处理已有世界描述"><p>已有手动输入。文件「{pendingPrompt.name}」已读取，当前创建仍使用上方文本；请选择如何导入。</p><div className="button-row compact"><button type="button" disabled={busyAll} onClick={()=>applyPendingPrompt('append')}>追加文件内容</button><button type="button" className="quiet" disabled={busyAll} onClick={()=>applyPendingPrompt('replace')}>替换现有文本</button><button type="button" className="quiet" disabled={busyAll} onClick={()=>{setPendingPrompt(null);setFileState(promptFile?'ready':'idle');setFileError('');}}>保留手动输入</button></div></div>}
+      {fileState==='error'&&<p className="world-error" role="alert">{fileError}</p>}
+      <p className="world-note">实际创作输入：{custom.trim()?`${custom.trim().length} 字符；${custom.trim().slice(0,120)}${custom.trim().length>120?'…':''}`:'尚无有效世界描述'}</p>
       <CreationPreferences horizon={horizon} setHorizon={setHorizon} horizonAge={horizonAge} setHorizonAge={setHorizonAge} scale={scale} setScale={setScale} mode={narrativeMode} setMode={setNarrativeMode}/>
-      <div className="button-row compact"><button type="button" disabled={busyAll || !custom.trim()} onClick={() => onCustom(custom.trim(),roleplayConfig())}>用这段描述创建</button></div>
+      <div className="button-row compact"><button type="button" disabled={busyAll || fileState==='reading' || !!pendingPrompt || !custom.trim()} onClick={() => void createCustom()}>{pending==='confirm'?'正在创建…':'用这段描述创建'}</button></div>
 
     </div>}
     {(view === 'preview' || view === 'editing') && preview && <article className="world-preview">

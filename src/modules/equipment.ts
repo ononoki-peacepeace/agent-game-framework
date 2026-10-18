@@ -28,6 +28,7 @@ export const equipmentModule: Module = {
         const itemId = String(c.action.parameters.item_id), slot = String(c.action.parameters.slot);
         const inv = c.store.component<Inventory>(c.action.actor_id, 'inventory');
         assert((inv.items[itemId] ?? 0) > 0, '背包中没有这件物品');
+        assert(c.store.entity(itemId).components.item?.condition!=='destroyed','损毁物品不能装备');
         const spec = c.store.component<EquipmentItem>(itemId, 'equipment_item');
         assert(spec.allowed_slots.includes(slot), '该物品不能装备到这个槽位');
         const equipment = c.store.component<Equipment>(c.action.actor_id, 'equipment');

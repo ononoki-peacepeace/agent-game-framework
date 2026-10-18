@@ -1,11 +1,15 @@
+import {structuredInputSchema,normalizeProviderOptionals} from '../ai/provider-schema.js';
+import {readFileSync} from 'node:fs';
 import {displayDiagnostic,displayText} from '../shared/display.js';
+import {npcPresentInView} from '../shared/interaction-context.js';
 import {getLogger,isLogLevel} from '../observability/index.js';
 import {startTrace,runWithTrace} from '../observability/trace.js';
 import {bindDevelopmentTask,routingClarification} from '../system/session.js';
 import {developmentProjection} from '../system/development-status.js';
 import {routeContext,readContextView} from '../system/context-router.js';
 import {agentResult} from '../agent/contracts.js';
-import {handleSystemAction,handleSystemInput,isCharacterPersonaInput} from '../system/agent.js';
+import {gameOutcome,WorldBlockedError} from '../agent/outcome.js';
+import {handleSystemAction,handleSystemInput} from '../system/agent.js';
 import {planMeta} from '../system/router.js';
 import {handleAgentInput,handleChoiceInput,isActiveGoalControlInput} from '../agent/executor.js';
 import {planGameRequest} from '../agent/game.js';
@@ -32,7 +36,7 @@ import {storyCommand} from '../narrative/runtime.js';
 import {sceneAffordances} from '../agent/scene-affordances.js';
 import {capabilityRegistry} from '../system/capabilities.js';
 import express from 'express';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { resolve, join } from 'node:path';
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { GameError, assert, id, profileSchema, safeParse, type WorldCreationProvenance } from '../core/schema.js';
@@ -55,7 +59,17 @@ const STARTED_AT = new Date().toISOString();
  */
 export function playerFacingError(error: unknown, malformed = false) {
   const detail=error instanceof Error?error.message:String(error);
-  if(error instanceof ProviderError)return '模型服务这次没有完整返回，操作尚未完成。请稍后重试。';
+  if(error instanceof WorldBlockedError)return error.message;
+  if(error instanceof ProviderError){
+    if(error.reason==='rate_limit')return '模型服务已触及请求额度或频率限制，请稍后重试；请先刷新状态确认本次行动是否结算。';
+    if(error.reason==='timeout')return '模型服务响应超时，请刷新状态确认本次行动是否结算。';
+    if(error.reason==='network')return '模型服务连接失败，请检查连接并刷新状态确认本次行动是否结算。';
+    return '模型服务这次没有完整返回，请刷新状态确认本次行动是否结算。';
+  }
+  if(/rate.?limit|quota|too many requests|\b429\b/i.test(detail))
+    return '模型服务已触及请求额度或频率限制，请稍后重试；请先刷新状态确认本次行动是否结算。';
+  if(/timeout|timed out|aborterror/i.test(detail))
+    return '模型服务响应超时，请刷新状态确认本次行动是否结算。';
   if(/ConditionNode|schema|validator|Framework validation|ResolutionReceipt|canonical delta|contract|条件必须由独立条件节点|框架校验|状态校验|依赖图存在循环|分支缺少条件|缺少条件/i.test(detail))
     return '这次行动没有正常完成，世界状态没有改变，可以安全重试。';
   if (error instanceof GameError) return error.message;
@@ -76,6 +90,7 @@ const unifiedInputSchema = z.strictObject({
   input: z.string().min(1).max(12000),
   choice_offer_id:z.string().uuid().optional(),
   legacy_choice:z.boolean().optional(),
+  interaction:z.strictObject({source:z.literal('npc_interaction'),target_id:z.string().min(1).max(120),mode:z.literal('conversation')}).optional(),
 });
 
 const generatedCharacterSchema = z.strictObject({
@@ -133,7 +148,7 @@ async function characterFromDirective(service: GameService, input: string, view:
     'visual_prompt 只描述角色外观，强调与已有角色在发色、发型、服饰、体型、年龄气质和姿势上有辨识度；它只是未来图像生成的提示，不代表图片已经生成。',
   ].join('\n');
   try {
-    const raw = await adapter.generate({ role: 'gm_reasoning', prompt, schema: generatedCharacterSchema });
+    const raw = await service.ai.generateValidated({role:'gm_reasoning',prompt},generatedCharacterSchema);
     const candidate = (raw && typeof raw === 'object' && 'data' in raw) ? (raw as { data: unknown }).data : raw;
     const parsed = generatedCharacterSchema.safeParse(candidate);
     return parsed.success ? parsed.data : fallback;
@@ -174,8 +189,28 @@ function allowedHost(hostHeader: string, allowLan: boolean) {
 }
 
 
+/** Captured at module load; a later disk edit cannot masquerade as a server reload. */
+export const runtimeIdentity=(()=>{
+  const extension=import.meta.url.endsWith('.ts')?'ts':'js';
+  try{
+    const code=['./app','./service','../core/environment','../core/environment-schema','../core/state','../modules/inventory','../modules/commerce','../core/resolution','../core/freeform','../core/narrative-firewall','../ai/runtime','../agent/semantic-entry',
+      '../ai/provider-schema','../agent/goal-contract','../agent/affordances','../agent/executor','../agent/plan-schema','../agent/contracts',
+      '../system/agent','../system/understanding','../system/capabilities','../system/resolver','../system/session',
+      '../agent/scene-interaction','../agent/npc-agent','../agent/npc-state','../core/runtime','../core/registry','../modules/characters','../modules/core',
+      '../agent/skills/natural-scene.skill','../agent/outcome','../agent/goal-alignment','../agent/entities','../core/turn-history','../system/goals','../system/context-router','../ai/failures','../background/generation','../background/runtime','../background/schema'];
+    const version=JSON.parse(readFileSync(new URL(extension==='ts'?'../../package.json':'../../../package.json',import.meta.url),'utf8')).version as string;
+    const hash=createHash('sha256');for(const name of code)hash.update(readFileSync(new URL(`${name}.${extension}`,import.meta.url)));
+    return Object.freeze({version,pid:process.pid,started_at:new Date(Date.now()-process.uptime()*1000).toISOString(),execution:extension==='ts'?'source':'compiled',code_sha256:hash.digest('hex')});
+  }catch{return Object.freeze({pid:process.pid,execution:extension==='ts'?'source':'compiled',code_sha256:null});}
+})();
+
 export function createApp(service: GameService, clientDirectory = resolve('dist/client'), providers?: AIProviderManager, assetDirectory = resolve('data/assets'), network: AppNetworkOptions = {}, developmentOptions: AppDevelopmentOptions = {}) {
   const app = express(), token = randomBytes(32).toString('hex'), allowLan = network.allowLan === true;
+  type InputRecord={fingerprint:string;game_id:string;state:'running'|'completed'|'failed';
+    response?:unknown;error?:string;http_status?:number;started_at:number;done:Promise<void>;finish:()=>void;
+    phase:'interpreting'|'planning'|'resolving'|'narrating'|'committing'|'finalizing';
+    phase_history:InputRecord['phase'][];committed_revision?:number};
+  const inputRecords=new Map<string,InputRecord>();
   if(developmentOptions.imageProvider)service.configureImageGeneration(new ImageAssetRuntime(developmentOptions.imageProvider,assetDirectory));
   const jobs=new RoutineJobs(service,service.storage instanceof JsonStore?service.storage.directory:undefined);
   const extensions=new ExtensionHost(service,resolve(service.storage instanceof JsonStore?service.storage.directory:join(assetDirectory,'..'),'extensions'));
@@ -280,7 +315,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     catch (error) { await unlink(path).catch(()=>undefined); throw error; }
   });
   app.use(express.json({ limit: '2mb' }));
-  app.get('/api/session', (_req, res) => res.json({ token, engine: service.ai.adapter.name, provider: providers?.info() ?? null }));
+  app.get('/api/session', (_req, res) => res.json({ token, runtime:runtimeIdentity, engine: service.ai.adapter.name, provider: providers?.info() ?? null }));
   app.get('/api/ai/providers', (_req, res) => res.json({ current: providers?.info() ?? null, providers: providers?.list() ?? [] }));
   app.post('/api/ai/provider', async (req, res) => {
     if (!providers) throw new GameError('当前构建不支持运行时切换 AI Provider');
@@ -306,9 +341,15 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     const module = typeof req.query.module === 'string' ? req.query.module : undefined;
     const event = typeof req.query.event === 'string' ? req.query.event : undefined;
     const job_id = typeof req.query.job_id === 'string' ? req.query.job_id : undefined;
-    const selected = (entry: { level: string; module: string; event: string }) => (!level || entry.level === level) && (!module || entry.module === module) && (!event || entry.event === event);
-    const buffered = logger.entries({ level, module, event, job_id, limit });
-    const entries = buffered.length ? buffered : (await logger.readHistory(limit)).filter(selected).slice(-limit);
+    const trace_id=typeof req.query.trace_id==='string'?req.query.trace_id:undefined;
+    const request_id=typeof req.query.request_id==='string'?req.query.request_id:undefined;
+    const exclude_event=req.query.hide_reads==='true'?'save.read':undefined;
+    const selected = (entry: { level: string; module: string; event: string; trace_id:string|null; request_id:string|null; job_id:string|null }) =>
+      (!level || entry.level === level) && (!module || entry.module === module) && (!event || entry.event === event) &&
+      (!trace_id||entry.trace_id===trace_id)&&(!request_id||entry.request_id===request_id)&&
+      (!job_id||entry.job_id===job_id)&&entry.event!==exclude_event;
+    const buffered = logger.entries({ level, module, event, job_id, trace_id, request_id, exclude_event, limit });
+    const entries = buffered.length ? buffered : (await logger.readHistory(limit,{level,module,event,job_id,trace_id,request_id,exclude_event})).filter(selected);
     res.json({ level: logger.level, file: logger.filePath(), entries, traces: logger.traces(20) });
   });
   app.get('/api/state', async (_req, res) => res.json(await service.view()));
@@ -330,13 +371,13 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     if(!adapter?.generate||adapter.name==='mock')return draftFromIdea(idea);
     try{
       const save=await service.current().catch(()=>null);
-      const raw=await adapter.generate({role:'gm_reasoning',schema:z.toJSONSchema(worldDraftSchema),prompt:[
+      const raw=await service.ai.generateValidated({role:'gm_reasoning',prompt:[
         '你是世界创建引导器。只输出 JSON 世界草稿，只描述体验层：世界名称、一句话介绍、时代、玩家身份、初始范围、危险程度(low/medium/high)、超自然程度(none/subtle/open)、NPC 密度(low/medium/high)、主要体验、特殊规则、建议玩法系统。',
         '不要写具体剧情，不要写强制主线，不要预设反派，不要替玩家安排必然发生的事件。不符合的角色/地点请交给后续世界创作流程处理。',
         `玩家想要：${idea}`,
-      ].join('\n')});
+      ].join('\n')},worldDraftSchema);
       const candidate=(raw&&typeof raw==='object'&&'data' in raw)?(raw as {data:unknown}).data:raw;
-      const parsed=worldDraftSchema.safeParse(candidate);
+      const parsed=worldDraftSchema.safeParse(normalizeProviderOptionals(candidate,structuredInputSchema(worldDraftSchema)));
       void save;
       return parsed.success?parsed.data:draftFromIdea(idea);
     }catch{return draftFromIdea(idea);}
@@ -443,26 +484,121 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   app.post('/api/new', async (req, res) => {
     const body = safeParse(z.strictObject({ description: z.string().min(1).max(12000).optional(), prompt_text: z.string().min(1).max(100000).optional(), prompt_profile: profileSchema.optional(),roleplay_config:roleplayConfigSchema.optional() }), req.body);
     const provenance:WorldCreationProvenance|undefined=body.description?{version:1,original_premise:body.description,declared_themes:[],declared_rules:[],player_role:null,initial_scope:null,template_source:{kind:'legacy',id:null,version:null},inspiration_seed:null,preview_signature:null,explicit_creation_choices:[],explicit_constraints:[],requested_traits:[],generated_canonical_fact_refs:[],records:[{kind:'premise',statement:body.description,source:'PLAYER_DECLARED',fact_ref:null}]}:undefined;
-    res.json(await service.newGame(body.description, body.prompt_text, body.prompt_profile,provenance,body.roleplay_config));
+    const trace=startTrace({module:'world_creation',logger:service.logger,request_id:randomUUID()});
+    res.json(await runWithTrace(trace,async()=>{
+      trace.info('world.create.request',{metadata:{description_chars:body.description?.length??0,
+        description_sha256:body.description?createHash('sha256').update(body.description).digest('hex'):null,
+        prompt_profile:body.prompt_profile?.id??null}});
+      try{
+        const created=await service.newGame(body.description,body.prompt_text,body.prompt_profile,provenance,body.roleplay_config);
+        trace.info('world.create.completed',{revision:created.revision,metadata:{game_id:created.game_id}});
+        return created;
+      }catch(error){trace.error('world.create.failed',{metadata:{error_name:error instanceof Error?error.name:'unknown'}});throw error;}
+    }));
   });
+  app.get('/api/input/status/:request_id',async(req,res)=>{
+    const gameId=z.string().uuid().parse(req.query.game_id),requestId=z.string().uuid().parse(req.params.request_id);
+    const record=inputRecords.get(`${gameId}:${req.params.request_id}`);
+    if(!record){
+      const persisted=await service.storage.readInputRecord?.(gameId,requestId);
+      if(persisted?.state==='completed'){
+        res.json({state:persisted.state,phase:'finalizing',committed_revision:persisted.committed_revision??null,
+          ...(persisted.state==='completed'?{result:persisted.response}:{error:persisted.error,http_status:persisted.http_status})});return;
+      }
+      const recovered=await recoverCommittedInput(gameId,requestId);
+      if(recovered){res.json({state:'completed',reason:'committed_progress_recovered',result:recovered});return;}
+      if(persisted?.state==='failed'){res.json({state:'failed',error:persisted.error,http_status:persisted.http_status});return;}
+      res.status(persisted?200:404).json({state:'unknown',reason:persisted?'server_interrupted':'record_missing'});return;
+    }
+    res.json({state:record.state,phase:record.phase,phase_history:record.phase_history,
+      elapsed_ms:Date.now()-record.started_at,
+      committed_revision:record.committed_revision??null,
+      ...(record.state==='completed'?{result:record.response}:{}),
+      ...(record.state==='failed'?{error:record.error,http_status:record.http_status}:{} )});
+  });
+  async function recoverCommittedInput(gameId:string,requestId:string){
+    const save=await service.storage.read('current','request_recovery');if(!save||save.game_id!==gameId)return null;
+    const receipt=save.runtime.receipts.find(entry=>entry.id===requestId);
+    const history=save.narrative_history?.find(entry=>entry.request_id===requestId);
+    if(!receipt&&!history)return null;
+    // A commit proves progress, not completion of every step in the original request.
+    // Always project current state; never replay an old scene over a later/undone world.
+    return agentResult('WORLD_ACTION','已找到原请求的已提交记录，并同步当前世界。完整请求终态不可用，不会自动重放；请以当前故事、位置和时间为准。',{
+      presentation:'assistant',view:service.project(save),outcome:gameOutcome('partial_progress','request_recovery',save.state_revision,['已提交记录'],receipt?[receipt.id]:[])});
+  }
   app.post('/api/input', async (req, res) => {
+    const body=safeParse(unifiedInputSchema,req.body);
+    const key=`${body.game_id}:${body.request_id}`,fingerprint=JSON.stringify(body);
+    const previous=inputRecords.get(key);
+    if(previous){
+      if(previous.fingerprint!==fingerprint)throw new GameError('请求 ID 已用于另一项操作',409);
+      await previous.done;
+      if(previous.state==='completed'){res.json(previous.response);return;}
+      res.status(previous.http_status??503).json({error:previous.error??'请求未完成，请刷新状态。'});return;
+    }
+    let finish=()=>{};
+    const done=new Promise<void>(resolve=>{finish=resolve;});
+    const record:InputRecord={fingerprint,game_id:body.game_id,state:'running',phase:'interpreting',
+      phase_history:['interpreting'],started_at:Date.now(),done,finish};
+    inputRecords.set(key,record);
+    // Keep bounded terminal history for refresh/retry without dropping a running request.
+    if(inputRecords.size>120)for(const [oldKey,old] of inputRecords){if(old.state!=='running'){inputRecords.delete(oldKey);if(inputRecords.size<=100)break;}}
+    const send=res.json.bind(res);
+    res.json=((value:unknown)=>{record.response=value;record.http_status=res.statusCode;
+      record.state=res.statusCode>=400?'failed':'completed';
+      if(record.state==='failed')record.error=String((value as {error?:unknown})?.error??'请求未完成');
+      return send(value);}) as typeof res.json;
     const trace=startTrace({module:'agent',logger:service.logger,
-      request_id:typeof req.body?.request_id==='string'?req.body.request_id:null,
-      game_id:typeof req.body?.game_id==='string'?req.body.game_id:null});
-    return runWithTrace(trace,async()=>{
-    const body = safeParse(unifiedInputSchema, req.body);
+      request_id:body.request_id,game_id:body.game_id,onEvent:(event,fields)=>{
+        if(event==='semantic.decision'||event==='agent.goal_compiled')record.phase='planning';
+        else if(event==='agent.action_selected'||event==='ai.direct.request'||event==='skill.started')record.phase='resolving';
+        else if(event==='narrative.attempt'||event==='narrative.regenerated')record.phase='narrating';
+        else if(event==='save.commit'){record.phase='committing';if(typeof fields.revision==='number')record.committed_revision=fields.revision;}
+        else if(event==='agent.outcome')record.phase='finalizing';
+        if(record.phase_history.at(-1)!==record.phase)record.phase_history.push(record.phase);
+      }});
+    let persistTerminal=false,discardRecord=false;
+    try{
+    const persisted=await service.storage.readInputRecord?.(body.game_id,body.request_id);
+    if(persisted){
+      discardRecord=true;
+      if(persisted.fingerprint!==createHash('sha256').update(fingerprint).digest('hex'))throw new GameError('请求 ID 已用于另一项操作',409);
+      if(persisted.state==='completed'){res.json(persisted.response);return;}
+      const recovered=await recoverCommittedInput(body.game_id,body.request_id);
+      if(recovered){res.json(recovered);return;}
+      if(persisted.state==='failed'){res.status(persisted.http_status??503).json({error:persisted.error??'原请求未完成。'});return;}
+      res.status(409).json({error:'原请求在服务重启后没有可恢复的完整终态，请核对当前世界状态；不会自动重新执行。',retry_policy:'do_not_replay'});return;
+    }
+    persistTerminal=true;
+    await service.storage.writeInputRecord?.({version:1,game_id:body.game_id,request_id:body.request_id,
+      fingerprint:createHash('sha256').update(fingerprint).digest('hex'),state:'running',started_at:record.started_at});
+    return await runWithTrace(trace,async()=>{
+    trace.info('input.received',{metadata:{input_chars:body.input.length,
+      source:body.interaction?.source??'manual',expected_revision:body.expected_revision}});
     const snapshot=await service.view();
     if(!snapshot||snapshot.game_id!==body.game_id)throw new GameError('游戏已切换，请刷新后操作',409);
     if(snapshot.revision!==body.expected_revision)throw new GameError('状态已更新，请重新规划',409);
+    if(body.interaction){
+      if(!npcPresentInView(snapshot,body.interaction.target_id))
+        throw new GameError('交谈对象已不在当前场景，请重新选择。',409);
+    }
     if(body.choice_offer_id||body.legacy_choice){
       res.json(await handleChoiceInput(service,body,body.choice_offer_id??null,body.legacy_choice===true));return;
     }
-    if(['mock','fixture'].includes(service.ai.adapter.name)&&isActiveGoalControlInput(await service.current(),body.input)){
+    // Exact commands addressing an existing persisted goal have the same
+    // deterministic meaning for real and test providers.
+    if(isActiveGoalControlInput(await service.current(),body.input)){
       res.json(await handleAgentInput(service,body));return;
     }
-    const gate=await routeContext(service,body.input,'world_input');
-    trace.info('agent.context_route',{metadata:{source:'manual',destination:gate.destination,
-      has_speech_context:Boolean(gate.speech_target_id),has_resolved_input:Boolean(gate.resolved_input)}});
+    const semanticStarted=performance.now(),callsBefore=service.ai.metrics.requests;
+    trace.info('semantic.start',{metadata:{source:body.interaction?.source??'manual'}});
+    const gate=await routeContext(service,body.input,'world_input',body.interaction);
+    trace.info('semantic.complete',{duration_ms:performance.now()-semanticStarted,
+      metadata:{destination:gate.destination,provider_calls:service.ai.metrics.requests-callsBefore,
+        semantic_kind:gate.semantic?.kind??null}});
+    trace.info('agent.context_route',{metadata:{source:body.interaction?.source??'manual',destination:gate.destination,
+      has_speech_context:Boolean(gate.speech_target_id),interaction_target_id:body.interaction?.target_id??null,
+      has_resolved_input:Boolean(gate.resolved_input)}});
     if(gate.destination==='AMBIGUOUS'){res.json(agentResult('CLARIFICATION',gate.clarification!,{clarification:gate.clarification,view:await readContextView(service)}));return;}
     if(gate.semantic?.kind==='read_only'){
       res.json(agentResult('WORLD_QUERY',gate.semantic.answer!,{presentation:'assistant',view:await readContextView(service)}));return;
@@ -471,16 +607,16 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
       res.json(await handleAgentInput(service,body,undefined,null,false,gate.semantic));return;
     }
     const narrativeCommand=gate.semantic?null:storyCommand(body.input);
-    if(narrativeCommand){const result=await service.narrativeCommand(body,narrativeCommand);res.json(agentResult('WORLD_ACTION',result.message,{presentation:'story',view:result.view}));return;}
+    if(narrativeCommand){const result=await service.narrativeCommand(body,narrativeCommand);res.json(agentResult('WORLD_ACTION',result.message,{presentation:'story',outcome:gameOutcome('completed','narrative_command',result.view.revision),view:result.view}));return;}
     const worldBody={...body,...(gate.resolved_input?{input:gate.resolved_input}:{}),
       ...(gate.end_conversation?{end_conversation:true}:{})};
     if(gate.destination==='SYSTEM_META_INTENT'){
-      const result=await processSystem({input:worldBody.input,confirmed:false,request_id:body.request_id,game_id:body.game_id,expected_revision:body.expected_revision,originating_surface:'world'});
+      const result=await processSystem({input:worldBody.input,confirmed:false,request_id:body.request_id,game_id:body.game_id,expected_revision:body.expected_revision,originating_surface:'world',semantic:gate.semantic});
       // The System surface owns the one authoritative answer; the world column only acknowledges the handover, so
       // the same player-facing text is never carried twice in one response.
       res.json({...agentResult('SYSTEM_META_INTENT','这条内容属于系统设置，已经交给右侧「系统」处理。',{view:await service.view(),ui_actions:[{kind:'open_panel',panel:'system'}]}),system_handoff:{input:body.input,result}});return;
     }
-    const ext=extensionIntent(worldBody.input);if(ext){if(ext.kind==='extension_open'){const installed=(await extensions.list()).find(e=>e.manifest.template===ext.template&&e.can_open);if(installed){res.json({...ext,extension_id:installed.id});return;}throw new GameError('此场景没有已启用的对应扩展；请先开发安装，并到适用地点游玩');}res.json(ext);return;}
+    const ext=gate.semantic?null:extensionIntent(worldBody.input);if(ext){if(ext.kind==='extension_open'){const installed=(await extensions.list()).find(e=>e.manifest.template===ext.template&&e.can_open);if(installed){res.json({...ext,extension_id:installed.id});return;}throw new GameError('此场景没有已启用的对应扩展；请先开发安装，并到适用地点游玩');}res.json(ext);return;}
     const routineText=worldBody.input.trim();
     if(!/而且|然后|并且|同时|顺便/.test(routineText)&&/^(?:继续(?:按.*(?:计划|安排))?(?:生活|日常)|继续按计划生活|就这样正常生活下去|按照原来的安排继续)/.test(routineText)){
       const save=await service.current(),routine=save.entities.find(e=>e.id===save.player_state.entity_id)?.components.routine;
@@ -493,8 +629,20 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     if (!view) throw new GameError('当前没有已载入的世界');
     const draft = await characterFromDirective(service, body.input, view);
     const card = characterCardFromDraft(draft, body.input);
-    res.json(await service.importCharacterCard(card, body.game_id, body.expected_revision));
-    });
+    const preview=await service.previewCharacterCard(card,body.game_id,body.expected_revision);
+    res.json(await service.commitCharacterCard(preview.preview_id,body.game_id,body.expected_revision,body.request_id));
+    });}catch(error){record.state='failed';record.error=playerFacingError(error);
+      record.http_status=error instanceof GameError?error.status:503;throw error;
+    }finally{
+      try{if(persistTerminal)await service.storage.writeInputRecord?.({version:1,game_id:body.game_id,request_id:body.request_id,
+        fingerprint:createHash('sha256').update(fingerprint).digest('hex'),state:record.state,started_at:record.started_at,
+        ...(record.response!==undefined?{response:record.response as any}:{}),...(record.error?{error:record.error}:{}),
+        ...(record.http_status!==undefined?{http_status:record.http_status}:{}),
+        ...(record.committed_revision!==undefined?{committed_revision:record.committed_revision}:{})});}
+      catch{service.logger.warn('input.recovery_record.failed',{module:'server',request_id:body.request_id});}
+      record.finish();
+      if(discardRecord&&inputRecords.get(key)===record)inputRecords.delete(key);
+    }
   });
   const jobView=async(job:Awaited<ReturnType<RoutineJobs['get']>>)=>{if(!job)return null;const view=await service.view();if(view&&view.game_id!==job.game_id)return null;return {...job,message:displayDiagnostic(job.message,view?.entities??[],view?.locations??[])};};
   app.post('/api/routine/run',async(req,res)=>res.status(202).json(await jobView(await jobs.start(req.body))));
@@ -516,6 +664,10 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   app.get('/api/modules',async(_req,res)=>res.json(await service.modules()));
   app.get('/api/system/tools',async(_req,res)=>{const info=await service.modules();res.json(toolAvailability(info.capabilities));});
   app.get('/api/system/behavior',async(_req,res)=>res.json(await service.behaviorConfig()));
+  app.get('/api/system/behavior-guidance',async(_req,res)=>res.json(await service.behaviorGuidance()));
+  app.post('/api/system/behavior-guidance/:id/enabled',async(req,res)=>res.json(await service.setBehaviorPatchEnabled(req.params.id,Boolean(req.body?.enabled))));
+  app.post('/api/system/behavior-guidance/:id/remove',async(req,res)=>res.json(await service.removeBehaviorPatch(String(req.params.id))));
+  app.get('/api/system/content',async(_req,res)=>res.json(await service.contentAllowances()));
   app.post('/api/characters/:id/persona',async(req,res)=>res.json(await service.setCharacterPersona({...req.body,entity_id:req.params.id})));
   app.get('/api/narrative/debug',async(_req,res)=>res.json(await service.narrativeDebug()));
   app.get('/api/scene/affordances',async(_req,res)=>res.json(await sceneAffordances(service)));
@@ -534,7 +686,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     const result=body.action?await handleSystemAction(service,body.action):await handleSystemInput(service,{
       input:body.input,confirmed:body.confirmed,session_id:body.session_id,request_id:body.request_id,
       game_id:body.game_id,expected_revision:body.expected_revision,
-    });
+    },body.semantic);
     if(result.category==='CAPABILITY_GAP'&&Array.isArray(result.advanced?.missing)&&result.advanced.missing.some((id:unknown)=>String(id).startsWith('media.image'))){
       const provider=await service.imageProviderStatus();
       const name=(result.advanced?.goal as {targets?:{reference?:string}[]}|undefined)?.targets?.[0]?.reference??'这个人物';
@@ -609,7 +761,6 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
         message:view?displayText(gate.semantic.answer!,view.entities,view.locations):gate.semantic.answer});
     }
     const routedInput=gate.resolved_input??input;
-    if(isCharacterPersonaInput(routedInput)&&(!gate.semantic||gate.semantic.kind==='system_operation'))return res.json(await processSystem({...body,input:routedInput}));
     if(gate.destination==='WORLD_INTENT'){
       const view=await service.view();if(!view)throw new GameError('请先载入世界');
       const tx={input:routedInput,request_id:body.request_id??randomUUID(),game_id:body.game_id??view.game_id,
@@ -618,7 +769,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
       const result=await handleAgentInput(service,tx,(request)=>jobs.start(request),gate.speech_target_id,Boolean(gate.world_input),gate.semantic);
       return res.json({category:'IN_WORLD_INPUT',tool_id:null,side_effect_level:result.time_advanced||result.canonical_changes?.length?'canonical':'none',needs_confirmation:false,message:result.message||result.view?.last_turn?.narrative||'当前世界没有返回可确认的结果。',view:result.view,...(result.clarification?{clarification:result.clarification}:{}),...(result.ui_actions?{ui_actions:result.ui_actions}:{})});
     }
-    return res.json(await processSystem({input:routedInput,confirmed:body.confirmed??false,request_id:body.request_id??randomUUID(),game_id:body.game_id,expected_revision:body.expected_revision,originating_surface:'system',...(body.session_id?{session_id:body.session_id}:{}),...(body.development_task_id?{development_task_id:body.development_task_id}:{})}));
+    return res.json(await processSystem({input:routedInput,confirmed:body.confirmed??false,request_id:body.request_id??randomUUID(),game_id:body.game_id,expected_revision:body.expected_revision,originating_surface:'system',semantic:gate.semantic,...(body.session_id?{session_id:body.session_id}:{}),...(body.development_task_id?{development_task_id:body.development_task_id}:{})}));
   });
   app.post('/api/system/action',async(req,res)=>res.json(await processSystem({action:req.body})));
   app.get('/api/development/tasks',async(_req,res)=>res.json(await developmentTasks.list()));
@@ -649,10 +800,20 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   app.post('/api/save', async (_req, res) => res.json(await service.checkpoint()));
   app.post('/api/load', async (_req, res) => res.json(await service.load()));
   app.post('/api/import', async (req, res) => res.json(await service.import(req.body)));
-  app.post('/api/character-card/import', async (req, res) => {
-    const body = safeParse(z.strictObject({ game_id: z.string().uuid(), expected_revision: z.number().int().min(0), card: z.unknown() }), req.body);
-    res.json(await service.importCharacterCard(body.card, body.game_id, body.expected_revision));
+  app.post('/api/character-card/preview',async(req,res)=>{
+    const body=safeParse(z.strictObject({game_id:z.string().uuid(),expected_revision:z.number().int().nonnegative(),card:z.unknown()}),req.body);
+    res.json(await service.previewCharacterCard(body.card,body.game_id,body.expected_revision));
   });
+  app.post('/api/character-card/commit',async(req,res)=>{
+    const body=safeParse(z.strictObject({game_id:z.string().uuid(),expected_revision:z.number().int().nonnegative(),
+      preview_id:z.string().uuid(),request_id:z.string().uuid()}),req.body);
+    res.json(await service.commitCharacterCard(body.preview_id,body.game_id,body.expected_revision,body.request_id));
+  });
+  app.post('/api/character-card/cancel',async(req,res)=>{
+    const body=safeParse(z.strictObject({preview_id:z.string().uuid()}),req.body);
+    res.json(service.cancelCharacterCardPreview(body.preview_id));
+  });
+  app.post('/api/character-card/import',async(_req,_res)=>{throw new GameError('请先预览角色卡并确认导入',409);});
   app.post('/api/export', async (_req, res) => { res.setHeader('Content-Disposition', 'attachment; filename="agent-game-save.json"'); res.type('json').send(await service.export()); });
   app.use(express.static(clientDirectory));
   app.use((_req, res) => res.status(404).json({ error: '接口不存在' }));
@@ -661,6 +822,17 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     const status = error instanceof GameError ? error.status : malformed ? 400 : 503;
     const publicState=await service.view().catch(()=>null);
     const human=(text:string)=>displayDiagnostic(text,publicState?.entities??[],publicState?.locations??[]);
+    if(error instanceof WorldBlockedError&&publicState){
+      service.logger.info('http.game_outcome',{module:'framework',metadata:{code:error.worldCode,
+        revision:publicState.revision,path:req.path}});
+      if(req.path==='/api/input'){
+        res.json(agentResult('WORLD_ACTION',human(error.message),{presentation:'story',
+          outcome:gameOutcome('blocked_by_world','world_transaction',publicState.revision),view:publicState}));return;
+      }
+      if(req.path==='/api/action'){
+        res.json({...publicState,notices:[human(error.message)]});return;
+      }
+    }
     if(!(error instanceof GameError)) service.logger.warn('http.error',{module:'framework',metadata:{status,detail:(error instanceof Error?`${error.name}: ${error.message}`:String(error)).slice(0,300)}});
     // A revision conflict on a reliably classified read-only request may be retried automatically by the client;
     // anything that could write state stays manual. Unclassifiable input is manual on purpose.

@@ -1,3 +1,5 @@
+import {goalSpecSchema,type GoalSpec} from './goals.js';
+import type {OpenGoalControl} from '../agent/plan-schema.js';
 import {applyFeatureGuideAction,sessionInput,type SystemExecutionContext,type SystemSession} from './session.js';
 import { z } from 'zod';
 import {randomUUID} from 'node:crypto';
@@ -16,6 +18,10 @@ import { sanitizePlayerText } from './player-copy.js';
 import { advanceFeatureGuide, featureGuideMessage, featureRequirement, isDelegateAnswer, isGuideConfirmation, startFeatureGuide, type FeatureGuide } from './feature-guide.js';
 import { shallowUnderstanding } from './understanding.js';
 import { resolveUniversalGoal, type UniversalResolution } from './resolver.js';
+import {interpretSemanticEntry} from '../agent/semantic-entry.js';
+import {currentTrace} from '../observability/trace.js';
+import {contentAllowanceSummary} from '../narrative/policy.js';
+import {compileBehaviorFeedback} from '../ai/behavior-feedback.js';
 import type { DevelopmentProjection } from './development-status.js';
 import { planFrameworkChange } from '../change/planner.js';
 import {
@@ -30,7 +36,7 @@ const behaviorScopeQuestion = '旁白叙述、人物对话，还是游戏助手�
 const asksAboutAssistant=(text:string)=>/你(们)?\s*(现在|目前|当前|都)?\s*(能|会|可以|支持|有|是|做|干)/.test(String(text??''))||/你(们)?\s*(能|会|可以|支持)\s*(做什么|干什么|哪些|什么)/.test(String(text??''));
 const mediaTools = ['avatar.crop','media.set_avatar','character.media.get','media.generate_image'];
 const lastPersonaTarget=new WeakMap<GameService,{game_id:string;entity_id:string}>();
-export const isCharacterPersonaInput=(text:string)=>/(说话|口吻|语气|语言习惯|句尾|性格)/.test(text)&&/(设为|设置|改成|改为|修改|更改|变得|让|取消|恢复|默认)/.test(text)&&!/(旁白|全体角色|所有角色)/.test(text);
+export const isCharacterPersonaInput=(text:string)=>/(说话|口吻|语气|语言习惯|句尾|性格)/.test(text)&&/(设为|设置|改成|改为|改得|修改|更改|变得|让|取消|恢复|默认)/.test(text)&&!/(旁白|全体角色|所有角色)/.test(text);
 async function applyCharacterPersonaInput(service:GameService,body:{input:string;request_id?:string;game_id?:string;expected_revision?:number}):Promise<SystemResult>{
   const save=await service.current(),view=publicView(save),input=body.input;
   const matches=view.entities.filter(entity=>entity.id!==view.player_id&&entity.components.character&&input.includes(String(entity.components.identity?.name??'\u0000')));
@@ -42,7 +48,7 @@ async function applyCharacterPersonaInput(service:GameService,body:{input:string
   const reset=/(取消|恢复默认|还原默认)/.test(input);
   const field=/(性格)/.test(input)?'personality':/(语言习惯|句尾)/.test(input)?'verbal_habits':'speech_style';
   const afterName=input.slice(input.indexOf(String(entity.components.identity?.name))+String(entity.components.identity?.name).length);
-  const value=afterName.replace(/^.*?(?:说话风格|说话方式|说话|语言习惯|句尾|口吻|语气|性格)/,'').replace(/^(?:设为|设置为|改成|改为|修改为|变得|更)/,'').replace(/[。！!\s]+$/,'').trim();
+  const value=afterName.replace(/^.*?(?:说话风格|说话方式|说话|语言习惯|句尾|口吻|语气|性格)/,'').replace(/^(?:设为|设置为|改成|改为|改得|修改为|变得|更)/,'').replace(/[。！!\s]+$/,'').trim();
   if(!reset&&!value)throw new GameError('请描述这位人物希望采用的说话方式。');
   const next=await service.setCharacterPersona({game_id:body.game_id??view.game_id,expected_revision:body.expected_revision??view.revision,request_id:body.request_id??randomUUID(),entity_id:entity.id,
     personality:field==='personality'?(reset?'':value):String(current.personality??''),
@@ -74,11 +80,22 @@ const result = (plan: MetaPlan, message: string, toolsList: ToolDescriptor[], ex
 };
 
 /** The System Agent: deterministic capability/tool layer first, model understanding where it adds real value. */
-export async function handleSystemInput(service:GameService,raw:unknown):Promise<SystemResult>{
+export async function handleSystemInput(service:GameService,raw:unknown,semantic?:import('../agent/semantic-entry.js').SemanticDecision):Promise<SystemResult>{
  const body=safeParse(z.strictObject({input:z.string().min(1).max(2000),confirmed:z.boolean().default(false),session_id:z.string().uuid().nullish(),request_id:z.string().uuid().optional(),game_id:z.string().optional(),expected_revision:z.number().int().nonnegative().optional()}),raw);
- if(isCharacterPersonaInput(body.input))return playerFacingSystemResult(await applyCharacterPersonaInput(service,body));
- const value=await sessionInput(service,body,(input,confirmed,context)=>executeSystemInput(service,{input,confirmed,request_id:body.request_id,expected_revision:body.expected_revision},context));
- const changePlan=planFrameworkChange(body.input,{surface:'system'},body.request_id);
+ if(isCharacterPersonaInput(body.input)&&(!semantic||semantic.operation_plane==='system_management')){
+   const save=await service.current(),view=service.project(save);
+   const named=view.entities.some(entity=>entity.id!==view.player_id&&entity.components.character&&
+     body.input.includes(String(entity.components.identity?.name??'\u0000')));
+   const remembered=lastPersonaTarget.get(service);
+   const refersToRemembered=/她|他|这个角色|该角色/.test(body.input)&&remembered?.game_id===view.game_id;
+   if(named||refersToRemembered){
+     const {understanding}=await understandSystemRequest(service,view,save,body.input,null);
+     if(understanding.style_target!=='world')return playerFacingSystemResult(await applyCharacterPersonaInput(service,body));
+   }
+ }
+ const value=await sessionInput(service,body,(input,confirmed,context)=>executeSystemInput(service,{input,confirmed,request_id:body.request_id,expected_revision:body.expected_revision,game_id:body.game_id},context,semantic));
+ const changePlan=(!semantic||semantic.operation_plane==='framework_development')?
+   planFrameworkChange(body.input,{surface:'system'},body.request_id):null;
  const enriched=changePlan?{...value,advanced:{...value.advanced,change_plan:changePlan},...(value.directive?.kind==='extension_development'?{directive:{...value.directive,change_plan:changePlan}}:{})}:value;
  return playerFacingSystemResult(enriched);
 }
@@ -216,28 +233,36 @@ function capabilityAnswer(service: GameService, view: ReturnType<typeof publicVi
   const image=providers.image.configured
     ? `图片生成已接入（${providers.image.provider}）。`
     : '图片生成 Provider 尚未接入；我会明确报告这个外部依赖，不会假装生成成功。';
+  const goalControls=service.systemCapabilities.availability(view.capabilities).filter(item=>item.available&&item.id.startsWith('open_goal.'))
+    .map(item=>({query:'查询',cancel:'指定取消',resume:'指定恢复'} as Record<string,string>)[item.id.slice('open_goal.'.length)]);
   return [
     `当前启用的世界模块：${enabledModules.join('、')||'仅核心运行时'}。`,
     `当前可见面板：${view.panels.map(panel=>panel.label).join('、')||'无'}。`,
     installedExtensions.length?`当前启用的扩展：${installedExtensions.join('、')}。`:'当前没有启用的扩展。',
     `可用操作包括：${availableTools.join('、')||'读取当前世界状态'}。`,
+    `玩家开放目标管理：${goalControls.filter(Boolean).join('、')||'当前不可用'}；与世界任务和开发任务分别管理。`,
     `文本 AI：${providers.text.provider}${providers.text.model?` / ${providers.text.model}`:''}。${image}`,
     development,
   ].join('\n');
 }
-async function resolveUnderstanding(service: GameService, view: ReturnType<typeof publicView>, save: Awaited<ReturnType<GameService['current']>>, toolsList: AvailableTool[], text: string, context: SystemExecutionContext): Promise<SystemResult | null> {
+async function resolveUnderstanding(service: GameService, view: ReturnType<typeof publicView>, save: Awaited<ReturnType<GameService['current']>>, toolsList: AvailableTool[], text: string, context: SystemExecutionContext, precomputed?:SystemUnderstanding): Promise<SystemResult | null> {
   const session = context.session;
   const prior = context.previous ?? session.resolved_request ?? null;
   const merge = mergeAnswer(context, text, view);
   let understanding = mergeInto(session.understanding, merge);
   let source: 'model' | 'deterministic' = 'deterministic';
   if (!merge) {
-    const answer = await understandSystemRequest(service, view, save, text, {
+    const answer = precomputed?{understanding:precomputed,source:'model' as const}:await understandSystemRequest(service, view, save, text, {
       current_goal: session.current_goal, understanding: session.understanding, pending_field: session.pending_field, previous: prior,
     });
     understanding = answer.understanding; source = answer.source;
   }
   if (!understanding) return null;
+  if(understanding.goal_control)return {...await delegateGoalManagement(service,{input:text,...context.requestEnvelope},understanding.goal_control),understanding,workflow:'goal_management'};
+  if(understanding.likely_workflow==='goal_management'||understanding.likely_workflow==='unclear'&&understanding.understood.length&&understanding.confidence>=.8){
+    const planned=await resolveUniversalGoal(service,text,context.requestEnvelope??{}, {capabilityScope:'open_goals'});
+    if(planned.handled)return {...universalSystemResult(planned),understanding,workflow:'goal_management'};
+  }
   // A merged answer supplies the field the session already knew was missing.
   if (merge) {
     if (merge.scope) context.behaviorScope = merge.scope;
@@ -261,6 +286,40 @@ async function resolveUnderstanding(service: GameService, view: ReturnType<typeo
   }
   // A model-labelled "correction" that arrives as the answer to a clarification keeps the pending workflow.
   if (answering && understanding.likely_workflow === 'correction') understanding = { ...understanding, likely_workflow: (session.understanding?.likely_workflow ?? 'unclear') as SystemWorkflow };
+  const explicitPreference=shallowUnderstanding(text,view).narrative_preference;
+  const modelPreference=understanding.narrative_preference&&understanding.confidence>=0.8&&
+    understanding.side_effect_class==='configuration'&&understanding.likely_workflow==='behavior_config'&&
+    understanding.style_target!=='character';
+  const preference=explicitPreference??(modelPreference?understanding.narrative_preference:null);
+  if(preference){
+    const requestedTopics=preference.topics;
+    const hasStyle=Boolean(preference.tone&&preference.scopes.length);
+    if(preference.mode==='require'&&requestedTopics.length){
+      return {category:'BEHAVIOR_CONFIGURATION',tool_id:null,side_effect_level:'none',needs_confirmation:false,
+        message:'题材偏好不能强制事件或人物行为必然发生，也不会提高出现概率。本次没有修改配置；可以设置为允许在自然因果下出现。',
+        understanding,workflow:'behavior_config'};
+    }
+    if(preference.mode==='exclude'&&requestedTopics.length){
+      return {category:'BEHAVIOR_CONFIGURATION',tool_id:null,side_effect_level:'none',needs_confirmation:false,
+        message:'目前这一项只支持记录允许的题材范围；这次没有修改配置。',understanding,workflow:'behavior_config'};
+    }
+    const allowedTopics=preference.mode==='allow'?requestedTopics:[];
+    if(hasStyle||allowedTopics.length){
+      const next=await service.setNarrativePreferences({scopes:hasStyle?preference.scopes:[],tone:hasStyle?preference.tone:null,allowed_topics:allowedTopics});
+      const updated=await service.current(),rules=updated.behavior_config;
+      const parts=[hasStyle?`语言/叙事风格：${behaviorSummary(rules)}`:null,
+        allowedTopics.length?`世界题材允许范围：${contentAllowanceSummary(updated.definition.roleplay_config?.content_allowances??[])}`:null].filter(Boolean);
+      return {category:'BEHAVIOR_CONFIGURATION',tool_id:'behavior.configure',side_effect_level:'configuration',needs_confirmation:false,
+        title:allowedTopics.length?(hasStyle?'叙事与世界题材配置':'世界题材配置'):'语言与叙事风格配置',
+        message:`已更新${parts.join('；')}。允许出现不代表强制生成或提高概率；具体情节仍由人物意愿、世界状态与事件因果决定，人物可以拒绝。年龄以世界记录为准，世界事实和行动结算不变。`,
+        advanced:{behavior:rules,content_allowances:updated.definition.roleplay_config?.content_allowances??[]},
+        view:next,understanding,workflow:'behavior_config',resolved:hasStyle?resolvedFrom('behavior_config',rules.at(-1)??null,text):null};
+    }
+    if(preference.mode==='allow'&&!requestedTopics.length)return {
+      category:'BEHAVIOR_CONFIGURATION',tool_id:null,side_effect_level:'none',needs_confirmation:false,
+      message:'我理解你想放宽当前世界的题材范围。请说明具体允许哪些题材；这次没有修改配置。',
+      clarification:'content_topics',understanding,workflow:'behavior_config'};
+  }
   const resolvedEntity = entityFor(view, text, context);
   // Media work that the framework cannot perform is reported, never questioned: asking about a style parameter
   // for an image nobody can generate would be a pointless loop.
@@ -412,6 +471,7 @@ async function resolveUnderstanding(service: GameService, view: ReturnType<typeo
   }
   // 6. Understood, but it maps onto no single deterministic tool (yet). Answer with what was understood and the
   //    nearest honest next step instead of falling back to a canned "I don't understand".
+  if(understanding.likely_workflow==='behavior_config')return null;
   if (understanding.understood.length) {
     return {
       category: 'SYSTEM_ANSWER', tool_id: null, side_effect_level: 'none', needs_confirmation: false,
@@ -535,13 +595,108 @@ async function executeTool(service: GameService, plan: MetaPlan, body: { input: 
 function resolvedFrom(workflow: SystemWorkflow, rule: { op?: string; value?: string; application?: BehaviorApplication; scope?: BehaviorScope } | null, summary: string): ResolvedSystemRequest {
   return { workflow, at: new Date().toISOString(), summary, scope: rule?.scope ?? null, application: rule?.application ?? null, value: rule?.value ?? null, op: (rule?.op as 'suffix' | 'prefix' | 'tone' | 'constraint' | undefined) ?? null, module: null, entity_id: null };
 }
-async function executeSystemInput(service: GameService, raw: unknown, context: SystemExecutionContext): Promise<SystemResult> {
-  const body = safeParse(z.strictObject({ input: z.string().min(1).max(2000), confirmed: z.boolean().default(false), request_id: z.string().uuid().optional(), expected_revision: z.number().int().nonnegative().optional() }), raw);
+async function executeSystemInput(service: GameService, raw: unknown, context: SystemExecutionContext,
+  semantic?:import('../agent/semantic-entry.js').SemanticDecision,recoveryAttempted=false): Promise<SystemResult> {
+  const body = safeParse(z.strictObject({ input: z.string().min(1).max(2000), confirmed: z.boolean().default(false), request_id: z.string().uuid().optional(), expected_revision: z.number().int().nonnegative().optional(),game_id:z.string().optional() }), raw);
+  context.requestEnvelope={request_id:body.request_id,expected_revision:body.expected_revision,game_id:body.game_id};
   const save = await service.current(), view = service.project(save), toolsList = toolAvailability(view.capabilities);
   const plan = planMeta(body.input, view.capabilities);
+  if(semantic?.goal_spec?.goal_control){
+    if(semantic.kind!=='system_operation'||semantic.operation_plane!=='system_management')return {
+      category:'EXECUTION_FAILURE',tool_id:null,side_effect_level:'none',needs_confirmation:false,message:'这项目标管理操作未获得系统管理授权，尚未执行。'};
+    return delegateGoalManagement(service,{...body,input:context.latest??body.input},semantic.goal_spec.goal_control,semantic.goal_spec);
+  }
+  // A live semantic decision is the authority for the operation plane. Capability handlers
+  // can fill parameters, but an unavailable world edit cannot become a development request.
+  if(semantic?.operation_plane==='world_authoring'){
+    if(!semantic.goal_spec)return {category:'USER_AMBIGUITY',tool_id:null,side_effect_level:'none',needs_confirmation:false,
+      message:'这次还不能确认要修改的世界目标，世界没有改变。请补充具体对象和期望变化。'};
+    const authorized=semantic.goal_spec.world_mutation&&
+      !semantic.goal_spec.desired_outputs.some(output=>output.kind==='feature');
+    if(!authorized){
+      if(!recoveryAttempted){
+        const revised=await interpretSemanticEntry(service,view,body.input,'SYSTEM',null,context.session,
+          {failure_code:'authorization_mismatch',failure_stage:'world_authoring_precommit'});
+        if(revised?.kind==='system_operation'&&revised.operation_plane==='world_authoring')
+          return executeSystemInput(service,body,context,revised,true);
+      }
+      return {category:'USER_AMBIGUITY',tool_id:null,side_effect_level:'none',needs_confirmation:false,
+        message:'拟修改的对象或结果没有得到这条请求的明确授权，世界没有改变。请确认具体目标。'};
+    }
+    const resolution=await resolveUniversalGoal(service,body.input,
+      {request_id:body.request_id,expected_revision:body.expected_revision},
+      {external_effects_confirmed:body.confirmed,authoritativeGoal:semantic.goal_spec});
+    if(resolution.handled&&resolution.kind==='CAPABILITY_GAP'&&resolution.recoverable&&!recoveryAttempted){
+      currentTrace()?.warn('system.goal_recovery',{metadata:{failure_code:'goal_capability_coverage',
+        stage:'world_authoring_precommit',missing:resolution.missing,revision:save.state_revision}});
+      const revised=await interpretSemanticEntry(service,view,body.input,'SYSTEM',null,context.session,
+        {failure_code:'goal_capability_coverage',failure_stage:'world_authoring_precommit',
+          detail:resolution.missing.join('；').slice(0,400)});
+      if(revised?.kind==='system_operation'&&revised.operation_plane==='world_authoring')
+        return executeSystemInput(service,body,context,revised,true);
+    }
+    if(resolution.handled&&resolution.kind==='EXECUTION_FAILURE'&&resolution.recoverable&&!recoveryAttempted){
+      currentTrace()?.warn('system.goal_recovery',{metadata:{failure_code:'profile_parameters_invalid',
+        stage:'world_authoring_precommit',reason:resolution.reason??null,revision:save.state_revision}});
+      const revised=await interpretSemanticEntry(service,view,body.input,'SYSTEM',null,context.session,
+        {failure_code:'profile_parameters_invalid',failure_stage:'world_authoring_precommit',
+          detail:resolution.reason??'人物资料字段无效'});
+      if(revised?.kind==='system_operation'&&revised.operation_plane==='world_authoring')
+        return executeSystemInput(service,body,context,revised,true);
+    }
+    if(!resolution.handled)return {category:'CAPABILITY_GAP',tool_id:null,side_effect_level:'none',needs_confirmation:false,
+      message:'目前没有可验证的世界编辑能力完成这项目标；世界没有改变。不会自动创建框架开发任务。'};
+    return universalSystemResult(resolution);
+  }
+  if(semantic?.operation_plane==='framework_development'){
+    const selected=['EXTENSION_REQUEST','FRAMEWORK_DEVELOPMENT'].includes(plan.category)?plan:
+      {...plan,category:'EXTENSION_REQUEST' as const,tool_id:'extension.create',args:{request:body.input},
+        needs_confirmation:true,reply:null};
+    return executeTool(service,selected,body,context,toolsList,context.entityId);
+  }
   const entityId = context.entityId;
   // The session goal is what the tool layer executes; understanding always reads what the player just said.
   const latest = context.latest ?? body.input;
+  // This is a System-only semantic compiler. It never routes a game action or edits the baseline.
+  // The provider owns the distinction between persistent runtime guidance, a style
+  // configuration, and ordinary discussion. This compiler only proposes advisory patches;
+  // it cannot execute a world action or create a patch unless it returns `create`.
+  const providerName=service.ai.adapter.name;
+  const liveProvider=!['mock','fixture'].includes(providerName);
+  const freshConfiguration=plan.tool_id!=='behavior.clear'&&!context.answeringClarification&&!context.behaviorScope;
+  const configurationUnderstanding=liveProvider&&freshConfiguration
+    ?(await understandSystemRequest(service,view,save,latest,null)).understanding:undefined;
+  // Control delegation precedes the advisory behavior compiler. The latter must
+  // neither swallow an executable management request nor add an unrelated call.
+  if(configurationUnderstanding&&(configurationUnderstanding.goal_control||configurationUnderstanding.likely_workflow==='goal_management'||
+    configurationUnderstanding.likely_workflow==='unclear'&&configurationUnderstanding.confidence>=.8&&configurationUnderstanding.understood.length)){
+    const delegated=await resolveUnderstanding(service,view,save,toolsList,latest,context,configurationUnderstanding);
+    if(delegated)return delegated;
+  }
+  if(semantic?.operation_plane==='system_management'&&
+    (['EXTENSION_REQUEST','FRAMEWORK_DEVELOPMENT'].includes(plan.category)||
+      configurationUnderstanding?.likely_workflow==='development_task'))
+    return {category:'USER_AMBIGUITY',tool_id:null,side_effect_level:'none',needs_confirmation:false,
+      message:'这次配置请求与拟执行的开发操作不一致，世界和框架都没有改变。请说明要调整的现有设置。'};
+  const configuredPreference=Boolean(configurationUnderstanding&&configurationUnderstanding.confidence>=0.8
+    &&(['style','topic'].includes(configurationUnderstanding.configuration_kind??'')
+      ||(configurationUnderstanding.configuration_kind===null
+        &&configurationUnderstanding.style_target!=='character'
+        &&Boolean(configurationUnderstanding.narrative_preference?.tone||configurationUnderstanding.narrative_preference?.mode))));
+  const behaviorCandidate=liveProvider&&freshConfiguration&&!configuredPreference;
+  if(behaviorCandidate){
+    const feedback=await compileBehaviorFeedback(service,latest,body.request_id);
+    if(feedback.kind==='create'){
+      const saved=await service.putBehaviorPatch(feedback.patch);
+      return {category:'AI_BEHAVIOR_FEEDBACK',tool_id:'behavior.guidance',side_effect_level:'configuration',needs_confirmation:false,
+        title:'AI 行为指导',message:`已保存「${feedback.patch.title}」（${feedback.patch.scope==='global'?'全局':feedback.patch.scope==='world'?'当前世界':'当前会话'}）。${feedback.overridden?`它覆盖了「${feedback.overridden}」。`:''}这只指导后续判断，不能改变世界事实或绕过结算。`,
+        view:saved.view,advanced:{behavior_patches:saved.patches}};
+    }
+    if(feedback.kind==='rejected')return {category:'AI_BEHAVIOR_FEEDBACK',tool_id:null,side_effect_level:'none',needs_confirmation:false,
+      title:'AI 行为指导',message:feedback.reason};
+    // A prose or topic configuration is deliberately "discussion" to the patch compiler;
+    // let the existing System configuration model handle it instead of stopping here.
+  }
   // A second-person question is about this Assistant: a recently talked-to NPC must not supply its subject.
   if(asksAboutAssistant(latest)){context.preferredNames=undefined;context.entityId=undefined;}
   // A goal that is still waiting for a clarification keeps its original request: short answers fill it in,
@@ -557,7 +712,9 @@ async function executeSystemInput(service: GameService, raw: unknown, context: S
     if(delegated)universalInput=delegated.resolved_request;
     else return {category:'EXECUTION_FAILURE',tool_id:null,side_effect_level:'none',needs_confirmation:false,message:'这次没能完成你委托的选择，世界状态没有改变；稍后可以重试。',pending_goal:pendingGoal};
   }
-  const universal = await resolveUniversalGoal(service, universalInput, { request_id: body.request_id, expected_revision: body.expected_revision }, { external_effects_confirmed: body.confirmed });
+  const explicitPreference=shallowUnderstanding(universalInput,view).narrative_preference;
+  const universal = semantic?.operation_plane==='system_management'||explicitPreference?{handled:false as const}:
+    await resolveUniversalGoal(service, universalInput, { request_id: body.request_id, expected_revision: body.expected_revision }, { external_effects_confirmed: body.confirmed });
   // Existing local media fallbacks (for example cropping an already stored full-body image) remain usable even
   // when the requested generation chain reports a missing provider capability.
   const mediaGap = universal.handled && universal.kind === 'CAPABILITY_GAP'
@@ -593,8 +750,8 @@ async function executeSystemInput(service: GameService, raw: unknown, context: S
       message: '当前待处理的修改与刚才的需求不一致，因此没有执行。你可以把想改的东西重新说一遍；如果确实要执行刚才那件事，请直接说明要确认它。',
     };
   }
-  if (needsUnderstanding(plan, latest, context)) {
-    const resolved = await resolveUnderstanding(service, view, save, toolsList, latest, context);
+  if ((plan.tool_id==='behavior.configure'&&!context.behaviorScope)||explicitPreference||needsUnderstanding(plan, latest, context)) {
+    const resolved = await resolveUnderstanding(service, view, save, toolsList, latest, context,configurationUnderstanding);
     if (resolved) {
       if(mediaGap&&universal.handled&&universal.kind==='CAPABILITY_GAP')return {...resolved,category:'CAPABILITY_GAP',advanced:{...resolved.advanced,resolution_kind:universal.kind,missing:universal.missing,goal:universal.goal,plan:universal.plan}};
       return resolved;
@@ -606,17 +763,32 @@ async function executeSystemInput(service: GameService, raw: unknown, context: S
   return express(service, view, save, body.input, executed, context);
 }
 
+async function delegateGoalManagement(service:GameService,body:{input:string;request_id?:string;expected_revision?:number;game_id?:string},control:OpenGoalControl,goal?:GoalSpec):Promise<SystemResult>{
+ if(goal&&(!goal.goal_control||goal.goal_control.kind!==control.kind||goal.goal_control.target!==control.target)){
+   const reason_code='goal_control_source_conflict';
+   const issues=[{field:'goal.goal_control',expected:control,actual:goal.goal_control}];
+   currentTrace()?.warn('system.goal_control.rejected',{metadata:{reason_code,issues}});
+   return {category:'EXECUTION_FAILURE',tool_id:null,side_effect_level:'none',needs_confirmation:false,
+     message:'目标管理语义来源不一致，尚未执行。',advanced:{reason_code,authorization_issues:issues}};
+ }
+ const authoritativeGoal=goal??goalSpecSchema.parse({objective:body.input.slice(0,600),goal_control:control,
+   persistence:'session',world_mutation:false,external_artifact:false,multi_step:false});
+ const resolution=await resolveUniversalGoal(service,body.input,body,{authoritativeGoal,capabilityScope:'open_goals'});
+ return resolution.handled?universalSystemResult(resolution):{category:'EXECUTION_FAILURE',tool_id:null,side_effect_level:'none',needs_confirmation:false,
+   message:'这项目标管理操作尚未形成可验证的执行契约，尚未执行。'};
+}
 function universalSystemResult(resolution: Exclude<UniversalResolution, { handled: false }>): SystemResult {
-  if (resolution.kind === 'EXECUTED') return { category: 'UNIVERSAL_GOAL', tool_id: resolution.plan.steps.at(-1)?.capability_id ?? null, side_effect_level: 'canonical-state', needs_confirmation: false, message: resolution.message, view: resolution.view, resolved: resolvedFrom('capability_question',null,resolution.goal.objective), advanced: { resolution_kind: resolution.kind, goal: resolution.goal, plan: resolution.plan, ...(resolution.details ?? {}) } };
+  if (resolution.kind === 'EXECUTED') return { category: resolution.goal.goal_control?'OPEN_GOAL_CONTROL':'UNIVERSAL_GOAL', tool_id: resolution.plan.steps.at(-1)?.capability_id ?? null, side_effect_level:resolution.goal.goal_control&&['queried','already_terminal'].includes(String((resolution.details?.goal_control as any)?.status))?'none':'canonical-state', needs_confirmation: false, message: resolution.message, view: resolution.view, ...(resolution.goal.goal_control?{workflow:'goal_management' as const}:{}), resolved: resolvedFrom(resolution.goal.goal_control?'goal_management':'capability_question',null,resolution.goal.objective), advanced: { resolution_kind: resolution.kind, goal: resolution.goal, plan: resolution.plan, ...(resolution.details ?? {}) } };
   if (resolution.kind === 'USER_AMBIGUITY') return { category: 'USER_AMBIGUITY', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: resolution.candidates.length ? `${resolution.question}\n${resolution.candidates.join('、')}` : resolution.question, clarification: 'universal_goal', pending_field: '具体目标', advanced: { resolution_kind: resolution.kind } };
   if (resolution.kind === 'CAPABILITY_GAP') return { category: 'CAPABILITY_GAP', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: resolution.message, advanced: { resolution_kind: resolution.kind, missing: resolution.missing, goal: resolution.goal, plan: resolution.plan } };
-  return { category: 'EXECUTION_FAILURE', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: resolution.message, advanced: { resolution_kind: resolution.kind, retryable: resolution.retryable, goal: resolution.goal, plan: resolution.plan, reason:resolution.reason??null } };
+  return { category: 'EXECUTION_FAILURE', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: resolution.message,view:resolution.view, advanced: { ...(resolution.details??{}),resolution_kind: resolution.kind, retryable: resolution.retryable, goal: resolution.goal, plan: resolution.plan, reason:resolution.reason??null } };
 }
 const expressionSchema = z.strictObject({ message: z.string().min(1).max(800) });
 async function express(service: GameService, view: ReturnType<typeof publicView>, save: Awaited<ReturnType<GameService['current']>>, text: string, executed: SystemResult, context: SystemExecutionContext): Promise<SystemResult> {
   const adapter = (service.ai as unknown as { adapter?: { name?: string } } | undefined)?.adapter;
   const executor = (service.ai as unknown as { systemAgent?: unknown });
   if (!adapter || adapter.name === 'mock' || typeof executor.systemAgent !== 'function') return executed;
+  if(executed.category==='OPEN_GOAL_CONTROL'||executed.advanced?.goal_control)return executed;
   if (executed.clarification || executed.needs_confirmation || executed.directive) return executed;
   // A read-only acknowledgement (feedback, logs) stays deterministic: no model call for a button-sized action.
   const material = ['configuration','canonical-management','canonical-state','development'].includes(executed.side_effect_level) || executed.category === 'CAPABILITY_ANSWER';

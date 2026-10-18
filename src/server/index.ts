@@ -2,7 +2,7 @@ import type {InstalledWorld} from '../routine/migration.js';
 import { readFile, mkdir, open, unlink } from 'node:fs/promises';
 import { networkInterfaces } from 'node:os';
 import { resolve, join } from 'node:path';
-import { createApp } from './app.js';
+import { createApp,runtimeIdentity } from './app.js';
 import { GameService } from './service.js';
 import { JsonStore } from '../storage/json-store.js';
 import { AIRuntime } from '../ai/runtime.js';
@@ -43,7 +43,7 @@ const port = Number(process.env.PORT ?? 3100);
 const host = process.env.HOST?.trim() || '127.0.0.1';
 const allowLan = host === '0.0.0.0' || /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host);
 const app = createApp(service, undefined, providers, resolve(directory, 'assets'), { allowLan });
-logger.info('runtime.startup', { module: 'server', metadata: { provider: providers.name, adapter: initialProvider.provider, data_directory: directory, log_directory: logDirectory, host, port } });
+logger.info('runtime.startup', { module: 'server', metadata: { runtime:runtimeIdentity,provider: providers.name, adapter: initialProvider.provider, data_directory: directory, log_directory: logDirectory, host, port } });
 const server = app.listen(port, host, () => {
   console.log(`Agent Game Framework (${providers.name})`);
   console.log(`本机: http://127.0.0.1:${port}`);

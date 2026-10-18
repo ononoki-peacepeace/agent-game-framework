@@ -1,4 +1,5 @@
 import type {AvatarCropMetadata} from '../shared/avatar.js';
+import {awaitInputResult,clearPendingInput,type InputStatus} from './input-recovery.js';
 let token = '';
 const naturalFailure='这次请求没有成功完成，当前状态没有被修改。请检查本地服务后重试。';
 const internalFailure=/Failed to fetch|TypeError|ECONNRESET|AbortError|socket hang up|HTTP\s*5\d\d|at\s+\S+\s*\(/i;
@@ -7,15 +8,40 @@ async function fetchJson(url:string,init:RequestInit,retryRead=false){
  let response:Response;
  for(let attempt=0;;attempt++)try{response=await fetch(url,init);break;}catch{if(retryRead&&attempt===0)continue;throw new Error(naturalFailure);}
  let result:any;try{result=await response.json();}catch{throw new Error(response.ok?'本地服务返回了无法读取的结果。':naturalFailure);}
- if(!response.ok)throw Object.assign(new Error(readableError(result?.error,'请求没有完成，当前状态没有被修改。')),{payload:result});
+ if(!response.ok)throw Object.assign(new Error(readableError(result?.error,'请求没有完成，当前状态没有被修改。')),{payload:result,httpStatus:response.status});
  return result;
 }
 export async function session() {
-  const value=await fetchJson('/api/session',{method:'GET'},true);token=value.token;return value as { token: string; engine: string; provider?: { provider: string; model?: string | null; base_url?: string | null } | null };
+  const value=await fetchJson('/api/session',{method:'GET'},true);token=value.token;return value as { token: string; engine: string; runtime?:{version?:string;code_sha256?:string|null}; provider?: { provider: string; model?: string | null; base_url?: string | null } | null };
 }
 export async function request<T>(path: string, body?: unknown): Promise<T> {
   const read=body===undefined;
-  return await fetchJson(`/api/${path}`, { method: read ? 'GET' : 'POST', headers: { 'Content-Type': 'application/json', 'X-Game-Token': token }, ...(read ? {} : { body: JSON.stringify(body) }) },read) as T;
+  const send=fetchJson(`/api/${path}`, { method: read ? 'GET' : 'POST', headers: { 'Content-Type': 'application/json', 'X-Game-Token': token }, ...(read ? {} : { body: JSON.stringify(body) }) },read) as Promise<T>;
+  if(path!=='input'||!body||typeof body!=='object')return await send;
+  const input=body as {request_id?:string;game_id?:string};
+  if(!input.request_id||!input.game_id)return await send;
+  const marker={request_id:input.request_id,game_id:input.game_id,started_at:Date.now()};
+  sessionStorage.setItem('herne.pending.input',JSON.stringify(marker));
+  try{
+    const result=await awaitInputResult(send,()=>inputRequestStatus<T>(marker.game_id,marker.request_id));
+    clearPendingInput(marker);
+    return result;
+  }catch(error){
+    if(!(error instanceof Error&&error.name==='InputStillRunning'))clearPendingInput(marker);
+    throw error;
+  }
+}
+
+export async function inputRequestStatus<T>(gameId:string,requestId:string,signal?:AbortSignal):Promise<InputStatus<T>>{
+  try{return await fetchJson(`/api/input/status/${encodeURIComponent(requestId)}?game_id=${encodeURIComponent(gameId)}`,
+    {method:'GET',headers:{'X-Game-Token':token},signal:signal?AbortSignal.any([signal,AbortSignal.timeout(10_000)]):AbortSignal.timeout(10_000)},true) as InputStatus<T>;
+  }catch(error){
+    const failure=error as {httpStatus?:number;payload?:{state?:string}};
+    // Only this endpoint's explicit missing-record contract is terminal unknown.
+    // A proxy/route 404, server error or disconnected network remains an error.
+    if(failure.httpStatus===404&&failure.payload?.state==='unknown')return {state:'unknown',reason:'record_missing'};
+    throw error;
+  }
 }
 
 export async function uploadAvatar(entityId: string, file: File, gameId: string, revision: number,crop?:AvatarCropMetadata) {

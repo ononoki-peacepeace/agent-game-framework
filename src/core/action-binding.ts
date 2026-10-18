@@ -27,36 +27,36 @@ function storageSides(input:string){
   return verb?{item:input.slice(0,verb.index),container:input.slice(verb.index+verb[0].length)}:null;
 }
 
-function roleName(save:SavePackage,text:string,hint?:string){
+function roleName(save:SavePackage,text:string,knownIds:Set<string>,hint?:string){
   if(hint)return text.includes(hint)?hint:null;
-  const names=[...new Set(save.entities.filter(entity=>entity.components.item)
+  const names=[...new Set(save.entities.filter(entity=>entity.components.item&&knownIds.has(entity.id))
     .map(entity=>String(entity.components.identity?.name??'')).filter(name=>name.length>=2&&text.includes(name)))];
   // A longer exact name supersedes its substring; two unrelated names are ambiguous.
   const maximal=names.filter(name=>!names.some(other=>other!==name&&other.includes(name)));
   return maximal.length===1?maximal[0]:null;
 }
 
-function bindRole(save:SavePackage,name:string|null,role:'item'|'container',visibleIds:Set<string>,claimedId?:string|null):BoundItem{
+function bindRole(save:SavePackage,name:string|null,role:'item'|'container',visibleIds:Set<string>,knownIds:Set<string>,claimedId?:string|null):BoundItem{
   const missing=():BoundItem=>({status:'missing',entity:undefined,known:false,visible:false,
     reachable:false,usableForAction:false,possession:'none'});
   if(!name)return missing();
   const player=save.entities.find(entity=>entity.id===save.player_state.entity_id);
   const owned=(player?.components.inventory as Inventory|undefined)?.items??{};
   const here=player?.components.location?.location_id;
-  const candidates=save.entities.filter(entity=>entity.components.item&&entity.components.identity?.name===name);
+  const candidates=save.entities.filter(entity=>entity.components.item&&knownIds.has(entity.id)&&entity.components.identity?.name===name);
   if(!candidates.length)return missing();
   const reachable=candidates.filter(entity=>(owned[entity.id]??0)>0||Boolean(here&&entity.components.location?.location_id===here));
   const selected=reachable.length===1?reachable[0]:candidates.length===1?candidates[0]:undefined;
-  if(!selected)return {status:'ambiguous',entity:undefined,known:candidates.some(entity=>visibleIds.has(entity.id)),
+  if(!selected)return {status:'ambiguous',entity:undefined,known:true,
     visible:reachable.some(entity=>visibleIds.has(entity.id)),reachable:reachable.length>0,
     usableForAction:false,possession:'none'};
   const held=(owned[selected.id]??0)>0;
   const inScene=Boolean(here&&selected.components.location?.location_id===here);
-  const isKnown=visibleIds.has(selected.id);
+  const isKnown=knownIds.has(selected.id),isVisible=visibleIds.has(selected.id);
   const canReach=held||inScene;
   const correctId=!claimedId||!save.entities.some(entity=>entity.id===claimedId)||claimedId===selected.id;
-  return {status:'bound',entity:selected,known:isKnown,visible:isKnown&&canReach,reachable:canReach,
-    usableForAction:isKnown&&canReach&&correctId&&Boolean(selected.components.item)&&(role==='item'||selected.components.item?.container===true),
+  return {status:'bound',entity:selected,known:isKnown,visible:isVisible&&canReach,reachable:canReach,
+    usableForAction:isVisible&&canReach&&correctId&&Boolean(selected.components.item)&&(role==='item'||selected.components.item?.container===true),
     possession:held?'held':inScene?'scene':'elsewhere'};
 }
 
@@ -66,10 +66,12 @@ export function bindStorageAction(save:SavePackage,input:string,hints?:{
 }):StorageBinding{
   const sides=storageSides(input);
   const visibleIds=new Set(publicView(save).entities.map(entity=>entity.id));
-  const itemName=sides?roleName(save,sides.item,hints?.itemName):null;
-  const containerName=sides?roleName(save,sides.container,hints?.containerName):null;
-  const item=bindRole(save,itemName,'item',visibleIds,hints?.itemId);
-  const container=bindRole(save,containerName,'container',visibleIds,hints?.containerId);
+  const knownIds=new Set([...visibleIds,...save.entities.filter(entity=>entity.components.item&&
+    entity.components.discovery?.known_to_player===true).map(entity=>entity.id)]);
+  const itemName=sides?roleName(save,sides.item,knownIds,hints?.itemName):null;
+  const containerName=sides?roleName(save,sides.container,knownIds,hints?.containerName):null;
+  const item=bindRole(save,itemName,'item',visibleIds,knownIds,hints?.itemId);
+  const container=bindRole(save,containerName,'container',visibleIds,knownIds,hints?.containerId);
   const capability=evaluateWorldPrerequisites(save,{requirements:[{kind:'capability',subject_id:'inventory.storage'}]}).status==='EXECUTABLE';
   const usableForAction=capability&&item.usableForAction&&container.usableForAction&&item.entity?.id!==container.entity?.id;
   const reason=!capability?'当前世界没有物品收纳能力'

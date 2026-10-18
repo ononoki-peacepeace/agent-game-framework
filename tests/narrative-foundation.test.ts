@@ -19,6 +19,19 @@ describe('narrative architecture and compatibility',()=>{
  it('keeps age and canonical history out of narrative state',()=>{const save=fresh(),state=ensureNarrativeState(save);expect(state).not.toHaveProperty('current_age');expect(JSON.stringify(state)).not.toContain('narrative_history');expect(state.player_entity_ref).toBe(save.player_state.entity_id);});
  it('builds a bounded context by reference and includes only explicitly relevant private truth',()=>{const save=fresh();const truth=ensureHiddenTruth(save);truth.commitments.push({id:'hidden_a',commitment:'HARD_TRUTH',statement:'A是真相',seed_constraint:null,source:'GM_DECLARED',created_event_ref:null,evidence:[],known_by:[]},{id:'hidden_b',commitment:'HARD_TRUTH',statement:'B是真相',seed_constraint:null,source:'GM_DECLARED',created_event_ref:null,evidence:[],known_by:[]});const context=buildNarrativeContext(save,['hidden_a']);expect(context.relevant_hidden_truth.map(x=>x.id)).toEqual(['hidden_a']);expect(context).not.toHaveProperty('entities');expect(context).not.toHaveProperty('history');});
  it('never projects hidden truth to the player view',()=>{const save=fresh();ensureHiddenTruth(save).commitments.push({id:'secret',commitment:'HARD_TRUTH',statement:'幕后答案',seed_constraint:null,source:'GM_DECLARED',created_event_ref:null,evidence:[],known_by:[]});expect(JSON.stringify(publicView(save))).not.toContain('幕后答案');});
+ it('hides a truth-linked arc and saga until the player learns the truth',()=>{
+   const save=fresh(),player=save.player_state.entity_id;
+   const truth={id:'secret',commitment:'HARD_TRUTH' as const,statement:'幕后答案',seed_constraint:null,
+     source:'GM_DECLARED' as const,created_event_ref:null,evidence:[],known_by:[] as string[]};
+   ensureHiddenTruth(save).commitments.push(truth);
+   addArc(save,{...arc('secret_arc', 'ACTIVE',[],['secret']),title:'幕后答案的故事',summary:'幕后答案尚未揭开'});
+   save.narrative_state!.current_saga={id:'secret_saga',title:'幕后答案篇章',start_time:structuredClone(save.runtime.time),
+     phase:'FORMING',arc_refs:['secret_arc'],canonical_event_refs:[]};
+   expect(JSON.stringify(publicView(save))).not.toContain('幕后答案');
+   truth.known_by.push(player);
+   expect(publicView(save).story?.major_arcs.map(item=>item.id)).toContain('secret_arc');
+   expect(publicView(save).story?.current_saga?.id).toBe('secret_saga');
+ });
  it('world snapshots include narrative organization so undo restores it atomically',()=>{const before=fresh(),after=structuredClone(before);addArc(after,arc('atomic'));after.state_revision++;checkpointTurn(before,after,randomUUID());expect(worldImage(after)).toHaveProperty('narrative_state');const restored=structuredClone(after.turn_checkpoint!.before) as any;expect(restored.narrative_state.arcs).toEqual([]);});
 });
 
@@ -49,4 +62,12 @@ describe('story craft remains grounded in canonical history',()=>{
 describe('service persistence',()=>{
  it('story management is revisioned, receipt-deduplicated and undoable',async()=>{const save=fresh();addArc(save,arc('service_arc'));const store=new MemoryStore();await store.write(validateSave(save));const ai=new AIRuntime({name:'fixture',generate:async()=>{throw Error('unused')}});const service=new GameService(store,ai,save.definition);const request_id=randomUUID();const first=await service.narrativeCommand({request_id,game_id:save.game_id,expected_revision:save.state_revision},'DORMANT');expect(first.view.story?.major_arcs[0].status).toBe('DORMANT');const duplicate=await service.narrativeCommand({request_id,game_id:save.game_id,expected_revision:save.state_revision},'DORMANT');expect(duplicate.view.revision).toBe(first.view.revision);await service.undo({request_id:randomUUID(),game_id:save.game_id,expected_revision:first.view.revision});expect((await service.view())!.story?.major_arcs[0].status).toBe('ACTIVE');});
  it('advanced diagnostics expose truth counts but never secret prose',async()=>{const save=fresh();save.gm_state.hidden_truth={version:1,commitments:[{id:'secret',commitment:'HARD_TRUTH',statement:'NEVER_EXPOSE_THIS',seed_constraint:null,source:'GM_DECLARED',created_event_ref:null,evidence:[],known_by:[]}]};const store=new MemoryStore();await store.write(save);const service=new GameService(store,new AIRuntime({name:'fixture',generate:async()=>{throw Error('unused')}}),save.definition);const debug=await service.narrativeDebug();expect(debug.hidden_truth_summary.count).toBe(1);expect(JSON.stringify(debug)).not.toContain('NEVER_EXPOSE_THIS');});
+ it('uses the same player projection for narrative diagnostics',async()=>{
+   const save=fresh();ensureHiddenTruth(save).commitments.push({id:'secret',commitment:'HARD_TRUTH',
+     statement:'SECRET_STORY',seed_constraint:null,source:'GM_DECLARED',created_event_ref:null,evidence:[],known_by:[]});
+   addArc(save,{...arc('secret_arc','ACTIVE',[],['secret']),title:'SECRET_STORY',summary:'SECRET_STORY'});
+   const store=new MemoryStore();await store.write(save);
+   const service=new GameService(store,new AIRuntime({name:'fixture',generate:async()=>{throw Error('unused')}}),save.definition);
+   expect(JSON.stringify(await service.narrativeDebug())).not.toContain('SECRET_STORY');
+ });
 });

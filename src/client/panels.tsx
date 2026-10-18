@@ -1,7 +1,7 @@
 import {endedTask,taskGroups} from './task-visibility.js';
 import type {RoutineJob} from '../routine/jobs.js';
 import type {Calendar} from '../routine/schema.js';
-import { useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { request } from './api.js';
 import {AvatarCropEditor} from './AvatarCropEditor.js';
 import {SystemPanel} from './SystemPanel.js';
@@ -9,6 +9,8 @@ import {relationshipBadge, relationshipSummary} from '../shared/relationship.js'
 import {genderLabel} from '../shared/gender.js';
 import {ageLabel} from '../shared/age.js';
 import {routePath} from '../core/map.js';
+import {layoutMapEdges,mapNodePositions} from './map-graph.js';
+export {visibleRouteEdges} from './map-graph.js';
 
 import {RoutinePlanPanel} from './RoutinePlanPanel.js';
 import type {AvatarCropMetadata} from '../shared/avatar.js';
@@ -18,11 +20,11 @@ export const nameOf = (entity?: Entity) => String(entity?.components.identity?.n
 export const playerOf = (view: PublicView) => view.entities.find(e => e.id === view.player_id)!;
 export const locationOf = (view: PublicView) => String(playerOf(view).components.location?.location_id ?? '');
 export interface PanelProps { onView?:(next:PublicView)=>void; onExport?:()=>void; onOpenCharacterCrop?:(entityId:string)=>void; acknowledgeTask?:(id:string,outcome:'completed'|'cancelled')=>Promise<void>;
-routineJob?:RoutineJob|null; configureCalendar?:(calendar:Calendar)=>Promise<void>; routineAuto?: boolean; pauseRoutine?: () => void; onOpenLogs?:()=>void; view: PublicView; act: (action: ActionInput) => void; busy: boolean; uploadAvatar?: (entity: Entity, file: File, crop?:AvatarCropMetadata) => Promise<void>; clearAvatar?: (entity: Entity) => Promise<void>; uploadVisualAsset?: (entity: Entity, slot: string, file: File) => Promise<void>; importCharacterCard?: (file: File) => Promise<void>; onSelectCharacter?: (entity: Entity) => void; editPersona?:(entity:Entity,persona:{personality:string;speech_style:string;verbal_habits:string})=>Promise<void>; extensionAct?: (extensionId:string,targetEntityId:string,actionType:string)=>Promise<void> }
+routineJob?:RoutineJob|null; configureCalendar?:(calendar:Calendar)=>Promise<void>; routineAuto?: boolean; pauseRoutine?: () => void; onOpenLogs?:()=>void; view: PublicView; act: (action: ActionInput) => void; busy: boolean; uploadAvatar?: (entity: Entity, file: File, crop?:AvatarCropMetadata) => Promise<void>; clearAvatar?: (entity: Entity) => Promise<void>; uploadVisualAsset?: (entity: Entity, slot: string, file: File) => Promise<void>; importCharacterCard?: (file: File) => Promise<void>; importCharacterText?:(text:string)=>Promise<void>; onSelectCharacter?: (entity: Entity) => void; editPersona?:(entity:Entity,persona:{personality:string;speech_style:string;verbal_habits:string})=>Promise<void>; extensionAct?: (extensionId:string,targetEntityId:string,actionType:string)=>Promise<void> }
 const numbers = (value: unknown) => (value ?? {}) as Record<string, number>;
 const inventory = (e: Entity) => numbers(e.components.inventory?.items);
 const relLabels: Record<string,string> = { familiarity:'熟悉度', trust:'信任', affection:'亲近', dependence:'依赖', protectiveness:'保护欲', suspicion:'怀疑', fear:'恐惧', respect:'尊重', romantic_interest:'恋爱倾向', leverage:'影响力' };
-export function Avatar({ entity, className='' }: { entity: Entity; className?: string }) { const id=entity.components.identity?.avatar_id; return id ? <span className={`avatar has-image ${className}`.trim()}><img src={`/api/avatar/${String(id)}`} alt={`${nameOf(entity)}头像`}/></span> : <span className={`avatar ${className}`.trim()} aria-label="无头像">{nameOf(entity).slice(0, 1)}</span>; }
+export function Avatar({ entity, className='' }: { entity: Entity; className?: string }) { const id=entity.components.identity?.avatar_id; const [failed,setFailed]=useState(false); useEffect(()=>setFailed(false),[id]); return id&&!failed ? <span className={`avatar has-image ${className}`.trim()}><img src={`/api/avatar/${String(id)}`} alt={`${nameOf(entity)}头像`} onError={()=>setFailed(true)}/></span> : <span className={`avatar ${className}`.trim()} aria-label={id?'头像加载失败':'无头像'}>{nameOf(entity).slice(0, 1)}</span>; }
 function textSummary(raw: unknown, limit?: number) {
   const text = String(raw ?? '').trim();
   if (!text) return '';
@@ -187,10 +189,11 @@ function Status({ view, uploadAvatar, clearAvatar, uploadVisualAsset, busy, onSe
     {Object.keys(traits).length > 0 && <div className="chip-row">{Object.entries(traits).slice(0,8).map(([id,t]) => <span className="chip" key={id}>{t.name ?? '未命名特质'}{t.status && t.status !== 'active' ? ` · ${t.status}` : ''}</span>)}</div>}
   </div>;
 }
-function Characters({ view, uploadAvatar, clearAvatar, importCharacterCard, busy, onSelectCharacter }: PanelProps) {
+function Characters({ view, uploadAvatar, clearAvatar, importCharacterCard, importCharacterText, busy, onSelectCharacter }: PanelProps) {
   const current = locationOf(view);
   const characters = view.entities.filter(e => e.components.character && e.id !== view.player_id);
-  return <><div className="character-import"><div><strong>角色卡</strong><small>支持 Tavern/Character Card V1、V2、V3 JSON。导入到当前位置，不推进时间，也不调用 AI。</small></div>{importCharacterCard&&<label className="file-button">导入角色卡 JSON<input type="file" accept=".json,application/json" disabled={busy} onChange={ev=>{const f=ev.target.files?.[0];ev.target.value='';if(f)void importCharacterCard(f)}}/></label>}</div><div className="list">{characters.map(e => {
+  const [pastedCard,setPastedCard]=useState('');
+  return <><div className="character-import"><div><strong>角色卡</strong><small>支持 Tavern/Character Card V1–V3、普通 JSON、文本或 Markdown；先预览世界适配，再确认导入。</small></div>{importCharacterCard&&<label className="file-button">导入人物卡<input type="file" accept=".json,.txt,.md,application/json,text/plain,text/markdown" disabled={busy} onChange={ev=>{const f=ev.target.files?.[0];ev.target.value='';if(f)void importCharacterCard(f)}}/></label>}{importCharacterText&&<details><summary>粘贴人物卡</summary><textarea aria-label="粘贴人物卡内容" value={pastedCard} onChange={e=>setPastedCard(e.target.value)} maxLength={100000} placeholder="首行写姓名，或粘贴 JSON / Markdown 人物卡"/><button type="button" disabled={busy||!pastedCard.trim()} onClick={()=>void importCharacterText(pastedCard)}>预览适配</button></details>}</div><div className="list">{characters.map(e => {
     const here = e.components.location?.location_id === current;
     const role = String(e.components.character?.role ?? '人物');
     const card = e.components.character_card as undefined|Record<string,unknown>;
@@ -207,13 +210,17 @@ function Relationships({ view }: PanelProps) {
 function InventoryPanel({ view }: PanelProps) {
   const actor=playerOf(view),entries=Object.entries(inventory(actor)).filter(([,n])=>n>0);
   const placements=(actor.components.inventory?.placements??{}) as Record<string,string|null>;
+  const equipped=new Set(Object.values((actor.components.equipment?.slots??{}) as Record<string,string|null>).filter((id):id is string=>Boolean(id)));
   const weight=entries.reduce((sum,[id,n])=>sum+Number(view.entities.find(e=>e.id===id)?.components.item?.weight??0)*n,0);
-  const children=(parent:string|null)=>entries.filter(([id])=>(placements[id]??null)===parent);
+  const children=(parent:string|null)=>entries.filter(([id])=>(placements[id]??null)===parent&&!equipped.has(id));
   const renderItem=([id,n]:[string,number],depth=0):ReactNode=>{
     const entity=view.entities.find(e=>e.id===id),nested=children(id),label=<div className="item-row"><span>{nameOf(entity)}</span><b>× {n}</b></div>;
     return nested.length?<details key={id} className="inventory-container" style={{marginLeft:depth*12}}><summary>{label}</summary>{nested.map(entry=>renderItem(entry,depth+1))}</details>:<div key={id} style={{marginLeft:depth*12}}>{label}</div>;
   };
-  return <><p className="muted">总重量 {weight.toFixed(2)} · 来自当前持有物品</p>{entries.length?children(null).map(entry=>renderItem(entry)):<p className="empty">背包为空。</p>}</>;
+  const carried=children(null),worn=entries.filter(([id])=>equipped.has(id));
+  return <><p className="muted">总重量 {weight.toFixed(2)} · 包含手持与穿戴物品</p>
+    {carried.length?carried.map(entry=>renderItem(entry)):<p className="empty">背包为空。</p>}
+    {worn.length?<><h4>手持与穿戴</h4>{worn.map(entry=>renderItem(entry))}</>:null}</>;
 }
 
 function descendants(locations: PublicLocation[], parent: string) {
@@ -221,73 +228,101 @@ function descendants(locations: PublicLocation[], parent: string) {
   while (queue.length) { const p = queue.shift()!; for (const l of locations.filter(x => x.parent_id === p)) if (!out.has(l.id)) { out.add(l.id); queue.push(l.id); } }
   return out;
 }
-/** Graph edges depend on the visible map level, never on the player's current node. */
-export function visibleRouteEdges(view:PublicView,nodes:PublicLocation[]){
-  const childForLeaf=(leaf:string)=>nodes.find(node=>node.id===leaf||descendants(view.locations,node.id).has(leaf));
-  const aggregate=new Map<string,{from:string;to:string;travel_minutes:number;indirect?:boolean}>();
-  for(const route of view.routes){
-    const a=childForLeaf(route.from),b=childForLeaf(route.to);if(!a||!b||a.id===b.id)continue;
-    const key=[a.id,b.id].sort().join('::'),prev=aggregate.get(key);
-    if(!prev||route.travel_minutes<prev.travel_minutes)aggregate.set(key,{from:a.id,to:b.id,travel_minutes:route.travel_minutes});
-  }
-  // Older maps can connect sibling places through their parent rather than a direct A–B route.
-  for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){
-    const a=nodes[i],b=nodes[j],key=[a.id,b.id].sort().join('::');if(aggregate.has(key))continue;
-    const candidates=[routePath(view.routes,a.id,b.id),routePath(view.routes,b.id,a.id)]
-      .filter((path):path is NonNullable<typeof path>=>!!path?.length)
-      .filter(path=>path.slice(0,-1).every(edge=>!nodes.some(node=>node.id===edge.to)));
-    const path=candidates.sort((left,right)=>left.reduce((sum,edge)=>sum+edge.travel_minutes,0)-right.reduce((sum,edge)=>sum+edge.travel_minutes,0))[0];
-    if(path)aggregate.set(key,{from:a.id,to:b.id,travel_minutes:path.reduce((sum,edge)=>sum+edge.travel_minutes,0),indirect:true});
-  }
-  return aggregate;
-}
 function ancestorChain(locations: PublicLocation[], id: string) {
   const chain: PublicLocation[] = []; let cur = locations.find(l => l.id === id); const seen = new Set<string>();
   while (cur && !seen.has(cur.id)) { seen.add(cur.id); chain.unshift(cur); cur = cur.parent_id ? locations.find(l => l.id === cur!.parent_id) : undefined; }
   return chain;
 }
+/** The map remembers where the player was browsing, per world, so switching tabs never yanks it back. */
+function storedMapScope(gameId:string){try{return localStorage.getItem(`agf:map-scope:${gameId}`);}catch{return null;}}
 function MapPanel({ view, act, busy }: PanelProps) {
   const current = locationOf(view), currentChain = ancestorChain(view.locations, current);
-  const defaultScope = currentChain.length > 1 ? currentChain[currentChain.length - 2]?.id ?? null : null;
-  const [scope, setScope] = useState<string | null>(defaultScope);
+  const storedScope=()=>storedMapScope(view.game_id);
+  const bestScopeFor=(locationId:string)=>{const chain=ancestorChain(view.locations,locationId);
+    return chain.filter(place=>view.locations.some(item=>item.parent_id===place.id)).at(-1)?.id??null;};
+  const [scope, setScope] = useState<string | null>(() => {
+    const stored=storedMapScope(view.game_id);
+    if(stored!==null&&stored!==''&&view.locations.some(item=>item.id===stored))return stored;
+    return bestScopeFor(current);
+  });
+  // First entry, a new world, or a stale stored level opens the level that contains the player; afterwards the
+  // player's own browsing wins until they press 「定位当前位置」 again.
+  useEffect(()=>{const stored=storedMapScope(view.game_id);
+    if(stored!==null&&stored!==''&&view.locations.some(item=>item.id===stored))return;
+    setScope(bestScopeFor(current));},[view.game_id,current]);
+  useEffect(()=>{try{localStorage.setItem(`agf:map-scope:${view.game_id}`,scope??'');}catch{/* private mode */}},[scope,view.game_id]);
+  const [regionId,setRegionId]=useState<string|null>(null);
+  const currentRegion=view.locations.find(location=>location.id===current)?.spatial?.region_id??null;
+  useEffect(()=>{if(!currentRegion)return;const region=view.regions?.find(item=>item.id===currentRegion);
+    if(region&&storedScope()===null){setRegionId(currentRegion);setScope(region.scope_location_id);}},[currentRegion,view.regions]);
   const [zoom, setZoom] = useState(1);
-  const children = useMemo(() => view.locations.filter(l => (l.parent_id ?? null) === scope), [view.locations, scope]);
+  const [pan,setPan]=useState({x:0,y:0});
+  const drag=useRef<{x:number;y:number;pan:{x:number;y:number};width:number;height:number}|null>(null);
+  const suppressNodeClick=useRef(false);
+  const regionsForScope=(view.regions??[]).filter(region=>region.scope_location_id===scope);
+  const activeRegion=regionsForScope.some(region=>region.id===regionId)?regionId:null;
+  const children = useMemo(() => view.locations.filter(l => (l.parent_id ?? null) === scope&&
+    (!activeRegion||l.spatial?.region_id===activeRegion)), [view.locations, scope,activeRegion]);
   const scopeLocation = scope ? view.locations.find(l => l.id === scope) : undefined;
-  const visible = children.length ? children : (scope ? [scopeLocation!].filter(Boolean) : view.locations.filter(l => !l.parent_id));
+  const visible = children.length ? [...(scopeLocation?[scopeLocation]:[]),...children] : (scope ? [scopeLocation!].filter(Boolean) : view.locations.filter(l => !l.parent_id));
   const rootNodes = visible.length ? visible : view.locations;
-  const positions=new Map<string,{x:number;y:number}>(),cols=Math.max(2,Math.ceil(Math.sqrt(rootNodes.length)));
-  const grid=(index:number)=>({x:15+(index%cols)*(70/Math.max(1,cols-1)),y:18+Math.floor(index/cols)*28});
-  const occupied=(point:{x:number;y:number})=>[...positions.values()].some(other=>Math.hypot(other.x-point.x,other.y-point.y)<12);
-  for(const [index,location] of rootNodes.entries()){
-    let point=location.position?{x:location.position.x,y:location.position.y}:grid(index);
-    if(occupied(point))for(let candidate=0;candidate<Math.max(16,rootNodes.length*2);candidate++){const alternate=grid(candidate);if(!occupied(alternate)){point=alternate;break;}}
-    positions.set(location.id,point);
-  }
+  const positions=mapNodePositions(rootNodes,view,scope??undefined);
   const pos=(location:PublicLocation)=>positions.get(location.id)!;
-  const childForLeaf = (leaf: string) => rootNodes.find(node => node.id === leaf || descendants(view.locations,node.id).has(leaf));
-  const aggregate = visibleRouteEdges(view,rootNodes);
+  const drawn=layoutMapEdges(view,rootNodes,positions,view.recent_movement_route?.location_ids);
   const reachable = new Map(view.locations.map(location=>[location.id,routePath(view.routes,current,location.id)]));
-  const currentNode=childForLeaf(current);
   const connections=rootNodes.flatMap(location=>{const path=reachable.get(location.id);return path?.length?[{location,path,minutes:path.reduce((sum,edge)=>sum+edge.travel_minutes,0)}]:[];});
+  const boundaryRoutes=activeRegion?view.routes.filter(route=>route.gateway?.from_region_id===activeRegion&&
+    view.locations.some(location=>location.id===route.from&&location.spatial?.region_id===activeRegion)):[];
   const viewSize = 100 / zoom, offset = (100 - viewSize) / 2;
+  const panLimit=Math.max(0,offset);
+  const boundedPan={x:Math.max(-panLimit,Math.min(panLimit,pan.x)),
+    y:Math.max(-panLimit,Math.min(panLimit,pan.y))};
+  const resetViewport=()=>{setZoom(1);setPan({x:0,y:0});};
   const crumbs = scope ? ancestorChain(view.locations, scope) : [];
   function clickNode(location: PublicLocation) {
+    if(suppressNodeClick.current){suppressNodeClick.current=false;return;}
     const hasChildren = view.locations.some(l => l.parent_id === location.id);
-    if (hasChildren) { setScope(location.id); setZoom(1); return; }
+    if (hasChildren&&location.id!==scope) { setScope(location.id); resetViewport(); return; }
     const path = reachable.get(location.id); if (path?.length && !busy) act({ type:'MOVE', target_id:location.id });
   }
   return <div className="map-panel-wrap">
-    <div className="map-toolbar"><div className="breadcrumbs"><button className="crumb" onClick={()=>{setScope(null);setZoom(1)}}>世界</button>{crumbs.map(c=><button className="crumb" key={c.id} onClick={()=>{setScope(c.id);setZoom(1)}}>› {c.name}</button>)}</div><div className="zoom-controls"><button className="quiet" onClick={()=>setZoom(z=>Math.max(.7,z-.2))}>−</button><span>{Math.round(zoom*100)}%</span><button className="quiet" onClick={()=>setZoom(z=>Math.min(2.6,z+.2))}>＋</button><button className="quiet" onClick={()=>setZoom(1)}>重置</button></div></div>
+    <div className="map-toolbar"><div className="breadcrumbs"><button className="crumb" onClick={()=>{setScope(null);setRegionId(null);resetViewport()}}>世界</button>{crumbs.map(c=><button className="crumb" key={c.id} onClick={()=>{setScope(c.id);setRegionId(null);resetViewport()}}>› {c.name}</button>)}{scope&&<button className="crumb" onClick={()=>{setScope(scopeLocation?.parent_id??null);setRegionId(null);resetViewport()}}>返回上一级</button>}</div><div className="zoom-controls"><button className="quiet" onClick={()=>setZoom(z=>Math.max(1,z/1.35))}>−</button><span>{Math.round(zoom*100)}%</span><button className="quiet" onClick={()=>setZoom(z=>Math.min(6,z*1.35))}>＋</button><button className="quiet" onClick={resetViewport}>重置</button></div></div>
+    {regionsForScope.length>1&&<div className="map-region-tabs" aria-label="地图区域">{regionsForScope.map(region=><button key={region.id}
+      className={activeRegion===region.id?'selected':'quiet'} onClick={()=>{setRegionId(region.id);resetViewport()}}>{region.name}</button>)}</div>}
+    <div className="map-current-path">当前位置：世界{currentChain.map(place=>` › ${place.name}`).join('')} {currentChain.length>1&&<button className="crumb" onClick={()=>{setScope(bestScopeFor(current));setRegionId(currentRegion);setZoom(1);setPan({x:0,y:0})}}>定位当前位置</button>}</div>
     <div className="graph-map" aria-label="分层平面地图">
-      <svg viewBox={`${offset} ${offset} ${viewSize} ${viewSize}`} role="img" aria-label={scopeLocation ? `${scopeLocation.name}地图` : '世界地图'}>
-        {[...aggregate.values()].map(edge=>{const a=pos(rootNodes.find(l=>l.id===edge.from)!),b=pos(rootNodes.find(l=>l.id===edge.to)!); const midX=(a.x+b.x)/2; return <g key={`${edge.from}-${edge.to}`}><path className={`map-route${edge.indirect?' map-route-indirect':''}`} d={`M ${a.x} ${a.y} H ${midX} V ${b.y} H ${b.x}`}/><rect className="route-label-bg" x={midX-5.5} y={(a.y+b.y)/2-3} width="11" height="5.5" rx="1"/><text className="route-label" x={midX} y={(a.y+b.y)/2+.7}>{edge.travel_minutes}m{edge.indirect?'':'+'}</text></g>})}
-        {currentNode&&connections.filter(connection=>connection.path.length>1&&!aggregate.has([currentNode.id,connection.location.id].sort().join('::'))).map(connection=>{const from=pos(currentNode),to=pos(connection.location),midX=(from.x+to.x)/2;return <g key={`indirect:${connection.location.id}`}><path className="map-route map-route-indirect" d={`M ${from.x} ${from.y} H ${midX} V ${to.y} H ${to.x}`}/><text className="route-label" x={midX} y={(from.y+to.y)/2-2}>{connection.minutes}m</text></g>})}
-        {rootNodes.map(location=>{const p=pos(location), isCurrent=location.id===current || descendants(view.locations,location.id).has(current), path=reachable.get(location.id), hasChildren=view.locations.some(l=>l.parent_id===location.id), canReach=!!path?.length; return <g key={location.id} className={`map-node ${isCurrent?'current':canReach?'reachable':''} ${hasChildren?'container-node':''}`} tabIndex={0} role="button" onKeyDown={e=>{if(e.key==='Enter'||e.key===' ')clickNode(location)}} onClick={()=>clickNode(location)}><title>{location.name}{hasChildren?'（展开）':canReach?`（${path.reduce((sum,edge)=>sum+edge.travel_minutes,0)}分钟）`:''}</title><rect x={p.x-5} y={p.y-3.8} width="10" height="7.6" rx="1.2"/><text className="map-node-label" x={p.x} y={p.y+8}>{location.name}</text>{hasChildren&&<text className="map-node-plus" x={p.x+5.6} y={p.y-4}>＋</text>}</g>})}
+      {view.recent_movement_route&&<p className="map-recent-route">上次移动：{view.recent_movement_route.location_ids.map(id=>view.locations.find(place=>place.id===id)?.name??id).join(' → ')} · {view.recent_movement_route.total_minutes} 分钟</p>}
+      <svg viewBox={`${offset+boundedPan.x} ${offset+boundedPan.y} ${viewSize} ${viewSize}`} role="img" aria-label={scopeLocation ? `${scopeLocation.name}地图` : '世界地图'}
+        onPointerDown={event=>{suppressNodeClick.current=false;if(zoom<=1)return;const rect=event.currentTarget.getBoundingClientRect();
+          drag.current={x:event.clientX,y:event.clientY,pan:boundedPan,width:rect.width,height:rect.height};
+          event.currentTarget.setPointerCapture(event.pointerId);}}
+        onPointerMove={event=>{const start=drag.current;if(!start)return;
+          const dx=event.clientX-start.x,dy=event.clientY-start.y;
+          if(Math.hypot(dx,dy)>5)suppressNodeClick.current=true;
+          setPan({x:Math.max(-panLimit,Math.min(panLimit,start.pan.x-dx/start.width*viewSize)),
+            y:Math.max(-panLimit,Math.min(panLimit,start.pan.y-dy/start.height*viewSize))});}}
+        onPointerUp={()=>{drag.current=null;}}
+        onPointerCancel={()=>{drag.current=null;}}>
+        <defs><marker id="map-arrow" markerWidth="2.6" markerHeight="2.6" refX="2.1" refY="1.3" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M 0 0 L 2.6 1.3 L 0 2.6 z"/></marker></defs>
+        {drawn.map(edge=><path key={`${edge.from}:${edge.to}`} data-route-from={edge.from} data-route-to={edge.to}
+          className={`map-route${edge.highlighted?' map-route-travelled':''}`} d={edge.d}
+          markerEnd={edge.forward_minutes!==null?'url(#map-arrow)':undefined}
+          markerStart={edge.reverse_minutes!==null?'url(#map-arrow)':undefined}/>)}
+        {drawn.map(edge=><g className="map-edge-badge" key={`label:${edge.from}:${edge.to}`}>
+          <rect className="route-label-bg" x={edge.label_x-edge.label_width/2} y={edge.label_y-3.2} width={edge.label_width} height="6.4" rx="2"/>
+          <text className="route-label" x={edge.label_x} y={edge.label_y+1}>{edge.label}</text></g>)}
+        {rootNodes.map(location=>{const p=pos(location), isCurrent=location.id===current || descendants(view.locations,location.id).has(current), path=reachable.get(location.id), hasChildren=view.locations.some(l=>l.parent_id===location.id), canReach=!!path?.length,opensChildren=hasChildren&&location.id!==scope,isScope=location.id===scope; return <g key={location.id} className={`map-node ${isCurrent?'current':canReach?'reachable':''} ${hasChildren?'container-node':''} ${isScope?'scope-entrance':''}`} tabIndex={0} role="button" onKeyDown={e=>{if(e.key==='Enter'||e.key===' ')clickNode(location)}} onClick={()=>clickNode(location)}><title>{`${location.name}${opensChildren?'（展开）':canReach?`（${path.reduce((sum,edge)=>sum+edge.travel_minutes,0)}分钟）`:''}`}</title><rect x={p.x-(isScope?3:5)} y={p.y-(isScope?2:3.8)} width={isScope?6:10} height={isScope?4:7.6} rx="1.2"/><text className="map-node-label" x={p.x} y={isScope?p.y-5:p.y+8}>{isScope?'入口':location.name}</text>{opensChildren&&<text className="map-node-plus" x={p.x+5.6} y={p.y-4}>＋</text>}</g>})}
       </svg>
-      <div className="map-legend"><span><i className="dot current-dot"/>当前位置所在层级</span><span><i className="dot reachable-dot"/>沿已知路线可达</span><span>方块可展开 · 使用 ＋ / − 缩放</span></div>
+      <div className="map-legend"><span><i className="dot current-dot"/>当前位置所在层级</span><span><i className="dot reachable-dot"/>沿已知路线可达</span><span>连线只表示直接路线；箭头表示方向，亮色是上次移动路线</span><span>{rootNodes.filter(node=>node.id!==scope).every(node=>node.position)?'子地点按已登记位置绘制；顶部入口与线条转角仅作示意，不代表途经地点或真实方位':'无完整位置记录，按固定示意布局绘制；方位不代表真实方向'}</span><span>方块可展开 · 放大后拖动查看</span></div>
+      <p className="map-mobile-hint">左右滑动查看完整连接图；下方路线列表可直接查看全部地点。</p>
     </div>
-    {connections.length>0&&<div className="map-connections" aria-label="当前可达路线">{connections.map(connection=><div key={connection.location.id} className="map-connection"><span>{currentNode?.name??'当前位置'}</span><span className="map-connection-line" aria-hidden="true"/><strong>{connection.minutes} 分钟</strong><span className="map-connection-line" aria-hidden="true"/><span>{connection.location.name}</span>{connection.path.length>1&&<small>途经 {connection.path.slice(0,-1).map(edge=>view.locations.find(place=>place.id===edge.to)?.name??edge.to).join('、')}</small>}</div>)}</div>}
-    <div className="map-location-list">{rootNodes.map(location=>{const path=reachable.get(location.id), here=location.id===current, hasChildren=view.locations.some(l=>l.parent_id===location.id);return <article className={`map-location-card ${here?'selected':''}`} key={location.id}><div><small>{here?'当前位置':hasChildren?'包含下级地图':path?.length?`移动 ${path.reduce((sum,edge)=>sum+edge.travel_minutes,0)} 分钟${path.length>1?` · 途经 ${path.slice(0,-1).map(edge=>view.locations.find(place=>place.id===edge.to)?.name??edge.to).join('、')}`:''}`:'地图节点'}</small><h3>{location.name}</h3><p>{location.description}</p></div><button className="quiet" disabled={busy&&!hasChildren} onClick={()=>clickNode(location)}>{hasChildren?'打开地图':path?.length?'前往':'查看'}</button></article>})}</div>
+    {connections.length>0&&<div className="map-connections" aria-label="当前可达路线">{connections.map(connection=><div key={connection.location.id} className="map-connection"><span>{[current,...connection.path.map(edge=>edge.to)].map(id=>view.locations.find(place=>place.id===id)?.name??id).join(' → ')}</span><strong>{connection.minutes} 分钟</strong></div>)}</div>}
+    {boundaryRoutes.length>0&&<div className="map-connections" aria-label="区域出口">{boundaryRoutes.map(route=>{
+      const target=view.locations.find(location=>location.id===route.to),region=view.regions?.find(item=>item.id===route.gateway?.to_region_id);
+      return <div className="map-connection" key={`${route.from}:${route.to}`}><span>出口 → {region?.name??'相邻区域'} · {target?.name??'入口'} · {route.travel_minutes} 分钟</span>
+        <button className="quiet" disabled={busy} onClick={()=>act({type:'MOVE',target_id:route.to})}>前往</button></div>;
+    })}</div>}
+    <div className="map-location-list">{rootNodes.map(location=>{const path=reachable.get(location.id), here=location.id===current, hasChildren=view.locations.some(l=>l.parent_id===location.id),opensChildren=hasChildren&&location.id!==scope;return <article className={`map-location-card ${here?'selected':''}`} key={location.id}><div><small>{here?'当前位置':opensChildren?'包含下级地图':path?.length?`移动 ${path.reduce((sum,edge)=>sum+edge.travel_minutes,0)} 分钟${path.length>1?` · 途经 ${path.slice(0,-1).map(edge=>view.locations.find(place=>place.id===edge.to)?.name??edge.to).join('、')}`:''}`:'地图节点'}</small><h3>{location.name}</h3><p>{location.description}</p></div><button className="quiet" disabled={busy&&!opensChildren} onClick={()=>clickNode(location)}>{opensChildren?'打开地图':path?.length?'前往':'查看'}</button></article>})}</div>
   </div>;
 }
 function Commerce({ view, act, busy }: PanelProps) {
@@ -347,13 +382,13 @@ function logSummary(entry:LogEntry){
   return entry.event;
 }
 export function LogPanel(){
-  const [data,setData]=useState<LogResponse|null>(null),[filter,setFilter]=useState('all'),[open,setOpen]=useState(''),[error,setError]=useState(''),[copied,setCopied]=useState('');
+  const [data,setData]=useState<LogResponse|null>(null),[filter,setFilter]=useState('all'),[open,setOpen]=useState(''),[error,setError]=useState(''),[copied,setCopied]=useState(''),[showReads,setShowReads]=useState(false),[traceFilter,setTraceFilter]=useState('');
   useEffect(()=>{
     let disposed=false,inFlight=false;
-    const load=async()=>{if(inFlight)return;inFlight=true;try{const next=await request<LogResponse>('logs?limit=400');if(!disposed){setData(next);setError('');}}catch(e){if(!disposed)setError(e instanceof Error?e.message:String(e));}finally{inFlight=false;}};
+    const load=async()=>{if(inFlight)return;inFlight=true;try{const next=await request<LogResponse>(`logs?limit=400&hide_reads=${!showReads}${traceFilter.trim()?`&${traceFilter.trim().startsWith('tr_')?'trace_id':'request_id'}=${encodeURIComponent(traceFilter.trim())}`:''}`);if(!disposed){setData(next);setError('');}}catch(e){if(!disposed)setError(e instanceof Error?e.message:String(e));}finally{inFlight=false;}};
     void load();const timer=window.setInterval(()=>void load(),3000);
     return()=>{disposed=true;window.clearInterval(timer);};
-  },[]);
+  },[showReads,traceFilter]);
   const entries=(data?.entries??[]).filter(entry=>logMatches(entry,filter)).slice().reverse();
   async function copyTrace(entry:LogEntry){
     const trace=data?.traces.find(item=>item.trace_id===entry.trace_id);
@@ -363,6 +398,8 @@ export function LogPanel(){
   }
   return <div className="log-panel">
     <div className="log-toolbar"><div className="log-filters">{logFilters.map(([id,label])=><button key={id} type="button" className={`quiet ${filter===id?'active':''}`} onClick={()=>setFilter(id)}>{label}</button>)}</div><small>{entries.length} 条 · 等级 {data?.level??'—'}</small></div>
+    <label><input type="checkbox" checked={showReads} onChange={e=>setShowReads(e.target.checked)}/>显示高频存档读取</label>
+    <input aria-label="筛选 Trace 或请求" placeholder="trace_id / request_id" value={traceFilter} onChange={e=>setTraceFilter(e.target.value)}/>
     <small className="log-file">{data?.file??'未启用文件日志（仅内存）'}</small>
     {error&&<p className="empty">{error}</p>}
     {copied&&<p className="muted">已复制 Trace：{copied}</p>}

@@ -66,7 +66,13 @@ describe('daily QA contract and continuity',()=>{
   });
   it('executes a generated continuous choice through the real agent and canonical receipt',async()=>{
     const f=await sparseSetup(),choice='合上琴盖、把盖布罩回去，去厨房给自己弄点早饭。';
-    const save=await f.service.current();save.last_turn={narrative:'琴声停了。',speaker:null,dialogue:null,choices:[choice],context_actions:[]};await f.store.write(save);
+    const save=await f.service.current(),here=String(save.entities.find(entity=>entity.id===save.player_state.entity_id)!.components.location!.location_id);
+    save.definition.map!.locations.find(location=>location.id===here)!.description='这间测试起居室有钢琴和开放厨房。';
+    save.environment_state={resolutions:[{id:'env_daily_kitchen',location_id:here,name:'厨房',aliases:[],
+      status:'present',classification:'environment_detail',entity_id:null,description:'室内的开放厨房',
+      take_allowed:false,source_request_id:randomUUID(),at:structuredClone(save.runtime.time),
+      known_by:[String(save.player_state.entity_id)]}]};
+    save.last_turn={narrative:'琴声停了。',speaker:null,dialogue:null,choices:[choice],context_actions:[]};await f.store.write(save);
     const scope={scope:'now' as const,day_offset:0,window:'any' as const};
     vi.spyOn(f.ai,'planGoals').mockResolvedValue({goals:[
       {goal_id:'g1',type:'WORLD_ACTION',normalized_goal:'合上琴盖、罩回盖布',depends_on:[],condition:null,branch:null,temporal_scope:scope,target_entities:[]},

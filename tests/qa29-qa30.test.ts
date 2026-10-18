@@ -87,7 +87,8 @@ describe('QA-29 Choice validation and QA-30 purchase authorization',()=>{
         request_id:randomUUID(),input});
       const pending=await first.current(),plan=pending.active_goal!.plan;
       const moveId=contractStepRequestId(plan.plan_id,'move',pending.state_revision);
-      expect(started.message).toContain('服务暂时失败');
+      expect(started.outcome).toMatchObject({type:'engine_failure',code:'provider_failure',stage:'narrative_provider'});
+      expect(started.message).not.toContain('服务暂时失败');
       expect(plan.goals.map(goal=>goal.status)).toEqual(['pending','pending','pending']);
       expect(actor(pending).components.location?.location_id).toBe('square');
       expect(await new JsonStore(directory).readPending(moveId)).not.toBeNull();
@@ -98,14 +99,16 @@ describe('QA-29 Choice validation and QA-30 purchase authorization',()=>{
       const interrupted=vi.spyOn(restarted,'turn').mockRejectedValueOnce(deterministic);
       const held=await handleAgentInput(restarted,{game_id:pending.game_id,expected_revision:pending.state_revision,
         request_id:randomUUID(),input:'继续目标'});
-      expect(held.message).toContain('程序校验未通过');
+      expect(held.outcome).toMatchObject({type:'engine_failure',code:'transaction_failure'});
+      expect(held.message).not.toContain('程序校验未通过');
       expect(held.message).not.toContain('可从当前持久目标安全重试');
       expect((await restarted.current()).state_revision).toBe(pending.state_revision);
       expect(await new JsonStore(directory).readPending(moveId)).not.toBeNull();
       interrupted.mockRestore();
 
+      const resumeId=randomUUID();
       const resumed=await handleAgentInput(restarted,{game_id:pending.game_id,expected_revision:pending.state_revision,
-        request_id:randomUUID(),input:'继续目标'});
+        request_id:resumeId,input:'继续目标'});
       const waiting=await restarted.current();
       expect(resumed.plan?.goals.map(goal=>goal.status)).toEqual(['completed','waiting_for_player','completed']);
       expect(waiting.resolution_receipts?.filter(receipt=>receipt.semantic_action==='MOVE')).toHaveLength(1);
@@ -113,6 +116,15 @@ describe('QA-29 Choice validation and QA-30 purchase authorization',()=>{
       expect(await new JsonStore(directory).readPending(moveId)).toBeNull();
       expect((actor(waiting).components.wallet as {balances:Record<string,number>}).balances.credit).toBe(funds);
       expect(waiting.active_goal?.options.some(option=>option.candidate_id==='BUY:corner_shop:bread')).toBe(true);
+      expect(waiting.runtime.receipts.some(receipt=>receipt.id===resumeId)).toBe(true);
+      const replay=await handleAgentInput(restarted,{game_id:waiting.game_id,expected_revision:waiting.state_revision,
+        request_id:resumeId,input:'继续目标'});
+      expect(replay.goal_control).toEqual(resumed.goal_control);
+      expect((await restarted.current()).state_revision).toBe(waiting.state_revision);
+      const replayAfterRestart=await handleAgentInput(new GameService(new JsonStore(directory),ai,sparseWorld()),
+        {game_id:waiting.game_id,expected_revision:waiting.state_revision,request_id:resumeId,input:'继续目标'});
+      expect(replayAfterRestart.goal_control?.status).toBe('blocked');
+      expect((await restarted.current()).state_revision).toBe(waiting.state_revision);
 
       const chosen=await handleAgentInput(restarted,{game_id:waiting.game_id,expected_revision:waiting.state_revision,
         request_id:randomUUID(),input:'面包'});

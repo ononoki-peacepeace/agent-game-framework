@@ -1,0 +1,89 @@
+{
+  "synthetic_provider": true,
+  "formal_save_used": false,
+  "inputs": [
+    "等待180分钟",
+    "等待30分钟"
+  ],
+  "revisions": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "time": [
+    {
+      "day": 1,
+      "minute": 180
+    },
+    {
+      "day": 1,
+      "minute": 210
+    }
+  ],
+  "npc_actions": [
+    {
+      "id": "911e5430-ac10-4b6f-a377-b5ae21f2a462",
+      "type": "MOVE",
+      "time_cost": 6,
+      "at": {
+        "day": 1,
+        "minute": 186
+      },
+      "status": "committed"
+    },
+    {
+      "id": "c26c6b40-8012-4c2f-a7a5-4f3ef0766a31",
+      "type": "HOLD",
+      "time_cost": 8,
+      "at": {
+        "day": 1,
+        "minute": 194
+      },
+      "status": "committed"
+    },
+    {
+      "id": "b16fe74d-c44b-43e3-a071-c78fc9032fc3",
+      "type": "TALK",
+      "time_cost": 5,
+      "at": {
+        "day": 1,
+        "minute": 199
+      },
+      "status": "committed"
+    }
+  ],
+  "calls": [
+    {
+      "role": "gm_reasoning",
+      "actor": null
+    },
+    {
+      "role": "npc_decision",
+      "actor": "npc_lin"
+    },
+    {
+      "role": "narrator",
+      "actor": null
+    },
+    {
+      "role": "gm_reasoning",
+      "actor": null
+    },
+    {
+      "role": "npc_decision",
+      "actor": "npc_qiao"
+    },
+    {
+      "role": "narrator",
+      "actor": null
+    },
+    {
+      "role": "narrator",
+      "actor": null
+    }
+  ],
+  "remote_exposures": 0,
+  "reload_equal": true,
+  "undo_equal": true
+}

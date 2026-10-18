@@ -1,0 +1,47 @@
+import {chromium,expect} from '@playwright/test';
+import {once} from 'node:events';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join,resolve} from 'node:path';
+import {randomUUID} from 'node:crypto';
+import {sparseSetup} from '../tests/sparse-fixture.js';
+import {createApp} from '../src/server/app.js';
+
+const root=await mkdtemp(join(tmpdir(),'agf-persona-qa-'));
+const fixture=await sparseSetup(),save=await fixture.service.current();
+const npc=save.entities.find(entity=>entity.id!==save.player_state.entity_id&&entity.components.character)!;
+npc.components.location=structuredClone(save.entities.find(entity=>entity.id===save.player_state.entity_id)!.components.location);
+await fixture.store.write(save);
+const server=createApp(fixture.service,resolve('dist/client'),undefined,join(root,'assets')).listen(0,'127.0.0.1');
+await once(server,'listening');
+let browser:Awaited<ReturnType<typeof chromium.launch>>|null=null;
+try{
+  browser=await chromium.launch({headless:true,executablePath:process.env.BROWSER_EXECUTABLE??'C:/Program Files/Google/Chrome/Application/chrome.exe'});
+  const page=await browser.newPage({viewport:{width:1366,height:768}}),errors:string[]=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  const base='http://127.0.0.1:'+(server.address() as {port:number}).port;
+  const open=async()=>{await page.goto(base);await page.getByRole('button',{name:'继续当前世界',exact:true}).click();await page.locator('.desktop-panel-nav').getByRole('button',{name:'人物',exact:true}).click();await page.locator('.sidebar-scroll').getByRole('button',{name:String(npc.components.identity?.name),exact:true}).first().click();await expect(page.getByRole('region',{name:'角色表现'})).toBeVisible();};
+  await open();
+  await page.getByRole('textbox',{name:'说话风格'}).fill('语气温和，从容而稳重');
+  await page.getByRole('textbox',{name:'语言习惯'}).fill('偶尔使用轻柔的反问');
+  await page.getByRole('button',{name:'保存角色表现'}).click();
+  await expect(page.getByRole('textbox',{name:'说话风格'})).toHaveValue('语气温和，从容而稳重');
+  let current=await fixture.service.current();
+  if(current.entities.find(entity=>entity.id===npc.id)?.components.character?.speech_style!=='语气温和，从容而稳重')throw Error('UI persona edit did not reach canonical save');
+  await open();await expect(page.getByRole('textbox',{name:'说话风格'})).toHaveValue('语气温和，从容而稳重');
+  await page.getByRole('button',{name:'恢复默认'}).click();
+  await expect(page.getByRole('textbox',{name:'说话风格'})).toHaveValue('');
+  current=await fixture.service.current();if(current.entities.find(entity=>entity.id===npc.id)?.components.character?.speech_style!=='')throw Error('UI reset did not persist');
+  const {token}=await (await page.request.get(base+'/api/session')).json() as {token:string};
+  const system=await page.request.post(base+'/api/system',{headers:{'X-Game-Token':token},data:{input:`把${String(npc.components.identity?.name)}的说话风格设为温柔沉稳。`,game_id:current.game_id,expected_revision:current.state_revision,request_id:randomUUID()}});
+  const systemResult=await system.json() as {category?:string;error?:string};
+  if(!system.ok()||systemResult.category!=='CHARACTER_PERSONA')throw Error('System persona request did not reach character mutation: '+JSON.stringify({status:system.status(),result:systemResult}));
+  current=await fixture.service.current();if(current.entities.find(entity=>entity.id===npc.id)?.components.character?.speech_style!=='温柔沉稳')throw Error('System reply did not persist per-character style');
+  const mobile=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  await mobile.goto(base);await mobile.getByRole('button',{name:'继续当前世界',exact:true}).click();
+  await mobile.getByRole('navigation',{name:'手机快捷导航'}).getByRole('button',{name:'人物',exact:true}).click();
+  await mobile.locator('.sidebar-scroll').getByRole('button',{name:String(npc.components.identity?.name),exact:true}).first().click();
+  await expect(mobile.getByRole('region',{name:'角色表现'})).toBeVisible();
+  if(errors.length)throw Error(errors.join('\n'));
+  console.log('PERSONA QA BROWSER PASS: desktop edit/reload/reset; System API mutation; mobile panel; isolated fixture');
+}finally{if(browser)await browser.close();server.closeAllConnections();await new Promise<void>(done=>server.close(()=>done()));await rm(root,{recursive:true,force:true});}

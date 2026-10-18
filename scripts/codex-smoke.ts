@@ -14,20 +14,20 @@ const demo=worldSchema.parse(JSON.parse(await readFile('content/worlds/town.json
 const adapter=new CodexAdapter(), ai=new AIRuntime(adapter), service=new GameService(new JsonStore(directory),ai,demo);
 const report:{step:string;ok:boolean;detail?:string}[]=[];
 async function step(name:string,fn:()=>Promise<void>){console.log('START '+name);try{await fn();report.push({step:name,ok:true});console.log('PASS '+name);}catch(e){report.push({step:name,ok:false,detail:String(e).slice(0,1600)});throw e;}finally{await writeFile(directory+'/report.json',JSON.stringify(report,null,2));}}
-await step('ChatGPT structured narration + persisted thread',async()=>{
+await step('ChatGPT structured narration without accumulated narrator thread',async()=>{
  const v=await service.newGame(); const out=await service.turn({request_id:randomUUID(),game_id:v.game_id,expected_revision:v.revision,action:{type:'TALK',target_id:'npc_lin',parameters:{topic:'你好，给新来的居民一句建议。'}}});
- assert.equal(out.notices.length,0,'Narration degraded: '+out.notices.join(';'));assert(out.last_turn?.dialogue);assert((await service.current()).ai.threads.narrator);
+ assert.equal(out.notices.length,0,'Narration degraded: '+out.notices.join(';'));assert(out.last_turn?.dialogue);assert.equal((await service.current()).ai.threads.narrator,undefined);
 });
-await step('resume after service/adapter reconstruction',async()=>{
+await step('narration after service/adapter reconstruction',async()=>{
  const restarted=new GameService(new JsonStore(directory),new AIRuntime(new CodexAdapter()),demo),v=await restarted.view();
  const before=(await restarted.current()).ai.threads.narrator;
  const out=await restarted.turn({request_id:randomUUID(),game_id:v!.game_id,expected_revision:v!.revision,action:{type:'WAIT',parameters:{minutes:1}}});
  assert.equal(out.notices.length,0);assert.equal((await restarted.current()).ai.threads.narrator,before);
 });
-await step('invalid thread recovery',async()=>{
+await step('legacy narrator thread is ignored and cleared',async()=>{
  const s=await service.current();s.ai.threads.narrator='00000000-0000-0000-0000-000000000000';await service.storage.write(s);
  const out=await service.turn({request_id:randomUUID(),game_id:s.game_id,expected_revision:s.state_revision,action:{type:'WAIT',parameters:{minutes:1}}});
- assert.equal(out.notices.length,0);assert.notEqual((await service.current()).ai.threads.narrator,s.ai.threads.narrator);
+ assert.equal(out.notices.length,0);assert.equal((await service.current()).ai.threads.narrator,undefined);
 });
 await step('natural language intent through runtime',async()=>{
  const s=await service.current();const out=await service.turn({request_id:randomUUID(),game_id:s.game_id,expected_revision:s.state_revision,input:'去街角商店。'});

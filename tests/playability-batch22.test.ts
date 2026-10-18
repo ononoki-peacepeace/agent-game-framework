@@ -20,7 +20,7 @@ describe('Batch 2.2 parent-level map and narrator contract',()=>{
     expect(view.entities.find(entity=>entity.id===view.player_id)?.components.location?.location_id).toBe(parent);
     expect(view.routes.some(route=>route.from==='old_child_a'&&route.to==='old_child_b')).toBe(false);
     expect(routePath(view.routes,'old_child_a','old_child_b')?.map(route=>route.to)).toEqual([parent,'old_child_b']);
-    expect(visibleRouteEdges(view,children).get('old_child_a::old_child_b')).toEqual({from:'old_child_a',to:'old_child_b',travel_minutes:8,indirect:true});
+    expect(visibleRouteEdges(view,children).has('old_child_a::old_child_b')).toBe(false);
   });
 
   it.each([

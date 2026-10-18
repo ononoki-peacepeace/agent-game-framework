@@ -18,7 +18,8 @@ const proposal=(minutes=2)=>({narrative:'程序候选',minutes,target_id:null,fa
 const narration={narrative:'你依次进行了这些局部活动。',speaker:null,dialogue:null,choices:[],
   context_actions:[],patches:[],interaction:null,item_claims:[],stable_locations:[],mechanical_claims:[]};
 async function setup(steps:string[],failAt=-1){
-  const f=await sparseSetup(),before=await f.service.current(),writes=vi.spyOn(f.store,'write');
+  const f=await sparseSetup();await seedRoomAnchors(f);
+  const before=await f.service.current(),writes=vi.spyOn(f.store,'write');
   vi.spyOn(f.ai,'interpret').mockResolvedValue({type:'FREEFORM_ACTION',parameters:{}});
   const freeform=vi.spyOn(f.ai,'freeform').mockImplementation(async (_save,input)=>{
     const index=steps.indexOf(input);
@@ -33,6 +34,18 @@ async function setup(steps:string[],failAt=-1){
 }
 async function run(f:Awaited<ReturnType<typeof setup>>){return executePlan(f.service,f.request,f.plan);}
 function player(save:SavePackage){return save.entities.find(entity=>entity.id===save.player_state.entity_id)!;}
+async function seedRoomAnchors(f:Awaited<ReturnType<typeof sparseSetup>>){
+  const save=await f.service.current(),here=String(player(save).components.location!.location_id);
+  const place=save.definition.map!.locations.find(location=>location.id===here)!;
+  place.description='这个测试场景是一间有开放厨房、门口和书桌的起居室。';
+  save.environment_state={resolutions:['厨房','门口','书桌前'].map((name,index)=>({
+    id:`env_compound_anchor_${index}`,location_id:here,name,aliases:[],status:'present' as const,
+    classification:'environment_detail' as const,entity_id:null,description:`房间内的${name}`,
+    take_allowed:false,source_request_id:randomUUID(),at:structuredClone(save.runtime.time),
+    known_by:[String(save.player_state.entity_id)],
+  }))};
+  await f.store.write(save);
+}
 
 describe('Phase 3 local compound candidate',()=>{
   it('commits two generic activities once with one revision and both receipts',async()=>{
@@ -179,7 +192,8 @@ describe('Phase 3 local compound candidate',()=>{
     expect(plan.local_compound?.steps).toEqual(['起身去厨房','待一会儿','回到书桌前','坐下']);
   });
   it('executes the human QA local round trip through planning with one revision',async()=>{
-    const f=await sparseSetup(),before=await f.service.current();
+    const f=await sparseSetup();await seedRoomAnchors(f);
+    const before=await f.service.current();
     const input='起身去厨房待一会儿，再回到书桌前坐下。';
     vi.spyOn(f.ai,'planGoals').mockResolvedValue({goals:[goal(0,'起身去厨房待一会儿'),goal(1,'回到书桌前坐下')]});
     vi.spyOn(f.ai,'interpret').mockResolvedValue({type:'FREEFORM_ACTION',parameters:{}});

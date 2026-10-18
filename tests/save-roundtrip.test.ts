@@ -22,7 +22,7 @@ function legacySave(): SavePackage {
     },
   })}`;
   delete (legacy as { routine_meta?: unknown }).routine_meta;
-  legacy.map_state = { known_location_ids: (flat?.locations ?? []).map(location => location.id), dynamic_locations: [], dynamic_routes: [] };
+  legacy.map_state = { known_location_ids: (flat?.locations ?? []).map(location => location.id), dynamic_locations: [], dynamic_routes: [],dynamic_regions:[] };
   legacy.calendar = { version: 1, anchor_day: legacy.runtime.time.day, anchor_month: 3, anchor_date: 3, anchor_weekday: 3, month_lengths: [31,28,31,30,31,30,31,31,30,31,30,31], source: '玩家确认当前时间映射' };
   return validateSave(legacy);
 }
