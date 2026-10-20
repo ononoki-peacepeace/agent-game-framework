@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "21cdca6",
+  "assessed_source": "506906d",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -1206,6 +1206,23 @@
         }
       ],
       "note": "Two original-scope findings resolved; broad mixed/dynamic intent and full corpus remain open. Score delta0."
+    },
+    {
+      "batch": "npc-objective-projection",
+      "type": "repair",
+      "source": "506906d",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "W5.3",
+          "result": "修复受阻计划与所属长期目标的上下文错位；7个直接用例、相邻91项通过",
+          "evidence": [
+            "tests/npc-objective-projection.test.ts",
+            "docs/npc-objective-projection.md"
+          ]
+        }
+      ],
+      "note": "Original-scope finding resolved; full long-term revision/fairness and multi-world72h acceptance remain open. Score delta0."
     }
   ],
   "new_risks": [],
@@ -1407,6 +1424,18 @@
       ],
       "summary": "Due validation now checks the condition entity instead of action recipient; legacy records remain supported.",
       "source": "21cdca6"
+    },
+    {
+      "id": "npc-objective-projection",
+      "scope": "original",
+      "condition": "W5.3",
+      "status": "resolved",
+      "source": "506906d",
+      "evidence": [
+        "tests/npc-objective-projection.test.ts",
+        "docs/npc-objective-projection.md"
+      ],
+      "summary": "Bounded recovery plans and their owned goals now remain visible and manageable together; priorities/ended IDs preserved. Baseline4 failures/1 control; final10 files/91 passed."
     }
   ]
 }

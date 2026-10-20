@@ -50,7 +50,7 @@ Do not reuse the historical 46% as a current estimate. The first reproducible co
 | W2 | Per-character private cognition projection | Completed | narrator-character-cognition; no omniscient projection |
 | W3 | Authored social events settle from authoritative receipts once | Completed | npc-relationships and repetition; Undo/persistence tested |
 | W4 | Autonomous routines and time-credit continuity | Partial | npc-physical-plan-continuity/scheduling; broad lives remain limited |
-| W5 | Persistent long/short goals, executable plans and blocked-plan revision | Partial | npc-persistent-plans/immediate-plan; long-term adjustment remains |
+| W5 | Persistent long/short goals, executable plans and blocked-plan revision | Partial | 506906d keeps blocked plans and owned goals visible/manageable together within existing context limits; actual replacement settles once; broader long-term adjustment/fairness and multi-world72h acceptance remain |
 | W6 | Body/resources and transient perception continuity | Partial | body/capability tests; multi-world long-duration breadth open |
 | W7 | Memory, NPC interactions and long-term relationship causality | Partial | integrated experience/social tests; broader society unaccepted |
 | W8 | Background incidents, macro arcs and player absence | Partial | 48-hour simulation: 39 actions, 12 resolved incidents, no offscreen leaks; variety remains |
