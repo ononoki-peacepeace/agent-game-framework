@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "885d1e7",
+  "assessed_source": "300f4f1",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -168,9 +168,12 @@
     "R6.2": {
       "status": "met",
       "evidence": [
-        "tests/request-restart-recovery.test.ts"
+        "tests/request-restart-recovery.test.ts",
+        "tests/input-process-kill.test.ts",
+        "tests/fixtures/input-kill-worker.ts",
+        "docs/input-process-kill.md"
       ],
-      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim. 300f4f1 tests only/product885d1e7:18 actual independent SIGKILL cases over WAIT/BUY/Core random physical request at pending/canonical/HTTP-terminal before/after boundaries. Old/new complete saves, child identity, time/credit/inventory/stock/rolls agree; status/replay has zero model/RNG calls and unchanged canonical bytes. Final6files71pass/build; original69/71 with two unexplained fetch failures retained, test connections now closed. Full background/async matrix and inside-atomic/OS durability boundaries remain open; no score transition."
     },
     "R6.3": {
       "status": "unmet",
@@ -184,9 +187,12 @@
     "R6.4": {
       "status": "unverified",
       "evidence": [
-        "tests/request-restart-recovery.test.ts"
+        "tests/request-restart-recovery.test.ts",
+        "tests/input-process-kill.test.ts",
+        "tests/fixtures/input-kill-worker.ts",
+        "docs/input-process-kill.md"
       ],
-      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required. 300f4f1 tests only/product885d1e7:18 actual independent SIGKILL cases over WAIT/BUY/Core random physical request at pending/canonical/HTTP-terminal before/after boundaries. Old/new complete saves, child identity, time/credit/inventory/stock/rolls agree; status/replay has zero model/RNG calls and unchanged canonical bytes. Final6files71pass/build; original69/71 with two unexplained fetch failures retained, test connections now closed. Full background/async matrix and inside-atomic/OS durability boundaries remain open; no score transition."
     },
     "R7.1": {
       "status": "met",
@@ -1992,6 +1998,13 @@
       "source": "885d1e7",
       "transitions": [],
       "note": "Typed time-window matching repairs false ambiguity and unauthorized any-time cancellation;6files57pass/build, real disk terminal cancellation/no execution. A7.3/A7.4 open/net0."
+    },
+    {
+      "batch": "input-process-kill",
+      "type": "evidence_correction",
+      "source": "300f4f1",
+      "transitions": [],
+      "note": "Independent process kill evidence extends WAIT to real BUY resources and Core random physical resolution; final6files71pass/build. First69/71 network failures retained. R6.4 remains unverified, full background/async matrix open/net0. Product remains885d1e7; latest full207files2064pass remains1bad19e."
     }
   ],
   "new_risks": [],
