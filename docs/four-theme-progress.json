@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "57e804a",
+  "assessed_source": "d688404",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -2755,6 +2755,32 @@
           "evidence": [
             "tests/generic-activity-fallback.test.ts",
             "docs/generic-activity-fallback.md",
+            "tests/multi-world-language-corpus.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "conditional-trade-after-arrival",
+      "type": "repair",
+      "source": "d688404",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "A7.3",
+          "result": "True/false/unknown guarded MOVE-purchase uses actual post-arrival binding;10focused pass;8files120pass1knownL08fail;fixed25assertion corpus24pass1fail with true-condition HTTP disk replay;full condition open",
+          "evidence": [
+            "tests/conditional-trade-plan.test.ts",
+            "docs/conditional-trade-plan.md",
+            "tests/multi-world-language-corpus.test.ts"
+          ]
+        },
+        {
+          "id": "A9.3",
+          "result": "True/false/unknown guarded MOVE-purchase uses actual post-arrival binding;10focused pass;8files120pass1knownL08fail;fixed25assertion corpus24pass1fail with true-condition HTTP disk replay;full condition open",
+          "evidence": [
+            "tests/conditional-trade-plan.test.ts",
+            "docs/conditional-trade-plan.md",
             "tests/multi-world-language-corpus.test.ts"
           ]
         }
