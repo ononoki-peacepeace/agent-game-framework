@@ -145,9 +145,11 @@
     "R5.4": {
       "status": "met",
       "evidence": [
-        "docs/current-offline-snapshot.md"
+        "docs/current-offline-snapshot.md",
+        "docs/post-reaction-offline-snapshot.md",
+        "scripts/agent-workspace.mjs"
       ],
-      "basis": "Product9917459/ledger6be22bb fixed195-file494-hash complete offline snapshot1957/1957pass, exact coverage once, build pass; original shard5 native0xC0000409 retained, exact halves passed. Native stability and later source edits need new evidence."
+      "basis": "Product9917459/ledger6be22bb fixed195-file494-hash complete offline snapshot1957/1957pass, exact coverage once, build pass; original shard5 native0xC0000409 retained, exact halves passed. Native stability and later source edits need new evidence. Fresh source29e6a5f/ledgerc351367:199files1992/1992pass,502pinned hashes unchanged, exact coverage once,16shards; isolated build passed. Old native crash retained."
     },
     "R6.1": {
       "status": "met",
@@ -1743,6 +1745,22 @@
           "evidence": [
             "tests/physical-denial-subject.test.ts",
             "docs/physical-denial-subject.md"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "post-reaction-complete-offline-snapshot",
+      "type": "repair",
+      "source": "29e6a5f",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R5.4",
+          "result": "Fresh199files1992pass on502pinned hashes, exact coverage once; refresh existing met only, historical native crash retained",
+          "evidence": [
+            "docs/post-reaction-offline-snapshot.md",
+            "scripts/agent-workspace.mjs"
           ]
         }
       ]

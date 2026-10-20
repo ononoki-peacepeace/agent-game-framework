@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Complete post-reaction offline snapshot — 2026-10-20
+
+Source `29e6a5f` / ledger `c351367`: fresh199files1992/1992pass across16shards, exact file coverage once, all502pinned source/config/content hashes unchanged. Complete isolated build passed. Original QA restored byte-for-byte;27frozen hashes and formal-save SHA match. No new crash; old0xC0000409/failed intermediates remain retained, cause not claimed fixed. See docs/post-reaction-offline-snapshot.md and ignored post-reaction-offline-summary.json. R5.4 evidence refresh only;60%=96/160,+0. No source WIP; original dirt preserved. Next: real JsonStore pending reaction-budget stage across service replacement, then original fixed remaining matrices. No paid/3100/deploy/push/Claude changes.
+
 ## Explicit injury-denial subject — 2026-10-20
 
 Parent `759e9fb`; source checkpoint containing this section fixes lawful “player/Qiao unhurt” prose being treated as denial of Lin's settled injury. Only a uniquely explicit immediate character/player subject scopes it away; pronouns, joint names, duplicate identities, absent scene and actual harmed targets stay conservative. Actual multiple-target Core controls pass. Baseline3fail/5controls, final11files108pass; isolated build in local SESSION. No schema/settlement change. See docs/physical-denial-subject.md. N4.2 explicit withdrawal/restoration net0; N4.3/N4.4 remain open,60%=96/160. Next: pin fresh current-source full offline manifest, preserve any process failures and original QA bytes; continue fixed remaining gaps. Original dirt/safety preserved.

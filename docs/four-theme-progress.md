@@ -47,6 +47,7 @@
 | settled-reaction-speech-repair | repair | N4.1: unmet → met | +0.625 pp |
 | injury-denial-subject-counterexample | evidence_correction | N4.2: met → unmet | -0.625 pp |
 | injury-denial-subject-repair | repair | N4.2: unmet → met | +0.625 pp |
+| post-reaction-complete-offline-snapshot | repair | R5.4: Fresh199files1992pass on502pinned hashes, exact coverage once; refresh existing met only, historical native crash retained；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -91,7 +92,7 @@
 | R5.1 | 已有故障矩阵区分技术失败与游戏内失败，保留已提交步骤 | 满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md) |
 | R5.2 | 已有分层修复与安全停止测试验证不重复 Core 副作用 | 满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md) |
 | R5.3 | 逐条关闭矩阵中仍未核验的嵌套故障出口 | 未满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md), [partial-plan-visible-status.test.ts](../tests/partial-plan-visible-status.test.ts), [partial-plan-visible-status.md](../docs/partial-plan-visible-status.md) |
-| R5.4 | 最新完整离线代码快照全套通过，旧失败不得改写为通过 | 满足 | [current-offline-snapshot.md](../docs/current-offline-snapshot.md) |
+| R5.4 | 最新完整离线代码快照全套通过，旧失败不得改写为通过 | 满足 | [current-offline-snapshot.md](../docs/current-offline-snapshot.md), [post-reaction-offline-snapshot.md](../docs/post-reaction-offline-snapshot.md), [agent-workspace.mjs](../scripts/agent-workspace.mjs) |
 
 ## R6 Pending/background jobs and asynchronous restart continuation
 
