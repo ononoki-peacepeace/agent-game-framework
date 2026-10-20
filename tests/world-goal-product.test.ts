@@ -9,12 +9,16 @@ import type { SavePackage } from '../src/core/schema.js';
 import { sparseSetup } from './sparse-fixture.js';
 
 async function runGoal(input:string,select:(save:SavePackage)=>string){
-  let candidate='',decisions=0;
+  let candidate='';
   const fixture=await sparseSetup(async request=>{
     const properties=(request.schema as any).properties??{};
     if(properties.destination)return {data:{destination:'WORLD_INTENT',confidence:1,clarification:null,speech_target_id:null,world_input:null,resolved_input:null,end_conversation:false}};
     if(properties.goals)return {data:{goals:[{goal_id:'g1',type:'WORLD_GOAL',normalized_goal:input,depends_on:[],condition:null,branch:null,temporal_scope:{scope:'now',day_offset:0,window:'any'},target_entities:[]}]}};
-    if(properties.decision)return {data:{decision:decisions++?'done':'act',candidate_id:decisions>1?null:candidate,reason:'fixture walks one declared affordance and then reports the goal reached',ambiguity:null}};
+    if(properties.decision){
+      const context=JSON.parse(request.prompt.slice(request.prompt.indexOf('{"objective"')).split('\n')[0]) as {progress:{completed:{candidate:string}[]}};
+      const completed=context.progress.completed.some(step=>step.candidate===candidate);
+      return {data:{decision:completed?'done':'act',candidate_id:completed?null:candidate,reason:'fixture performs the actual declared affordance after any required travel',ambiguity:null}};
+    }
     if(request.role==='narrator')return {data:{narrative:'你采取了当前世界允许的第一步。',speaker:null,dialogue:null,choices:[],context_actions:[],patches:[],interaction:null}};
     throw new Error('unexpected fixture request');
   });
@@ -30,7 +34,7 @@ async function runGoal(input:string,select:(save:SavePackage)=>string){
   }finally{server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));await rm(directory,{recursive:true,force:true});}
 }
 
-it('open-ended goals discover declared affordances and execute a real first stage',async()=>{
+it('open-ended goals discover declared affordances and perform the actual activity after preparation',async()=>{
   const sleep=await runGoal('找地方睡觉',()=> 'activity:sleep');
   expect(sleep.result).toMatchObject({intent:'WORLD_GOAL',plan:{status:'completed'}});
   expect(sleep.result.message).not.toContain('已记下');
@@ -39,10 +43,12 @@ it('open-ended goals discover declared affordances and execute a real first stag
 
   const work=await runGoal('想办法挣钱',()=> 'activity:work');
   expect(work.result).toMatchObject({intent:'WORLD_GOAL',plan:{status:'completed'}});
-  expect(work.after.state_revision).toBeGreaterThan(work.before.state_revision);
+  expect(work.after.state_revision).toBeGreaterThan(work.before.state_revision+1);
   expect(work.after.runtime.time.minute).toBeGreaterThan(work.before.runtime.time.minute);
   expect(work.result.results?.[0]?.summary).toContain('先沿已知路线');
   expect(work.result.message).toBe(work.after.last_turn?.narrative);
+  const credit=(save:SavePackage)=>Number((save.entities.find(entity=>entity.id===save.player_state.entity_id)!.components.wallet as {balances:Record<string,number>}).balances.credit);
+  expect(credit(work.after)-credit(work.before)).toBe(8);
 
   const inquiry=await runGoal('找人打听最近的消息',save=>{
     const player=save.entities.find(entity=>entity.id===save.player_state.entity_id)!;

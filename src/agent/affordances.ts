@@ -65,7 +65,7 @@ async function performAffordance(service:GameService,view:PublicView,save:SavePa
     const path=firstRoute(view,here,selected.location_id);
     if(!path?.length)return null;
     await service.turn({game_id:save.game_id,expected_revision:save.state_revision,request_id:requestId,action:{type:'MOVE',target_id:path[0].to,parameters:{}}});
-    return {summary:`已开始推进「${objective}」：先沿已知路线前往${view.locations.find(location=>location.id===path[0].to)?.name??'下一地点'}。`,fulfilled:false};
+    return {summary:`已开始推进「${objective}」：先沿已知路线前往${view.locations.find(location=>location.id===path[0].to)?.name??'下一地点'}。`,fulfilled:selected.kind==='move'&&path.length===1};
   }
   if(selected.kind==='activity'){
     await service.performDeclaredActivity({activity_id:selected.id.slice('activity:'.length),game_id:save.game_id,expected_revision:save.state_revision,request_id:requestId});
@@ -88,7 +88,7 @@ async function performAffordance(service:GameService,view:PublicView,save:SavePa
  * decision, missing information, a canonical block, or the step cap. Achieved affordances are never repeated.
  */
 export async function executeOpenWorldGoal(service:GameService,save:SavePackage,objective:string,requestId:string){
-  let current=save;const attempted=new Set<string>(),steps:{candidate:string;summary:string}[]=[];
+  let current=save;const attempted=new Set<string>(),steps:{candidate:string;summary:string;fulfilled:boolean}[]=[];
   const summarise=()=>steps.map(entry=>entry.summary).join(' ');
   let view=service.project(current);
   for(let step=0;step<MAX_GOAL_STEPS;step++){
@@ -100,7 +100,9 @@ export async function executeOpenWorldGoal(service:GameService,save:SavePackage,
     }
     const player=view.entities.find(entity=>entity.id===view.player_id),here=String(player?.components.location?.location_id??'');
     const decision=await service.ai.chooseAffordance(view,objective,candidates,goalDecisionSchema,{
-      completed:steps,player_location:here,player_location_name:view.locations.find(location=>location.id===here)?.name??null,
+      completed:steps.filter(entry=>entry.fulfilled),
+      preparation:steps.filter(entry=>!entry.fulfilled&&!attempted.has(entry.candidate)),
+      player_location:here,player_location_name:view.locations.find(location=>location.id===here)?.name??null,
     },current);
     if(decision.decision==='done'){
       if(!steps.length)return {ok:false,message:decision.reason||'当前世界没有可直接推进这个目标的行动。',view};
@@ -117,7 +119,7 @@ export async function executeOpenWorldGoal(service:GameService,save:SavePackage,
     current=await service.current();
     // A verified outcome is the only thing that lets the walk continue instead of looping on a no-op.
     if(current.state_revision<=revisionBefore)return {ok:false,message:`${outcome.summary} 这一步没有改变世界状态，因此停在这里。`,view:service.project(current)};
-    steps.push({candidate:selected.id,summary:outcome.summary});
+    steps.push({candidate:selected.id,summary:outcome.summary,fulfilled:outcome.fulfilled});
   }
   return {ok:false,message:`${summarise()} 已达到本轮推进步数上限；「${objective}」尚无完成证据。`,view:service.project(current)};
 }

@@ -1,5 +1,10 @@
 # Claude Code starting handoff
 
+## Open-goal preparation completion — 2026-10-21
+
+Parent a954b27; source checkpoint containing this section distinguishes candidate preparation from actual completion and rejects premature done through existing bounded validation. Baseline3fail/2controls; final6files49pass/build. Actual HTTP/JsonStore restart and original-request replay preserve work +8/2revisions or exhausted partial +0/1revision without generation. No Core/schema/budget change. See docs/open-goal-completion-evidence.md. A4.2 explicitly withdrawn and restored in following ledger commit, net0 to60%=96/160. A4.3 stays open; full212files2118pass remains f9f93f0. Next: reproduce remaining authority/recovery boundaries (including declared activity settlement) and continue four themes. Original dirt, frozen criteria, formal save and3100 preserved.
+
+
 ## Future cancellation respects explicit time window — 2026-10-21
 
 Parent `a7b790b`; source checkpoint containing this section includes existing typed morning/afternoon window in cancellation matching, alongside original recipient/date. Baseline3fail/2controls; expanded4fail/2controls includes wrong cancellation of any-time plan; final6files57pass/build in SESSION. Actual original-language cancellation and replay, real JsonStore/new-service terminal cancellation at due time verified. True duplicate/missing-window ambiguity remains no-write; no text guessing/schema/Core change. See docs/future-cancel-window.md. A7.3/A7.4 remain open;60%=96/160,+0; full207files2064pass stays1bad19e. Next: audit full fixed A7 mixed/dynamic-intent matrix and representative multi-world corpus rather than treating one fix as whole condition. Original dirt/safety preserved.

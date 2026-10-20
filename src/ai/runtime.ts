@@ -271,7 +271,12 @@ export class AIRuntime {
     return checked.data;
   }
   async chooseAffordance<T>(view:import('../shared/contracts.js').PublicView,objective:string,candidates:unknown[],schema:z.ZodType<T>,progress?:unknown,save?:SavePackage){
-    const result=await this.generateValidated({role:'intent_interpreter',schema:structuredInputSchema(schema),maxOutputTokens:2000,prompt:'你在持续世界里替玩家推进一个开放目标。每轮只决定下一步：如果候选里确实有一个动作能继续推进 objective，返回 decision="act" 并给出候选中的 candidate_id；如果目标已经由 completed 里已经发生的步骤达成，返回 decision="done"；如果必须先由玩家做重大选择或缺少必要信息，返回 decision="clarify" 并写一个必要的 ambiguity 问题；如果当前世界条件明确阻塞目标，返回 decision="blocked" 并在 reason 里说明。绝不虚构地点、人物、工作、物品、规则或候选 id，也绝不重复 completed 里已经做过的同一个动作。JSON only.'+JSON.stringify({objective,current_time:view.time,player_id:view.player_id,progress:progress??null,candidates})},schema,save,{category:'planning',tags:['goal']},candidate=>{const d=candidate as {decision?:string;candidate_id?:string};if(d.decision==='act'&&!candidates.some(c=>(c as {id?:string}).id===d.candidate_id))throw new CandidateValidationError('affordance',[{path:'candidate_id',code:'candidate_reference',expected:'本次已给出的候选ID',message:'选择的动作不在本次候选集合'}],candidate);});
+    const result=await this.generateValidated({role:'intent_interpreter',schema:structuredInputSchema(schema),maxOutputTokens:2000,prompt:'你在持续世界里替玩家推进一个开放目标。每轮只决定下一步：如果候选里确实有一个动作能继续推进 objective，返回 decision="act" 并给出候选中的 candidate_id；如果目标已经由 completed 里已经发生的步骤达成，返回 decision="done"；preparation 只记录前往候选地点的准备，候选本身尚未执行，不能作为目标完成证据；到达后仍须选择该候选实际执行。如果必须先由玩家做重大选择或缺少必要信息，返回 decision="clarify" 并写一个必要的 ambiguity 问题；如果当前世界条件明确阻塞目标，返回 decision="blocked" 并在 reason 里说明。绝不虚构地点、人物、工作、物品、规则或候选 id，也绝不重复 completed 里已经做过的同一个动作。JSON only.'+JSON.stringify({objective,current_time:view.time,player_id:view.player_id,progress:progress??null,candidates})},schema,save,{category:'planning',tags:['goal']},candidate=>{
+      const d=candidate as {decision?:string;candidate_id?:string};
+      if(d.decision==='act'&&!candidates.some(c=>(c as {id?:string}).id===d.candidate_id))throw new CandidateValidationError('affordance',[{path:'candidate_id',code:'candidate_reference',expected:'本次已给出的候选ID',message:'选择的动作不在本次候选集合'}],candidate);
+      if(d.decision==='done'&&(progress as {preparation?:unknown[]}|undefined)?.preparation?.length)
+        throw new CandidateValidationError('affordance',[{path:'decision',code:'completion_evidence',expected:'候选行动本身已经实际执行；到达地点只是准备',message:'还有仅完成前往地点准备的候选，不能据此宣布原目标完成；选择实际候选继续，或明确阻塞/待玩家决定'}],candidate);
+    });
     return schema.parse(result.data);
   }
   async proposeBackgroundContinuation(save:SavePackage,repair?:{reason:string;previous:BackgroundProposal}):Promise<BackgroundProposal>{
