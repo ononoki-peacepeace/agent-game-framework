@@ -1,0 +1,9 @@
+# Future cancellation retains the player's stated time window
+
+Parent `a7b790b`. Fixed original Chinese inputs and source/test hashes were saved in local `future-cancel-window-scenarios.json` before baseline. Initially three failures/two controls. Expanded baseline adds an any-time commitment: four failures/two controls. The planner already retained the explicit morning/afternoon window, but cancellation matched only recipient/date. That wrongly blocked a uniquely specified cancellation among two windows and wrongly cancelled an any-time plan as if it had an afternoon commitment.
+
+Cancellation now uses the existing typed time-window field as well as recipient/date. An unspecified window retains prior matching/ambiguity behavior; an explicit window must match the original plan's window. It does not guess from free text, choose among duplicate same-window plans, or silently turn an any-time commitment into a specific one. No schema, Core, model-budget or world-action change.
+
+Final six-file/57-test regression and complete isolated build are recorded in SESSION. Two original natural-language requests cancel only the specified morning/afternoon plan, retaining the same-NPC other window and later date. Missing-window and duplicate-window ambiguity remain no-write; replay is identical. Actual JsonStore/service recreation retains cancelled morning as terminal at due time; explicit execution cannot call a model or act on it. Author-controlled time advancement is a fixture, not a long-duration simulation claim.
+
+A7.3/A7.4 remain open for the complete mixed/dynamic-intent and restart corpus. **60.00%,96/160,+0**. Latest complete207-file/2064-test snapshot remains `1bad19e`; this later source has targeted evidence only. Original dirty QA, frozen criteria, formal data and service/Provider boundaries are preserved.

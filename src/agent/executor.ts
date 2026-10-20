@@ -431,7 +431,8 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
    }else if(goal.type==='LIST_FUTURE'){
     const entries=save.future_intents??[];futures.push(...entries);message=entries.length?entries.map(i=>i.status==='due'?dueAssessment(view,i):i.goal+'（'+i.status+'）').join('\n'):'目前没有登记的未来打算。';
    }else if(goal.type==='CANCEL_FUTURE'){
-    const matches=(save.future_intents??[]).filter(i=>['planned','due'].includes(i.status)&&(!goal.target_entities.length||goal.target_entities.every(id=>i.target_entities.includes(id)))&&(!goal.temporal_scope.day_offset||i.target_date===view.time.day+goal.temporal_scope.day_offset));
+    const matches=(save.future_intents??[]).filter(i=>['planned','due'].includes(i.status)&&(!goal.target_entities.length||goal.target_entities.every(id=>i.target_entities.includes(id)))&&(!goal.temporal_scope.day_offset||i.target_date===view.time.day+goal.temporal_scope.day_offset)&&
+     (goal.temporal_scope.window==='any'||i.time_window===goal.temporal_scope.window));
     assert(matches.length===1,matches.length?'有多个打算符合，请补充目标、日期或具体活动。':'没有找到对应的未完成打算。');
     await service.agentTransaction({...body,request_id:childId(body.request_id,'cancel:'+id),expected_revision:save.state_revision},{cancel:matches[0].id},next=>{next.future_intents!.find(i=>i.id===matches[0].id)!.status='cancelled';});save=await service.current();changes.push('cancel_future:'+matches[0].id);message='已取消：'+matches[0].goal;
    }else if(goal.type==='EXECUTE_FUTURE'){

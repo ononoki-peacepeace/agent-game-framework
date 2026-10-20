@@ -1,5 +1,10 @@
 # Claude Code starting handoff
 
+## Future cancellation respects explicit time window — 2026-10-21
+
+Parent `a7b790b`; source checkpoint containing this section includes existing typed morning/afternoon window in cancellation matching, alongside original recipient/date. Baseline3fail/2controls; expanded4fail/2controls includes wrong cancellation of any-time plan; final6files57pass/build in SESSION. Actual original-language cancellation and replay, real JsonStore/new-service terminal cancellation at due time verified. True duplicate/missing-window ambiguity remains no-write; no text guessing/schema/Core change. See docs/future-cancel-window.md. A7.3/A7.4 remain open;60%=96/160,+0; full207files2064pass stays1bad19e. Next: audit full fixed A7 mixed/dynamic-intent matrix and representative multi-world corpus rather than treating one fix as whole condition. Original dirt/safety preserved.
+
+
 ## Post-commit failure step summary — 2026-10-21
 
 Parent `6c6876e`; source checkpoint containing this section prevents a failed-step summary denying changed world state or recommending blind retry after recovery sees a newer revision. Initial2actual-WAIT cases failed; final6files27pass/build in SESSION. Structured receipt/story stays, explicit refreshed-revision/same-child replay adds no minute/receipt/model call. No Core/interface/retry change. See docs/plan-committed-failure-summary.md. R5.3 open;60%=96/160,+0. Full207files2064pass belongs preceding1bad19e; this later edit has targeted evidence. Next: fixed conditional/dynamic-intent/partial-result matrix and all other themes; original dirt/safety preserved.
