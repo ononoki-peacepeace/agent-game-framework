@@ -401,6 +401,7 @@ export function canonicalCompoundNarrative(save:SavePackage,hidden:boolean,steps
       isSettledPerception(save,step)?canonicalPerceptionNarrative(save,step,hidden):
       step.semantic_action==='TALK'?`你向${name}开了口。`:
       step.semantic_action==='WAIT'?`你等了${step.time_cost}分钟。`:
+      step.semantic_action==='HOLD'?canonicalResolutionNarrative(step,hidden):
       itemActionTypes.has(step.semantic_action)?canonicalResolutionNarrative(step,hidden):
       facts.length?facts.join(' '):canonicalResolutionNarrative(step,hidden);
     return `${index+1}、${text}`;
@@ -422,6 +423,15 @@ export function canonicalResolutionNarrative(receipt:Receipt,hidden:boolean,perc
     return discovered.length?`你仔细查看了眼前的情形。${discovered.map(fact=>fact.slice('发现已存在的证据：'.length)).join('；')}`:
       hidden?'你仔细查看了当前区域。眼前能确认的仍是已经看见的情形。':
         '你仔细观察了一会儿，在这次检查范围内暂时没有发现明显异常或新的线索。';
+  }
+  if(receipt.semantic_action==='HOLD'&&!hidden&&receipt.kind==='DETERMINISTIC'&&receipt.outcome==='success'){
+    const fact=receipt.canonical_facts.map(text=>/^在当前位置持续进行「([\s\S]+)」，实际经过 (\d+) 分钟(，因需要处理的事情而暂停|。)$/.exec(text))
+      .find(match=>match&&Number(match[2])===receipt.time_cost);
+    if(fact)return receipt.time_cost===0?`你停了下来，尚未继续「${fact[1]}」。`:
+      `你留在原处继续「${fact[1]}」，${fact[3]==='。'?`这段活动持续了${receipt.time_cost}分钟。`:`过了${receipt.time_cost}分钟便停了下来。`}`;
+    // Long Core facts can be truncated; elapsed time alone never proves the
+    // named activity or a larger goal was completed.
+    return receipt.time_cost>0?`你留在原处，过了${receipt.time_cost}分钟。`:'你停了下来。';
   }
   const itemNarrative=itemActionNarrative(receipt,hidden);if(itemNarrative)return itemNarrative;
   const outcome=hidden?'这次尝试已经进行，结果目前尚不可确认。':
