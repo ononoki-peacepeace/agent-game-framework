@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "9544101",
+  "assessed_source": "486bd2f",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -141,11 +141,11 @@
       "basis": "Known remaining implementation or acceptance gap in the existing ledger."
     },
     "R5.4": {
-      "status": "unverified",
+      "status": "met",
       "evidence": [
-        "docs/qa-ai-recovery-coverage.md"
+        "docs/current-offline-snapshot.md"
       ],
-      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+      "basis": "Source486bd2f fixed190-file/488-hash manifest, full1927/1927pass with no missing/duplicated files or source changes, build passed. Earlier failed run/native crash retained. Offline snapshot only; later product edits need fresh evidence."
     },
     "R6.1": {
       "status": "met",
@@ -1375,6 +1375,31 @@
           "evidence": [
             "docs/current-offline-snapshot.md",
             "tests/observability-idle.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "repaired-complete-offline-snapshot",
+      "type": "repair",
+      "source": "486bd2f",
+      "transitions": [
+        {
+          "id": "R5.4",
+          "before": "unverified",
+          "after": "met",
+          "evidence": [
+            "docs/current-offline-snapshot.md"
+          ],
+          "reason": "Fresh complete190-file offline run passes1927/1927 with source hash and exact coverage audit; original failures preserved."
+        }
+      ],
+      "condition_checks": [
+        {
+          "id": "R5.3",
+          "result": "Complete test run does not establish every nested failure exit audit; condition remains unmet",
+          "evidence": [
+            "docs/current-offline-snapshot.md"
           ]
         }
       ]

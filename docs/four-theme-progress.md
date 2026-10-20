@@ -1,16 +1,16 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：9544101。整体 **59.38%**（95/160 个固定条件满足）。未满足 28，待验证 37。
+计分版本 v1；评估源代码：486bd2f。整体 **60.00%**（96/160 个固定条件满足）。未满足 28，待验证 36。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
 | 主题 | 满足 | 未满足 | 待验证 | 完成/部分/未完成项 | 主题进度 |
 |---|---:|---:|---:|---|---:|
-| ① 可靠性 | 29 | 6 | 5 | 4/6/0 | 72.5% |
+| ① 可靠性 | 30 | 6 | 4 | 4/6/0 | 75.0% |
 | ② 自然语言行动 | 22 | 7 | 11 | 3/5/2 | 55.0% |
 | ③ 自主持续世界 | 24 | 7 | 9 | 3/6/1 | 60.0% |
 | ④ Narrator 与体验 | 20 | 8 | 12 | 2/6/2 | 50.0% |
-| 合计 | 95 | 28 | 37 | 12/23/5 | 59.38% |
+| 合计 | 96 | 28 | 36 | 12/23/5 | 60.00% |
 
 旧台账的12/21/7是工作包人工分类，保留作历史。这里的完成/部分/未完成由4个条件满足数推导，不能与旧分类混用。旧46%为退役估计；首次建立口径不是产品进展，不计算相对46%的提升。
 
@@ -31,6 +31,7 @@
 | compound-degraded-prose | repair | N3.3: Settled compound speech/physical order retained across refusal, timeout and fact-conflict; general failed/unexecuted goal presentation remains open；完整条件保持开放; N8.2: Concrete inherited-last-step omission repaired; broad naturalness and incomplete-goal prose remain open；完整条件保持开放 | +0.000 pp |
 | legacy-social-policy-strategy | repair | W9.1: unmet → met; W9.2: unmet → met | +1.250 pp |
 | complete-offline-snapshot-1927 | repair | R5.4: All190 fixed files executed,1926/1927pass; migration log failure and original process crash retained. Repair49pass/build passed; no full-condition closure.；完整条件保持开放 | +0.000 pp |
+| repaired-complete-offline-snapshot | repair | R5.4: unverified → met | +0.625 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -75,7 +76,7 @@
 | R5.1 | 已有故障矩阵区分技术失败与游戏内失败，保留已提交步骤 | 满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md) |
 | R5.2 | 已有分层修复与安全停止测试验证不重复 Core 副作用 | 满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md) |
 | R5.3 | 逐条关闭矩阵中仍未核验的嵌套故障出口 | 未满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md) |
-| R5.4 | 最新完整离线代码快照全套通过，旧失败不得改写为通过 | 待验证 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md) |
+| R5.4 | 最新完整离线代码快照全套通过，旧失败不得改写为通过 | 满足 | [current-offline-snapshot.md](../docs/current-offline-snapshot.md) |
 
 ## R6 Pending/background jobs and asynchronous restart continuation
 
