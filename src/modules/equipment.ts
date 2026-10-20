@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { assert, dictionary, id, text } from '../core/schema.js';
 import type { Module } from '../core/registry.js';
 import type { Inventory } from './inventory.js';
+import {worldAssert} from '../agent/outcome.js';
+import {unsealedContainerAncestors} from '../core/item-access.js';
 
 export type Equipment = { slots: Record<string, string | null>; labels?: Record<string, string> };
 export type EquipmentItem = { allowed_slots: string[]; modifiers: Record<string, number>; effect: string };
@@ -28,6 +30,7 @@ export const equipmentModule: Module = {
         const itemId = String(c.action.parameters.item_id), slot = String(c.action.parameters.slot);
         const inv = c.store.component<Inventory>(c.action.actor_id, 'inventory');
         assert((inv.items[itemId] ?? 0) > 0, '背包中没有这件物品');
+        worldAssert(unsealedContainerAncestors(c.save,c.store.entity(itemId)),'unavailable','物品仍在密封或不可接触的容器内，当前不能装备');
         assert(c.store.entity(itemId).components.item?.condition!=='destroyed','损毁物品不能装备');
         const spec = c.store.component<EquipmentItem>(itemId, 'equipment_item');
         assert(spec.allowed_slots.includes(slot), '该物品不能装备到这个槽位');

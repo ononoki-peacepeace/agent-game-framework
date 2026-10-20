@@ -1,0 +1,9 @@
+# Equipment obeys sealed container access
+
+Parent `f64e99c`, product before repair `80f9084`. The final built-code preflight found 2 sealed failures/2 open controls. Formal source regression reproduced 5 failures/4 controls: player and NPC could equip contents of a sealed bag or open inner bag inside a sealed outer bag. A service request reached narration instead of world refusal. Original preflight, hashes and baseline reports remain in ignored `sealed-equipment-*` evidence.
+
+EQUIP now calls the existing ancestry guard before slot mutation, with structured world-unavailable feedback. It does not open containers, move contents, charge time, generate prose or alter equipment on refusal. Accessible nesting and the accessible exterior of a sealed container retain the established EQUIP behavior. UNEQUIP remains the existing explicit action. This depends on `core/item-access.ts` introduced in `5f29a42`; there are no unmerged interfaces, schema, Core commit or budget changes.
+
+Final isolated regression: 7 files, 98/98 tests, zero skips; complete isolated build passed (session 66060). Nine focused cases cover player/NPC sealed and nested sources, open nesting, sealed-container exterior controls, and actual JsonStore/service recreation where repeated refused requests preserve all state and disk bytes with zero generation. These are service-level tests, not HTTP. No failure was converted to a successful game outcome.
+
+A8.3/N6.3 broad dynamic item/environment/consumption/multi-world matrices remain open, net zero to 60% (96/160). The complete 228-file/2252-test snapshot belongs to preceding `80f9084`/evidence `f64e99c`; this later edit has targeted evidence. Original dirt, formal save, frozen criteria, production service, paid providers and Claude checkout remain preserved. Next review the remaining explicit policy/offline migration and four-theme acceptance gaps rather than inferring closure from these access cases.

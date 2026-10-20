@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Sealed equipment access — 2026-10-21
+
+Parentf64e99c; this source checkpoint guards EQUIP with existing unsealedContainerAncestors before slot changes. Builtpreflight2fail/2opencontrols;formal5fail/4controls;final7files98pass/zero skip and isolated build/session66060 passed. Player/NPC/open/nested/exterior controls and actual disk/new-service repeated refusal preserve bytes/state,zero generation;not HTTP. Depends core/item-access from5f29a42;no schema/Core/budget changes. See docs/sealed-equipment-access.md. A8.3/N6.3 remain open,60%=96/160,+0. Complete228files2252pass stays preceding80f9084/evidencef64e99c,including native-failed initial19 retained and11fresh file passes. Next: review remaining legacy-policy offline migration and broader four-theme gaps. Original dirt retained;no source WIP after checkpoint.
+
 ## Complete post-item offline coverage — 2026-10-21
 
 Product80f9084/evidence starting362b3cb:228files2252/2252pass,zero skip,538pinned hashes unchanged,exact selected coverage once. Initial20process attempt had native0xC0000409 at19(no report),retained;19passed reports+11fresh single-file reports give30passing-report coverage,31total attempts. Identical-product isolated build/session68456 passed. Original QA/27frozen/formal SHA match. Native cause unresolved. See docs/post-item-offline-snapshot.md/ignored post-item-offline-summary.json. R5.4 refresh only;60%=96/160,+0. No active tests/source WIP after evidence commit. Next: copy ignored sealed-equipment-test-candidate.ts into tests,run formal baseline before repair;built-code preflight player/NPC sealed2fail/open2controls. Then continue fixed four-theme matrices. Original dirt/safety preserved.
