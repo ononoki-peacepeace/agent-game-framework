@@ -81,7 +81,9 @@ export async function sparseStep(input:SavePackage,ai:AIRuntime,horizon:number,s
    return s;
  }
  const end=Math.min(slot.end,limit);const duration=end-now;s=wait(s,duration,rng);
- const progress=r.block_progress as {key:string;minutes:number}|undefined;const accrued=(progress?.key===slot.key?progress.minutes:0)+duration;routineOf(s).block_progress={key:slot.key,minutes:accrued};
+ const progress=r.block_progress as {key:string;minutes:number}|undefined;
+ const actualDuration=absoluteTime(s)-now;
+ const accrued=(progress?.key===slot.key?progress.minutes:0)+actualDuration;routineOf(s).block_progress={key:slot.key,minutes:accrued};
  if(!routineOf(s).interrupted && end===slot.end){
    const player=s.entities.find(e=>e.id===s.player_state.entity_id)!;
    // Recovery saturates; all other numeric permissions use the same validator as sparse AI.

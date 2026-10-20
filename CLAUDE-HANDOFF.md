@@ -1,5 +1,10 @@
 # Claude Code starting handoff
 
+## Local routine actual time credit — 2026-10-21
+
+Parent1fab9a9; source checkpoint containing this section adds actual Core clock delta to local block progress, preventing interrupted work/sleep from receiving requested120/480 when only60 elapsed. Baseline2fail/2controls; final regression/build in SESSION. Added prefix30+interrupt60+disk/service read retains90/no wage; test-side explicit acknowledgement then final30 yields120, one completed block and exactly+8 without generation. No schema/Core/payment/resumption policy change. See docs/routine-local-elapsed.md. W4.3 stays open;60%=96/160,+0. Full212files2118pass remains f9f93f0. Next: pin current source and refresh complete offline snapshot before further product edits, then continue fixed four-theme matrices. Original dirt/safety preserved.
+
+
 ## Routine actual partial settlement — 2026-10-21
 
 Parent12b2b72; source checkpoint containing this section withholds unearned AI routine effects, records actual end/elapsed and truthful pause, and prevents premature completed_blocks. Corrected baseline2fail/5controls plus completed-block1fail; original4fail/2controls included3invalid appointment expectations (scheduler already preempts), preserved. Final4files45pass + explicit sparse/lifecycle2files25pass =6distinctfiles70pass/build. Actual event and JsonStore/service replay covered. Integrate routine-controller+scheduler together; no schema/Core or invented proportional reward. See docs/routine-partial-interruption.md. W4.3 remains open;60%=96/160,+0. Full212files2118pass stays f9f93f0. Next: actual local scheduler accrued time/foreground interruption and remaining fixed matrices. Original dirt/safety preserved.
