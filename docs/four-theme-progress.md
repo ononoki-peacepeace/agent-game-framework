@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：d1721f4。整体 **60.00%**（96/160 个固定条件满足）。未满足 28，待验证 36。
+计分版本 v1；评估源代码：42fcb15。整体 **60.63%**（97/160 个固定条件满足）。未满足 28，待验证 35。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -8,9 +8,9 @@
 |---|---:|---:|---:|---|---:|
 | ① 可靠性 | 30 | 6 | 4 | 4/6/0 | 75.0% |
 | ② 自然语言行动 | 22 | 7 | 11 | 3/5/2 | 55.0% |
-| ③ 自主持续世界 | 24 | 7 | 9 | 3/6/1 | 60.0% |
+| ③ 自主持续世界 | 25 | 7 | 8 | 3/6/1 | 62.5% |
 | ④ Narrator 与体验 | 20 | 8 | 12 | 2/6/2 | 50.0% |
-| 合计 | 96 | 28 | 36 | 12/23/5 | 60.00% |
+| 合计 | 97 | 28 | 35 | 12/23/5 | 60.63% |
 
 旧台账的12/21/7是工作包人工分类，保留作历史。这里的完成/部分/未完成由4个条件满足数推导，不能与旧分类混用。旧46%为退役估计；首次建立口径不是产品进展，不计算相对46%的提升。
 
@@ -96,6 +96,7 @@
 | item-action-degraded-prose | repair | N8.2: Four item-action fallbacks and compound child prose retain actual item/quantity/payment;full failed/unexecuted multi-goal naturalness remains open；完整条件保持开放; N3.3: Four item-action fallbacks and compound child prose retain actual item/quantity/payment;full failed/unexecuted multi-goal naturalness remains open；完整条件保持开放 | +0.000 pp |
 | post-item-complete-offline-snapshot | repair | R5.4: Current228-file2252pass exact coverage on538fixed hashes;initial native failure retained,30passing reports/31attempts;no root-cause stability claim；完整条件保持开放 | +0.000 pp |
 | sealed-equipment-access | repair | A8.3: EQUIP sealed source/nested access repaired with player/NPC/exterior controls;full dynamic item/multi-world matrix remains open；完整条件保持开放; N6.3: EQUIP sealed source/nested access repaired with player/NPC/exterior controls;full dynamic item/multi-world matrix remains open；完整条件保持开放 | +0.000 pp |
+| legacy-policy-offline-activation | repair | W9.3: unverified → met | +0.625 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -355,7 +356,7 @@
 |---|---|---|---|
 | W9.1 | 明确旧世界社交政策与作者数据缺口 | 满足 | [legacy-social-policy-strategy.md](../docs/legacy-social-policy-strategy.md), [npc-relations.ts](../src/agent/npc-relations.ts), [authoring.ts](../src/ai/authoring.ts) |
 | W9.2 | 制定可审查的兼容数据策略及禁止默认虚构原则 | 满足 | [legacy-social-policy-strategy.md](../docs/legacy-social-policy-strategy.md), [npc-relations.ts](../src/agent/npc-relations.ts), [authoring.ts](../src/ai/authoring.ts) |
-| W9.3 | 离线副本验证政策缺失、启用与迁移的行为 | 待验证 | [claude-takeover-integration.md](../docs/claude-takeover-integration.md) |
+| W9.3 | 离线副本验证政策缺失、启用与迁移的行为 | 满足 | [legacy-relationship-policy.test.ts](../tests/legacy-relationship-policy.test.ts), [legacy-relationship-policy-activation.md](../docs/legacy-relationship-policy-activation.md), [legacy-social-policy-strategy.md](../docs/legacy-social-policy-strategy.md) |
 | W9.4 | 经明确授权后执行所需正式数据变更或确认无需迁移 | 待验证 | [claude-takeover-integration.md](../docs/claude-takeover-integration.md) |
 
 ## W10 Multi-world extended-duration and future multiplayer acceptance

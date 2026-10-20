@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "d1721f4",
+  "assessed_source": "42fcb15",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -893,11 +893,13 @@
       "basis": "Reviewable prospective compatibility strategy forbids inferred defaults and retroactive effects, preserves existing facts, and specifies offline/identity/authorization gates without claiming implementation. Reviewed design9544101, product sourceb4c018f; no formal migration or author policy choice claimed."
     },
     "W9.3": {
-      "status": "unverified",
+      "status": "met",
       "evidence": [
-        "docs/claude-takeover-integration.md"
+        "tests/legacy-relationship-policy.test.ts",
+        "docs/legacy-relationship-policy-activation.md",
+        "docs/legacy-social-policy-strategy.md"
       ],
-      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+      "basis": "42fcb15 implements explicit prospective legacy-policy preview/activation on constructed offline copies of public town data.20fixed cases cover missing policy/read/restart,old speech/physical receipt inertness,new authored deltas,omissions/bounds/fallback/zero,numeric/resource/time/cognition/cursor preservation,existing markers,invalid selection/identity/hash/preview,actual competing revision,prepare failure,real JsonStore before/after write failure/restart/replay and Undo. Final6files76pass/zero skip plus complete isolated build/session7075 passed. Preflight retroactive-edit failure,initial sync/physical eligibility/sandbox failures retained. No HTTP/CLI/model/load hook;no formal policy choice or mutation. W9.4 remains unverified pending human decision/authorization."
     },
     "W9.4": {
       "status": "unverified",
@@ -2662,6 +2664,24 @@
             "tests/sealed-equipment-access.test.ts",
             "docs/sealed-equipment-access.md"
           ]
+        }
+      ]
+    },
+    {
+      "batch": "legacy-policy-offline-activation",
+      "type": "repair",
+      "source": "42fcb15",
+      "transitions": [
+        {
+          "id": "W9.3",
+          "before": "unverified",
+          "after": "met",
+          "evidence": [
+            "tests/legacy-relationship-policy.test.ts",
+            "docs/legacy-relationship-policy-activation.md",
+            "docs/legacy-social-policy-strategy.md"
+          ],
+          "reason": "Original offline missing/enabled/migration strategy matrix implemented and reviewed with actual Core,JsonStore,response-loss/restart/Undo evidence;formal choice/activation remains W9.4."
         }
       ]
     }
