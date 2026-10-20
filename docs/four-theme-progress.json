@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "8b5d2df",
+  "assessed_source": "53eaaa6",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -1028,9 +1028,11 @@
         "tests/scene-presence-groups.test.ts",
         "docs/scene-presence-groups.md",
         "tests/perception-subjects.test.ts",
-        "docs/perception-subjects.md"
+        "docs/perception-subjects.md",
+        "tests/contained-evidence-access.test.ts",
+        "docs/contained-evidence-access.md"
       ],
-      "basis": "Existing factual/presence/perception tests plus compound physical-child counterexample repair; explicit met withdrawal/restoration recorded, final8files79pass/build at 8ae218b; wider N4.3/N4.4 remain open. 7ecc07b: actual settled reaction words required in beats/legacy dialogue; explicit withdrawal/restoration, net0. Counterexample at055367a:5fail/7controls, earlier denied/intended departure globally suppressed later actual departure with no Core move; N4.1 explicitly withdrawn pending repair. 1246a49: occurrence-scoped departure negation, truthful no-receipt degradation marker; initial5fail/7controls, final6files80pass/build. N4.1 withdrawal/restoration net0; broader subject/multi-world scope remains open. Counterexample06f594f: multi-named comma clauses bypass whole-sentence presence validation;7fail/5controls including NPC-only guard subject attribution. N4.1 withdrawn pending bounded repair. 1bad19e: independently named/player clauses retain presence checks;7fail/5controls, intermediate63/66 overly broad split corrected, final7files92pass/build. Explicit N4.1 withdrawal/restoration net0; rich subject/multi-world matrices open. Counterexample b52a6e5: explicit joint NPC subjects bypass presence checks;7fail/6legal controls, including real service accepting invented joint departure after WAIT. N4.1 withdrawn pending repair. ae4f469: bounded literal joint-subject presence/travel guard checks each named member; baseline7fail/6legal controls, first3files42pass, expanded final8files94pass/build. Real service degrades unsupported group departure and replays WAIT once. N4.1 withdrawal/restoration net0; broad grammar/multi-world matrix remains open. Counterexample d2947cc: multi-named clauses and joint subjects bypass event-time blocked-sight narration checks;6fail/4legal controls including actual settled physical turn. N4.1 withdrawn pending repair. f9f93f0: explicit visual joint subjects and independent named/player clauses preserve event-time sight receipt checks;6fail/4controls, final9files85pass/build including HTTP/compound-child continuity. Actual physical turn rejects invented observation and replays once. N4.1 withdrawn/restored net0; broader attribution/quoted/multi-world grammar remains open."
+      "basis": "Existing factual/presence/perception tests plus compound physical-child counterexample repair; explicit met withdrawal/restoration recorded, final8files79pass/build at 8ae218b; wider N4.3/N4.4 remain open. 7ecc07b: actual settled reaction words required in beats/legacy dialogue; explicit withdrawal/restoration, net0. Counterexample at055367a:5fail/7controls, earlier denied/intended departure globally suppressed later actual departure with no Core move; N4.1 explicitly withdrawn pending repair. 1246a49: occurrence-scoped departure negation, truthful no-receipt degradation marker; initial5fail/7controls, final6files80pass/build. N4.1 withdrawal/restoration net0; broader subject/multi-world scope remains open. Counterexample06f594f: multi-named comma clauses bypass whole-sentence presence validation;7fail/5controls including NPC-only guard subject attribution. N4.1 withdrawn pending bounded repair. 1bad19e: independently named/player clauses retain presence checks;7fail/5controls, intermediate63/66 overly broad split corrected, final7files92pass/build. Explicit N4.1 withdrawal/restoration net0; rich subject/multi-world matrices open. Counterexample b52a6e5: explicit joint NPC subjects bypass presence checks;7fail/6legal controls, including real service accepting invented joint departure after WAIT. N4.1 withdrawn pending repair. ae4f469: bounded literal joint-subject presence/travel guard checks each named member; baseline7fail/6legal controls, first3files42pass, expanded final8files94pass/build. Real service degrades unsupported group departure and replays WAIT once. N4.1 withdrawal/restoration net0; broad grammar/multi-world matrix remains open. Counterexample d2947cc: multi-named clauses and joint subjects bypass event-time blocked-sight narration checks;6fail/4legal controls including actual settled physical turn. N4.1 withdrawn pending repair. f9f93f0: explicit visual joint subjects and independent named/player clauses preserve event-time sight receipt checks;6fail/4controls, final9files85pass/build including HTTP/compound-child continuity. Actual physical turn rejects invented observation and replays once. N4.1 withdrawn/restored net0; broader attribution/quoted/multi-world grammar remains open. Counterexample9acea32/product8b5d2df: generic perception discovers a clue behind sealed ancestors and degraded prose exposes its content;deterministic5fail/3lawful controls. Withdrawn pending repair. Repaired53eaaa6:scene/owned sealed ancestors bound discovery,exterior/open controls and learned knowledge retained;6files67pass/zero skip,final isolated build pass;actual Core/fallback/disk/new-service replay verified. Initial generic-JSON build failure retained. Withdrawal/restoration net0."
     },
     "N4.2": {
       "status": "met",
@@ -1116,9 +1118,11 @@
       "evidence": [
         "tests/initial-possessions.test.ts",
         "tests/local-scene-materialization.test.ts",
-        "tests/narrative-firewall-observability.test.ts"
+        "tests/narrative-firewall-observability.test.ts",
+        "tests/contained-evidence-access.test.ts",
+        "docs/contained-evidence-access.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 53eaaa6 repairs sealed-container clue access;full container/environment/temporary-item/transfer/consumption matrix still open."
     },
     "N6.4": {
       "status": "unverified",
@@ -2433,6 +2437,49 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "contained-evidence-withdrawal",
+      "type": "evidence_correction",
+      "source": "8b5d2df",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "tests/contained-evidence-access.test.ts"
+          ],
+          "reason": "Actual Core perception/fallback exposes sealed-contained clue;deterministic5fail/3controls."
+        }
+      ]
+    },
+    {
+      "batch": "contained-evidence-repair",
+      "type": "repair",
+      "source": "53eaaa6",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "tests/contained-evidence-access.test.ts",
+            "docs/contained-evidence-access.md"
+          ],
+          "reason": "Actual discovery/fallback sealed-contained leak repaired,6files67pass/build;withdraw/restore net0."
+        }
+      ],
+      "observations": [
+        {
+          "id": "N6.3",
+          "result": "Sealed clue subcase repaired;full item matrix stays open",
+          "evidence": [
+            "tests/contained-evidence-access.test.ts",
+            "docs/contained-evidence-access.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -3089,6 +3136,18 @@
         "docs/future-control-condition.md"
       ],
       "summary": "Fast future cancellation/execution erased original condition; guarded typed planning preserves false/unknown/true outcomes,actual HTTP parent restart replay pass."
+    },
+    {
+      "id": "contained-evidence",
+      "scope": "original",
+      "condition": "N4.1",
+      "status": "repaired",
+      "source": "53eaaa6",
+      "evidence": [
+        "tests/contained-evidence-access.test.ts",
+        "docs/contained-evidence-access.md"
+      ],
+      "summary": "Sealed scene/owned ancestors now bound evidence discovery and fallback content;lawful open/exterior/prior-knowledge cases remain."
     }
   ]
 }
