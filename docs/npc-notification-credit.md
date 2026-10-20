@@ -1,0 +1,9 @@
+# Newly notified NPCs cannot inherit earlier time
+
+Parent `a616649`, product `c3ac8fb`. A legal relay task with 100 banked minutes could notify a new listener during a 1- or 10-minute interval, then give the listener the old balance. The listener immediately completed a 7-minute trip despite learning about the appointment too late. Original-source baseline: 2 failures and 1 lawful 25-minute control. W4.2 was explicitly withdrawn before repair.
+
+Social settlement now tracks each relayer's actual Core receipt costs during the current interval. A newly created invitation receives at most the current interval remaining after those costs, capped by the existing relay balance. The relayer's own balance, world clock, schema, action budgets and model-call limits are unchanged. Every movement and notification still requires an actual Core receipt.
+
+Final regression: 5 distinct files, 48 passed, zero failed/skipped; isolated full build passed. This includes the original 1/10-minute counterexamples, lawful 25-minute delivery/travel, existing whole/split-interval social chains, physical plans and companion continuity. A fourth focused case writes and reads actual JsonStore state, verifies zero inherited balance, advances 7 real minutes before one trip, then verifies zero-time settlement is unchanged. This is a disk serialization/settlement test, not an HTTP restart test.
+
+Raw baseline, focused, regression JSON and build log remain in the ignored takeover checkpoint directory under `npc-notification-credit-*`. W4.2 can be restored with withdrawal/restoration net zero, returning to 60% (96/160). Broader W4.3/W4.4 matrices remain open. The complete 215-file/2149-pass offline snapshot is still pinned to earlier product `6f4a300`; later changes have targeted evidence only. Formal save, frozen acceptance definitions, original uncommitted files, production service and paid-provider boundaries remain preserved.

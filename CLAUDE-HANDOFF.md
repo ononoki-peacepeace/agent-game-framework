@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Notification time-credit causality — 2026-10-21
+
+Parent a616649; this source checkpoint caps new invitation credit by the current interval after actual relayer Core costs, preserving the relayer's old bank. Baseline2fail/1lawful25min control; final5distinctfiles48pass/zero skip and isolated build pass. Actual JsonStore write/read requires7newminutes before one receiver trip; zero-time resettlement unchanged (not HTTP restart). See docs/npc-notification-credit.md. No schema/Core/public dependency/model-budget change. W4.2 withdrawn then restored by following ledger commit,net0 to60%=96/160; W4.3/4 remain open. Full215files2149pass remains6f4a300. Next: continue resource/time and four-theme fixed matrices. Original dirt/frozen/formal/3100/paid/Claude preserved.
+
 ## Future execution date/window authority — 2026-10-21
 
 Parent0445cb8; source checkpoint containing this section retains original execution window/day offset in fastPlan and filters due intentions before actual social action. Direct2fail/1ambiguitycontrol; expanded original-language3newfail after first repair. Final5files57pass/build; actual JsonStore/new-service afternoon original input settles one TALK/completes afternoon only, replay refreshed revision does not generate or change bytes. No schema/Core/retry change; integrate planner+executor together. See docs/future-execute-window.md. A7.3/A7.4 stay open;60%=96/160,+0. Full215files2149pass stays6f4a300. Next: review actual selected goal content versus same-recipient future ambiguity and remaining fixed matrices. Original dirt/safety preserved.

@@ -642,7 +642,7 @@ async function settleSocialNpcTurn(service:GameService,input:SavePackage,
     state.social_tasks.some(task=>task.status==='active'||task.status==='blocked')))
     return {save:input,visibleFacts:[] as string[]};
   let save=structuredClone(input);
-  const visibleFacts:string[]=[],attempted=new Set<string>();
+  const visibleFacts:string[]=[],attempted=new Set<string>(),spentThisInterval=new Map<string,number>();
   const now=minuteOf(save,save.runtime.time);
   let actions=0,decisions=0,skipped=0;const socialBudget=generationBudget(socialDecisionsPerTurn);
   for(const state of Object.values(save.npc_agent_state??{}))for(const task of state.social_tasks){
@@ -665,6 +665,7 @@ async function settleSocialNpcTurn(service:GameService,input:SavePackage,
     const credit=taskOf(npcId,taskId)?.time_credit_minutes??0;
     if(receipt.time_cost>credit)throw new Error('社会行动超过已积累的世界时间');
     save=result.save;receipt.commit_status='committed';
+    spentThisInterval.set(npcId,(spentThisInterval.get(npcId)??0)+receipt.time_cost);
     taskOf(npcId,taskId)!.time_credit_minutes-=receipt.time_cost;
     const destination=save.entities.find(entity=>entity.id===npcId)?.components.location?.location_id;
     if(playerLocation()===origin||playerLocation()===destination){
@@ -762,7 +763,9 @@ async function settleSocialNpcTurn(service:GameService,input:SavePackage,
         organizer_id:updated.organizer_id,activity_location_id:updated.activity_location_id,
         destination_ids:[],recipient_ids:[],notified_ids:[],declined_ids:[],
         activity_at:updated.activity_at,next_at:structuredClone(save.runtime.time),
-        last_accounted_at:structuredClone(save.runtime.time),time_credit_minutes:updated.time_credit_minutes,
+        last_accounted_at:structuredClone(save.runtime.time),
+        // A new listener cannot spend the relayer's time bank from before this interval.
+        time_credit_minutes:Math.min(updated.time_credit_minutes,Math.max(0,elapsed-(spentThisInterval.get(npcId)??0))),
         source_request_id:updated.source_request_id,condition:null});
       save.npc_agent_state??={};save.npc_agent_state[target.id]=mind;
       attempted.delete(id);
