@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "adac019",
+  "assessed_source": "7647121",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -3021,6 +3021,30 @@
           "evidence": [
             "tests/npc-long-route-plan.test.ts",
             "docs/npc-long-edge-credit.md"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "npc-legacy-long-edge-credit",
+      "type": "repair",
+      "source": "7647121",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "W4.3",
+          "result": "Legacy current known firstedge paid-credit limit through1440 matches actual time;prior knowledge boundary,guards and Core settlement retained. Numeric reader dependency documented;baseline3fail13controls,final9files93pass/build,actual270credit disk/service restart/oneMOVE. Full matrices/process migration remain open.",
+          "evidence": [
+            "tests/npc-long-route-plan.test.ts",
+            "docs/npc-legacy-long-edge-credit.md"
+          ]
+        },
+        {
+          "id": "W5.3",
+          "result": "Legacy current known firstedge paid-credit limit through1440 matches actual time;prior knowledge boundary,guards and Core settlement retained. Numeric reader dependency documented;baseline3fail13controls,final9files93pass/build,actual270credit disk/service restart/oneMOVE. Full matrices/process migration remain open.",
+          "evidence": [
+            "tests/npc-long-route-plan.test.ts",
+            "docs/npc-legacy-long-edge-credit.md"
           ]
         }
       ]

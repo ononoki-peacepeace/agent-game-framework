@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：adac019。整体 **60.63%**（97/160 个固定条件满足）。未满足 28，待验证 35。
+计分版本 v1；评估源代码：7647121。整体 **60.63%**（97/160 个固定条件满足）。未满足 28，待验证 35。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -111,6 +111,7 @@
 | image-existing-content | repair | R8.3: Existing content-addressed image EEXIST now verifies bytes before binding;corrupt/truncated assets stop without overwriting/deleting/save mutation or retry. Baseline2fail2controls,final5files42pass/build. Full request-identity/GC/external writer gate remains open.；完整条件保持开放 | +0.000 pp |
 | npc-long-route-plan | repair | W4.3: Typed MOVE multi-edge route above240credit cap makes actual first-edge progress;original destination/cursor retained until arrival,matching time boundary,dependent work/long motive/disk restart/closed route controls. Baseline2fail1control,final7files59pass/build. Singleedge>240 and full matrices remain open.；完整条件保持开放; W5.3: Typed MOVE multi-edge route above240credit cap makes actual first-edge progress;original destination/cursor retained until arrival,matching time boundary,dependent work/long motive/disk restart/closed route controls. Baseline2fail1control,final7files59pass/build. Singleedge>240 and full matrices remain open.；完整条件保持开放 | +0.000 pp |
 | npc-long-edge-credit | repair | W4.3: Typed current declared travel edge can store actual paid credit through1440-minute map limit;no accrual before schedule/conditions or duplicated world time. Numeric reader dependency documented;legacy cap unchanged. Baseline2fail7controls;final8files80pass/build,actual270credit disk/service restart. Full matrices open.；完整条件保持开放; W5.3: Typed current declared travel edge can store actual paid credit through1440-minute map limit;no accrual before schedule/conditions or duplicated world time. Numeric reader dependency documented;legacy cap unchanged. Baseline2fail7controls;final8files80pass/build,actual270credit disk/service restart. Full matrices open.；完整条件保持开放 | +0.000 pp |
+| npc-legacy-long-edge-credit | repair | W4.3: Legacy current known firstedge paid-credit limit through1440 matches actual time;prior knowledge boundary,guards and Core settlement retained. Numeric reader dependency documented;baseline3fail13controls,final9files93pass/build,actual270credit disk/service restart/oneMOVE. Full matrices/process migration remain open.；完整条件保持开放; W5.3: Legacy current known firstedge paid-credit limit through1440 matches actual time;prior knowledge boundary,guards and Core settlement retained. Numeric reader dependency documented;baseline3fail13controls,final9files93pass/build,actual270credit disk/service restart/oneMOVE. Full matrices/process migration remain open.；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
