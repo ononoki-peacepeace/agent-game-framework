@@ -46,7 +46,7 @@ describe('bounded Narrator validation retries',()=>{
     expect(after.last_turn?.narrative).toContain('把注意力交给');
     expect(after.state_revision).toBe(before.state_revision+1);
   });
-  it('still rejects a literal uncommitted movement after the same audit',async()=>{
+  it('rejects literal uncommitted movement before a model audit can authorize it',async()=>{
     const {service,ai}=await sparseSetup(),before=await service.current();
     (ai.adapter as {name:string}).name='controlled-model';
     vi.spyOn(ai,'freeform').mockResolvedValue(proposal);
@@ -57,7 +57,7 @@ describe('bounded Narrator validation retries',()=>{
       request_id:requestId,input:'观察房间'},undefined,undefined,undefined,false,
       undefined,undefined,true);
     const after=await service.current();
-    expect(audit.mock.calls[0]?.[2]).toMatchObject({suspected_mechanical_claim:{kind:'position'}});
+    expect(audit).not.toHaveBeenCalled();
     expect(after.last_turn?.narrative).not.toContain('走到尚未登记的门口');
     expect(service.logger.entries({event:'narrative.safe_fallback'}).filter(entry=>entry.request_id===requestId)).toHaveLength(1);
   });

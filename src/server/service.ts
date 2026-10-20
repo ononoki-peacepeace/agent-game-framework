@@ -798,7 +798,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
         notices.push(...turn.facts);
       } else try {
         narrationPresentation={status:'normal',reasons:[]};
-        const receipt=(generic||turn.action.type==='MOVE')?next.resolution_receipts?.find(entry=>entry.request_id===req.request_id):undefined;
+        const receipt=(generic||['MOVE','INSPECT'].includes(turn.action.type))?next.resolution_receipts?.find(entry=>entry.request_id===req.request_id):undefined;
         if(generic)assert(receipt,'开放行动缺少程序判定凭据');
         if(generic&&!compoundSteps)assertFreeformGoalEvidence(next,req.input!,req.request_id);
         const compoundReceipts=compoundSteps?.map((_,index)=>next.resolution_receipts?.find(entry=>entry.request_id===compoundStepId(req.request_id,index)));
@@ -905,10 +905,14 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
               try{validateResolvedNarrative(receipt,result,Boolean(check?.hidden),
                 narrativeSteps as NonNullable<SavePackage['resolution_receipts']>|undefined,next);}
               catch(error){
-                // A literal inventory/position claim still fails. For perception prose, let the
-                // existing groundedness audit distinguish it from a metaphorical verb match.
+                // Only explicitly sensory constructions can reach the prose audit after a
+                // pattern rejection. A model's positive audit cannot authorize world effects.
                 if(perception&&error instanceof NarrativePatternError&&
-                  ['inventory','position'].includes(error.patternKind))ambiguousPattern=error;
+                  ['inventory','position'].includes(error.patternKind)){
+                  validateResolvedNarrative(receipt,result,Boolean(check?.hidden),
+                    narrativeSteps as NonNullable<SavePackage['resolution_receipts']>|undefined,next,true);
+                  ambiguousPattern=error;
+                }
                 else throw error;
               }
               if(receipt.movement_route)validateMovementNarrative(receipt,result,next);
@@ -1023,7 +1027,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
         if(error instanceof GameError)throw error;
         if (!['refusal','content_filter'].includes(failureReason(error))) {
           observe('warn','narration.aborted_before_commit',{module:'turn',request_id:req.request_id,metadata:{action:turn.action.type,reason:failureReason(error),detail:errorText(error).slice(0,240)}});
-          const settledReceipt=(generic||turn.action.type==='MOVE')?
+          const settledReceipt=(generic||['MOVE','INSPECT'].includes(turn.action.type))?
             next.resolution_receipts?.find(entry=>entry.request_id===req.request_id):undefined;
           if(settledReceipt&&error instanceof ProviderError&&
             ['schema','timeout','server_error','max_output_tokens','length','invalid_json','missing_output_text'].includes(error.reason)){

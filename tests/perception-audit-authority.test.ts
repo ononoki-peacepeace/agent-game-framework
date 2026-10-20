@@ -19,10 +19,15 @@ const literal=[
   '你穿过门口，走出了房间，暂时没有新的发现。',
   '你离开了当前房间，暂时没有新的发现。',
   '你进入走廊，暂时没有新的发现。',
+  '你把注意力交给房间，随后走到门口，暂时没有新的发现。',
+  '你的目光穿过门口；你进入走廊，暂时没有新的发现。',
+  '你把注意力交给房间，随后拿起钥匙，暂时没有新的发现。',
 ];
 const expressive=[
   '你的目光穿过门口，门外是公开可见的走廊；本次没有新的发现。',
   '你把注意力交给门边的房间，暂时没有新的发现。',
+  '你没有走到门口；你的目光穿过门口，本次没有新的发现。',
+  '你准备进入走廊，但仍留在原地；本次没有新的发现。',
 ];
 function initial(){
   const save=fresh();save.definition.events=[];
@@ -39,6 +44,21 @@ function runtime(text:string,grounded=true){
   }});
   return {ai,narrations:()=>narrations,audits:()=>audits};
 }
+const proposal={narrative:'观察尝试',minutes:1,target_id:null,facts:[],relationship:null,
+  item_move:null,storage_move:null,completion_quote:null,required_conditions:[],
+  resolution:{type:'DETERMINISTIC' as const,domain:'perception',band:'normal' as const,
+    visibility:'public' as const,stakes:'观察当前可见范围',stages:[],evidence_ids:[]}};
+it.each(literal)('does not let a positive audit override generic perception authority: %s',async text=>{
+  const store=new MemoryStore(),save=initial(),f=runtime(text);await store.write(save);
+  vi.spyOn(f.ai,'freeform').mockResolvedValue(proposal);
+  const service=new GameService(store,f.ai,save.definition),before=await service.current();
+  const body={game_id:before.game_id,expected_revision:before.state_revision,request_id:randomUUID(),input:'观察房间'};
+  const result=await service.turn(body,undefined,undefined,undefined,false,undefined,undefined,true),after=await service.current();
+  expect(after.entities).toEqual(before.entities);expect(after.runtime.time.minute-before.runtime.time.minute).toBe(1);
+  const calls=f.ai.metrics.requests;expect(await service.turn(body)).toEqual(result);expect(f.ai.metrics.requests).toBe(calls);
+  expect(after.last_turn?.narrative).not.toBe(text);expect(after.last_turn?.presentation?.status).toBe('degraded');
+  expect(f.narrations()).toBe(3);expect(f.audits()).toBe(0);
+});
 it.each(literal)('does not let an inconsistent positive audit authorize uncommitted literal travel: %s',async text=>{
   const store=new MemoryStore(),save=initial(),f=runtime(text);await store.write(save);
   const service=new GameService(store,f.ai,save.definition),before=await service.current();
@@ -48,6 +68,7 @@ it.each(literal)('does not let an inconsistent positive audit authorize uncommit
   expect(after.entities).toEqual(before.entities);expect(after.resolution_receipts!.filter(r=>r.request_id===body.request_id).map(r=>r.semantic_action)).toEqual(['INSPECT']);
   expect(await service.turn(body)).toEqual(result);expect(f.ai.metrics.requests).toBe(calls);
   expect(after.last_turn?.narrative).not.toBe(text);expect(after.last_turn?.presentation?.status).toBe('degraded');
+  expect(f.narrations()).toBe(3);expect(f.audits()).toBe(0);
 });
 it.each(expressive)('preserves grounded attention/metaphor without a new movement or inventory effect: %s',async text=>{
   const store=new MemoryStore(),save=initial(),f=runtime(text);await store.write(save);
@@ -55,6 +76,22 @@ it.each(expressive)('preserves grounded attention/metaphor without a new movemen
   await service.turn({game_id:before.game_id,expected_revision:before.state_revision,request_id:randomUUID(),action:{type:'INSPECT',parameters:{focus:'门口'}}});
   const after=await service.current();expect(after.last_turn?.narrative).toBe(text);expect(after.last_turn?.presentation?.status).toBe('normal');
   expect(f.narrations()).toBe(1);expect(f.audits()).toBe(1);expect(after.entities).toEqual(before.entities);
+});
+it.each(expressive)('preserves generic sensory or prospective wording: %s',async text=>{
+  const store=new MemoryStore(),save=initial(),f=runtime(text);await store.write(save);
+  vi.spyOn(f.ai,'freeform').mockResolvedValue(proposal);
+  const service=new GameService(store,f.ai,save.definition),before=await service.current();
+  await service.turn({game_id:before.game_id,expected_revision:before.state_revision,request_id:randomUUID(),input:'观察房间'},
+    undefined,undefined,undefined,false,undefined,undefined,true);
+  const after=await service.current();expect(after.last_turn?.narrative).toBe(text);expect(after.last_turn?.presentation?.status).toBe('normal');
+  expect(f.narrations()).toBe(1);expect(f.audits()).toBe(1);expect(after.entities).toEqual(before.entities);
+});
+it('keeps a real Core MOVE eligible for truthful travel narration',async()=>{
+  const store=new MemoryStore(),save=initial(),f=runtime('你沿路来到车站。');await store.write(save);
+  const service=new GameService(store,f.ai,save.definition),before=await service.current();
+  await service.turn({game_id:before.game_id,expected_revision:before.state_revision,request_id:randomUUID(),action:{type:'MOVE',target_id:'station',parameters:{}}});
+  const after=await service.current();expect(after.entities.find(e=>e.id===save.player_state.entity_id)?.components.location?.location_id).toBe('station');
+  expect(after.last_turn?.narrative).toBe('你沿路来到车站。');expect(after.last_turn?.presentation?.status).toBe('normal');
 });
 it('keeps the existing negative-audit refusal control',async()=>{
   const store=new MemoryStore(),save=initial(),f=runtime(literal[0],false);await store.write(save);

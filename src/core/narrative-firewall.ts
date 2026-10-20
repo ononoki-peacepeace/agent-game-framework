@@ -29,13 +29,15 @@ function attentionMovement(prefix:string){
 
 /** Validation only: a denial or future intention is not evidence of completed travel.
  * Scan every occurrence so a negative sentence cannot hide a later positive claim. */
-function assertedPatternMatch(kind:string,pattern:RegExp,text:string){
+function assertedPatternMatch(kind:string,pattern:RegExp,text:string,expressivePerception=false){
   for(const match of text.matchAll(new RegExp(pattern.source,pattern.flags.includes('g')?pattern.flags:pattern.flags+'g'))){
+    const prefix=text.slice(Math.max(0,match.index-80),match.index).split(/[，,。；;！？!?\n]/).at(-1)??'';
+    if(expressivePerception&&kind==='inventory'&&['交给','递给'].includes(match[0])&&
+      /(?:把|将)(?:自己的)?(?:视线|目光|注意力)$/.test(prefix))continue;
     if(kind==='inventory'&&match[0]==='放下'&&/^(?:了|自己的|双|两只|一只)*(?:手臂|胳膊|双手|手|肩膀|头|腿)(?=[，,。；;！？!?]|$)/.test(text.slice(match.index+match[0].length)))continue;
     if(kind==='injury'&&/(?:没有|并未|尚未|未曾|未|不曾)$/.test(text.slice(Math.max(0,match.index-4),match.index)))continue;
     if(kind==='position'){
-      const prefix=text.slice(Math.max(0,match.index-80),match.index).split(/[，,。；;！？!?\n]/).at(-1)??'';
-      if(match[0]==='离开'&&attentionMovement(prefix))continue;
+      if((match[0]==='离开'||expressivePerception)&&attentionMovement(prefix))continue;
       if(/(?:没有|尚未|还没|并未|未曾|不曾|没能|未能|不能|不会|不愿|不想|不打算|打算|准备|想要)(?:(?:真正|实际|立即|直接|已经|曾经|成功|能够|继续|主动|变成|将要|再|就|被|去|要|会)){0,5}$/.test(prefix))continue;
     }
     return match;
@@ -139,7 +141,7 @@ export function validateScenePresenceNarrative(save:SavePackage,prose:string,cla
 }
 
 /** Reject prose that asserts mechanical effects absent from the committed program receipt. */
-export function validateResolvedNarrative(receipt:Receipt,result:Narrative,hidden:boolean,compoundReceipts?:Receipt[],scene?:SavePackage){
+export function validateResolvedNarrative(receipt:Receipt,result:Narrative,hidden:boolean,compoundReceipts?:Receipt[],scene?:SavePackage,expressivePerception=false){
   if((result.item_claims??[]).length||(result.stable_locations??[]).length||result.patches.length)
     throw new GameError('开放行动的场景描写不能自行写入实体或状态',503);
   const allowed=new Set(receipt.effects);
@@ -226,7 +228,7 @@ export function validateResolvedNarrative(receipt:Receipt,result:Narrative,hidde
         try{validateMovementNarrative(step,{...result,narrative:sentence,dialogue:null},scene);return true;}catch{return false;}
       })).join('');
     }
-    const match=assertedPatternMatch(kind,pattern,text);
+    const match=assertedPatternMatch(kind,pattern,text,expressivePerception);
     if(match&&!allowed.has(kind as typeof receipt.effects[number]))
       throw new NarrativePatternError(kind,match.index,matchedSnippet(text,match.index,match[0].length));
   }
