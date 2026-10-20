@@ -1,3 +1,7 @@
+## Environment HTTP listener fixture — 2026-10-21
+
+Branch codex/claude-takeover-integration; test checkpoint3929878, unchanged product19c8108, parent9ca4f48. Original3bad-port sessionGET failures retained. Bounded listener selection closes blocked allocations before HTTP; max8, bind errors propagate, no request retry. Deterministic controls plus actual HTTP file:2files38pass/zero skip; full build19092 exit0. See docs/fetchable-loopback-fixture.md. Latest full selected coverage remains8bf6d9e245files2470pass; native0xC0000409 unresolved.99/16061.875%(61.88%),batch+0. No source WIP after checkpoint; original dirt/safety preserved. Next: fix three-structure72h scenario definitions and failure standards, then baseline through actual offline service/disk/restart paths without claiming broader W4-W8/N7 acceptance.
+
 ## Audited migration snapshot and R9.4 — 2026-10-21
 
 Branch codex/claude-takeover-integration; source/test 8bf6d9e, product 19c8108, parent ledger 41277a5. Audited 245 files/2470 selected passing assertions, zero skips, 559 unchanged hashes, exact inventory once; build65969 exit0. Initial20-process attempt: shard4 three Fetch bad-port fixture failures, shard12 native0xC0000409/no complete report. Both retained;26 fresh single-file passes +18 original passing reports form44 selected reports. Native cause remains unresolved. See docs/post-migration-offline-snapshot.md.

@@ -1,0 +1,7 @@
+# Fetch-compatible temporary listeners
+
+Test checkpoint `3929878`, unchanged product `19c8108`. The original pinned run retained three `environment-gap-http` failures at the initial session GET: Node Fetch rejected the OS-assigned listener with `Error: bad port`, before any game assertion. A same-source single-file recovery passed all35 assertions; this did not remove the allocation defect.
+
+The affected fixture now selects a listener before sending a request. Low privileged ports and Fetch's known blocked high ports are discarded and closed, with at most eight allocations. Bind errors propagate immediately; HTTP requests and game actions are never retried by this helper. Deterministic controls simulate a blocked allocation followed by a real successful GET, repeated unsuitable allocations with complete cleanup, and a bind error without retries. Two files passed **38/38 assertions, zero skips** (`fetchable-listener-focused.json/.log`, session54152), and the complete isolated build passed (`fetchable-listener-build.log`, session19092 exit0).
+
+Only the reproduced environment HTTP fixture adopts this helper. Other existing listeners have not been silently rewritten. The native `0xC0000409` exit remains unresolved. Latest complete selected coverage stays at source/test `8bf6d9e`, 245 files/2470 passing assertions; it predates these test-only changes. No game behavior, interface or fixed criterion changed; **99/160,61.875% (61.88%), net zero**. All original failure reports, user QA changes and safety boundaries remain preserved.

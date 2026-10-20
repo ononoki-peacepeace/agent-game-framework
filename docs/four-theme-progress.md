@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：8bf6d9e。整体 **61.88%**（99/160 个固定条件满足）。未满足 27，待验证 34。
+计分版本 v1；评估源代码：3929878。整体 **61.88%**（99/160 个固定条件满足）。未满足 27，待验证 34。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：30 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：31 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -121,6 +121,7 @@
 | migration-external-image | repair | R9.4: Actualatomicrenamekill/externalreplacement/recovery/errorclassificationevidence;correctedbaseline2fail6controls,final8files106pass/zeroskip/build. Preparationkill/fullmatrixremainopen.；完整条件保持开放 | +0.000 pp |
 | migration-preparation-matrix | repair | R9.4: Fullboundedpreparation/replacementkill/externalimage/error/no-replaymatrix54pass/build;currentfullsnapshot/safetyauditpending,no score yet.；完整条件保持开放 | +0.000 pp |
 | post-migration-complete-offline-snapshot | repair | R9.4: unverified → met | +0.625 pp |
+| fetchable-loopback-fixture | evidence_correction | R5.4: Original3Fetch bad-port failures retained;bounded listener selection and deterministic cleanup/bind-error controls38pass/build. Latest full coverage predates this test-only checkpoint; no status change.；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -165,7 +166,7 @@
 | R5.1 | 已有故障矩阵区分技术失败与游戏内失败，保留已提交步骤 | 满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md), [routine-world-block-outcome.test.ts](../tests/routine-world-block-outcome.test.ts), [routine-world-block-outcome.md](../docs/routine-world-block-outcome.md) |
 | R5.2 | 已有分层修复与安全停止测试验证不重复 Core 副作用 | 满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md) |
 | R5.3 | 逐条关闭矩阵中仍未核验的嵌套故障出口 | 未满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md), [partial-plan-visible-status.test.ts](../tests/partial-plan-visible-status.test.ts), [partial-plan-visible-status.md](../docs/partial-plan-visible-status.md), [plan-handoff-failure.test.ts](../tests/plan-handoff-failure.test.ts), [plan-handoff-failure.md](../docs/plan-handoff-failure.md), [plan-unreadable-state.test.ts](../tests/plan-unreadable-state.test.ts), [plan-unreadable-state.md](../docs/plan-unreadable-state.md), [plan-committed-failure-summary.test.ts](../tests/plan-committed-failure-summary.test.ts), [plan-committed-failure-summary.md](../docs/plan-committed-failure-summary.md) |
-| R5.4 | 最新完整离线代码快照全套通过，旧失败不得改写为通过 | 满足 | [current-offline-snapshot.md](../docs/current-offline-snapshot.md), [post-reaction-offline-snapshot.md](../docs/post-reaction-offline-snapshot.md), [agent-workspace.mjs](../scripts/agent-workspace.mjs), [post-context-offline-snapshot.md](../docs/post-context-offline-snapshot.md), [post-subject-offline-snapshot.md](../docs/post-subject-offline-snapshot.md), [post-routine-offline-snapshot.md](../docs/post-routine-offline-snapshot.md), [post-control-offline-snapshot.md](../docs/post-control-offline-snapshot.md), [post-item-offline-snapshot.md](../docs/post-item-offline-snapshot.md), [post-corpus-offline-snapshot.md](../docs/post-corpus-offline-snapshot.md), [post-long-route-offline-snapshot.md](../docs/post-long-route-offline-snapshot.md), [post-process-offline-snapshot.md](../docs/post-process-offline-snapshot.md), [post-migration-offline-snapshot.md](../docs/post-migration-offline-snapshot.md) |
+| R5.4 | 最新完整离线代码快照全套通过，旧失败不得改写为通过 | 满足 | [current-offline-snapshot.md](../docs/current-offline-snapshot.md), [post-reaction-offline-snapshot.md](../docs/post-reaction-offline-snapshot.md), [agent-workspace.mjs](../scripts/agent-workspace.mjs), [post-context-offline-snapshot.md](../docs/post-context-offline-snapshot.md), [post-subject-offline-snapshot.md](../docs/post-subject-offline-snapshot.md), [post-routine-offline-snapshot.md](../docs/post-routine-offline-snapshot.md), [post-control-offline-snapshot.md](../docs/post-control-offline-snapshot.md), [post-item-offline-snapshot.md](../docs/post-item-offline-snapshot.md), [post-corpus-offline-snapshot.md](../docs/post-corpus-offline-snapshot.md), [post-long-route-offline-snapshot.md](../docs/post-long-route-offline-snapshot.md), [post-process-offline-snapshot.md](../docs/post-process-offline-snapshot.md), [post-migration-offline-snapshot.md](../docs/post-migration-offline-snapshot.md), [fetchable-loopback-fixture.md](../docs/fetchable-loopback-fixture.md) |
 
 ## R6 Pending/background jobs and asynchronous restart continuation
 
