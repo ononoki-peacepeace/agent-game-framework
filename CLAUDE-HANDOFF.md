@@ -2,6 +2,8 @@
 
 ## Compound degraded prose continuation — 2026-10-20
 
+Reviewed source `b4c018f`; score remains58.125%=93/160 (30unmet/37unverified), macro12/22/6. Progress JSON records the resolved original N3.3 omission and bounded N8.2 evidence without new met transitions. Current source is checkpointed; only original QA/audit dirt remains after the documentation checkpoint. Next selected audit: W5 repeated blocked-goal recovery selection and long-term plan revision, using existing fixed protocol.
+
 Parent `70fdf63`, source checkpoint containing this section fixes an inherited-final-physical aggregate hiding earlier speech. Explicit compound child IDs now precede aggregate types in refusal/provider/fact-conflict fallback; per-step Core rendering preserves ordered speech/physical facts. Full narrative beats accompany already validated witness speech so SceneStory retains both stages. Service/firewall changes must travel together; no public schema/settlement change. Baseline2fail, first4files34pass, expanded6pass; final11files109pass and complete isolated build passed. All existing compound/repetition assertions retained.
 
 Score unchanged58.125%=93met/30unmet/37unverified. N3.3/N8.2 concrete omission fixed but failed/unexecuted general multi-goal prose and broad naturalness remain open. Original QA/audit dirt preserved; no production/3100/paid calls/deploy/push/Claude edits. Next: remaining action, persistent-world and reliability conditions after this Narrator batch is safely checkpointed.

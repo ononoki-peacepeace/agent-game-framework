@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "1b0cb30",
+  "assessed_source": "b4c018f",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -931,9 +931,11 @@
     "N3.3": {
       "status": "unmet",
       "evidence": [
-        "tests/compound-narration-aggregation.test.ts"
+        "tests/compound-narration-aggregation.test.ts",
+        "tests/compound-degraded-prose.test.ts",
+        "docs/compound-degraded-prose.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. Source b4c018f fixes inherited-last-step degradation omission; final11files109pass, isolated build passed, full condition remains open."
     },
     "N3.4": {
       "status": "unverified",
@@ -1075,9 +1077,11 @@
     "N8.2": {
       "status": "unmet",
       "evidence": [
-        "tests/narration-degradation-http.test.ts"
+        "tests/narration-degradation-http.test.ts",
+        "tests/compound-degraded-prose.test.ts",
+        "docs/compound-degraded-prose.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. Source b4c018f fixes inherited-last-step degradation omission; final11files109pass, isolated build passed, full condition remains open."
     },
     "N8.3": {
       "status": "met",
@@ -1279,6 +1283,30 @@
             "docs/degraded-prose-grounding.md",
             "tests/degraded-prose-grounding.test.ts",
             "tests/__snapshots__/degraded-prose-grounding.test.ts.snap"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "compound-degraded-prose",
+      "type": "repair",
+      "source": "b4c018f",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "N3.3",
+          "result": "Settled compound speech/physical order retained across refusal, timeout and fact-conflict; general failed/unexecuted goal presentation remains open",
+          "evidence": [
+            "tests/compound-degraded-prose.test.ts",
+            "docs/compound-degraded-prose.md"
+          ]
+        },
+        {
+          "id": "N8.2",
+          "result": "Concrete inherited-last-step omission repaired; broad naturalness and incomplete-goal prose remain open",
+          "evidence": [
+            "tests/compound-degraded-prose.test.ts",
+            "docs/compound-degraded-prose.md"
           ]
         }
       ]
@@ -1509,6 +1537,18 @@
         "tests/__snapshots__/degraded-prose-grounding.test.ts.snap"
       ],
       "summary": "Safety degradation no longer replaces six distinct Core-settled scenes with save/generation boilerplate. Original12fail, interrupted4fail, final9files82pass; complete N8.2 still open."
+    },
+    {
+      "id": "compound-last-physical-omission",
+      "scope": "original",
+      "condition": "N3.3",
+      "status": "resolved",
+      "source": "b4c018f",
+      "evidence": [
+        "tests/compound-degraded-prose.test.ts",
+        "docs/compound-degraded-prose.md"
+      ],
+      "summary": "Explicit child receipts precede inherited aggregate physical type; ordered prose and UI/witness beats retained. Baseline2fail; final11files109pass, complete build passed. No whole-condition credit."
     }
   ]
 }
