@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "e2d7d80",
+  "assessed_source": "e173ac8",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -1050,7 +1050,7 @@
       "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
     },
     "N4.1": {
-      "status": "unmet",
+      "status": "met",
       "evidence": [
         "tests/narrative-firewall-observability.test.ts",
         "tests/compound-physical-firewall.test.ts",
@@ -1067,21 +1067,25 @@
         "docs/perception-subjects.md",
         "tests/contained-evidence-access.test.ts",
         "docs/contained-evidence-access.md",
-        "docs/scene-count-counterexample.md"
+        "docs/scene-count-counterexample.md",
+        "docs/scene-count-authority.md",
+        "tests/scene-count-authority.test.ts"
       ],
-      "basis": "Existing factual/presence/perception tests plus compound physical-child counterexample repair; explicit met withdrawal/restoration recorded, final8files79pass/build at 8ae218b; wider N4.3/N4.4 remain open. 7ecc07b: actual settled reaction words required in beats/legacy dialogue; explicit withdrawal/restoration, net0. Counterexample at055367a:5fail/7controls, earlier denied/intended departure globally suppressed later actual departure with no Core move; N4.1 explicitly withdrawn pending repair. 1246a49: occurrence-scoped departure negation, truthful no-receipt degradation marker; initial5fail/7controls, final6files80pass/build. N4.1 withdrawal/restoration net0; broader subject/multi-world scope remains open. Counterexample06f594f: multi-named comma clauses bypass whole-sentence presence validation;7fail/5controls including NPC-only guard subject attribution. N4.1 withdrawn pending bounded repair. 1bad19e: independently named/player clauses retain presence checks;7fail/5controls, intermediate63/66 overly broad split corrected, final7files92pass/build. Explicit N4.1 withdrawal/restoration net0; rich subject/multi-world matrices open. Counterexample b52a6e5: explicit joint NPC subjects bypass presence checks;7fail/6legal controls, including real service accepting invented joint departure after WAIT. N4.1 withdrawn pending repair. ae4f469: bounded literal joint-subject presence/travel guard checks each named member; baseline7fail/6legal controls, first3files42pass, expanded final8files94pass/build. Real service degrades unsupported group departure and replays WAIT once. N4.1 withdrawal/restoration net0; broad grammar/multi-world matrix remains open. Counterexample d2947cc: multi-named clauses and joint subjects bypass event-time blocked-sight narration checks;6fail/4legal controls including actual settled physical turn. N4.1 withdrawn pending repair. f9f93f0: explicit visual joint subjects and independent named/player clauses preserve event-time sight receipt checks;6fail/4controls, final9files85pass/build including HTTP/compound-child continuity. Actual physical turn rejects invented observation and replays once. N4.1 withdrawn/restored net0; broader attribution/quoted/multi-world grammar remains open. Counterexample9acea32/product8b5d2df: generic perception discovers a clue behind sealed ancestors and degraded prose exposes its content;deterministic5fail/3lawful controls. Withdrawn pending repair. Repaired53eaaa6:scene/owned sealed ancestors bound discovery,exterior/open controls and learned knowledge retained;6files67pass/zero skip,final isolated build pass;actual Core/fallback/disk/new-service replay verified. Initial generic-JSON build failure retained. Withdrawal/restoration net0. Counterexample on e2d7d80: scene-count-preflight5fail2controls,quoted recollections falsely rejected and later/multidigit asserted counts missed. Withdrawn pending repair;active pinned snapshot unchanged."
+      "basis": "Existing factual/presence/perception tests plus compound physical-child counterexample repair; explicit met withdrawal/restoration recorded, final8files79pass/build at 8ae218b; wider N4.3/N4.4 remain open. 7ecc07b: actual settled reaction words required in beats/legacy dialogue; explicit withdrawal/restoration, net0. Counterexample at055367a:5fail/7controls, earlier denied/intended departure globally suppressed later actual departure with no Core move; N4.1 explicitly withdrawn pending repair. 1246a49: occurrence-scoped departure negation, truthful no-receipt degradation marker; initial5fail/7controls, final6files80pass/build. N4.1 withdrawal/restoration net0; broader subject/multi-world scope remains open. Counterexample06f594f: multi-named comma clauses bypass whole-sentence presence validation;7fail/5controls including NPC-only guard subject attribution. N4.1 withdrawn pending bounded repair. 1bad19e: independently named/player clauses retain presence checks;7fail/5controls, intermediate63/66 overly broad split corrected, final7files92pass/build. Explicit N4.1 withdrawal/restoration net0; rich subject/multi-world matrices open. Counterexample b52a6e5: explicit joint NPC subjects bypass presence checks;7fail/6legal controls, including real service accepting invented joint departure after WAIT. N4.1 withdrawn pending repair. ae4f469: bounded literal joint-subject presence/travel guard checks each named member; baseline7fail/6legal controls, first3files42pass, expanded final8files94pass/build. Real service degrades unsupported group departure and replays WAIT once. N4.1 withdrawal/restoration net0; broad grammar/multi-world matrix remains open. Counterexample d2947cc: multi-named clauses and joint subjects bypass event-time blocked-sight narration checks;6fail/4legal controls including actual settled physical turn. N4.1 withdrawn pending repair. f9f93f0: explicit visual joint subjects and independent named/player clauses preserve event-time sight receipt checks;6fail/4controls, final9files85pass/build including HTTP/compound-child continuity. Actual physical turn rejects invented observation and replays once. N4.1 withdrawn/restored net0; broader attribution/quoted/multi-world grammar remains open. Counterexample9acea32/product8b5d2df: generic perception discovers a clue behind sealed ancestors and degraded prose exposes its content;deterministic5fail/3lawful controls. Withdrawn pending repair. Repaired53eaaa6:scene/owned sealed ancestors bound discovery,exterior/open controls and learned knowledge retained;6files67pass/zero skip,final isolated build pass;actual Core/fallback/disk/new-service replay verified. Initial generic-JSON build failure retained. Withdrawal/restoration net0. Counterexample on e2d7d80: scene-count-preflight5fail2controls,quoted recollections falsely rejected and later/multidigit asserted counts missed. Withdrawn pending repair;active pinned snapshot unchanged. Producte173ac8:everyunquotedheadcount validated,quotedrecollections excludedusingexistingpresenceprojection,Chineseintegerdigits/tens parsed. Baseline9fail8controls,firstfix4files61pass,final9files101pass/zeroskip/build45923.22focused incl2actualHTTPdisk/newserviceexactresponse replay/unchangedbytes/zero generation;originalcounterexamples retained. BroaderN4.3/4 remainopen."
     },
     "N4.2": {
-      "status": "unmet",
+      "status": "met",
       "evidence": [
         "tests/narrative-firewall-observability.test.ts",
         "tests/repeated-physical-narrative-scope.test.ts",
         "docs/repeated-physical-narrative-scope.md",
         "tests/physical-denial-subject.test.ts",
         "docs/physical-denial-subject.md",
-        "docs/scene-count-counterexample.md"
+        "docs/scene-count-counterexample.md",
+        "docs/scene-count-authority.md",
+        "tests/scene-count-authority.test.ts"
       ],
-      "basis": "Existing legal-description regressions plus repaired repetition child-scope false rejection; explicit introduced counterexample withdrawal/restoration recorded. Final11files104pass/build at 0e6b9c8. 29e6a5f: explicit other-person injury denials retained, ambiguous/actual-target controls conservative;11files108pass/build; withdrawal/restoration net0. Counterexample on e2d7d80: scene-count-preflight5fail2controls,quoted recollections falsely rejected and later/multidigit asserted counts missed. Withdrawn pending repair;active pinned snapshot unchanged."
+      "basis": "Existing legal-description regressions plus repaired repetition child-scope false rejection; explicit introduced counterexample withdrawal/restoration recorded. Final11files104pass/build at 0e6b9c8. 29e6a5f: explicit other-person injury denials retained, ambiguous/actual-target controls conservative;11files108pass/build; withdrawal/restoration net0. Counterexample on e2d7d80: scene-count-preflight5fail2controls,quoted recollections falsely rejected and later/multidigit asserted counts missed. Withdrawn pending repair;active pinned snapshot unchanged. Producte173ac8:everyunquotedheadcount validated,quotedrecollections excludedusingexistingpresenceprojection,Chineseintegerdigits/tens parsed. Baseline9fail8controls,firstfix4files61pass,final9files101pass/zeroskip/build45923.22focused incl2actualHTTPdisk/newserviceexactresponse replay/unchangedbytes/zero generation;originalcounterexamples retained. BroaderN4.3/4 remainopen."
     },
     "N4.3": {
       "status": "unmet",
@@ -3178,6 +3182,42 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "scene-count-authority-repair",
+      "type": "repair",
+      "source": "e173ac8",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "docs/scene-count-authority.md",
+            "tests/scene-count-authority.test.ts"
+          ],
+          "reason": "Retained scene-count counterexamples repaired with quoted/asserted/repeated/Chinese-number controls and actualHTTPdiskrestart/replay;final101pass/build."
+        },
+        {
+          "id": "N4.2",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "docs/scene-count-authority.md",
+            "tests/scene-count-authority.test.ts"
+          ],
+          "reason": "Retained scene-count counterexamples repaired with quoted/asserted/repeated/Chinese-number controls and actualHTTPdiskrestart/replay;final101pass/build."
+        }
+      ],
+      "condition_checks": [
+        {
+          "id": "N4.3",
+          "result": "Quoted headcount boundary repaired;broader lawful metaphor/reported-speech/perception language matrix remainsopen.",
+          "evidence": [
+            "docs/scene-count-authority.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -3888,23 +3928,27 @@
       "id": "scene-count-assertions",
       "scope": "original",
       "condition": "N4.1",
-      "status": "open",
-      "source": "e2d7d80",
+      "status": "repaired",
+      "source": "e173ac8",
       "evidence": [
-        "docs/scene-count-counterexample.md"
+        "docs/scene-count-counterexample.md",
+        "docs/scene-count-authority.md",
+        "tests/scene-count-authority.test.ts"
       ],
-      "summary": "Initial correct count hides later contradictory assertion;two-digit Chinese count skipped."
+      "summary": "Initial correct count hides later contradictory assertion;two-digit Chinese count skipped. Repaired and verified101pass/build,withdrawal preserved."
     },
     {
       "id": "scene-count-quoted-recollection",
       "scope": "original",
       "condition": "N4.2",
-      "status": "open",
-      "source": "e2d7d80",
+      "status": "repaired",
+      "source": "e173ac8",
       "evidence": [
-        "docs/scene-count-counterexample.md"
+        "docs/scene-count-counterexample.md",
+        "docs/scene-count-authority.md",
+        "tests/scene-count-authority.test.ts"
       ],
-      "summary": "Three supported quotation forms are scanned as current authoritative presence;legitimate quoted recollections falsely rejected."
+      "summary": "Three supported quotation forms are scanned as current authoritative presence;legitimate quoted recollections falsely rejected. Repaired and verified101pass/build,withdrawal preserved."
     }
   ]
 }

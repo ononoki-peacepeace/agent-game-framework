@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：e2d7d80。整体 **60.00%**（96/160 个固定条件满足）。未满足 29，待验证 35。
+计分版本 v1；评估源代码：e173ac8。整体 **61.25%**（98/160 个固定条件满足）。未满足 27，待验证 35。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -9,8 +9,8 @@
 | ① 可靠性 | 31 | 5 | 4 | 4/6/0 | 77.5% |
 | ② 自然语言行动 | 22 | 7 | 11 | 3/5/2 | 55.0% |
 | ③ 自主持续世界 | 25 | 7 | 8 | 3/6/1 | 62.5% |
-| ④ Narrator 与体验 | 18 | 10 | 12 | 2/5/3 | 45.0% |
-| 合计 | 96 | 29 | 35 | 12/22/6 | 60.00% |
+| ④ Narrator 与体验 | 20 | 8 | 12 | 2/6/2 | 50.0% |
+| 合计 | 98 | 27 | 35 | 12/23/5 | 61.25% |
 
 旧台账的12/21/7是工作包人工分类，保留作历史。这里的完成/部分/未完成由4个条件满足数推导，不能与旧分类混用。旧46%为退役估计；首次建立口径不是产品进展，不计算相对46%的提升。
 
@@ -117,6 +117,7 @@
 | migration-interleaving-matrix | repair | R9.3: Completed bounded cooperative current/view write interleavings,3files30pass;initial26pass4wrongIPCfail retained/fixed in tests only. Current fullsnapshot/finalbuild pending;no score yet.；完整条件保持开放 | +0.000 pp |
 | scene-count-counterexample | evidence_correction | N4.1: met → unmet; N4.2: met → unmet | -1.250 pp |
 | post-process-complete-offline-snapshot | repair | R9.3: unmet → met | +0.625 pp |
+| scene-count-authority-repair | repair | N4.1: unmet → met; N4.2: unmet → met | +1.250 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -419,8 +420,8 @@
 
 | 条件 | 具体通过条件 | 状态 | 依据 |
 |---|---|---|---|
-| N4.1 | 已有事实、在场和感知校验阻止越权描写 | 未满足 | [narrative-firewall-observability.test.ts](../tests/narrative-firewall-observability.test.ts), [compound-physical-firewall.test.ts](../tests/compound-physical-firewall.test.ts), [compound-physical-firewall.md](../docs/compound-physical-firewall.md), [compound-degraded-prose.test.ts](../tests/compound-degraded-prose.test.ts), [physical-reaction-speech-integrity.md](../docs/physical-reaction-speech-integrity.md), [scene-presence-negation.test.ts](../tests/scene-presence-negation.test.ts), [scene-presence-negation.md](../docs/scene-presence-negation.md), [scene-presence-subjects.test.ts](../tests/scene-presence-subjects.test.ts), [scene-presence-subjects.md](../docs/scene-presence-subjects.md), [scene-presence-groups.test.ts](../tests/scene-presence-groups.test.ts), [scene-presence-groups.md](../docs/scene-presence-groups.md), [perception-subjects.test.ts](../tests/perception-subjects.test.ts), [perception-subjects.md](../docs/perception-subjects.md), [contained-evidence-access.test.ts](../tests/contained-evidence-access.test.ts), [contained-evidence-access.md](../docs/contained-evidence-access.md), [scene-count-counterexample.md](../docs/scene-count-counterexample.md) |
-| N4.2 | 已知合法描写及误拒边界有回归证据 | 未满足 | [narrative-firewall-observability.test.ts](../tests/narrative-firewall-observability.test.ts), [repeated-physical-narrative-scope.test.ts](../tests/repeated-physical-narrative-scope.test.ts), [repeated-physical-narrative-scope.md](../docs/repeated-physical-narrative-scope.md), [physical-denial-subject.test.ts](../tests/physical-denial-subject.test.ts), [physical-denial-subject.md](../docs/physical-denial-subject.md), [scene-count-counterexample.md](../docs/scene-count-counterexample.md) |
+| N4.1 | 已有事实、在场和感知校验阻止越权描写 | 满足 | [narrative-firewall-observability.test.ts](../tests/narrative-firewall-observability.test.ts), [compound-physical-firewall.test.ts](../tests/compound-physical-firewall.test.ts), [compound-physical-firewall.md](../docs/compound-physical-firewall.md), [compound-degraded-prose.test.ts](../tests/compound-degraded-prose.test.ts), [physical-reaction-speech-integrity.md](../docs/physical-reaction-speech-integrity.md), [scene-presence-negation.test.ts](../tests/scene-presence-negation.test.ts), [scene-presence-negation.md](../docs/scene-presence-negation.md), [scene-presence-subjects.test.ts](../tests/scene-presence-subjects.test.ts), [scene-presence-subjects.md](../docs/scene-presence-subjects.md), [scene-presence-groups.test.ts](../tests/scene-presence-groups.test.ts), [scene-presence-groups.md](../docs/scene-presence-groups.md), [perception-subjects.test.ts](../tests/perception-subjects.test.ts), [perception-subjects.md](../docs/perception-subjects.md), [contained-evidence-access.test.ts](../tests/contained-evidence-access.test.ts), [contained-evidence-access.md](../docs/contained-evidence-access.md), [scene-count-counterexample.md](../docs/scene-count-counterexample.md), [scene-count-authority.md](../docs/scene-count-authority.md), [scene-count-authority.test.ts](../tests/scene-count-authority.test.ts) |
+| N4.2 | 已知合法描写及误拒边界有回归证据 | 满足 | [narrative-firewall-observability.test.ts](../tests/narrative-firewall-observability.test.ts), [repeated-physical-narrative-scope.test.ts](../tests/repeated-physical-narrative-scope.test.ts), [repeated-physical-narrative-scope.md](../docs/repeated-physical-narrative-scope.md), [physical-denial-subject.test.ts](../tests/physical-denial-subject.test.ts), [physical-denial-subject.md](../docs/physical-denial-subject.md), [scene-count-counterexample.md](../docs/scene-count-counterexample.md), [scene-count-authority.md](../docs/scene-count-authority.md), [scene-count-authority.test.ts](../tests/scene-count-authority.test.ts) |
 | N4.3 | 扩大合法比喻、转述和场景表述语料降低误拒 | 未满足 | [narrative-firewall-observability.test.ts](../tests/narrative-firewall-observability.test.ts), [scene-presence-negation.test.ts](../tests/scene-presence-negation.test.ts), [scene-presence-negation.md](../docs/scene-presence-negation.md), [scene-presence-subjects.test.ts](../tests/scene-presence-subjects.test.ts), [scene-presence-subjects.md](../docs/scene-presence-subjects.md), [scene-presence-groups.test.ts](../tests/scene-presence-groups.test.ts), [scene-presence-groups.md](../docs/scene-presence-groups.md), [perception-subjects.test.ts](../tests/perception-subjects.test.ts), [perception-subjects.md](../docs/perception-subjects.md) |
 | N4.4 | 多世界误放与误拒均按固定期望验收 | 待验证 | [narrative-firewall-observability.test.ts](../tests/narrative-firewall-observability.test.ts) |
 
