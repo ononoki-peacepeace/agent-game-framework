@@ -71,13 +71,21 @@ export function validateScenePresenceNarrative(save:SavePackage,prose:string,cla
   const here=save.entities.find(entity=>entity.id===save.player_state.entity_id)?.components.location?.location_id;
   const people=save.entities.filter(entity=>entity.id!==save.player_state.entity_id&&entity.components.character);
   let subject:typeof people[number]|undefined;
-  for(const sentence of prose.replace(/[“「『][^”」』]*[”」』]/g,'').split(/[。！？\n]/)){
+  const sentences=prose.replace(/[“「『][^”」』]*[”」』]/g,'').split(/[。！？\n]/);
+  for(let index=0;index<sentences.length;index++){
+    const sentence=sentences[index];
     const compact=sentence.replace(/\s/g,'');
     const named=people.filter(entity=>{
       const name=String(entity.components.identity?.name??'');
       const aliases=[name.replace(/\s/g,''),...name.split(/\s+/).filter(part=>part.length>=2)];
       return aliases.some(alias=>alias&&compact.includes(alias));
     });
+    // Independently named clauses must not disappear just because the whole
+    // sentence has multiple people. Keep single-subject implicit continuations
+    // together; a player clause must not inherit the preceding NPC's identity.
+    if((named.length>1||/[，,；;](?:你|玩家)/.test(compact))&&/[，,；;]/.test(sentence)){
+      sentences.splice(index+1,0,...sentence.split(/[，,；;]/));subject=undefined;continue;
+    }
     if(named.length===1)subject=named[0];else if(named.length>1)subject=undefined;
     else if(!/^(?:随后|随即|接着|然后)?(?:她|他)/.test(compact))continue;
     if(!subject)continue;

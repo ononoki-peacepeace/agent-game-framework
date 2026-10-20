@@ -1,5 +1,10 @@
 # Claude Code starting handoff
 
+## Named scene-presence clauses — 2026-10-20
+
+Parent `06f594f`; source checkpoint containing this section checks independent named/player clauses instead of skipping every multi-NPC sentence, preserving single-subject implicit continuations. Baseline7fail/5controls; first63/66 exposed3regressions from splitting all clauses, narrowed repair final7files92pass/build in SESSION. Actual absent-person WAIT prose degrades with no move/duplicate receipt; player-motion unit checks only this NPC guard ownership, not whole-scene validity. See docs/scene-presence-subjects.md. N4.1 explicit withdrawal/restoration net0;60%=96/160, N4.3/N4.4 open. Full1992pass remains29e6a5f. Next: conditional/future/partial narrative matrix and other fixed themes; preserve original dirt/safety.
+
+
 ## Scene-presence departure negation — 2026-10-20
 
 Parent `055367a`; source checkpoint containing this section scopes denied/intended departure to its occurrence and marks existing no-receipt presence fallback degraded. Initial5fail/7controls; intermediate48/49 plus expanded14/16 exposed marker and false “没有犹豫地离开” exemption. Final6files80pass/build in SESSION. Actual WAIT preserves NPC position/one receipt/minute/replay; lawful prose stays normal. See docs/scene-presence-negation.md. N4.1 explicit withdrawal/restoration net0;60%=96/160, N4.3/N4.4 open. Full1992pass remains29e6a5f. Next: reproduce complex named-subject/quotation scene-presence boundaries, then remaining fixed matrices. Original dirt/safety preserved.
