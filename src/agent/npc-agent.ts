@@ -770,6 +770,9 @@ function settleExecutableNpcPlans(input:SavePackage,beforeTime:SavePackage['runt
   for(const npcId of ordered)for(const original of own(save,npcId).plans.filter(p=>p.status==='active'&&p.execution)){
     signal?.throwIfAborted();
     let plan=own(save,npcId).plans.find(p=>p.id===original.id)!,execution=plan.execution!;
+    if(!own(save,npcId).goals.some(goal=>goal.id===plan.goal_id&&goal.status==='active')){
+      plan.status='abandoned';continue;
+    }
     if(plan.last_failed_request_id===turnId){
       execution.last_accounted_at=structuredClone(save.runtime.time);execution.time_credit_minutes=0;continue;
     }
@@ -869,6 +872,9 @@ function settleLegacyNpcActivityPlans(input:SavePackage,beforeTime:SavePackage['
     signal?.throwIfAborted();
     const state=save.npc_agent_state![npcId];
     for(const plan of state.plans.filter(plan=>plan.status==='active'&&plan.activity)){
+      if(!state.goals.some(goal=>goal.id===plan.goal_id&&goal.status==='active')){
+        plan.status='abandoned';continue;
+      }
       if(plan.last_failed_request_id===requestId.split(':window:')[0]){
         plan.activity!.last_accounted_at=structuredClone(save.runtime.time);plan.activity!.time_credit_minutes=0;continue;
       }
@@ -1019,6 +1025,7 @@ export function nextNpcPlanBoundary(save:SavePackage,ctx:ActionContext):number|n
     if(!here||Number(actor?.components.condition?.hp??100)<=0||save.background_state?.npc_status[npcId]?.unavailable||
       state.social_tasks&&socialObligationActive(save,state))continue;
     for(const plan of (state.plans??[]).filter(p=>p.status==='active'&&(p.activity||p.execution))){
+      if(!state.goals.some(goal=>goal.id===plan.goal_id&&goal.status==='active'))continue;
       if(plan.last_failed_request_id===(ctx.npc_time_budget?.scope_id??ctx.action.id))continue;
       const execution=plan.execution,activity=plan.activity;
       if(activity?.condition||execution?.condition)continue;

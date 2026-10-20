@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Ended-goal execution guard — 2026-10-20
+
+Parent `1913391`; source checkpoint containing this section prevents both legacy activities and executable steps from acting for an ended owned goal; stale plans become abandoned, goal state stays intact, clock boundaries exclude them. Compatible persisted shape remains accepted. Baseline4fail with real MOVE receipts; final8files67pass and complete isolated strict/client/server build passed. See docs/npc-ended-goal-execution.md. No schema/settlement/interface change, W5.3 stays open; score60%=96/160 unchanged. Original dirty QA/audit and untracked files preserved. Next: incomplete multi-goal story must expose remaining failed/unexecuted stages without inventing results; reproduce before repair. Production/3100/paid/deploy/push/Claude unchanged.
+
 ## Legacy activity / long objective continuation — 2026-10-20
 
 Parent `32462b1`; source checkpoint containing this section corrects both legacy travel arrival paths completing long goals automatically. Only a short goal with no remaining active owned plan is auto-completed; long motives stay active. Baseline2fail/2controls; final6files56pass, isolated build result in local SESSION. No schema/settlement/time-budget change. See docs/npc-legacy-long-goal.md. W5.3 stays open; score60%=96/160 unchanged. Original dirty QA/audit and four untracked handoff files preserved. Next: reproduce ended-goal legacy/executable plan execution against lawful persisted snapshots; broader W5 long-duration and Narrator incomplete-goal matrices remain open. No production/3100/paid/deploy/push/Claude edits.

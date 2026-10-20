@@ -1,0 +1,7 @@
+# Ended NPC objectives cannot authorize lingering executable work
+
+At `1913391`, a validated, serialized NPC state could contain a completed or abandoned goal with an active old plan. Existing Save validation permits this compatible legacy shape. The decision context hides the ended objective and decision admission cleans its plans, but both deterministic schedulers still executed the old MOVE before a new decision occurred. Four baseline cases failed with an actual move from square to market.
+
+Both legacy activities and typed executable plans now verify the owned goal is active before accruing time or executing a step. A stale plan becomes abandoned; the ended goal keeps its exact state. Clock boundary selection also excludes ended-goal plans. No schema restriction, migration, replacement objective, model call or new action is introduced. Ordinary active plans retain their existing behavior.
+
+[npc-ended-goal-execution.test.ts](../tests/npc-ended-goal-execution.test.ts) uses lawful persisted snapshots for both plan formats and both ended statuses. It checks actual location, absence of MOVE receipts, unchanged goal and immutable input. Final eight files / 67 tests passed, including active-plan, resource-revision, legacy-arrival and scheduling controls. Complete isolated strict/client/server build passed. W5.3 remains open for its wider adaptive and long-duration matrix; score stays 60.00% (96/160). Full-suite evidence remains at earlier `486bd2f`, not this source.
