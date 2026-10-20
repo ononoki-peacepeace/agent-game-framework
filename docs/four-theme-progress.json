@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "f41c301",
+  "assessed_source": "1efd18b",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -707,9 +707,11 @@
     "W5.3": {
       "status": "unmet",
       "evidence": [
-        "tests/npc-persistent-plans.test.ts"
+        "tests/npc-persistent-plans.test.ts",
+        "tests/npc-own-resource-context.test.ts",
+        "docs/npc-own-resource-context.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Objective/recovery and owner-resource context gaps repaired with focused evidence; broader resource/location/relationship/new-fact/repeated-failure long-duration matrix remains open."
     },
     "W5.4": {
       "status": "unverified",
@@ -1427,6 +1429,22 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "npc-own-resource-context",
+      "type": "repair",
+      "source": "1efd18b",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "W5.3",
+          "result": "Owner balances/held quantities now support bounded resource-aware blocked-plan revision; long goal and single Core execution preserved; full long-term matrix remains open",
+          "evidence": [
+            "tests/npc-own-resource-context.test.ts",
+            "docs/npc-own-resource-context.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -1689,6 +1707,18 @@
         "docs/source-recipient-topic-authority.md"
       ],
       "summary": "Actual TALK previously targeted topic NPC; explicit address now owns all binding hint paths and target_entities. Baseline4fail plus hint3fail; final14files203pass/build passed, no whole-condition closure."
+    },
+    {
+      "id": "npc-own-resource-context",
+      "scope": "original",
+      "condition": "W5.3",
+      "status": "resolved",
+      "source": "1efd18b",
+      "evidence": [
+        "tests/npc-own-resource-context.test.ts",
+        "docs/npc-own-resource-context.md"
+      ],
+      "summary": "NPC context omitted own money/quantities. Baseline5fail; final8files62pass/build passed; unknown versus zero and other-owner privacy preserved. No whole-condition credit."
     }
   ]
 }
