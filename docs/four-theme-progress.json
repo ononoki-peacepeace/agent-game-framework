@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "1efd18b",
+  "assessed_source": "e211093",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -709,7 +709,9 @@
       "evidence": [
         "tests/npc-persistent-plans.test.ts",
         "tests/npc-own-resource-context.test.ts",
-        "docs/npc-own-resource-context.md"
+        "docs/npc-own-resource-context.md",
+        "tests/npc-legacy-long-goal.test.ts",
+        "docs/npc-legacy-long-goal.md"
       ],
       "basis": "Objective/recovery and owner-resource context gaps repaired with focused evidence; broader resource/location/relationship/new-fact/repeated-failure long-duration matrix remains open."
     },
@@ -1445,6 +1447,22 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "npc-legacy-long-goal",
+      "type": "repair",
+      "source": "e211093",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "W5.3",
+          "result": "Legacy arrival completes the travel plan but preserves long goals and short goals with other active work; broader revision matrix remains open",
+          "evidence": [
+            "tests/npc-legacy-long-goal.test.ts",
+            "docs/npc-legacy-long-goal.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -1719,6 +1737,18 @@
         "docs/npc-own-resource-context.md"
       ],
       "summary": "NPC context omitted own money/quantities. Baseline5fail; final8files62pass/build passed; unknown versus zero and other-owner privacy preserved. No whole-condition credit."
+    },
+    {
+      "id": "npc-legacy-long-goal",
+      "scope": "original",
+      "condition": "W5.3",
+      "status": "resolved",
+      "source": "e211093",
+      "evidence": [
+        "tests/npc-legacy-long-goal.test.ts",
+        "docs/npc-legacy-long-goal.md"
+      ],
+      "summary": "Two legacy arrival branches prematurely ended ongoing goals. Baseline2fail/2controls; final6files56pass and complete isolated build passed. No whole-condition credit."
     }
   ]
 }
