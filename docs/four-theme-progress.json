@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "ae4f469",
+  "assessed_source": "f9f93f0",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -1003,9 +1003,11 @@
         "tests/scene-presence-subjects.test.ts",
         "docs/scene-presence-subjects.md",
         "tests/scene-presence-groups.test.ts",
-        "docs/scene-presence-groups.md"
+        "docs/scene-presence-groups.md",
+        "tests/perception-subjects.test.ts",
+        "docs/perception-subjects.md"
       ],
-      "basis": "Existing factual/presence/perception tests plus compound physical-child counterexample repair; explicit met withdrawal/restoration recorded, final8files79pass/build at 8ae218b; wider N4.3/N4.4 remain open. 7ecc07b: actual settled reaction words required in beats/legacy dialogue; explicit withdrawal/restoration, net0. Counterexample at055367a:5fail/7controls, earlier denied/intended departure globally suppressed later actual departure with no Core move; N4.1 explicitly withdrawn pending repair. 1246a49: occurrence-scoped departure negation, truthful no-receipt degradation marker; initial5fail/7controls, final6files80pass/build. N4.1 withdrawal/restoration net0; broader subject/multi-world scope remains open. Counterexample06f594f: multi-named comma clauses bypass whole-sentence presence validation;7fail/5controls including NPC-only guard subject attribution. N4.1 withdrawn pending bounded repair. 1bad19e: independently named/player clauses retain presence checks;7fail/5controls, intermediate63/66 overly broad split corrected, final7files92pass/build. Explicit N4.1 withdrawal/restoration net0; rich subject/multi-world matrices open. Counterexample b52a6e5: explicit joint NPC subjects bypass presence checks;7fail/6legal controls, including real service accepting invented joint departure after WAIT. N4.1 withdrawn pending repair. ae4f469: bounded literal joint-subject presence/travel guard checks each named member; baseline7fail/6legal controls, first3files42pass, expanded final8files94pass/build. Real service degrades unsupported group departure and replays WAIT once. N4.1 withdrawal/restoration net0; broad grammar/multi-world matrix remains open."
+      "basis": "Existing factual/presence/perception tests plus compound physical-child counterexample repair; explicit met withdrawal/restoration recorded, final8files79pass/build at 8ae218b; wider N4.3/N4.4 remain open. 7ecc07b: actual settled reaction words required in beats/legacy dialogue; explicit withdrawal/restoration, net0. Counterexample at055367a:5fail/7controls, earlier denied/intended departure globally suppressed later actual departure with no Core move; N4.1 explicitly withdrawn pending repair. 1246a49: occurrence-scoped departure negation, truthful no-receipt degradation marker; initial5fail/7controls, final6files80pass/build. N4.1 withdrawal/restoration net0; broader subject/multi-world scope remains open. Counterexample06f594f: multi-named comma clauses bypass whole-sentence presence validation;7fail/5controls including NPC-only guard subject attribution. N4.1 withdrawn pending bounded repair. 1bad19e: independently named/player clauses retain presence checks;7fail/5controls, intermediate63/66 overly broad split corrected, final7files92pass/build. Explicit N4.1 withdrawal/restoration net0; rich subject/multi-world matrices open. Counterexample b52a6e5: explicit joint NPC subjects bypass presence checks;7fail/6legal controls, including real service accepting invented joint departure after WAIT. N4.1 withdrawn pending repair. ae4f469: bounded literal joint-subject presence/travel guard checks each named member; baseline7fail/6legal controls, first3files42pass, expanded final8files94pass/build. Real service degrades unsupported group departure and replays WAIT once. N4.1 withdrawal/restoration net0; broad grammar/multi-world matrix remains open. Counterexample d2947cc: multi-named clauses and joint subjects bypass event-time blocked-sight narration checks;6fail/4legal controls including actual settled physical turn. N4.1 withdrawn pending repair. f9f93f0: explicit visual joint subjects and independent named/player clauses preserve event-time sight receipt checks;6fail/4controls, final9files85pass/build including HTTP/compound-child continuity. Actual physical turn rejects invented observation and replays once. N4.1 withdrawn/restored net0; broader attribution/quoted/multi-world grammar remains open."
     },
     "N4.2": {
       "status": "met",
@@ -1027,9 +1029,11 @@
         "tests/scene-presence-subjects.test.ts",
         "docs/scene-presence-subjects.md",
         "tests/scene-presence-groups.test.ts",
-        "docs/scene-presence-groups.md"
+        "docs/scene-presence-groups.md",
+        "tests/perception-subjects.test.ts",
+        "docs/perception-subjects.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 1246a49: occurrence-scoped departure negation, truthful no-receipt degradation marker; initial5fail/7controls, final6files80pass/build. N4.1 withdrawal/restoration net0; broader subject/multi-world scope remains open. 1bad19e: independently named/player clauses retain presence checks;7fail/5controls, intermediate63/66 overly broad split corrected, final7files92pass/build. Explicit N4.1 withdrawal/restoration net0; rich subject/multi-world matrices open. ae4f469: bounded literal joint-subject presence/travel guard checks each named member; baseline7fail/6legal controls, first3files42pass, expanded final8files94pass/build. Real service degrades unsupported group departure and replays WAIT once. N4.1 withdrawal/restoration net0; broad grammar/multi-world matrix remains open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 1246a49: occurrence-scoped departure negation, truthful no-receipt degradation marker; initial5fail/7controls, final6files80pass/build. N4.1 withdrawal/restoration net0; broader subject/multi-world scope remains open. 1bad19e: independently named/player clauses retain presence checks;7fail/5controls, intermediate63/66 overly broad split corrected, final7files92pass/build. Explicit N4.1 withdrawal/restoration net0; rich subject/multi-world matrices open. ae4f469: bounded literal joint-subject presence/travel guard checks each named member; baseline7fail/6legal controls, first3files42pass, expanded final8files94pass/build. Real service degrades unsupported group departure and replays WAIT once. N4.1 withdrawal/restoration net0; broad grammar/multi-world matrix remains open. f9f93f0: explicit visual joint subjects and independent named/player clauses preserve event-time sight receipt checks;6fail/4controls, final9files85pass/build including HTTP/compound-child continuity. Actual physical turn rejects invented observation and replays once. N4.1 withdrawn/restored net0; broader attribution/quoted/multi-world grammar remains open."
     },
     "N4.4": {
       "status": "unverified",
@@ -2054,6 +2058,49 @@
         }
       ],
       "note": "No new whole-condition credit; no Core/schema/settlement change."
+    },
+    {
+      "batch": "perception-subjects-withdrawal",
+      "type": "evidence_correction",
+      "source": "ae4f469",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "tests/perception-subjects.test.ts"
+          ],
+          "reason": "Actual event-time sight receipt contradicted by accepted multi-person Narrator paragraph/beats;6fail/4controls."
+        }
+      ]
+    },
+    {
+      "batch": "perception-subjects",
+      "type": "repair",
+      "source": "f9f93f0",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "tests/perception-subjects.test.ts",
+            "docs/perception-subjects.md"
+          ],
+          "reason": "Multi-subject event-time sight counterexample repaired; final9files85pass/build; withdrawal/restoration net0."
+        }
+      ],
+      "condition_checks": [
+        {
+          "id": "N4.3",
+          "evidence": [
+            "tests/perception-subjects.test.ts",
+            "docs/perception-subjects.md"
+          ],
+          "result": "Bounded explicit clauses and joint lists only; broad attribution/quoted/multi-world matrix open"
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -2569,6 +2616,18 @@
         "docs/scene-presence-groups.md"
       ],
       "summary": "Joined names no longer discard presence validation;7fail/6controls, final8files94pass/build, N4.1 withdrawn/restored net0."
+    },
+    {
+      "id": "perception-subjects",
+      "scope": "original",
+      "condition": "N4.1",
+      "status": "resolved",
+      "source": "f9f93f0",
+      "evidence": [
+        "tests/perception-subjects.test.ts",
+        "docs/perception-subjects.md"
+      ],
+      "summary": "Actual event-time sight receipts retain multi-subject attribution; baseline6fail/4controls, final9files85pass/build, N4.1 withdrawn/restored net0."
     }
   ]
 }
