@@ -25,7 +25,7 @@ Do not reuse the historical 46% as a current estimate. The first reproducible co
 | R7 | Extension development/install and external workspace effects | Partial | installation/registration fault tests; remaining workspace/kill boundaries |
 | R8 | Frontend synchronization and all System/media mutation paths | Partial | 19 media/canonical race failures fixed; HTTP restart and 134-test expanded regression passed; external writers/GC/provider identities remain |
 | R9 | Read-time current/view migration race acceptance | Partial | stale-read/failed-parent cases and media-queue crossing fixed; single-service regressions passed; cross-instance/process/OS boundaries remain |
-| R10 | World/global/session behavior-guidance cross-store removal/replay acceptance | Partial | world receipts and scoped enable/remove; ambiguous legacy IDs stop before writing; global cache reconciles after saved response loss; durable global/session identity and scope moves remain open |
+| R10 | World/global/session behavior-guidance cross-store removal/replay acceptance | Partial | world receipts and scoped enable/remove; ambiguous legacy IDs stop before writing; global cache reconciles after saved response loss; dffb82d adds durable global/session identity after deletion/restart (R10.3); scope moves and multi-process boundaries remain open |
 
 ## ② Natural-language actions
 

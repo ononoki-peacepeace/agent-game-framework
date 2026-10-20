@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "f4bf805",
+  "assessed_source": "dffb82d",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -274,11 +274,22 @@
       "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
     },
     "R10.3": {
-      "status": "unmet",
+      "status": "met",
       "evidence": [
+        "tests/p0a-guidance-durable-identity.test.ts",
         "docs/behavior-guidance-recovery.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Reviewed source dffb82d: initial 8 cases / 7 failures; final adjacent 9 files / 144 passed; subsequent complete durable boundary file 51 passed; strict TypeScript 26.98s / exit0. Suites overlap. Service recreation with real JsonStore, not process-kill evidence.",
+      "verification": {
+        "source": "dffb82d",
+        "reports": [
+          "guidance-durable-baseline.json",
+          "guidance-durable-final.json",
+          "guidance-durable-boundaries.json",
+          "guidance-durable-boundaries-typecheck.log"
+        ],
+        "directory": ".codex-checkpoints/framework-reliability-handoff/takeover-2026-10-20"
+      }
     },
     "R10.4": {
       "status": "unmet",
@@ -1143,6 +1154,24 @@
       "type": "accounting_baseline",
       "transitions": [],
       "note": "First reproducible baseline; no repair credit and no comparison to old subjective 46%."
+    },
+    {
+      "batch": "guidance-durable-identity",
+      "type": "repair",
+      "source": "dffb82d",
+      "transitions": [
+        {
+          "id": "R10.3",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "tests/p0a-guidance-durable-identity.test.ts",
+            "docs/behavior-guidance-recovery.md"
+          ],
+          "reason": "Reviewed source dffb82d: initial 8 cases / 7 failures; final adjacent 9 files / 144 passed; subsequent complete durable boundary file 51 passed; strict TypeScript 26.98s / exit0. Suites overlap. Service recreation with real JsonStore, not process-kill evidence."
+        }
+      ],
+      "note": "Original acceptance scope; +0.625 percentage points. Cross-scope moves and multi-process/OS boundaries remain open; no denominator changes."
     }
   ],
   "new_risks": [],

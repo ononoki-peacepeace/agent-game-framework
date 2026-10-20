@@ -1,16 +1,16 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：f4bf805。整体 **56.25%**（90/160 个固定条件满足）。未满足 32，待验证 38。
+计分版本 v1；评估源代码：dffb82d。整体 **56.88%**（91/160 个固定条件满足）。未满足 31，待验证 38。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
 | 主题 | 满足 | 未满足 | 待验证 | 完成/部分/未完成项 | 主题进度 |
 |---|---:|---:|---:|---|---:|
-| ① 可靠性 | 28 | 7 | 5 | 4/6/0 | 70.0% |
+| ① 可靠性 | 29 | 6 | 5 | 4/6/0 | 72.5% |
 | ② 自然语言行动 | 22 | 7 | 11 | 3/5/2 | 55.0% |
 | ③ 自主持续世界 | 22 | 9 | 9 | 3/5/2 | 55.0% |
 | ④ Narrator 与体验 | 18 | 9 | 13 | 2/5/3 | 45.0% |
-| 合计 | 90 | 32 | 38 | 12/21/7 | 56.25% |
+| 合计 | 91 | 31 | 38 | 12/21/7 | 56.88% |
 
 旧台账的12/21/7是工作包人工分类，保留作历史。这里的完成/部分/未完成由4个条件满足数推导，不能与旧分类混用。旧46%为退役估计；首次建立口径不是产品进展，不计算相对46%的提升。
 
@@ -21,6 +21,7 @@
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
 | baseline-v1 | accounting_baseline | 0（只建立基线） | +0.000 pp |
+| guidance-durable-identity | repair | R10.3: unmet → met | +0.625 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -109,7 +110,7 @@
 |---|---|---|---|
 | R10.1 | world 指导写入、启停、删除均准备请求并保存原凭据 | 满足 | [behavior-guidance-recovery.md](../docs/behavior-guidance-recovery.md) |
 | R10.2 | 范围冲突先拒绝；全局写后丢响应从磁盘恢复缓存 | 满足 | [behavior-guidance-recovery.md](../docs/behavior-guidance-recovery.md) |
-| R10.3 | global/session 删除或重启后仍识别原请求且不重新执行 | 未满足 | [behavior-guidance-recovery.md](../docs/behavior-guidance-recovery.md) |
+| R10.3 | global/session 删除或重启后仍识别原请求且不重新执行 | 满足 | [p0a-guidance-durable-identity.test.ts](../tests/p0a-guidance-durable-identity.test.ts), [behavior-guidance-recovery.md](../docs/behavior-guidance-recovery.md) |
 | R10.4 | 明确范围移动的跨存储失败恢复与竞争策略通过验收 | 未满足 | [behavior-guidance-recovery.md](../docs/behavior-guidance-recovery.md) |
 
 ## A1 Compound speech stages bind their own uniquely authorized named recipient
