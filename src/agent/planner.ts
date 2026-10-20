@@ -123,9 +123,13 @@ export function fastPlan(view:PublicView,text:string):AgentPlan|null {
     !resolveEntities(view,text).matches.some(entity=>entity.id!==view.player_id&&Boolean(entity.components.character))){
    add('WORLD_ACTION',text,{target_entities:[]});return validatePlan({goals});
  }
- if(/执行|履行/.test(text)&&/计划|打算/.test(text)){add('EXECUTE_FUTURE',text,{temporal_scope:{...temporal(text),scope:'now'}});return validatePlan({goals});}
+ const executeFuture=/执行|履行/.test(text)&&/计划|打算/.test(text);
+ const cancelFuture=/算了|取消|不找|不约|不去了/.test(text)&&/明天|后天|计划|打算|取消/.test(text);
+ // Conditional management needs an owned condition/branch graph before any effect.
+ if((executeFuture||cancelFuture)&&hasUserCondition(text))return null;
+ if(executeFuture){add('EXECUTE_FUTURE',text,{temporal_scope:{...temporal(text),scope:'now'}});return validatePlan({goals});}
  if(/(?:查看|有哪些|有什么|列出).*(?:计划|打算)|(?:未来|明天).*(?:计划|打算).*[?？]/.test(text)){add('LIST_FUTURE',text);return validatePlan({goals});}
- if(/算了|取消|不找|不约|不去了/.test(text)&&/明天|后天|计划|打算|取消/.test(text)){add('CANCEL_FUTURE',text,{temporal_scope:temporal(text)});return validatePlan({goals});}
+ if(cancelFuture){add('CANCEL_FUTURE',text,{temporal_scope:temporal(text)});return validatePlan({goals});}
  if(target&&/^(我)?(现在)?(对|向|跟|和).{1,40}(说|告诉|问)[：:「“]/.test(text)){add('WORLD_SPEECH',text);return validatePlan({goals});}
  const conditional=hasUserCondition(text),future=/明天|后天|之后|打算|以后/.test(text);
  const moneyClause=text.split(/[，,；;]|而且|并且|同时/).find(clause=>/多少钱|余额|资金/.test(clause));

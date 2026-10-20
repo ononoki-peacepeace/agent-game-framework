@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Conditional future control — 2026-10-21
+
+Parent0c8726c; this source checkpoint prevents fast CANCEL_FUTURE/EXECUTE_FUTURE from discarding original conditions, using the existing typed planner/owned branches. Corrected original-source baseline4fail/2controls; final regression/build counts in SESSION. False/unknown/no-condition candidates do not write; true cancel/actual TALK pass. Real JsonStore+HTTP server recreation returns identical parent response,zero generation/byte changes; offline route/planner controlled. Initial raw-vs-projected due fixture mismatch, internal-function replay assumption and sandbox fetch failures retained and documented in docs/future-control-condition.md. No schema/Core/retry interface changes. A7.3 remains open,60%=96/160,+0. Next: refresh complete pinned offline coverage after accumulated product edits, then continue four themes. Original dirt/safety preserved.
+
 ## Notification time-credit causality — 2026-10-21
 
 Parent a616649; this source checkpoint caps new invitation credit by the current interval after actual relayer Core costs, preserving the relayer's old bank. Baseline2fail/1lawful25min control; final5distinctfiles48pass/zero skip and isolated build pass. Actual JsonStore write/read requires7newminutes before one receiver trip; zero-time resettlement unchanged (not HTTP restart). See docs/npc-notification-credit.md. No schema/Core/public dependency/model-budget change. W4.2 withdrawn then restored by following ledger commit,net0 to60%=96/160; W4.3/4 remain open. Full215files2149pass remains6f4a300. Next: continue resource/time and four-theme fixed matrices. Original dirt/frozen/formal/3100/paid/Claude preserved.
