@@ -1,0 +1,7 @@
+# Scene-presence count counterexamples
+
+Pinned source e2d7d80/product8affb2f. A separate ignored preflight reproduced five failures with two controls: three quoted recollections were incorrectly treated as present-scene headcounts; an initial correct count hid a subsequent contradictory assertion; and a two-digit Chinese count was skipped as NaN. The temporary fixture has exactly three authoritative characters at the same location. Its correct-three and incorrect-two controls pass. No world/model/production writes occur.
+
+Retained files under the ignored takeover checkpoint directory: scene-count-preflight.test.ts, .config.mts, .json and .log. These are outside the active243-file557-hash full snapshot inventory; passing that fixed inventory cannot refute this counterexample. Source/tests stay frozen until that snapshot audit completes. N4.1 and N4.2 are withdrawn pending repair and verification: **95/160, 59.375% (59.38%), net minus two conditions /1.25 percentage points**. N4.3/4 remain open.
+
+Next after current snapshot audit: promote bounded counterexamples, retain three quotation styles plus asserted/quoted mixtures, repeated claims, Chinese-number and truthful controls; minimally align count validation with the existing unquoted presence projection, check every count, parse only supported integer forms; verify actual narration degradation and restart/replay without extra world effects. No new NPC reaction or result may be invented.
