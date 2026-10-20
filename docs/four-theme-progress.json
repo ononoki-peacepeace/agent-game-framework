@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "e211093",
+  "assessed_source": "3675e38",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -711,7 +711,9 @@
         "tests/npc-own-resource-context.test.ts",
         "docs/npc-own-resource-context.md",
         "tests/npc-legacy-long-goal.test.ts",
-        "docs/npc-legacy-long-goal.md"
+        "docs/npc-legacy-long-goal.md",
+        "tests/npc-ended-goal-execution.test.ts",
+        "docs/npc-ended-goal-execution.md"
       ],
       "basis": "Objective/recovery and owner-resource context gaps repaired with focused evidence; broader resource/location/relationship/new-fact/repeated-failure long-duration matrix remains open."
     },
@@ -1463,6 +1465,22 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "npc-ended-goal-execution",
+      "type": "repair",
+      "source": "3675e38",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "W5.3",
+          "result": "Ended goals cannot authorize lingering legacy/typed plans after reload; stale plans abandoned without MOVE or goal mutation; full adaptive matrix remains open",
+          "evidence": [
+            "tests/npc-ended-goal-execution.test.ts",
+            "docs/npc-ended-goal-execution.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -1749,6 +1767,18 @@
         "docs/npc-legacy-long-goal.md"
       ],
       "summary": "Two legacy arrival branches prematurely ended ongoing goals. Baseline2fail/2controls; final6files56pass and complete isolated build passed. No whole-condition credit."
+    },
+    {
+      "id": "npc-ended-goal-execution",
+      "scope": "original",
+      "condition": "W5.3",
+      "status": "resolved",
+      "source": "3675e38",
+      "evidence": [
+        "tests/npc-ended-goal-execution.test.ts",
+        "docs/npc-ended-goal-execution.md"
+      ],
+      "summary": "Valid ended-goal snapshots still executed old plans. Baseline4fail; final8files67pass/build passed. No whole-condition credit."
     }
   ]
 }
