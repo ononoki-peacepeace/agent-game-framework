@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "f537de7",
+  "assessed_source": "132de1c",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -551,9 +551,11 @@
         "tests/sealed-item-movement.test.ts",
         "docs/sealed-item-movement.md",
         "tests/sealed-item-damage.test.ts",
-        "docs/sealed-item-damage.md"
+        "docs/sealed-item-damage.md",
+        "tests/tracked-item-sale.test.ts",
+        "docs/tracked-item-sale.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 5f29a42 repairs sealed ancestry for source/destination movement/transfer and Freeform prerequisites;baseline8fail/3controls,expanded destination/Freeform counterexamples retained,7files99pass/build,actual disk no-write refusals. Full condition remains open. f537de7 repairs registered/shared sealed-contained damage before RNG/mutation;baseline4fail/2controls,6files111pass/build,actual disk service no-write/no-generation refusal. Full matrix stays open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 5f29a42 repairs sealed ancestry for source/destination movement/transfer and Freeform prerequisites;baseline8fail/3controls,expanded destination/Freeform counterexamples retained,7files99pass/build,actual disk no-write refusals. Full condition remains open. f537de7 repairs registered/shared sealed-contained damage before RNG/mutation;baseline4fail/2controls,6files111pass/build,actual disk service no-write/no-generation refusal. Full matrix stays open. 132de1c repairs tracked sale placement/owner cleanup and sealed/filled-container refusal;baseline4fail/1control,6files105pass/build,real disk/service replay with one payment/receipt and no extra generation. Equipped/consumption/full matrix stays open."
     },
     "A8.4": {
       "status": "unverified",
@@ -1128,9 +1130,11 @@
         "tests/sealed-item-movement.test.ts",
         "docs/sealed-item-movement.md",
         "tests/sealed-item-damage.test.ts",
-        "docs/sealed-item-damage.md"
+        "docs/sealed-item-damage.md",
+        "tests/tracked-item-sale.test.ts",
+        "docs/tracked-item-sale.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 53eaaa6 repairs sealed-container clue access;full container/environment/temporary-item/transfer/consumption matrix still open. 5f29a42 repairs sealed ancestry for source/destination movement/transfer and Freeform prerequisites;baseline8fail/3controls,expanded destination/Freeform counterexamples retained,7files99pass/build,actual disk no-write refusals. Full condition remains open. f537de7 repairs registered/shared sealed-contained damage before RNG/mutation;baseline4fail/2controls,6files111pass/build,actual disk service no-write/no-generation refusal. Full matrix stays open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 53eaaa6 repairs sealed-container clue access;full container/environment/temporary-item/transfer/consumption matrix still open. 5f29a42 repairs sealed ancestry for source/destination movement/transfer and Freeform prerequisites;baseline8fail/3controls,expanded destination/Freeform counterexamples retained,7files99pass/build,actual disk no-write refusals. Full condition remains open. f537de7 repairs registered/shared sealed-contained damage before RNG/mutation;baseline4fail/2controls,6files111pass/build,actual disk service no-write/no-generation refusal. Full matrix stays open. 132de1c repairs tracked sale placement/owner cleanup and sealed/filled-container refusal;baseline4fail/1control,6files105pass/build,real disk/service replay with one payment/receipt and no extra generation. Equipped/consumption/full matrix stays open."
     },
     "N6.4": {
       "status": "unverified",
@@ -2533,6 +2537,30 @@
           "evidence": [
             "tests/sealed-item-damage.test.ts",
             "docs/sealed-item-damage.md"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "tracked-item-sale",
+      "type": "repair",
+      "source": "132de1c",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "A8.3",
+          "result": "Tracked sale lifecycle and sealed/filled-container prerequisites repaired;equipped/consumption/full matrix open",
+          "evidence": [
+            "tests/tracked-item-sale.test.ts",
+            "docs/tracked-item-sale.md"
+          ]
+        },
+        {
+          "id": "N6.3",
+          "result": "Tracked sale lifecycle and sealed/filled-container prerequisites repaired;equipped/consumption/full matrix open",
+          "evidence": [
+            "tests/tracked-item-sale.test.ts",
+            "docs/tracked-item-sale.md"
           ]
         }
       ]
