@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "857a42c",
+  "assessed_source": "80f9084",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -1010,9 +1010,11 @@
         "tests/partial-plan-visible-status.test.ts",
         "docs/partial-plan-visible-status.md",
         "tests/compound-reaction-budget.test.ts",
-        "docs/compound-reaction-ownership.md"
+        "docs/compound-reaction-ownership.md",
+        "tests/item-action-degraded-prose.test.ts",
+        "docs/item-action-degraded-prose.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. Source b4c018f fixes inherited-last-step degradation omission; final11files109pass, isolated build passed, full condition remains open. Source c6a7e84 binds actual compound child reactions with shared durable budget;13distinct files81pass/build; full condition remains open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. Source b4c018f fixes inherited-last-step degradation omission; final11files109pass, isolated build passed, full condition remains open. Source c6a7e84 binds actual compound child reactions with shared durable budget;13distinct files81pass/build; full condition remains open. 80f9084 repairs generic BUY/SELL/EQUIP/UNEQUIP degradation from exact deterministic Core facts,including compound children;baseline8fail,7files56pass/build,actual disk/service replay and reviewed Chinese outputs. Full failed/unexecuted/multi-world naturalness remains open."
     },
     "N3.4": {
       "status": "unverified",
@@ -1194,9 +1196,11 @@
         "tests/compound-degraded-prose.test.ts",
         "docs/compound-degraded-prose.md",
         "tests/compound-reaction-budget.test.ts",
-        "docs/compound-reaction-ownership.md"
+        "docs/compound-reaction-ownership.md",
+        "tests/item-action-degraded-prose.test.ts",
+        "docs/item-action-degraded-prose.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. Source b4c018f fixes inherited-last-step degradation omission; final11files109pass, isolated build passed, full condition remains open. Source c6a7e84 binds actual compound child reactions with shared durable budget;13distinct files81pass/build; full condition remains open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. Source b4c018f fixes inherited-last-step degradation omission; final11files109pass, isolated build passed, full condition remains open. Source c6a7e84 binds actual compound child reactions with shared durable budget;13distinct files81pass/build; full condition remains open. 80f9084 repairs generic BUY/SELL/EQUIP/UNEQUIP degradation from exact deterministic Core facts,including compound children;baseline8fail,7files56pass/build,actual disk/service replay and reviewed Chinese outputs. Full failed/unexecuted/multi-world naturalness remains open."
     },
     "N8.3": {
       "status": "met",
@@ -2589,6 +2593,30 @@
           "evidence": [
             "tests/equipped-item-sale.test.ts",
             "docs/equipped-item-sale.md"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "item-action-degraded-prose",
+      "type": "repair",
+      "source": "80f9084",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "N8.2",
+          "result": "Four item-action fallbacks and compound child prose retain actual item/quantity/payment;full failed/unexecuted multi-goal naturalness remains open",
+          "evidence": [
+            "tests/item-action-degraded-prose.test.ts",
+            "docs/item-action-degraded-prose.md"
+          ]
+        },
+        {
+          "id": "N3.3",
+          "result": "Four item-action fallbacks and compound child prose retain actual item/quantity/payment;full failed/unexecuted multi-goal naturalness remains open",
+          "evidence": [
+            "tests/item-action-degraded-prose.test.ts",
+            "docs/item-action-degraded-prose.md"
           ]
         }
       ]
