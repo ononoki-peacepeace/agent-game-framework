@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "a253d58",
+  "assessed_source": "7bb13f2",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -414,9 +414,11 @@
       "evidence": [
         "tests/goal-contract-batch1.test.ts",
         "tests/open-goal-completion-evidence.test.ts",
-        "docs/open-goal-completion-evidence.md"
+        "docs/open-goal-completion-evidence.md",
+        "tests/declared-activity-interruption.test.ts",
+        "docs/declared-activity-interruption.md"
       ],
-      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim. Counterexample a954b27/productf9f93f0: remote work travel appears in completed affordances, so done certifies earning without work or wage;3fail/2controls. A4.2 withdrawn pending repair. Repaired a253d58: actual fulfilled candidate only, preparation cannot certify done; bounded repair/exhaust and real HTTP JsonStore restart/replay;6files49pass/build. Wider A4.3 remains open."
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim. Counterexample a954b27/productf9f93f0: remote work travel appears in completed affordances, so done certifies earning without work or wage;3fail/2controls. A4.2 withdrawn pending repair. Repaired a253d58: actual fulfilled candidate only, preparation cannot certify done; bounded repair/exhaust and real HTTP JsonStore restart/replay;6files49pass/build. Wider A4.3 remains open. Counterexample218559d/producta253d58: interrupted declared activity receives full effects and open goal certifies done after partial duration;5fail/2controls. Withdrawn pending repair. Repaired7bb13f2: full declared effects require actual full Core duration; interrupted activity stops goal before done. Scheduled/event/exact-end and disk restart/replay,8files115pass/build; broader A4.3 open."
     },
     "A4.3": {
       "status": "unmet",
@@ -2153,6 +2155,39 @@
           "reason": "Separate preparation from actual candidate fulfillment; bounded false-done validation, actual wage and zero-extra restart replay;49pass/build."
         }
       ]
+    },
+    {
+      "batch": "declared-activity-interruption-withdrawal",
+      "type": "evidence_correction",
+      "source": "a253d58",
+      "transitions": [
+        {
+          "id": "A4.2",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "tests/declared-activity-interruption.test.ts"
+          ],
+          "reason": "Interrupted partial activity receives full wage/recovery and counts as completed;5fail/2controls."
+        }
+      ]
+    },
+    {
+      "batch": "declared-activity-interruption-repair",
+      "type": "repair",
+      "source": "7bb13f2",
+      "transitions": [
+        {
+          "id": "A4.2",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "tests/declared-activity-interruption.test.ts",
+            "docs/declared-activity-interruption.md"
+          ],
+          "reason": "Core elapsed duration gates full activity effects and completion; truthful stop on actual interruption;115pass/build."
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -2691,6 +2726,17 @@
         "tests/open-goal-completion-evidence.test.ts"
       ],
       "summary": "Remote activity preparation sent as completed affordance lets done certify work with no work/resource effect."
+    },
+    {
+      "id": "declared-activity-interruption",
+      "scope": "original",
+      "condition": "A4.2",
+      "status": "repaired",
+      "source": "a253d58",
+      "evidence": [
+        "tests/declared-activity-interruption.test.ts"
+      ],
+      "summary": "Full activity effects applied before Core WAIT truncates at player appointment; partial execution certifies original goal."
     }
   ]
 }
