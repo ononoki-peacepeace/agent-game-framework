@@ -443,7 +443,9 @@ describe('natural scene interaction routing', () => {
       .toContainEqual({speaker_id:'player',utterance:'那我们聊聊别的吧。'});
     const after=await f.service.current();
     expect(after.entities.find(entity=>entity.id===npcId)!.components.relationships).toEqual(relationships);
-    expect(after.npc_agent_state![npcId].knowledge).toEqual([]);
+    // Scene speech becomes sourced hearsay, never a confirmed observation or a relationship change.
+    expect(after.npc_agent_state![npcId].knowledge.every(item=>item.source_type==='told_by'&&
+      item.source_ref===after.player_state.entity_id&&item.confidence<1)).toBe(true);
     expect(after.narrative_history?.at(-1)?.speech_events?.at(-1)?.utterance).toBe('今天先到这儿吧。');
   });
   it('provides actor-scoped ensemble context and records NPC-to-NPC exchange in one scene call',async()=>{

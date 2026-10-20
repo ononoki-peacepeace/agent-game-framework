@@ -140,7 +140,14 @@ describe('autonomous NPC foundation',()=>{
     const c=buildNpcAgentContext(save,'npc_C',{kind:'direct_scene',description:'谈话'});
     expect(JSON.stringify(b.memories)).toContain('钥匙在仓库');
     expect(JSON.stringify(c)).not.toContain('钥匙在仓库');
-    expect(save.npc_agent_state?.npc_B.knowledge.map(item=>item.id)).toEqual(['evidence_1']);
+    // The witness gains sourced hearsay; the absent NPC gains nothing at all.
+    expect(save.npc_agent_state?.npc_B.knowledge.map(item=>item.id))
+      .toEqual(['evidence_1',`heard:${sceneId}:npc_A`]);
+    expect(save.npc_agent_state?.npc_B.knowledge.at(-1))
+      .toMatchObject({source_type:'told_by',source_ref:'npc_A',confidence:0.4});
+    expect(save.npc_agent_state?.npc_C.knowledge).toEqual([
+      {id:'evidence_3',proposition:'听到一段争执',source_type:'observed',source_ref:'event_3',
+        learned_at:save.runtime.time,confidence:0.8}]);
     expect(JSON.stringify(b)).not.toContain('ULTIMATE_SECRET_A');
     expect(JSON.stringify(b)).not.toContain('我自己实施了那件事');
     expect(JSON.stringify(buildNpcAgentContext(save,'npc_A',{kind:'direct_scene',description:'谈话'}))).toContain('我自己实施了那件事');

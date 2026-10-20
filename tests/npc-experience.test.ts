@@ -45,10 +45,16 @@ describe('NPC personal authoritative experience',()=>{
     expect(memory.summary).toContain('我想安静待一会儿。');
     expect(memory.summary.indexOf('拍照前')).toBeLessThan(memory.summary.indexOf('散步'));
     expect(memory.summary.length).toBeLessThanOrEqual(500);
-    expect(state.knowledge).toEqual(before.knowledge);
+    // Hearing a claim forms sourced hearsay, never a confirmed observation of its content.
+    expect(state.knowledge.every(item=>item.source_type==='told_by'&&item.confidence<1)).toBe(true);
+    expect(state.knowledge.map(item=>item.source_ref)).toEqual([save.player_state.entity_id]);
+    expect(state.knowledge.at(-1)!.proposition).toContain('拍照前我会先问你');
+    expect(state.knowledge.at(-1)!.proposition).not.toContain('你想去散步吗？');
+    expect(state.knowledge.length).toBe(before.knowledge.length+1);
     expect(state.beliefs).toEqual(before.beliefs);
     expect(save.entities.find(entity=>entity.id==='npc_lin')!.components.relationships).toEqual(relationships);
     expect(save.npc_agent_state!.npc_absent.memories).toEqual([]);
+    expect(save.npc_agent_state!.npc_absent.knowledge).toEqual([]);
     save.narrative_history=[];save.turn_history=[];
     const reloaded=validateSave(structuredClone(save));
     expect(JSON.stringify(buildNpcAgentContext(reloaded,'npc_lin',{kind:'direct_scene',description:'拍照前的约定'}).memories))

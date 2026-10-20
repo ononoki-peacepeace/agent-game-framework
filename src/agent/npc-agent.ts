@@ -149,7 +149,10 @@ export function admitNpcDecision(save:SavePackage,npcId:string,trigger:'direct_s
   const state=save.npc_agent_state?.[npcId];
   const admitted=Boolean(entity&&npcId!==save.player_state.entity_id&&
     (trigger==='vote'||trigger==='world_event'||residentImportance==='major'||residentImportance==='recurring'||
-      state&&(state.goals.some(goal=>goal.status==='active')||state.knowledge.length>0||state.private_facts.length>0)));
+      state&&(state.goals.some(goal=>goal.status==='active')||
+        // Overhearing a remark is not a stake. First-hand knowledge is; hearsay alone
+        // must not make every bystander pay for a dedicated decision call each turn.
+        state.knowledge.some(item=>item.source_type!=='told_by')||state.private_facts.length>0)));
   observe('debug',admitted?'npc_agent.admitted':'npc_agent.skipped',{module:'agent',revision:save.state_revision,
     metadata:{npc_id:npcId,trigger,reason:admitted?'meaningful_decision':'lightweight_or_not_present'}});
   return admitted;
@@ -288,6 +291,17 @@ function boundedMemories(items:NpcAgentState['memories']){
   }
   return result;
 }
+const knowledgeWeight=(item:NpcAgentState['knowledge'][number])=>
+  (item.source_type==='told_by'?0:item.source_type==='inferred'?1:2)*10+Math.round(item.confidence*9);
+/** Hearsay is forgotten first; first-hand and confident knowledge outlives it. */
+function boundedKnowledge(items:NpcAgentState['knowledge']){
+  const result=[...items];
+  while(result.length>80){
+    const least=Math.min(...result.map(knowledgeWeight));
+    result.splice(result.findIndex(item=>knowledgeWeight(item)===least),1);
+  }
+  return result;
+}
 function boundedObjectives<T extends {status:'active'|'completed'|'abandoned'}>(items:T[],max:number){
   const result=[...items];
   while(result.length>max){
@@ -418,6 +432,19 @@ function stageNpcDecision(save:SavePackage,npcId:string,eventRef:string,decision
   }
 }
 
+/** Hearsay needs an assertion. Questions, greetings and fragments teach a listener nothing. */
+function assertedContent(utterance:string){
+  const declarative=utterance.trim().split(/(?<=[。！!？?；;\n])/).map(part=>part.trim())
+    .filter(part=>part.length>=5&&!/[？?]\s*$/.test(part));
+  const joined=declarative.join('');
+  return joined.length>=5?joined:'';
+}
+function hearsayProposition(save:SavePackage,speakerId:string,content:string){
+  const name=String(save.entities.find(entity=>entity.id===speakerId)?.components.identity?.name??speakerId).slice(0,40);
+  const prefix=name+'当场说过：“',suffix='”（听来的转述，自己未核实）',room=500-prefix.length-suffix.length;
+  return prefix+(content.length<=room?content:content.slice(0,room-1)+'…')+suffix;
+}
+
 /** Speech is evidence that words were spoken, never automatic proof of the proposition they contain. */
 export function recordSceneObservation(save:SavePackage,requestId:string,
   speechEvents:readonly {speaker_id:string;utterance:string}[],audienceIds?:readonly string[]){
@@ -443,6 +470,21 @@ export function recordSceneObservation(save:SavePackage,requestId:string,
     const summary=prefix+events.map((event,index)=>labels[index]+'说：“'+quote(event.utterance)+'”').join('；');
     state.memories=boundedMemories([...state.memories,{event_ref:eventRef,kind:'heard' as const,summary,
       participant_ids:participants,at,importance:1}]);
+    // Sourced hearsay: only someone who was actually in this audience learns it, the
+    // source is the speaker who said it, and the content stays that speaker's claim.
+    // Repeating it later is how a report spreads; nothing is synced to absent characters.
+    for(const speakerId of participants){
+      if(speakerId===npcId)continue;
+      const content=assertedContent(events.filter(event=>event.speaker_id===speakerId)
+        .map(event=>event.utterance).join('\n'));
+      const id=`heard:${requestId}:${speakerId}`;
+      if(!content||state.knowledge.some(item=>item.id===id))continue;
+      state.knowledge=boundedKnowledge([...state.knowledge,{id,
+        proposition:hearsayProposition(save,speakerId,content),source_type:'told_by' as const,
+        source_ref:speakerId,learned_at:at,confidence:0.4}]);
+      observe('debug','npc_agent.knowledge_updated',{module:'agent',revision:save.state_revision+1,
+        metadata:{npc_id:npcId,knowledge_id:id,source_type:'told_by',source_ref:speakerId}});
+    }
     save.npc_agent_state??={};save.npc_agent_state[npcId]=state;
     observe('debug','npc_agent.memory_updated',{module:'agent',revision:save.state_revision+1,metadata:{npc_id:npcId,event_ref:eventRef}});
   }
