@@ -102,7 +102,10 @@ function narrationFallback(save: SavePackage, action: Parameters<typeof applyPat
     const target=save.entities.find(entity=>entity.id===receipt.target_id);
     const name=String(target?.components.identity?.name??'对方');
     if(receipt.semantic_action==='TALK')return {narrative:`你向${name}开了口。`};
-    if(receipt.semantic_action==='WAIT')return {narrative:receipt.time_cost>0?`你等了${receipt.time_cost}分钟。`:'你停下来，等了一会儿。'};
+    if(receipt.semantic_action==='WAIT'){
+      const waited=receipt.time_cost>0?`你等了${receipt.time_cost}分钟。`:'你停了下来。';
+      return {narrative:[waited,save.foreground?.reason].filter(Boolean).join('\n')};
+    }
     return {narrative:canonicalResolutionNarrative(receipt,hidden)};
   }
   return {narrative:'你试着按眼前的打算行动。'};

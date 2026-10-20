@@ -1,5 +1,10 @@
 # Claude Code starting handoff
 
+## WAIT fallback actual handoff — 2026-10-21
+
+Parentf08fd70; source checkpoint containing this section makes zero-time WAIT degradation say only stopped, retains actual positive minutes and saved foreground reason. Baseline4fail/1control; initial repair exposed missing original task title in fixture, corrected original-source baseline still4fail/1control. Final6files50pass/build. Actual Core0/1min, one receipt, refusal/content-filter/degraded/replay and ordinaryWAIT controls pass. No Core/schema/extra retry/NPC invention. See docs/wait-interruption-fallback.md. N8.3 explicit withdrawal/restoration net0 to60%=96/160; N8.2 open. Full215files2149pass stays6f4a300. Next: reproduce metadata-only accepted schedule label migration (ID replacing authored label) separately, then fixed four-theme matrices. Original dirt/safety preserved.
+
+
 ## Remote routine usable route prerequisite — 2026-10-21
 
 Parent4754b83; source checkpoint containing this section removes the zero-usable-route shortcut that let remote work execute without arrival. Corrected baseline2fail/1local control; original unknown fixture was default-known after validation, retained and corrected before original-source rerun. Final targeted count/build in SESSION; actual GameService/JsonStore refusals leave time/wage/position and file bytes unchanged across restart, zero generation. No schema/Core/public interface change. See docs/routine-unreachable-location.md. W4.3 remains open;60%=96/160,+0. Full215files2149pass stays preceding6f4a300 with native-failed initial attempt preserved. Next: broader natural-language/Narrator fixed matrices and explicit world-blocked feedback. Original dirt/safety preserved.
