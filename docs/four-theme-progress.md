@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：f67402f。整体 **61.88%**（99/160 个固定条件满足）。未满足 27，待验证 34。
+计分版本 v1；评估源代码：a2c768b。整体 **61.25%**（98/160 个固定条件满足）。未满足 28，待验证 34。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -9,8 +9,8 @@
 | ① 可靠性 | 32 | 5 | 3 | 5/5/0 | 80.0% |
 | ② 自然语言行动 | 22 | 7 | 11 | 3/5/2 | 55.0% |
 | ③ 自主持续世界 | 26 | 6 | 8 | 3/7/0 | 65.0% |
-| ④ Narrator 与体验 | 19 | 9 | 12 | 2/6/2 | 47.5% |
-| 合计 | 99 | 27 | 34 | 13/23/4 | 61.88% |
+| ④ Narrator 与体验 | 18 | 10 | 12 | 2/5/3 | 45.0% |
+| 合计 | 98 | 28 | 34 | 13/22/5 | 61.25% |
 
 旧台账的12/21/7是工作包人工分类，保留作历史。这里的完成/部分/未完成由4个条件满足数推导，不能与旧分类混用。旧46%为退役估计；首次建立口径不是产品进展，不计算相对46%的提升。
 
@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：31 已修复，19 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：31 已修复，20 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -124,6 +124,7 @@
 | fetchable-loopback-fixture | evidence_correction | R5.4: Original3Fetch bad-port failures retained;bounded listener selection and deterministic cleanup/bind-error controls38pass/build. Latest full coverage predates this test-only checkpoint; no status change.；完整条件保持开放 | +0.000 pp |
 | fixed-three-structure72h-scenarios | repair | W10.1: unmet → met | +0.625 pp |
 | perception-inspect-authority-counterexample | evidence_correction | N4.1: met → unmet | -0.625 pp |
+| actual-npc-movement-prose-counterexample | evidence_correction | N4.2: met → unmet | -0.625 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -427,7 +428,7 @@
 | 条件 | 具体通过条件 | 状态 | 依据 |
 |---|---|---|---|
 | N4.1 | 已有事实、在场和感知校验阻止越权描写 | 未满足 | [perception-audit-authority.md](../docs/perception-audit-authority.md), [perception-audit-authority.test.ts](../tests/perception-audit-authority.test.ts) |
-| N4.2 | 已知合法描写及误拒边界有回归证据 | 满足 | [narrative-firewall-observability.test.ts](../tests/narrative-firewall-observability.test.ts), [repeated-physical-narrative-scope.test.ts](../tests/repeated-physical-narrative-scope.test.ts), [repeated-physical-narrative-scope.md](../docs/repeated-physical-narrative-scope.md), [physical-denial-subject.test.ts](../tests/physical-denial-subject.test.ts), [physical-denial-subject.md](../docs/physical-denial-subject.md), [scene-count-counterexample.md](../docs/scene-count-counterexample.md), [scene-count-authority.md](../docs/scene-count-authority.md), [scene-count-authority.test.ts](../tests/scene-count-authority.test.ts) |
+| N4.2 | 已知合法描写及误拒边界有回归证据 | 未满足 | [npc-movement-narration-authority.md](../docs/npc-movement-narration-authority.md) |
 | N4.3 | 扩大合法比喻、转述和场景表述语料降低误拒 | 未满足 | [narrative-firewall-observability.test.ts](../tests/narrative-firewall-observability.test.ts), [scene-presence-negation.test.ts](../tests/scene-presence-negation.test.ts), [scene-presence-negation.md](../docs/scene-presence-negation.md), [scene-presence-subjects.test.ts](../tests/scene-presence-subjects.test.ts), [scene-presence-subjects.md](../docs/scene-presence-subjects.md), [scene-presence-groups.test.ts](../tests/scene-presence-groups.test.ts), [scene-presence-groups.md](../docs/scene-presence-groups.md), [perception-subjects.test.ts](../tests/perception-subjects.test.ts), [perception-subjects.md](../docs/perception-subjects.md) |
 | N4.4 | 多世界误放与误拒均按固定期望验收 | 待验证 | [narrative-firewall-observability.test.ts](../tests/narrative-firewall-observability.test.ts) |
 
