@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：c3ac8fb。整体 **59.38%**（95/160 个固定条件满足）。未满足 29，待验证 36。
+计分版本 v1；评估源代码：6164f04。整体 **60.00%**（96/160 个固定条件满足）。未满足 28，待验证 36。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -8,9 +8,9 @@
 |---|---:|---:|---:|---|---:|
 | ① 可靠性 | 30 | 6 | 4 | 4/6/0 | 75.0% |
 | ② 自然语言行动 | 22 | 7 | 11 | 3/5/2 | 55.0% |
-| ③ 自主持续世界 | 23 | 8 | 9 | 3/6/1 | 57.5% |
+| ③ 自主持续世界 | 24 | 7 | 9 | 3/6/1 | 60.0% |
 | ④ Narrator 与体验 | 20 | 8 | 12 | 2/6/2 | 50.0% |
-| 合计 | 95 | 29 | 36 | 12/23/5 | 59.38% |
+| 合计 | 96 | 28 | 36 | 12/23/5 | 60.00% |
 
 旧台账的12/21/7是工作包人工分类，保留作历史。这里的完成/部分/未完成由4个条件满足数推导，不能与旧分类混用。旧46%为退役估计；首次建立口径不是产品进展，不计算相对46%的提升。
 
@@ -84,6 +84,7 @@
 | routine-world-block-repair | repair | R5.1: unmet → met | +0.625 pp |
 | future-execute-window | repair | 无条件状态变化 | +0.000 pp |
 | npc-notification-credit-withdrawal | evidence_correction | W4.2: met → unmet | -0.625 pp |
+| npc-notification-credit-repair | repair | W4.2: unmet → met | +0.625 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -297,7 +298,7 @@
 | 条件 | 具体通过条件 | 状态 | 依据 |
 |---|---|---|---|
 | W4.1 | 自主生活调度保留已有物理行动连续性 | 满足 | [npc-physical-plan-continuity.test.ts](../tests/npc-physical-plan-continuity.test.ts) |
-| W4.2 | 时间额度与欠账连续且不重复推进 | 未满足 | [npc-physical-plan-continuity.test.ts](../tests/npc-physical-plan-continuity.test.ts), [npc-social-notification-credit.test.ts](../tests/npc-social-notification-credit.test.ts) |
+| W4.2 | 时间额度与欠账连续且不重复推进 | 满足 | [npc-physical-plan-continuity.test.ts](../tests/npc-physical-plan-continuity.test.ts), [npc-social-notification-credit.test.ts](../tests/npc-social-notification-credit.test.ts), [npc-notification-credit.md](../docs/npc-notification-credit.md) |
 | W4.3 | 日程、旅行、突发中断与资源变化协调调整 | 未满足 | [npc-physical-plan-continuity.test.ts](../tests/npc-physical-plan-continuity.test.ts), [routine.test.ts](../tests/routine.test.ts), [routine-partial-interruption.md](../docs/routine-partial-interruption.md), [routine-local-elapsed.test.ts](../tests/routine-local-elapsed.test.ts), [routine-local-elapsed.md](../docs/routine-local-elapsed.md), [routine-unreachable-location.test.ts](../tests/routine-unreachable-location.test.ts), [routine-unreachable-location.md](../docs/routine-unreachable-location.md), [schedule-label-migration.test.ts](../tests/schedule-label-migration.test.ts), [schedule-label-migration.md](../docs/schedule-label-migration.md) |
 | W4.4 | 多世界长时间生活行为丰富且持续可执行 | 待验证 | [npc-physical-plan-continuity.test.ts](../tests/npc-physical-plan-continuity.test.ts) |
 

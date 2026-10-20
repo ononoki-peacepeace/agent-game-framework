@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "c3ac8fb",
+  "assessed_source": "6164f04",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -703,12 +703,13 @@
       "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
     },
     "W4.2": {
-      "status": "unmet",
+      "status": "met",
       "evidence": [
         "tests/npc-physical-plan-continuity.test.ts",
-        "tests/npc-social-notification-credit.test.ts"
+        "tests/npc-social-notification-credit.test.ts",
+        "docs/npc-notification-credit.md"
       ],
-      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim. Counterexamplea616649/productc3ac8fb: new listener inherits relayer bank100 and travels despite only1/10minute current interval;2fail/1lawful25min control. Withdrawn pending repair."
+      "basis": "Historical bounded evidence plus6164f04: old-bank notification2fail/1control repaired,5distinctfiles48pass/zero skip and isolated build. Actual disk read/write plus7newminutes/zero-time replay verified; no HTTP restart claim. Explicit withdrawal/restoration net0; broad W4.3/4 remain open."
     },
     "W4.3": {
       "status": "unmet",
@@ -2381,6 +2382,23 @@
           "reason": "New listener time credit includes old relayer bank preceding notification;2fail/1control."
         }
       ]
+    },
+    {
+      "batch": "npc-notification-credit-repair",
+      "type": "repair",
+      "source": "6164f04",
+      "transitions": [
+        {
+          "id": "W4.2",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "tests/npc-social-notification-credit.test.ts",
+            "docs/npc-notification-credit.md"
+          ],
+          "reason": "New notification credit bounded by actual interval after relayer Core costs;5files48pass/build;withdraw/restore net0."
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -3017,12 +3035,14 @@
       "id": "npc-notification-credit",
       "scope": "original",
       "condition": "W4.2",
-      "status": "open",
-      "source": "c3ac8fb",
+      "status": "repaired",
+      "source": "6164f04",
       "evidence": [
-        "tests/npc-social-notification-credit.test.ts"
+        "tests/npc-physical-plan-continuity.test.ts",
+        "tests/npc-social-notification-credit.test.ts",
+        "docs/npc-notification-credit.md"
       ],
-      "summary": "New invitation inherits relayer old time bank, letting notification cause retroactive receiver travel."
+      "summary": "New invitation cannot inherit relayer bank before current interval; lawful25min chains/disk new-time travel/zero-time resettlement pass."
     }
   ]
 }
