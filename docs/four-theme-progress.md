@@ -1,16 +1,16 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：8bf6d9e。整体 **61.25%**（98/160 个固定条件满足）。未满足 27，待验证 35。
+计分版本 v1；评估源代码：8bf6d9e。整体 **61.88%**（99/160 个固定条件满足）。未满足 27，待验证 34。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
 | 主题 | 满足 | 未满足 | 待验证 | 完成/部分/未完成项 | 主题进度 |
 |---|---:|---:|---:|---|---:|
-| ① 可靠性 | 31 | 5 | 4 | 4/6/0 | 77.5% |
+| ① 可靠性 | 32 | 5 | 3 | 5/5/0 | 80.0% |
 | ② 自然语言行动 | 22 | 7 | 11 | 3/5/2 | 55.0% |
 | ③ 自主持续世界 | 25 | 7 | 8 | 3/6/1 | 62.5% |
 | ④ Narrator 与体验 | 20 | 8 | 12 | 2/6/2 | 50.0% |
-| 合计 | 98 | 27 | 35 | 12/23/5 | 61.25% |
+| 合计 | 99 | 27 | 34 | 13/22/5 | 61.88% |
 
 旧台账的12/21/7是工作包人工分类，保留作历史。这里的完成/部分/未完成由4个条件满足数推导，不能与旧分类混用。旧46%为退役估计；首次建立口径不是产品进展，不计算相对46%的提升。
 
@@ -120,6 +120,7 @@
 | scene-count-authority-repair | repair | N4.1: unmet → met; N4.2: unmet → met | +1.250 pp |
 | migration-external-image | repair | R9.4: Actualatomicrenamekill/externalreplacement/recovery/errorclassificationevidence;correctedbaseline2fail6controls,final8files106pass/zeroskip/build. Preparationkill/fullmatrixremainopen.；完整条件保持开放 | +0.000 pp |
 | migration-preparation-matrix | repair | R9.4: Fullboundedpreparation/replacementkill/externalimage/error/no-replaymatrix54pass/build;currentfullsnapshot/safetyauditpending,no score yet.；完整条件保持开放 | +0.000 pp |
+| post-migration-complete-offline-snapshot | repair | R9.4: unverified → met | +0.625 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -164,7 +165,7 @@
 | R5.1 | 已有故障矩阵区分技术失败与游戏内失败，保留已提交步骤 | 满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md), [routine-world-block-outcome.test.ts](../tests/routine-world-block-outcome.test.ts), [routine-world-block-outcome.md](../docs/routine-world-block-outcome.md) |
 | R5.2 | 已有分层修复与安全停止测试验证不重复 Core 副作用 | 满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md) |
 | R5.3 | 逐条关闭矩阵中仍未核验的嵌套故障出口 | 未满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md), [partial-plan-visible-status.test.ts](../tests/partial-plan-visible-status.test.ts), [partial-plan-visible-status.md](../docs/partial-plan-visible-status.md), [plan-handoff-failure.test.ts](../tests/plan-handoff-failure.test.ts), [plan-handoff-failure.md](../docs/plan-handoff-failure.md), [plan-unreadable-state.test.ts](../tests/plan-unreadable-state.test.ts), [plan-unreadable-state.md](../docs/plan-unreadable-state.md), [plan-committed-failure-summary.test.ts](../tests/plan-committed-failure-summary.test.ts), [plan-committed-failure-summary.md](../docs/plan-committed-failure-summary.md) |
-| R5.4 | 最新完整离线代码快照全套通过，旧失败不得改写为通过 | 满足 | [current-offline-snapshot.md](../docs/current-offline-snapshot.md), [post-reaction-offline-snapshot.md](../docs/post-reaction-offline-snapshot.md), [agent-workspace.mjs](../scripts/agent-workspace.mjs), [post-context-offline-snapshot.md](../docs/post-context-offline-snapshot.md), [post-subject-offline-snapshot.md](../docs/post-subject-offline-snapshot.md), [post-routine-offline-snapshot.md](../docs/post-routine-offline-snapshot.md), [post-control-offline-snapshot.md](../docs/post-control-offline-snapshot.md), [post-item-offline-snapshot.md](../docs/post-item-offline-snapshot.md), [post-corpus-offline-snapshot.md](../docs/post-corpus-offline-snapshot.md), [post-long-route-offline-snapshot.md](../docs/post-long-route-offline-snapshot.md), [post-process-offline-snapshot.md](../docs/post-process-offline-snapshot.md) |
+| R5.4 | 最新完整离线代码快照全套通过，旧失败不得改写为通过 | 满足 | [current-offline-snapshot.md](../docs/current-offline-snapshot.md), [post-reaction-offline-snapshot.md](../docs/post-reaction-offline-snapshot.md), [agent-workspace.mjs](../scripts/agent-workspace.mjs), [post-context-offline-snapshot.md](../docs/post-context-offline-snapshot.md), [post-subject-offline-snapshot.md](../docs/post-subject-offline-snapshot.md), [post-routine-offline-snapshot.md](../docs/post-routine-offline-snapshot.md), [post-control-offline-snapshot.md](../docs/post-control-offline-snapshot.md), [post-item-offline-snapshot.md](../docs/post-item-offline-snapshot.md), [post-corpus-offline-snapshot.md](../docs/post-corpus-offline-snapshot.md), [post-long-route-offline-snapshot.md](../docs/post-long-route-offline-snapshot.md), [post-process-offline-snapshot.md](../docs/post-process-offline-snapshot.md), [post-migration-offline-snapshot.md](../docs/post-migration-offline-snapshot.md) |
 
 ## R6 Pending/background jobs and asynchronous restart continuation
 
@@ -200,7 +201,7 @@
 | R9.1 | 空闲 current/view 迁移在现有锁内重读后写 | 满足 | [p0a-migration-read-races.test.ts](../tests/p0a-migration-read-races.test.ts) |
 | R9.2 | 父请求准备失败不先迁移，媒体交叉不覆盖新凭据 | 满足 | [p0a-migration-read-races.test.ts](../tests/p0a-migration-read-races.test.ts) |
 | R9.3 | 多个服务实例或进程读迁移竞争不覆盖新提交 | 满足 | [p0a-migration-read-races.test.ts](../tests/p0a-migration-read-races.test.ts), [migration-two-service.test.ts](../tests/migration-two-service.test.ts), [migration-two-service.md](../docs/migration-two-service.md), [migration-two-process.test.ts](../tests/migration-two-process.test.ts), [current-write-guard.test.ts](../tests/current-write-guard.test.ts), [migration-process-write-guard.md](../docs/migration-process-write-guard.md), [migration-interleaving-matrix.md](../docs/migration-interleaving-matrix.md), [post-process-offline-snapshot.md](../docs/post-process-offline-snapshot.md) |
-| R9.4 | 进程强杀及外部替换时迁移结果和错误分类可验证 | 待验证 | [p0a-migration-read-races.test.ts](../tests/p0a-migration-read-races.test.ts), [migration-two-process.test.ts](../tests/migration-two-process.test.ts), [current-write-guard.test.ts](../tests/current-write-guard.test.ts), [migration-process-write-guard.md](../docs/migration-process-write-guard.md), [migration-external-image.md](../docs/migration-external-image.md), [migration-external-image.test.ts](../tests/migration-external-image.test.ts), [migration-preparation-matrix.md](../docs/migration-preparation-matrix.md) |
+| R9.4 | 进程强杀及外部替换时迁移结果和错误分类可验证 | 满足 | [p0a-migration-read-races.test.ts](../tests/p0a-migration-read-races.test.ts), [migration-two-process.test.ts](../tests/migration-two-process.test.ts), [current-write-guard.test.ts](../tests/current-write-guard.test.ts), [migration-process-write-guard.md](../docs/migration-process-write-guard.md), [migration-external-image.md](../docs/migration-external-image.md), [migration-external-image.test.ts](../tests/migration-external-image.test.ts), [migration-preparation-matrix.md](../docs/migration-preparation-matrix.md), [post-migration-offline-snapshot.md](../docs/post-migration-offline-snapshot.md) |
 
 ## R10 World/global/session behavior-guidance cross-store removal/replay acceptance
 

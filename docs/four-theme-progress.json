@@ -163,9 +163,10 @@
         "docs/post-item-offline-snapshot.md",
         "docs/post-corpus-offline-snapshot.md",
         "docs/post-long-route-offline-snapshot.md",
-        "docs/post-process-offline-snapshot.md"
+        "docs/post-process-offline-snapshot.md",
+        "docs/post-migration-offline-snapshot.md"
       ],
-      "basis": "Product9917459/ledger6be22bb fixed195-file494-hash complete offline snapshot1957/1957pass, exact coverage once, build pass; original shard5 native0xC0000409 retained, exact halves passed. Native stability and later source edits need new evidence. Fresh source29e6a5f/ledgerc351367:199files1992/1992pass,502pinned hashes unchanged, exact coverage once,16shards; isolated build passed. Old native crash retained. Fresh product1bad19e/ledger5c083d8 full snapshot207files2064/2064pass,515pinned hashes unchanged, exact coverage once,16shards exit0. Identical-product complete isolated build passed. Historical native crash retained; no later-source or process-stability claim. Fresh productf9f93f0/ledger264dcf4 full snapshot212files2118/2118pass,521pinned hashes unchanged, exact coverage once,16shards exit0; identical-product complete isolated build passed. Earlier native/network/assertion failures retained; no later-source or universal stability claim. Product6f4a300/ledger52c96ad: pinned215files2149pass on524unchanged hashes, exact selected coverage once. Initial16shards had native0xC0000409 at10, preserved;15passed shards plus14fresh single-file passes form29-process audited coverage. Identical-source build passed; no native root-cause fix claim. Current product8b5d2df/ledgerff24471:222files2192/2192pass,20fresh processes all exit0,zero skip,531pinned hashes unchanged,exact coverage once; same-product full isolated build passed. Old native failure retained/cause unresolved. Product80f9084/evidence starting362b3cb:228files2252/2252pass,zero skip,538unchanged hashes,exact selected coverage once. Initial20process attempt had native0xC0000409 at19/no report,retained;19passed original reports+11fresh single-file reports form30passing-report coverage(31total attempts). Identical-product complete isolated build/session68456 passed. Original QA/27frozen/formal SHA match;native cause unresolved. Product7647121: complete241files2403pass/zero skip,553unchanged hashes,exact coverage once,20fresh processes exit0/build88392; independent-process migration failure retained outside passing inventory. Sourcee2d7d80/product8affb2f:243files2424pass/zero skip,557hashes unchanged/exactinventoryonce/20processexit0/build15279;separate scene-count counterexamples retained."
+      "basis": "Product9917459/ledger6be22bb fixed195-file494-hash complete offline snapshot1957/1957pass, exact coverage once, build pass; original shard5 native0xC0000409 retained, exact halves passed. Native stability and later source edits need new evidence. Fresh source29e6a5f/ledgerc351367:199files1992/1992pass,502pinned hashes unchanged, exact coverage once,16shards; isolated build passed. Old native crash retained. Fresh product1bad19e/ledger5c083d8 full snapshot207files2064/2064pass,515pinned hashes unchanged, exact coverage once,16shards exit0. Identical-product complete isolated build passed. Historical native crash retained; no later-source or process-stability claim. Fresh productf9f93f0/ledger264dcf4 full snapshot212files2118/2118pass,521pinned hashes unchanged, exact coverage once,16shards exit0; identical-product complete isolated build passed. Earlier native/network/assertion failures retained; no later-source or universal stability claim. Product6f4a300/ledger52c96ad: pinned215files2149pass on524unchanged hashes, exact selected coverage once. Initial16shards had native0xC0000409 at10, preserved;15passed shards plus14fresh single-file passes form29-process audited coverage. Identical-source build passed; no native root-cause fix claim. Current product8b5d2df/ledgerff24471:222files2192/2192pass,20fresh processes all exit0,zero skip,531pinned hashes unchanged,exact coverage once; same-product full isolated build passed. Old native failure retained/cause unresolved. Product80f9084/evidence starting362b3cb:228files2252/2252pass,zero skip,538unchanged hashes,exact selected coverage once. Initial20process attempt had native0xC0000409 at19/no report,retained;19passed original reports+11fresh single-file reports form30passing-report coverage(31total attempts). Identical-product complete isolated build/session68456 passed. Original QA/27frozen/formal SHA match;native cause unresolved. Product7647121: complete241files2403pass/zero skip,553unchanged hashes,exact coverage once,20fresh processes exit0/build88392; independent-process migration failure retained outside passing inventory. Sourcee2d7d80/product8affb2f:243files2424pass/zero skip,557hashes unchanged/exactinventoryonce/20processexit0/build15279;separate scene-count counterexamples retained. Source8bf6d9e/product19c8108:245files 2470pass/zero skip,559 pinned hashes/exact selected inventory once/build65969. Original20-process attempt had shard4:3bad-port fixture failures and shard12:native0xC0000409/no report. Retained originals plus26 fresh single-file passing reports form44 selected passing reports; native cause unresolved."
     },
     "R6.1": {
       "status": "met",
@@ -287,10 +288,10 @@
         "docs/migration-interleaving-matrix.md",
         "docs/post-process-offline-snapshot.md"
       ],
-      "basis": "Sourcee2d7d80/product8affb2f: frozen protocol two-service/independent-process current/view canonical/media before/after comparison retain flags,assets,revisions and receipt identity. Same-revision/higher-image controls also pass. Expanded3files30pass,adjacent9files84pass,complete243file pinned snapshot/build15279 now audited. Cooperating JsonStore only;olderunguarded/rawexternalwriters/general stale canonical transactions excluded;R9.4 external/preparation/OSmatrix remains separate andopen."
+      "basis": "Sourcee2d7d80/product8affb2f: frozen protocol two-service/independent-process current/view canonical/media before/after comparison retain flags,assets,revisions and receipt identity. Same-revision/higher-image controls also pass. Expanded3files30pass,adjacent9files84pass,complete243file pinned snapshot/build15279 now audited. Cooperating JsonStore only;olderunguarded/rawexternalwriters/general stale canonical transactions excluded;R9.4 has separate bounded preparation/replacement evidence assessed below."
     },
     "R9.4": {
-      "status": "unverified",
+      "status": "met",
       "evidence": [
         "tests/p0a-migration-read-races.test.ts",
         "tests/migration-two-process.test.ts",
@@ -298,9 +299,10 @@
         "docs/migration-process-write-guard.md",
         "docs/migration-external-image.md",
         "tests/migration-external-image.test.ts",
-        "docs/migration-preparation-matrix.md"
+        "docs/migration-preparation-matrix.md",
+        "docs/post-migration-offline-snapshot.md"
       ],
-      "basis": "Product8affb2f: actual strict live-child SIGKILL before/after migration persistence for current/view,timeout thenkill/retry,corrupt coordination safe stop and postkill request replay pass. Fixture autoexit and sandboxHTTP failures retained;full preparation/replace/external replacement/OS error matrix remains unverified. Product19c8108:realfsrenamebefore/afterSIGKILL withvalidatedflushedtemp/currentviewoldornewcompleteimage;externalcanonicalreceipt/samerevision/newgame andcorrupt/missingrecoverycontrols. ServerstoredJSONSyntaxErrorHTTP400counterexamples repairedto503,failedinputidentity/exactrestartreplay/noactions. Correctedbaseline2fail6controls,final8files106pass/build39666. Preparationkill andcompleteOS/externalwriter matrixremainunverified. Testcheckpoint8bf6d9e/product19c8108 unchanged:27processcases incl12prepare/persist/atomicrenamekillcurrentview,16externalcases incl4EIO/recovery,9sameprocess+2guardfault=54pass/build98796. Boundedfrozenmatrixevidencecomplete,currentfullsnapshot/safetyauditpending;conditionstaysunverified."
+      "basis": "Source/test8bf6d9e, product19c8108: the frozen bounded current/view preparation, persistence and real fs.rename before/after matrix has12 strict live-child SIGKILL controls; valid external receipt/same-revision/new-game replacement, corrupt/missing safe stop with explicit restoration, four before/after EIO controls and failed-input exact restart replay pass. Four focused files54pass/build98796, followed by audited245-file2470 selected passing assertions on559 unchanged hashes/build65969. Initial shard4 had3bad-port fixture failures and shard12 exited0xC0000409 without a complete report; originals retained and26 fresh single-file passes plus18 original passing reports cover the fixed inventory exactly once. No error replays world actions. Native crash root cause remains unresolved; uncooperative raw writes during owned rename and arbitrary power-loss durability are excluded."
     },
     "R10.1": {
       "status": "met",
@@ -3252,6 +3254,34 @@
             "docs/migration-preparation-matrix.md",
             "tests/migration-two-process.test.ts",
             "tests/migration-external-image.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "post-migration-complete-offline-snapshot",
+      "type": "repair",
+      "source": "8bf6d9e",
+      "transitions": [
+        {
+          "id": "R9.4",
+          "before": "unverified",
+          "after": "met",
+          "evidence": [
+            "docs/post-migration-offline-snapshot.md",
+            "docs/migration-preparation-matrix.md",
+            "tests/migration-two-process.test.ts",
+            "tests/migration-external-image.test.ts"
+          ],
+          "reason": "Complete frozen bounded preparation/replacement kill, external-image and error/no-replay matrix plus audited unchanged-source full assertion coverage/build. Original fixture failures and native crash retained; no crash-root-cause claim."
+        }
+      ],
+      "condition_checks": [
+        {
+          "id": "R5.4",
+          "result": "245 files/2470 selected passing assertions,559 unchanged hashes,exact inventory once/build65969; original bad-port failures/native crash retained,26 single-file recovery reports. No score change.",
+          "evidence": [
+            "docs/post-migration-offline-snapshot.md"
           ]
         }
       ]
