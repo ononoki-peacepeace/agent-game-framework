@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Sealed-container evidence access — 2026-10-21
+
+Parent9acea32; this source checkpoint prevents general evidence discovery through sealed scene/owned container ancestors while preserving open containers,anchor-exterior clues and learned knowledge. Initial random4fail/4pass; deterministic5fail/3controls; final6files67pass/zero skip and isolated build passed;initial generic-JSON typing build failure retained. Actual Core INSPECT+refusal/content-filter prose,explicit-ID/NPC observer,disk/new-service replay covered;not HTTP. No schema/receipt/commit/time/model-budget changes. Integrate truth accessibility only. See docs/contained-evidence-access.md. N4.1 withdrawn/restored by following ledger evidence,net0 to60%=96/160; N6.3 full matrix open. Complete222files2192pass remains8b5d2df/evidence9acea32. Next: reproduce sealed-container item extraction/transfer prerequisites,then other fixed four-theme matrices;original dirt/safety preserved.
+
 ## Complete post-control offline snapshot — 2026-10-21
 
 Product8b5d2df/ledgerff24471:222files2192/2192pass,zero skip;20fresh isolated processes all exit0;531pinned hashes unchanged; exact file coverage once. Same-product complete isolated build passed(session93848). Original QA/27frozen/formal SHA match. Old native0xC0000409 and all earlier failures retained; cause still unresolved. See docs/post-control-offline-snapshot.md and ignored post-control-offline-summary.json. R5.4 refresh only;60%=96/160,+0. No active verification or source WIP. Next: reproduce contained-evidence-preflight.json hypothesis using lawful validated sealed/unsealed/exterior controls,then four fixed-theme matrices. Original dirt/production/paid/Claude boundaries preserved.

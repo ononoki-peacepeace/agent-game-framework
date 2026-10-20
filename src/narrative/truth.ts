@@ -41,9 +41,22 @@ export function evidenceAccessible(save:SavePackage,actorId:string,placement:Non
   if(placement.anchor_entity_id){
     const anchor=save.entities.find(entity=>entity.id===placement.anchor_entity_id);if(!anchor)return false;
     if(anchor.components.item?.condition==='destroyed')return false;
+    // A sealed ancestor hides contents; a clue on the anchor's own exterior can remain visible.
+    const unsealedAncestors=(parentOf:(entity:SavePackage['entities'][number])=>string|null|undefined)=>{
+      const seen=new Set([anchor.id]);let parentId=parentOf(anchor);
+      while(parentId){
+        if(seen.has(parentId))return false;seen.add(parentId);
+        const parent=save.entities.find(entity=>entity.id===parentId);
+        if(parent?.components.item?.container!==true||(parent.components.item.tags as string[]|undefined)?.includes('sealed'))return false;
+        parentId=parentOf(parent);
+      }
+      return true;
+    };
     const holders=save.entities.filter(entity=>Number((entity.components.inventory?.items as Record<string,number>|undefined)?.[anchor.id]??0)>0);
-    if(holders.length)return holders.length===1&&holders[0].id===actorId;
-    return anchor.components.location?.location_id===here&&(!placement.scene_scope||anchor.components.scene_position?.label===placement.scene_scope);
+    if(holders.length)return holders.length===1&&holders[0].id===actorId&&
+      unsealedAncestors(entity=>(holders[0].components.inventory?.placements as Record<string,string|null>|undefined)?.[entity.id]);
+    return anchor.components.location?.location_id===here&&(!placement.scene_scope||anchor.components.scene_position?.label===placement.scene_scope)&&
+      unsealedAncestors(entity=>{const parentId=entity.components.item?.container_id;return typeof parentId==='string'?parentId:null;});
   }
   return (!placement.location_id||placement.location_id===here)&&
     (!placement.scene_scope||actor.components.scene_position?.label===placement.scene_scope)&&Boolean(placement.location_id||placement.scene_scope);
