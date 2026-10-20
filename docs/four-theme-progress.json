@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "975f705",
+  "assessed_source": "885d1e7",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -498,9 +498,11 @@
       "evidence": [
         "tests/goal-contract-batch2.test.ts",
         "tests/plan-handoff-failure.test.ts",
-        "docs/plan-handoff-failure.md"
+        "docs/plan-handoff-failure.md",
+        "tests/future-cancel-window.test.ts",
+        "docs/future-cancel-window.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 8e2a0f6: between-step handoff failures retain settled prefix/receipt and skipped guards do not pause read-only alternatives;3fail/1control,7distinctfiles57pass/build. Full fixed matrix remains open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 8e2a0f6: between-step handoff failures retain settled prefix/receipt and skipped guards do not pause read-only alternatives;3fail/1control,7distinctfiles57pass/build. Full fixed matrix remains open. 885d1e7: explicit date/time-window cancellation now preserves other commitments and rejects invented any-time narrowing. Initial3fail/2controls, expanded4fail/2controls, final6files57pass/build; full mixed/dynamic-intent matrix remains open."
     },
     "A7.4": {
       "status": "unverified",
@@ -1983,6 +1985,13 @@
       "source": "975f705",
       "transitions": [],
       "note": "Two actual post-commit failure-summary counterexamples; final6files27pass/build. R5.3 remains unmet/net0; previous207files2064pass snapshot remains1bad19e."
+    },
+    {
+      "batch": "future-cancel-window",
+      "type": "repair",
+      "source": "885d1e7",
+      "transitions": [],
+      "note": "Typed time-window matching repairs false ambiguity and unauthorized any-time cancellation;6files57pass/build, real disk terminal cancellation/no execution. A7.3/A7.4 open/net0."
     }
   ],
   "new_risks": [],
@@ -2474,6 +2483,18 @@
         "docs/plan-committed-failure-summary.md"
       ],
       "summary": "Failed-step prose contradicted saved receipt and changed state; wording now requires state inspection, no settlement/retry-policy change."
+    },
+    {
+      "id": "future-cancel-window",
+      "scope": "original",
+      "condition": "A7.3",
+      "status": "resolved",
+      "source": "885d1e7",
+      "evidence": [
+        "tests/future-cancel-window.test.ts",
+        "docs/future-cancel-window.md"
+      ],
+      "summary": "Cancellation discarded original typed time window; explicit selection and no guessed narrowing now hold, no schema/Core change."
     }
   ]
 }
