@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：d37eb16。整体 **60.00%**（96/160 个固定条件满足）。未满足 28，待验证 36。
+计分版本 v1；评估源代码：742b1f2。整体 **60.00%**（96/160 个固定条件满足）。未满足 28，待验证 36。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：20 已修复，0 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：21 已修复，0 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -51,6 +51,7 @@
 | compound-reaction-disk-recovery-verification | repair | R6.3: New JsonStore/service resumes disk pending seal without extra reaction calls/Core;9case matrix and adjacent6distinctfiles54pass/build; no product change or full-matrix closure；完整条件保持开放 | +0.000 pp |
 | npc-legacy-plan-recovery | repair | W5.3: Legacy currently blocked route receives recovery priority with owner goal; actual replacement/HOLD/long-goal/reload and prerequisite controls pass. Whole adaptive matrix remains open；完整条件保持开放 | +0.000 pp |
 | npc-conditional-plan-context | repair | W5.3: Both formats expose pending conditions and owner goals without auto-confirming; actual replacement or continued wait verified. Wider newfact/relationship/repeatedfailure matrix open；完整条件保持开放 | +0.000 pp |
+| npc-legacy-failure-diagnostic | repair | W5.3: Legacy real rejection/system/unknown-cause distinction retained through reload and current context; reopened-route timing and success cleanup pass. Full adaptive adjustment matrix remains open；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -274,7 +275,7 @@
 |---|---|---|---|
 | W5.1 | 短期和长期目标及计划已有持久结构 | 满足 | [npc-persistent-plans.test.ts](../tests/npc-persistent-plans.test.ts) |
 | W5.2 | 即时执行计划和阻塞计划有已验证修订路径 | 满足 | [npc-persistent-plans.test.ts](../tests/npc-persistent-plans.test.ts) |
-| W5.3 | 长期目标根据新事实、关系与失败作持续调整 | 未满足 | [npc-persistent-plans.test.ts](../tests/npc-persistent-plans.test.ts), [npc-own-resource-context.test.ts](../tests/npc-own-resource-context.test.ts), [npc-own-resource-context.md](../docs/npc-own-resource-context.md), [npc-legacy-long-goal.test.ts](../tests/npc-legacy-long-goal.test.ts), [npc-legacy-long-goal.md](../docs/npc-legacy-long-goal.md), [npc-ended-goal-execution.test.ts](../tests/npc-ended-goal-execution.test.ts), [npc-ended-goal-execution.md](../docs/npc-ended-goal-execution.md), [npc-legacy-plan-recovery.test.ts](../tests/npc-legacy-plan-recovery.test.ts), [npc-legacy-plan-recovery.md](../docs/npc-legacy-plan-recovery.md), [npc-conditional-plan-context.test.ts](../tests/npc-conditional-plan-context.test.ts), [npc-conditional-plan-context.md](../docs/npc-conditional-plan-context.md) |
+| W5.3 | 长期目标根据新事实、关系与失败作持续调整 | 未满足 | [npc-persistent-plans.test.ts](../tests/npc-persistent-plans.test.ts), [npc-own-resource-context.test.ts](../tests/npc-own-resource-context.test.ts), [npc-own-resource-context.md](../docs/npc-own-resource-context.md), [npc-legacy-long-goal.test.ts](../tests/npc-legacy-long-goal.test.ts), [npc-legacy-long-goal.md](../docs/npc-legacy-long-goal.md), [npc-ended-goal-execution.test.ts](../tests/npc-ended-goal-execution.test.ts), [npc-ended-goal-execution.md](../docs/npc-ended-goal-execution.md), [npc-legacy-plan-recovery.test.ts](../tests/npc-legacy-plan-recovery.test.ts), [npc-legacy-plan-recovery.md](../docs/npc-legacy-plan-recovery.md), [npc-conditional-plan-context.test.ts](../tests/npc-conditional-plan-context.test.ts), [npc-conditional-plan-context.md](../docs/npc-conditional-plan-context.md), [npc-legacy-failure-diagnostic.md](../docs/npc-legacy-failure-diagnostic.md) |
 | W5.4 | 跨重启多世界长过程计划执行和修订均验收通过 | 待验证 | [npc-persistent-plans.test.ts](../tests/npc-persistent-plans.test.ts) |
 
 ## W6 Body/resources and transient perception continuity

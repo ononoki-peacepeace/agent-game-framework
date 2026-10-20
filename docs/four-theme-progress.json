@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "d37eb16",
+  "assessed_source": "742b1f2",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -723,9 +723,10 @@
         "tests/npc-legacy-plan-recovery.test.ts",
         "docs/npc-legacy-plan-recovery.md",
         "tests/npc-conditional-plan-context.test.ts",
-        "docs/npc-conditional-plan-context.md"
+        "docs/npc-conditional-plan-context.md",
+        "docs/npc-legacy-failure-diagnostic.md"
       ],
-      "basis": "Objective/recovery and owner-resource context gaps repaired with focused evidence; broader resource/location/relationship/new-fact/repeated-failure long-duration matrix remains open. 4e372c0: valid route-blocked legacy activity and owned goal remain manageable inside bounded context;9files78pass/build. Broader adaptive matrix open. d37eb16: conditional plans/owner goals retained in bounded context, owner alone keeps waiting or replaces;9files80pass plus final6case owner controls/build. Full adaptive matrix remains open."
+      "basis": "Objective/recovery and owner-resource context gaps repaired with focused evidence; broader resource/location/relationship/new-fact/repeated-failure long-duration matrix remains open. 4e372c0: valid route-blocked legacy activity and owned goal remain manageable inside bounded context;9files78pass/build. Broader adaptive matrix open. d37eb16: conditional plans/owner goals retained in bounded context, owner alone keeps waiting or replaces;9files80pass plus final6case owner controls/build. Full adaptive matrix remains open. 742b1f2: legacy actual Core/system diagnostics and unknown old failures retained, success clears stale metadata; final10files88pass plus schemaHTTP3files52pass/build. Full adaptive matrix open."
     },
     "W5.4": {
       "status": "unverified",
@@ -1818,6 +1819,22 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "npc-legacy-failure-diagnostic",
+      "type": "repair",
+      "source": "742b1f2",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "W5.3",
+          "result": "Legacy real rejection/system/unknown-cause distinction retained through reload and current context; reopened-route timing and success cleanup pass. Full adaptive adjustment matrix remains open",
+          "evidence": [
+            "tests/npc-legacy-plan-recovery.test.ts",
+            "docs/npc-legacy-failure-diagnostic.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -2225,6 +2242,18 @@
         "docs/npc-conditional-plan-context.md"
       ],
       "summary": "Four valid conditional plan projection/admission counterexamples repaired;9files80pass, final6case conditional controls/build. No whole-condition credit."
+    },
+    {
+      "id": "npc-legacy-failure-diagnostic",
+      "scope": "original",
+      "condition": "W5.3",
+      "status": "resolved",
+      "source": "742b1f2",
+      "evidence": [
+        "tests/npc-legacy-plan-recovery.test.ts",
+        "docs/npc-legacy-failure-diagnostic.md"
+      ],
+      "summary": "Baseline2fail/9controls; additive optional legacy fields preserve actual cause, old cause stays unknown; final10files88pass+schemaHTTP3files52pass/build. No whole-condition credit."
     }
   ]
 }
