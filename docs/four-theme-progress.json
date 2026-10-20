@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "1246a49",
+  "assessed_source": "1bad19e",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -988,9 +988,11 @@
         "tests/compound-degraded-prose.test.ts",
         "docs/physical-reaction-speech-integrity.md",
         "tests/scene-presence-negation.test.ts",
-        "docs/scene-presence-negation.md"
+        "docs/scene-presence-negation.md",
+        "tests/scene-presence-subjects.test.ts",
+        "docs/scene-presence-subjects.md"
       ],
-      "basis": "Existing factual/presence/perception tests plus compound physical-child counterexample repair; explicit met withdrawal/restoration recorded, final8files79pass/build at 8ae218b; wider N4.3/N4.4 remain open. 7ecc07b: actual settled reaction words required in beats/legacy dialogue; explicit withdrawal/restoration, net0. Counterexample at055367a:5fail/7controls, earlier denied/intended departure globally suppressed later actual departure with no Core move; N4.1 explicitly withdrawn pending repair. 1246a49: occurrence-scoped departure negation, truthful no-receipt degradation marker; initial5fail/7controls, final6files80pass/build. N4.1 withdrawal/restoration net0; broader subject/multi-world scope remains open."
+      "basis": "Existing factual/presence/perception tests plus compound physical-child counterexample repair; explicit met withdrawal/restoration recorded, final8files79pass/build at 8ae218b; wider N4.3/N4.4 remain open. 7ecc07b: actual settled reaction words required in beats/legacy dialogue; explicit withdrawal/restoration, net0. Counterexample at055367a:5fail/7controls, earlier denied/intended departure globally suppressed later actual departure with no Core move; N4.1 explicitly withdrawn pending repair. 1246a49: occurrence-scoped departure negation, truthful no-receipt degradation marker; initial5fail/7controls, final6files80pass/build. N4.1 withdrawal/restoration net0; broader subject/multi-world scope remains open. Counterexample06f594f: multi-named comma clauses bypass whole-sentence presence validation;7fail/5controls including NPC-only guard subject attribution. N4.1 withdrawn pending bounded repair. 1bad19e: independently named/player clauses retain presence checks;7fail/5controls, intermediate63/66 overly broad split corrected, final7files92pass/build. Explicit N4.1 withdrawal/restoration net0; rich subject/multi-world matrices open."
     },
     "N4.2": {
       "status": "met",
@@ -1008,9 +1010,11 @@
       "evidence": [
         "tests/narrative-firewall-observability.test.ts",
         "tests/scene-presence-negation.test.ts",
-        "docs/scene-presence-negation.md"
+        "docs/scene-presence-negation.md",
+        "tests/scene-presence-subjects.test.ts",
+        "docs/scene-presence-subjects.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 1246a49: occurrence-scoped departure negation, truthful no-receipt degradation marker; initial5fail/7controls, final6files80pass/build. N4.1 withdrawal/restoration net0; broader subject/multi-world scope remains open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 1246a49: occurrence-scoped departure negation, truthful no-receipt degradation marker; initial5fail/7controls, final6files80pass/build. N4.1 withdrawal/restoration net0; broader subject/multi-world scope remains open. 1bad19e: independently named/player clauses retain presence checks;7fail/5controls, intermediate63/66 overly broad split corrected, final7files92pass/build. Explicit N4.1 withdrawal/restoration net0; rich subject/multi-world matrices open."
     },
     "N4.4": {
       "status": "unverified",
@@ -1929,6 +1933,39 @@
         }
       ],
       "note": "Intermediate48/49 and14/16 retained; final17case file covers6invalid/9legal/2service. No whole N4.3/N4.4 credit."
+    },
+    {
+      "batch": "scene-presence-subjects-counterexample",
+      "type": "evidence_correction",
+      "source": "06f594f",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "tests/scene-presence-subjects.test.ts"
+          ],
+          "reason": "Multi-named clauses discarded all presence checks; actual service false presence,7fail/5controls. Player-motion unit case tests only ownership, not whole-scene factual validity."
+        }
+      ]
+    },
+    {
+      "batch": "scene-presence-subjects-repair",
+      "type": "repair",
+      "source": "1bad19e",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "tests/scene-presence-subjects.test.ts",
+            "docs/scene-presence-subjects.md"
+          ],
+          "reason": "Final7files92pass/build; single-subject continuations retained, independent named clauses checked, actual service false presence degrades without move/replay. Prior explicit withdrawal; net0."
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -2396,6 +2433,18 @@
         "docs/scene-presence-negation.md"
       ],
       "summary": "Sentence-global denial hid later unreceipted departure; scoped prefixes and fallback presentation repaired. Explicit withdrawal/restoration net0."
+    },
+    {
+      "id": "scene-presence-subjects",
+      "scope": "original",
+      "condition": "N4.1",
+      "status": "resolved",
+      "source": "1bad19e",
+      "evidence": [
+        "tests/scene-presence-subjects.test.ts",
+        "docs/scene-presence-subjects.md"
+      ],
+      "summary": "Multi-named sentence checks were discarded; bounded named/player clause scoping repaired, first3regressions retained and fixed. Rich attribution remains open."
     }
   ]
 }
