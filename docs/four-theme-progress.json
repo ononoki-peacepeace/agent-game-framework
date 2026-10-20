@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "100dcf3",
+  "assessed_source": "4e372c0",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -719,9 +719,11 @@
         "tests/npc-legacy-long-goal.test.ts",
         "docs/npc-legacy-long-goal.md",
         "tests/npc-ended-goal-execution.test.ts",
-        "docs/npc-ended-goal-execution.md"
+        "docs/npc-ended-goal-execution.md",
+        "tests/npc-legacy-plan-recovery.test.ts",
+        "docs/npc-legacy-plan-recovery.md"
       ],
-      "basis": "Objective/recovery and owner-resource context gaps repaired with focused evidence; broader resource/location/relationship/new-fact/repeated-failure long-duration matrix remains open."
+      "basis": "Objective/recovery and owner-resource context gaps repaired with focused evidence; broader resource/location/relationship/new-fact/repeated-failure long-duration matrix remains open. 4e372c0: valid route-blocked legacy activity and owned goal remain manageable inside bounded context;9files78pass/build. Broader adaptive matrix open."
     },
     "W5.4": {
       "status": "unverified",
@@ -1782,6 +1784,22 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "npc-legacy-plan-recovery",
+      "type": "repair",
+      "source": "4e372c0",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "W5.3",
+          "result": "Legacy currently blocked route receives recovery priority with owner goal; actual replacement/HOLD/long-goal/reload and prerequisite controls pass. Whole adaptive matrix remains open",
+          "evidence": [
+            "tests/npc-legacy-plan-recovery.test.ts",
+            "docs/npc-legacy-plan-recovery.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -2165,6 +2183,18 @@
         "docs/physical-denial-subject.md"
       ],
       "summary": "3fail/5controls; final11files108pass/build. Explicit evidence withdrawal/restoration net0."
+    },
+    {
+      "id": "npc-legacy-plan-recovery",
+      "scope": "original",
+      "condition": "W5.3",
+      "status": "resolved",
+      "source": "4e372c0",
+      "evidence": [
+        "tests/npc-legacy-plan-recovery.test.ts",
+        "docs/npc-legacy-plan-recovery.md"
+      ],
+      "summary": "Valid legacy route-blocked plan hidden behind12abstract plans;2fail/1control, final9files78pass/build. Invalid dual-plan time speculation excluded and edit reversed."
     }
   ]
 }
