@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "742b1f2",
+  "assessed_source": "70a4575",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -724,9 +724,11 @@
         "docs/npc-legacy-plan-recovery.md",
         "tests/npc-conditional-plan-context.test.ts",
         "docs/npc-conditional-plan-context.md",
-        "docs/npc-legacy-failure-diagnostic.md"
+        "docs/npc-legacy-failure-diagnostic.md",
+        "tests/npc-active-plan-revision.test.ts",
+        "docs/npc-active-plan-revision.md"
       ],
-      "basis": "Objective/recovery and owner-resource context gaps repaired with focused evidence; broader resource/location/relationship/new-fact/repeated-failure long-duration matrix remains open. 4e372c0: valid route-blocked legacy activity and owned goal remain manageable inside bounded context;9files78pass/build. Broader adaptive matrix open. d37eb16: conditional plans/owner goals retained in bounded context, owner alone keeps waiting or replaces;9files80pass plus final6case owner controls/build. Full adaptive matrix remains open. 742b1f2: legacy actual Core/system diagnostics and unknown old failures retained, success clears stale metadata; final10files88pass plus schemaHTTP3files52pass/build. Full adaptive matrix open."
+      "basis": "Objective/recovery and owner-resource context gaps repaired with focused evidence; broader resource/location/relationship/new-fact/repeated-failure long-duration matrix remains open. 4e372c0: valid route-blocked legacy activity and owned goal remain manageable inside bounded context;9files78pass/build. Broader adaptive matrix open. d37eb16: conditional plans/owner goals retained in bounded context, owner alone keeps waiting or replaces;9files80pass plus final6case owner controls/build. Full adaptive matrix remains open. 742b1f2: legacy actual Core/system diagnostics and unknown old failures retained, success clears stale metadata; final10files88pass plus schemaHTTP3files52pass/build. Full adaptive matrix open. 70a4575: viable ongoing method/owner goal remain visible after real relationship or witnessed-newfact inputs;10files93pass/build, owner may retain original. Full adaptive matrix open."
     },
     "W5.4": {
       "status": "unverified",
@@ -1835,6 +1837,22 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "npc-active-plan-revision",
+      "type": "repair",
+      "source": "70a4575",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "W5.3",
+          "result": "Real relationship and witnessed new statements inform owner revision or retention before failure; bounded context, one replacement and long motive verified. Full repeatedfailure/location/long-duration matrix remains open",
+          "evidence": [
+            "tests/npc-active-plan-revision.test.ts",
+            "docs/npc-active-plan-revision.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -2254,6 +2272,18 @@
         "docs/npc-legacy-failure-diagnostic.md"
       ],
       "summary": "Baseline2fail/9controls; additive optional legacy fields preserve actual cause, old cause stays unknown; final10files88pass+schemaHTTP3files52pass/build. No whole-condition credit."
+    },
+    {
+      "id": "npc-active-plan-revision",
+      "scope": "original",
+      "condition": "W5.3",
+      "status": "resolved",
+      "source": "70a4575",
+      "evidence": [
+        "tests/npc-active-plan-revision.test.ts",
+        "docs/npc-active-plan-revision.md"
+      ],
+      "summary": "Eight lawful viable-plan projection/admission cases failed; actual ongoing method now prioritized ahead of abstract plans,10files93pass/build, no whole-condition credit."
     }
   ]
 }
