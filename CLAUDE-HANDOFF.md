@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Compound reaction disk-pending verification — 2026-10-20
+
+Parent `13be36f`, product remains `29e6a5f`; checkpoint containing this section adds two real JsonStore/new-service recovery cases, no product fix. Witness/repair exhausts budget, final world write fails, persisted seal resumes without extra calls or Core execution, pending clears, replay stays identical. Initial9cases pass; adjacent5files49pass + actual pending file5pass =6distinctfiles54pass. One command named nonexistent optional pending-repair file; counts corrected. Initial build found two test-spy implicit-any parameters, now typed; final build in SESSION. See docs/compound-reaction-disk-recovery.md. R6.3 remains open,60%=96/160,+0. Full1992pass belongs to preceding pinned hashes before these two new cases. Next: remaining fixed reliability/NL/NPC/Narrator matrices; preserve original dirt/safety.
+
 ## Complete post-reaction offline snapshot — 2026-10-20
 
 Source `29e6a5f` / ledger `c351367`: fresh199files1992/1992pass across16shards, exact file coverage once, all502pinned source/config/content hashes unchanged. Complete isolated build passed. Original QA restored byte-for-byte;27frozen hashes and formal-save SHA match. No new crash; old0xC0000409/failed intermediates remain retained, cause not claimed fixed. See docs/post-reaction-offline-snapshot.md and ignored post-reaction-offline-summary.json. R5.4 evidence refresh only;60%=96/160,+0. No source WIP; original dirt preserved. Next: real JsonStore pending reaction-budget stage across service replacement, then original fixed remaining matrices. No paid/3100/deploy/push/Claude changes.
