@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "7ecc07b",
+  "assessed_source": "29e6a5f",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -976,9 +976,11 @@
       "evidence": [
         "tests/narrative-firewall-observability.test.ts",
         "tests/repeated-physical-narrative-scope.test.ts",
-        "docs/repeated-physical-narrative-scope.md"
+        "docs/repeated-physical-narrative-scope.md",
+        "tests/physical-denial-subject.test.ts",
+        "docs/physical-denial-subject.md"
       ],
-      "basis": "Existing legal-description regressions plus repaired repetition child-scope false rejection; explicit introduced counterexample withdrawal/restoration recorded. Final11files104pass/build at 0e6b9c8."
+      "basis": "Existing legal-description regressions plus repaired repetition child-scope false rejection; explicit introduced counterexample withdrawal/restoration recorded. Final11files104pass/build at 0e6b9c8. 29e6a5f: explicit other-person injury denials retained, ambiguous/actual-target controls conservative;11files108pass/build; withdrawal/restoration net0."
     },
     "N4.3": {
       "status": "unmet",
@@ -1700,6 +1702,50 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "injury-denial-subject-counterexample",
+      "type": "evidence_correction",
+      "source": "7ecc07b",
+      "transitions": [
+        {
+          "id": "N4.2",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "tests/physical-denial-subject.test.ts",
+            "docs/physical-denial-subject.md"
+          ],
+          "reason": "Three lawful Core-backed other-person denials falsely rejected; five target/ambiguity controls passed."
+        }
+      ]
+    },
+    {
+      "batch": "injury-denial-subject-repair",
+      "type": "repair",
+      "source": "29e6a5f",
+      "transitions": [
+        {
+          "id": "N4.2",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "tests/physical-denial-subject.test.ts",
+            "docs/physical-denial-subject.md"
+          ],
+          "reason": "Unique immediate subject scopes only unrelated-target denial;11files108pass/build. Net0 restoration."
+        }
+      ],
+      "condition_checks": [
+        {
+          "id": "N4.3",
+          "result": "Bounded explicit-subject corpus added; arbitrary Chinese subject/temporal/metaphor and multi-world matrix remain open",
+          "evidence": [
+            "tests/physical-denial-subject.test.ts",
+            "docs/physical-denial-subject.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -2071,6 +2117,18 @@
         "docs/physical-reaction-speech-integrity.md"
       ],
       "summary": "Any-speech-by-speaker guard allowed reversing actual reaction;2fail/8controls. Fixed exact stored-utterance preservation, explicit withdrawal/restoration net0."
+    },
+    {
+      "id": "injury-denial-subject",
+      "scope": "original",
+      "condition": "N4.2",
+      "status": "resolved",
+      "source": "29e6a5f",
+      "evidence": [
+        "tests/physical-denial-subject.test.ts",
+        "docs/physical-denial-subject.md"
+      ],
+      "summary": "3fail/5controls; final11files108pass/build. Explicit evidence withdrawal/restoration net0."
     }
   ]
 }
