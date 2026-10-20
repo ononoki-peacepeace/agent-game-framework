@@ -33,7 +33,7 @@ it('uses only matching public typed activity evidence and exact Core fact',async
   {...receipt,effects:receipt.effects.filter(effect=>effect!=='activity')},
   {...receipt,canonical_facts:receipt.canonical_facts.filter(fact=>!fact.startsWith('进行了活动：'))},
   {...receipt,outcome:'failure' as const},
- ])expect(canonicalResolutionNarrative(altered,false)).not.toContain(inputs[0]);
+ ])expect(canonicalResolutionNarrative(altered as typeof receipt,false)).not.toContain(inputs[0]);
  expect(canonicalResolutionNarrative(receipt,true)).not.toContain(inputs[0]);
 });
 it('renders actual generic child activity before the following TALK in compound degradation',async()=>{

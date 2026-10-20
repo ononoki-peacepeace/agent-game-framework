@@ -386,6 +386,15 @@ function itemActionNarrative(receipt:Receipt,hidden:boolean){
   return null;
 }
 
+function activityActionNarrative(receipt:Receipt,hidden:boolean){
+  const activity=receipt.activity;
+  if(hidden||receipt.kind!=='DETERMINISTIC'||receipt.outcome!=='success'||!activity?.occurred||
+    !receipt.effects.includes('activity')||activity.duration_minutes!==receipt.time_cost||
+    !receipt.canonical_facts.includes(`进行了活动：${activity.description}（${activity.duration_minutes} 分钟）。`))return null;
+  // The receipt proves this activity interval, never the completion of a larger goal.
+  return `你进行了「${activity.description}」这段活动，持续了${receipt.time_cost}分钟。`;
+}
+
 /** Multi-step grounded degradation: a compound turn must never collapse into one
  * generic completion line. Present each settled step's confirmed facts in order,
  * without inventing any world state beyond the committed receipts. */
@@ -403,7 +412,8 @@ export function canonicalCompoundNarrative(save:SavePackage,hidden:boolean,steps
       step.semantic_action==='WAIT'?`你等了${step.time_cost}分钟。`:
       step.semantic_action==='HOLD'?canonicalResolutionNarrative(step,hidden):
       itemActionTypes.has(step.semantic_action)?canonicalResolutionNarrative(step,hidden):
-      facts.length?facts.join(' '):canonicalResolutionNarrative(step,hidden);
+      activityActionNarrative(step,hidden)??
+      (facts.length?facts.join(' '):canonicalResolutionNarrative(step,hidden));
     return `${index+1}、${text}`;
   });
   return lines.join('\n');
@@ -434,6 +444,7 @@ export function canonicalResolutionNarrative(receipt:Receipt,hidden:boolean,perc
     return receipt.time_cost>0?`你留在原处，过了${receipt.time_cost}分钟。`:'你停了下来。';
   }
   const itemNarrative=itemActionNarrative(receipt,hidden);if(itemNarrative)return itemNarrative;
+  const activityNarrative=activityActionNarrative(receipt,hidden);if(activityNarrative)return activityNarrative;
   const outcome=hidden?'这次尝试已经进行，结果目前尚不可确认。':
     receipt.outcome==='partial_success'?'这次尝试取得了部分进展。':
     ['success','strong_success'].includes(receipt.outcome)?'这次尝试已完成。':'这次尝试没有达到预期。';
