@@ -798,7 +798,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
         notices.push(...turn.facts);
       } else try {
         narrationPresentation={status:'normal',reasons:[]};
-        const receipt=(generic||['MOVE','INSPECT'].includes(turn.action.type))?next.resolution_receipts?.find(entry=>entry.request_id===req.request_id):undefined;
+        const receipt=next.resolution_receipts?.find(entry=>entry.request_id===req.request_id);
         if(generic)assert(receipt,'开放行动缺少程序判定凭据');
         if(generic&&!compoundSteps)assertFreeformGoalEvidence(next,req.input!,req.request_id);
         const compoundReceipts=compoundSteps?.map((_,index)=>next.resolution_receipts?.find(entry=>entry.request_id===compoundStepId(req.request_id,index)));
@@ -901,15 +901,19 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
               }
               const perception=(check?.spec?.domain==='perception'||
                 isActivePerception(receipt.semantic_action))&&!['mock','fixture'].includes(this.ai.adapter.name);
+              // Existing non-check built-ins may propose optional scene enrichment, which
+              // is validated separately below. Their prose still obeys the Core receipt.
+              const resolvedResult=!generic&&!['MOVE','INSPECT'].includes(turn.action.type)?
+                {...result,item_claims:[],stable_locations:[],patches:[]}:result;
               let ambiguousPattern:NarrativePatternError|null=null;
-              try{validateResolvedNarrative(receipt,result,Boolean(check?.hidden),
+              try{validateResolvedNarrative(receipt,resolvedResult,Boolean(check?.hidden),
                 narrativeSteps as NonNullable<SavePackage['resolution_receipts']>|undefined,next);}
               catch(error){
                 // Only explicitly sensory constructions can reach the prose audit after a
                 // pattern rejection. A model's positive audit cannot authorize world effects.
                 if(perception&&error instanceof NarrativePatternError&&
                   ['inventory','position'].includes(error.patternKind)){
-                  validateResolvedNarrative(receipt,result,Boolean(check?.hidden),
+                  validateResolvedNarrative(receipt,resolvedResult,Boolean(check?.hidden),
                     narrativeSteps as NonNullable<SavePackage['resolution_receipts']>|undefined,next,true);
                   ambiguousPattern=error;
                 }
@@ -982,6 +986,14 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
                     return {...result,narrative:canonicalMovementNarrative(receipt,next),speaker:null,dialogue:null,choices:[],
                       choice_semantics:[],context_actions:[],patches:[],interaction:null,
                       item_claims:[],stable_locations:[],mechanical_claims:[]};
+                  }
+                  if(!generic){
+                    degradeNarration(reason);
+                    observe('warn','narrative.safe_fallback',{module:'turn',request_id:req.request_id,
+                      metadata:{reason:'core_action_facts_unverified',narrator_attempts:attempt}});
+                    return {...result,...narrationFallback(next,turn.action,current,compoundSteps),
+                      speaker:null,dialogue:null,scene_beats:[],choices:[],choice_semantics:[],context_actions:[],
+                      patches:[],interaction:null,item_claims:[],stable_locations:[],mechanical_claims:[],presence_claims:[]};
                   }
                 throw error;
               }
