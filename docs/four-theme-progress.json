@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "42fcb15",
+  "assessed_source": "b21b28d",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -1017,9 +1017,11 @@
         "tests/compound-reaction-budget.test.ts",
         "docs/compound-reaction-ownership.md",
         "tests/item-action-degraded-prose.test.ts",
-        "docs/item-action-degraded-prose.md"
+        "docs/item-action-degraded-prose.md",
+        "tests/hold-activity-fallback.test.ts",
+        "docs/hold-activity-fallback.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. Source b4c018f fixes inherited-last-step degradation omission; final11files109pass, isolated build passed, full condition remains open. Source c6a7e84 binds actual compound child reactions with shared durable budget;13distinct files81pass/build; full condition remains open. 80f9084 repairs generic BUY/SELL/EQUIP/UNEQUIP degradation from exact deterministic Core facts,including compound children;baseline8fail,7files56pass/build,actual disk/service replay and reviewed Chinese outputs. Full failed/unexecuted/multi-world naturalness remains open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. Source b4c018f fixes inherited-last-step degradation omission; final11files109pass, isolated build passed, full condition remains open. Source c6a7e84 binds actual compound child reactions with shared durable budget;13distinct files81pass/build; full condition remains open. 80f9084 repairs generic BUY/SELL/EQUIP/UNEQUIP degradation from exact deterministic Core facts,including compound children;baseline8fail,7files56pass/build,actual disk/service replay and reviewed Chinese outputs. Full failed/unexecuted/multi-world naturalness remains open. b21b28d repairs HOLD0/partial/full activity degradation from exact Core fact/actual receipt time,foreground reason and compound children;baseline9fail,6files63pass/build,actual event/disk replay and reviewed outputs. Full naturalness and failed/unexecuted multi-goal matrix remain open."
     },
     "N3.4": {
       "status": "unverified",
@@ -1205,9 +1207,11 @@
         "tests/compound-reaction-budget.test.ts",
         "docs/compound-reaction-ownership.md",
         "tests/item-action-degraded-prose.test.ts",
-        "docs/item-action-degraded-prose.md"
+        "docs/item-action-degraded-prose.md",
+        "tests/hold-activity-fallback.test.ts",
+        "docs/hold-activity-fallback.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. Source b4c018f fixes inherited-last-step degradation omission; final11files109pass, isolated build passed, full condition remains open. Source c6a7e84 binds actual compound child reactions with shared durable budget;13distinct files81pass/build; full condition remains open. 80f9084 repairs generic BUY/SELL/EQUIP/UNEQUIP degradation from exact deterministic Core facts,including compound children;baseline8fail,7files56pass/build,actual disk/service replay and reviewed Chinese outputs. Full failed/unexecuted/multi-world naturalness remains open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. Source b4c018f fixes inherited-last-step degradation omission; final11files109pass, isolated build passed, full condition remains open. Source c6a7e84 binds actual compound child reactions with shared durable budget;13distinct files81pass/build; full condition remains open. 80f9084 repairs generic BUY/SELL/EQUIP/UNEQUIP degradation from exact deterministic Core facts,including compound children;baseline8fail,7files56pass/build,actual disk/service replay and reviewed Chinese outputs. Full failed/unexecuted/multi-world naturalness remains open. b21b28d repairs HOLD0/partial/full activity degradation from exact Core fact/actual receipt time,foreground reason and compound children;baseline9fail,6files63pass/build,actual event/disk replay and reviewed outputs. Full naturalness and failed/unexecuted multi-goal matrix remain open."
     },
     "N8.3": {
       "status": "met",
@@ -2682,6 +2686,30 @@
             "docs/legacy-social-policy-strategy.md"
           ],
           "reason": "Original offline missing/enabled/migration strategy matrix implemented and reviewed with actual Core,JsonStore,response-loss/restart/Undo evidence;formal choice/activation remains W9.4."
+        }
+      ]
+    },
+    {
+      "batch": "hold-activity-degraded-prose",
+      "type": "repair",
+      "source": "b21b28d",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "N8.2",
+          "result": "HOLD actual0/partial/full intervals and handoff prose repaired;full naturalness/failed-unexecuted matrix remains open",
+          "evidence": [
+            "tests/hold-activity-fallback.test.ts",
+            "docs/hold-activity-fallback.md"
+          ]
+        },
+        {
+          "id": "N3.3",
+          "result": "HOLD actual0/partial/full intervals and handoff prose repaired;full naturalness/failed-unexecuted matrix remains open",
+          "evidence": [
+            "tests/hold-activity-fallback.test.ts",
+            "docs/hold-activity-fallback.md"
+          ]
         }
       ]
     }

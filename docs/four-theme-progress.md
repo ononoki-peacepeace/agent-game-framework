@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：42fcb15。整体 **60.63%**（97/160 个固定条件满足）。未满足 28，待验证 35。
+计分版本 v1；评估源代码：b21b28d。整体 **60.63%**（97/160 个固定条件满足）。未满足 28，待验证 35。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -97,6 +97,7 @@
 | post-item-complete-offline-snapshot | repair | R5.4: Current228-file2252pass exact coverage on538fixed hashes;initial native failure retained,30passing reports/31attempts;no root-cause stability claim；完整条件保持开放 | +0.000 pp |
 | sealed-equipment-access | repair | A8.3: EQUIP sealed source/nested access repaired with player/NPC/exterior controls;full dynamic item/multi-world matrix remains open；完整条件保持开放; N6.3: EQUIP sealed source/nested access repaired with player/NPC/exterior controls;full dynamic item/multi-world matrix remains open；完整条件保持开放 | +0.000 pp |
 | legacy-policy-offline-activation | repair | W9.3: unverified → met | +0.625 pp |
+| hold-activity-degraded-prose | repair | N8.2: HOLD actual0/partial/full intervals and handoff prose repaired;full naturalness/failed-unexecuted matrix remains open；完整条件保持开放; N3.3: HOLD actual0/partial/full intervals and handoff prose repaired;full naturalness/failed-unexecuted matrix remains open；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -392,7 +393,7 @@
 |---|---|---|---|
 | N3.1 | 复合行动叙述聚合已结算步骤 | 满足 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts) |
 | N3.2 | 身体和发言结果以凭据为准不重演 | 满足 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts) |
-| N3.3 | 多步叙述完整表达成功、失败与未执行的区别 | 未满足 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts), [compound-degraded-prose.test.ts](../tests/compound-degraded-prose.test.ts), [compound-degraded-prose.md](../docs/compound-degraded-prose.md), [partial-plan-visible-status.test.ts](../tests/partial-plan-visible-status.test.ts), [partial-plan-visible-status.md](../docs/partial-plan-visible-status.md), [compound-reaction-budget.test.ts](../tests/compound-reaction-budget.test.ts), [compound-reaction-ownership.md](../docs/compound-reaction-ownership.md), [item-action-degraded-prose.test.ts](../tests/item-action-degraded-prose.test.ts), [item-action-degraded-prose.md](../docs/item-action-degraded-prose.md) |
+| N3.3 | 多步叙述完整表达成功、失败与未执行的区别 | 未满足 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts), [compound-degraded-prose.test.ts](../tests/compound-degraded-prose.test.ts), [compound-degraded-prose.md](../docs/compound-degraded-prose.md), [partial-plan-visible-status.test.ts](../tests/partial-plan-visible-status.test.ts), [partial-plan-visible-status.md](../docs/partial-plan-visible-status.md), [compound-reaction-budget.test.ts](../tests/compound-reaction-budget.test.ts), [compound-reaction-ownership.md](../docs/compound-reaction-ownership.md), [item-action-degraded-prose.test.ts](../tests/item-action-degraded-prose.test.ts), [item-action-degraded-prose.md](../docs/item-action-degraded-prose.md), [hold-activity-fallback.test.ts](../tests/hold-activity-fallback.test.ts), [hold-activity-fallback.md](../docs/hold-activity-fallback.md) |
 | N3.4 | 多世界长复合动作描写自然且不漏步骤 | 待验证 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts) |
 
 ## N4 Facts, presence, perception and legal-description false rejection balance
@@ -436,7 +437,7 @@
 | 条件 | 具体通过条件 | 状态 | 依据 |
 |---|---|---|---|
 | N8.1 | 固定各类场景降级描写质量标准与样例 | 满足 | [degraded-prose-acceptance.v1.json](../docs/degraded-prose-acceptance.v1.json), [degraded-prose-grounding.md](../docs/degraded-prose-grounding.md), [degraded-prose-grounding.test.ts](../tests/degraded-prose-grounding.test.ts), [degraded-prose-grounding.test.ts.snap](../tests/__snapshots__/degraded-prose-grounding.test.ts.snap) |
-| N8.2 | 降级文本自然表达已结算事实及未完成部分 | 未满足 | [narration-degradation-http.test.ts](../tests/narration-degradation-http.test.ts), [compound-degraded-prose.test.ts](../tests/compound-degraded-prose.test.ts), [compound-degraded-prose.md](../docs/compound-degraded-prose.md), [compound-reaction-budget.test.ts](../tests/compound-reaction-budget.test.ts), [compound-reaction-ownership.md](../docs/compound-reaction-ownership.md), [item-action-degraded-prose.test.ts](../tests/item-action-degraded-prose.test.ts), [item-action-degraded-prose.md](../docs/item-action-degraded-prose.md) |
+| N8.2 | 降级文本自然表达已结算事实及未完成部分 | 未满足 | [narration-degradation-http.test.ts](../tests/narration-degradation-http.test.ts), [compound-degraded-prose.test.ts](../tests/compound-degraded-prose.test.ts), [compound-degraded-prose.md](../docs/compound-degraded-prose.md), [compound-reaction-budget.test.ts](../tests/compound-reaction-budget.test.ts), [compound-reaction-ownership.md](../docs/compound-reaction-ownership.md), [item-action-degraded-prose.test.ts](../tests/item-action-degraded-prose.test.ts), [item-action-degraded-prose.md](../docs/item-action-degraded-prose.md), [hold-activity-fallback.test.ts](../tests/hold-activity-fallback.test.ts), [hold-activity-fallback.md](../docs/hold-activity-fallback.md) |
 | N8.3 | 身体、对话、观察、移动的降级文本逐项验收通过 | 满足 | [degraded-prose-acceptance.v1.json](../docs/degraded-prose-acceptance.v1.json), [degraded-prose-grounding.md](../docs/degraded-prose-grounding.md), [degraded-prose-grounding.test.ts](../tests/degraded-prose-grounding.test.ts), [degraded-prose-grounding.test.ts.snap](../tests/__snapshots__/degraded-prose-grounding.test.ts.snap), [wait-interruption-fallback.test.ts](../tests/wait-interruption-fallback.test.ts), [wait-interruption-fallback.md](../docs/wait-interruption-fallback.md) |
 | N8.4 | 当前模型与离线回退组合均不输出工具式总结 | 待验证 | [narration-degradation-http.test.ts](../tests/narration-degradation-http.test.ts) |
 
