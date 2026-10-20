@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "968f26f",
+  "assessed_source": "adac019",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -2997,6 +2997,30 @@
           "evidence": [
             "tests/npc-long-route-plan.test.ts",
             "docs/npc-long-route-plan.md"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "npc-long-edge-credit",
+      "type": "repair",
+      "source": "adac019",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "W4.3",
+          "result": "Typed current declared travel edge can store actual paid credit through1440-minute map limit;no accrual before schedule/conditions or duplicated world time. Numeric reader dependency documented;legacy cap unchanged. Baseline2fail7controls;final8files80pass/build,actual270credit disk/service restart. Full matrices open.",
+          "evidence": [
+            "tests/npc-long-route-plan.test.ts",
+            "docs/npc-long-edge-credit.md"
+          ]
+        },
+        {
+          "id": "W5.3",
+          "result": "Typed current declared travel edge can store actual paid credit through1440-minute map limit;no accrual before schedule/conditions or duplicated world time. Numeric reader dependency documented;legacy cap unchanged. Baseline2fail7controls;final8files80pass/build,actual270credit disk/service restart. Full matrices open.",
+          "evidence": [
+            "tests/npc-long-route-plan.test.ts",
+            "docs/npc-long-edge-credit.md"
           ]
         }
       ]
