@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Complete post-control offline snapshot — 2026-10-21
+
+Product8b5d2df/ledgerff24471:222files2192/2192pass,zero skip;20fresh isolated processes all exit0;531pinned hashes unchanged; exact file coverage once. Same-product complete isolated build passed(session93848). Original QA/27frozen/formal SHA match. Old native0xC0000409 and all earlier failures retained; cause still unresolved. See docs/post-control-offline-snapshot.md and ignored post-control-offline-summary.json. R5.4 refresh only;60%=96/160,+0. No active verification or source WIP. Next: reproduce contained-evidence-preflight.json hypothesis using lawful validated sealed/unsealed/exterior controls,then four fixed-theme matrices. Original dirt/production/paid/Claude boundaries preserved.
+
 ## Conditional future control — 2026-10-21
 
 Parent0c8726c; this source checkpoint prevents fast CANCEL_FUTURE/EXECUTE_FUTURE from discarding original conditions, using the existing typed planner/owned branches. Corrected original-source baseline4fail/2controls; final regression/build counts in SESSION. False/unknown/no-condition candidates do not write; true cancel/actual TALK pass. Real JsonStore+HTTP server recreation returns identical parent response,zero generation/byte changes; offline route/planner controlled. Initial raw-vs-projected due fixture mismatch, internal-function replay assumption and sandbox fetch failures retained and documented in docs/future-control-condition.md. No schema/Core/retry interface changes. A7.3 remains open,60%=96/160,+0. Next: refresh complete pinned offline coverage after accumulated product edits, then continue four themes. Original dirt/safety preserved.

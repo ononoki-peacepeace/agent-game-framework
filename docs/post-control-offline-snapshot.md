@@ -1,0 +1,9 @@
+# Complete offline snapshot after conditional future control
+
+Product `8b5d2df`, ledger `ff24471`: 222 distinct test files, 2192/2192 assertions passed, zero failed or skipped. All 20 fresh isolated processes exited zero in this run. The audited report set covers every current `tests/**/*.test.ts` exactly once. All 531 pinned source/configuration/content/test/acceptance hashes are unchanged before and after the run. The complete isolated build (`future-control-condition-build.log`, session 93848 exit 0) passed with these same product bytes.
+
+The manifest, all 20 raw JSON reports/logs/status files, original/generated QA copies, audit script and final summary remain under `.codex-checkpoints/framework-reliability-handoff/takeover-2026-10-20/post-control-offline-*`; runner and auditor are `run-post-control-offline.mjs` and `audit-post-control-offline.mjs` in that directory. Tests used the Codex workspace wrapper, offline providers, isolated saves and temporary OS-assigned HTTP ports. Historical generated QA files were restored after every shard.
+
+The final audit verifies original QA bytes, 27 frozen acceptance record hashes and the unchanged formal-save SHA256 `94109AA75B66ED021619A3A7CC9C2795A714D36B2DADFA109B1C8CEB67455DE9`. No production server, deployment, paid provider or Claude checkout was used. All prior failures remain retained, including the earlier native `0xC0000409` attempt. This run passing does not resolve or establish the cause of that historical process failure.
+
+This refreshes existing bounded R5.4 evidence only. Overall remains 60% (96/160), net zero. Real-provider, human-quality, independent process-kill and broader fixed world matrices remain open. Next is the recorded sealed-container evidence-accessibility hypothesis; it was found by read-only inspection during the pinned run and is not yet a reproduced defect.
