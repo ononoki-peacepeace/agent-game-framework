@@ -74,7 +74,7 @@ export function SystemPanel({ handoff, view, onView, onOpenLogs, onExport, onOpe
     if(sending)return;setSending(true);
     try{
       const updated=await request<{view:PublicView;patches:BehaviorPatch[]}>(`system/behavior-guidance/${encodeURIComponent(patch.id)}/${operation==='remove'?'remove':'enabled'}`,
-        operation==='remove'?{}:{enabled:!patch.enabled});
+        {scope:patch.scope,game_id:view.game_id,expected_revision:view.revision,request_id:clientRequestId(),...(operation==='remove'?{}:{enabled:!patch.enabled})});
       setGuidancePatches(updated.patches);onView?.(updated.view);
     }catch(error){setComposer(state=>submitFailed(state,(error as Error).message));}
     finally{setSending(false);}

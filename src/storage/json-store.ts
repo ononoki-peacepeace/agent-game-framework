@@ -1,4 +1,4 @@
-import { mkdir, open, readFile, rename, unlink, stat } from 'node:fs/promises';
+import { mkdir, open, readFile, unlink, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { validateSave } from '../core/state.js';
@@ -53,10 +53,7 @@ export class JsonStore implements SaveStorage {
     catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')return [];throw error;}
   }
   async writeGlobalGuidance(patches:BehaviorPatch[]){
-    const body=JSON.stringify(z.array(behaviorPatchSchema).max(100).parse(patches),null,2),path=join(this.directory,'behavior-guidance.json');
-    await mkdir(this.directory,{recursive:true});const temp=path+'.'+randomUUID()+'.tmp';
-    try{const file=await open(temp,'wx');try{await file.writeFile(body,'utf8');await file.sync();}finally{await file.close();}await rename(temp,path);}
-    finally{await unlink(temp).catch(()=>undefined);}
+    await writeAtomicJson(join(this.directory,'behavior-guidance.json'),z.array(behaviorPatchSchema).max(100).parse(patches));
   }
   async read(slot: 'current' | 'checkpoint' = 'current',source:SaveReadSource='unspecified') {
     const path=join(this.directory, `${slot}.json`),started=performance.now();

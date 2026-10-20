@@ -1,5 +1,13 @@
 # Claude Code starting handoff
 
+## Guidance continuation — 2026-10-20
+
+Continue on `codex/claude-takeover-integration` from `db8bfc4`; the checkpoint containing this section adds world-guidance request receipts, source-text System recovery, explicitly scoped enable/remove, ambiguity rejection before any cross-store side effects, global write-failure cache reconciliation and shared initialization. The global file remains the existing array format and uses the shared atomic writer. Service/compiler/System/app/client changes must be integrated together; no Save schema or storage interface changes. Existing unique-ID callers stay compatible; ambiguous legacy IDs require explicit scope. Retained feedback requests do not regenerate self-overrides or re-enable a later-disabled rule.
+
+Evidence: guidance-write-baseline10/10 failed; guidance-write-final12 files/116 passed; complete strict TypeScript24.56s passed. Full isolated build result and exact source commit are in the authoritative takeover SESSION. World put/enable/remove supports durable request identity; global/session deleted-identity recovery and multi-process/global locking remain open. No world/global/session multi-file transaction is claimed. Next ongoing boundary: short canonical configuration writes versus the independent media queue; regular long world turns already merge presentation under that queue and must keep media usable during model generation.
+
+Overall46%; bounded offline completed/partial/unfinished: reliability4/6/0, actions3/5/2, world3/5/2, Narrator2/5/3; total12/21/7. Newly additive frozenv21 records this batch. No production save,3100,paid provider,Claude branch or remote push changes.
+
 ## Official-account continuation — 2026-10-20
 
 Branch `codex/claude-takeover-integration`; reviewed source checkpoint `0c11b7b` commits atomic multi-scope style configuration, original-input receipt recovery, operation-preserving contextual moves and bounded build diagnostics. This is a continuation of the existing integration, not another Claude takeover. Claude's dirty worktree remains untouched.

@@ -82,9 +82,9 @@ const result = (plan: MetaPlan, message: string, toolsList: ToolDescriptor[], ex
 /** The System Agent: deterministic capability/tool layer first, model understanding where it adds real value. */
 export async function handleSystemInput(service:GameService,raw:unknown,semantic?:import('../agent/semantic-entry.js').SemanticDecision,sourceInput?:string):Promise<SystemResult>{
  const body=safeParse(z.strictObject({input:z.string().min(1).max(2000),confirmed:z.boolean().default(false),session_id:z.string().uuid().nullish(),request_id:z.string().uuid().optional(),game_id:z.string().optional(),expected_revision:z.number().int().nonnegative().optional()}),raw);
- const replay=await service.recoverBehaviorConfigRequest(sourceInput??body.input,body);
- if(replay)return {category:'BEHAVIOR_CONFIGURATION',tool_id:null,side_effect_level:'configuration',needs_confirmation:false,
-   message:'已找到这条风格配置的提交记录，并同步当前配置。',view:replay};
+ const replay=await service.recoverSystemConfigurationRequest(sourceInput??body.input,body);
+ if(replay)return {category:replay.kind==='guidance'?'AI_BEHAVIOR_FEEDBACK':'BEHAVIOR_CONFIGURATION',tool_id:null,side_effect_level:'configuration',needs_confirmation:false,
+   message:'已找到这条配置的提交记录，并同步当前配置。',view:replay.view};
  if(isCharacterPersonaInput(body.input)&&(!semantic||semantic.operation_plane==='system_management')){
    const save=await service.current(),view=service.project(save);
    const named=view.entities.some(entity=>entity.id!==view.player_id&&entity.components.character&&
@@ -689,7 +689,7 @@ async function executeSystemInput(service: GameService, raw: unknown, context: S
   if(behaviorCandidate){
     const feedback=await compileBehaviorFeedback(service,latest,body.request_id);
     if(feedback.kind==='create'){
-      const saved=await service.putBehaviorPatch(feedback.patch);
+      const saved=await service.putBehaviorPatch(feedback.patch,context.requestEnvelope,context.sourceInput??latest);
       return {category:'AI_BEHAVIOR_FEEDBACK',tool_id:'behavior.guidance',side_effect_level:'configuration',needs_confirmation:false,
         title:'AI 行为指导',message:`已保存「${feedback.patch.title}」（${feedback.patch.scope==='global'?'全局':feedback.patch.scope==='world'?'当前世界':'当前会话'}）。${feedback.overridden?`它覆盖了「${feedback.overridden}」。`:''}这只指导后续判断，不能改变世界事实或绕过结算。`,
         view:saved.view,advanced:{behavior_patches:saved.patches}};

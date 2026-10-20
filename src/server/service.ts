@@ -100,8 +100,14 @@ const behaviorSettingSchema=z.strictObject({scope:behaviorScopeSchema,instructio
     application:z.enum(['per_sentence','per_paragraph','per_message','final_sentence']).default('per_message')}).optional()});
 type ConfigurationRequest={game_id?:string;expected_revision?:number;request_id?:string};
 const configurationRequestSchema=z.strictObject({game_id:z.string().uuid().optional(),expected_revision:z.number().int().nonnegative().optional(),request_id:z.string().uuid().optional()});
+type GuidanceRequest=ConfigurationRequest&{scope?:BehaviorPatch['scope']};
+const guidanceRequestSchema=configurationRequestSchema.extend({scope:z.enum(['world','global','session']).optional()});
 function behaviorInputFingerprint(input:string){
   return 'behavior-config:input:'+createHash('sha256').update(safeParse(z.string().min(1).max(2000),input)).digest('hex');
+}
+function guidanceFingerprint(operation:unknown,sourceInput?:string){
+  return sourceInput===undefined?'behavior-guidance:changes:'+createHash('sha256').update(JSON.stringify(operation)).digest('hex'):
+    'behavior-guidance:input:'+createHash('sha256').update(safeParse(z.string().min(1).max(2000),sourceInput)).digest('hex');
 }
 // Media fields live in the save for portability, but they are not canonical gameplay state.
 function preservePresentation(source: SavePackage, target: SavePackage) {
@@ -116,6 +122,7 @@ function preservePresentation(source: SavePackage, target: SavePackage) {
 export class GameService {
   private busy = false;
   private globalGuidanceLoaded=false;
+  private globalGuidanceLoading:Promise<void>|null=null;
   private readonly pendingTurns=new Map<string,PendingTurn>();
   private readonly characterImportPreviews=new Map<string,ImportCandidate>();
   private mediaQueue:Promise<unknown>=Promise.resolve();
@@ -300,45 +307,104 @@ export class GameService {
   }
   private async ensureGlobalGuidance(){
     if(this.globalGuidanceLoaded)return;
-    this.ai.globalPatches=this.storage.readGlobalGuidance?await this.storage.readGlobalGuidance():[];
-    this.globalGuidanceLoaded=true;
+    this.globalGuidanceLoading??=(async()=>{
+      this.ai.globalPatches=this.storage.readGlobalGuidance?await this.storage.readGlobalGuidance():[];
+      this.globalGuidanceLoaded=true;
+    })().finally(()=>{this.globalGuidanceLoading=null;});
+    await this.globalGuidanceLoading;
   }
   async behaviorGuidance(){
     const save=await this.current();
     return [...this.ai.globalPatches,...(save.behavior_patches??[]),...this.ai.sessionPatches];
   }
-  async putBehaviorPatch(raw:unknown){
+  private guidanceResult(save:SavePackage){
+    return {view:publicView(save),patches:[...this.ai.globalPatches,...(save.behavior_patches??[]),...this.ai.sessionPatches]};
+  }
+  private guidanceIdentity(save:SavePackage,request:ConfigurationRequest|undefined,fingerprint:string){
+    const tx=safeParse(configurationRequestSchema,{game_id:request?.game_id??save.game_id,
+      expected_revision:request?.expected_revision??save.state_revision,request_id:request?.request_id??randomUUID()});
+    assert(tx.game_id===save.game_id,'游戏已切换');
+    const receipt=save.runtime.receipts.find(entry=>entry.id===tx.request_id);
+    if(receipt)assert(receipt.fingerprint===fingerprint,'请求 ID 已用于另一操作');
+    return {game_id:tx.game_id!,expected_revision:tx.expected_revision!,request_id:tx.request_id!,replayed:!!receipt};
+  }
+  private guidanceCandidates(save:SavePackage,id:string,scope?:BehaviorPatch['scope']){
+    safeParse(z.string().uuid(),id);
+    const candidates=[...this.ai.globalPatches.map(patch=>({scope:'global' as const,patch})),
+      ...(save.behavior_patches??[]).map(patch=>({scope:'world' as const,patch})),
+      ...this.ai.sessionPatches.map(patch=>({scope:'session' as const,patch}))].filter(item=>item.patch.id===id&&(!scope||item.scope===scope));
+    assert(candidates.every(item=>item.scope===item.patch.scope),'指导记录的存储范围不一致');
+    return candidates;
+  }
+  private async writeWorldGuidance(save:SavePackage,request:ConfigurationRequest|undefined,fingerprint:string,mutate:()=>void){
+    const tx=this.guidanceIdentity(save,request,fingerprint);
+    if(tx.replayed)return this.guidanceResult(save);
+    if(save.state_revision!==tx.expected_revision)throw new GameError('状态已更新，请刷新后重试',409);
+    mutate();save.state_revision++;
+    save.runtime.receipts=[...save.runtime.receipts,{id:tx.request_id,fingerprint,revision:save.state_revision}].slice(-100);
+    const validated=validateSave(save);
+    await prepareRequestCommit(tx.game_id,tx.request_id,fingerprint,tx.expected_revision);
+    await this.storage.write(validated);
+    this.logger.info('behavior.patch.updated',{module:'framework',request_id:tx.request_id,revision:validated.state_revision});
+    return this.guidanceResult(validated);
+  }
+  private async writeGlobalGuidance(next:BehaviorPatch[]){
+    assert(this.storage.writeGlobalGuidance&&this.storage.readGlobalGuidance,'全局指导持久化不可用');
+    try{await this.storage.writeGlobalGuidance(next);this.ai.globalPatches=next;}
+    catch(error){
+      // The file may already contain the complete edit. Re-read its authority;
+      // if that also fails, future service reads must retry instead of serving a known-stale cache.
+      this.globalGuidanceLoaded=false;await this.ensureGlobalGuidance().catch(()=>undefined);throw error;
+    }
+  }
+  async putBehaviorPatch(raw:unknown,request?:ConfigurationRequest,sourceInput?:string){
     const patch=behaviorPatchSchema.parse(raw);
+    assert(patch.overrides!==patch.id,'行为指导不能覆盖自身');
     return this.exclusive(async()=>{
-      const save=await this.current();
+      const save=await this.current(),fingerprint=guidanceFingerprint({put:patch},sourceInput);
+      if(this.guidanceIdentity(save,request,fingerprint).replayed)return this.guidanceResult(save);
+      assert(!this.guidanceCandidates(save,patch.id).some(item=>item.scope!==patch.scope),'指导 ID 已存在于另一范围，请明确处理原范围');
       if(patch.scope==='session')this.ai.sessionPatches=[...this.ai.sessionPatches.filter(item=>item.id!==patch.id),patch].slice(-100);
       else if(patch.scope==='global'){
         const next=[...this.ai.globalPatches.filter(item=>item.id!==patch.id),patch].slice(-100);
-        assert(this.storage.writeGlobalGuidance,'全局指导持久化不可用');
-        await this.storage.writeGlobalGuidance(next);this.ai.globalPatches=next;
+        if(JSON.stringify(next)!==JSON.stringify(this.ai.globalPatches))await this.writeGlobalGuidance(next);
       }else{
-        save.behavior_patches=[...(save.behavior_patches??[]).filter(item=>item.id!==patch.id),patch].slice(-100);
-        save.state_revision++;await this.storage.write(validateSave(save));
+        return this.writeWorldGuidance(save,request,fingerprint,()=>{
+          save.behavior_patches=[...(save.behavior_patches??[]).filter(item=>item.id!==patch.id),patch].slice(-100);
+        });
       }
       this.logger.info('behavior.patch.updated',{module:'framework',revision:save.state_revision,metadata:{id:patch.id,scope:patch.scope,category:patch.category,enabled:patch.enabled}});
-      return {view:publicView(save),patches:[...this.ai.globalPatches,...(save.behavior_patches??[]),...this.ai.sessionPatches]};
+      return this.guidanceResult(save);
     });
   }
-  async removeBehaviorPatch(id:string){
+  async removeBehaviorPatch(id:string,request?:GuidanceRequest){
+    const options=safeParse(guidanceRequestSchema,request??{});
     return this.exclusive(async()=>{
-      const save=await this.current();
-      const world=(save.behavior_patches??[]).filter(item=>item.id!==id);
-      if(world.length!==(save.behavior_patches??[]).length){save.behavior_patches=world;save.state_revision++;await this.storage.write(validateSave(save));}
-      const global=this.ai.globalPatches.filter(item=>item.id!==id);
-      if(global.length!==this.ai.globalPatches.length){assert(this.storage.writeGlobalGuidance,'全局指导持久化不可用');await this.storage.writeGlobalGuidance(global);this.ai.globalPatches=global;}
-      this.ai.sessionPatches=this.ai.sessionPatches.filter(item=>item.id!==id);
-      return {view:publicView(save),patches:[...this.ai.globalPatches,...(save.behavior_patches??[]),...this.ai.sessionPatches]};
+      const save=await this.current(),fingerprint=guidanceFingerprint({remove:id,scope:options.scope??null});
+      if(this.guidanceIdentity(save,options,fingerprint).replayed)return this.guidanceResult(save);
+      const candidates=this.guidanceCandidates(save,id,options.scope);
+      assert(candidates.length<=1,'多个范围存在同一指导 ID，请指定范围');
+      const scope=candidates[0]?.scope??options.scope;
+      if(scope==='world')return this.writeWorldGuidance(save,options,fingerprint,()=>{save.behavior_patches=(save.behavior_patches??[]).filter(item=>item.id!==id);});
+      if(scope==='global'&&candidates.length)await this.writeGlobalGuidance(this.ai.globalPatches.filter(item=>item.id!==id));
+      if(scope==='session')this.ai.sessionPatches=this.ai.sessionPatches.filter(item=>item.id!==id);
+      return this.guidanceResult(save);
     });
   }
-  async setBehaviorPatchEnabled(id:string,enabled:boolean){
-    const found=(await this.behaviorGuidance()).find(item=>item.id===id);
-    assert(found,'行为指导不存在');
-    return this.putBehaviorPatch({...found,enabled});
+  async setBehaviorPatchEnabled(id:string,enabled:boolean,request?:GuidanceRequest){
+    safeParse(z.boolean(),enabled);const options=safeParse(guidanceRequestSchema,request??{});
+    return this.exclusive(async()=>{
+      const save=await this.current(),fingerprint=guidanceFingerprint({enabled,id,scope:options.scope??null});
+      if(this.guidanceIdentity(save,options,fingerprint).replayed)return this.guidanceResult(save);
+      const candidates=this.guidanceCandidates(save,id,options.scope);
+      assert(candidates.length<=1,'多个范围存在同一指导 ID，请指定范围');
+      const found=candidates[0];assert(found,'行为指导不存在');
+      const update=(items:BehaviorPatch[])=>items.map(item=>item.id===id?{...item,enabled}:item);
+      if(found.scope==='world')return this.writeWorldGuidance(save,options,fingerprint,()=>{save.behavior_patches=update(save.behavior_patches??[]);});
+      if(found.scope==='global'&&found.patch.enabled!==enabled)await this.writeGlobalGuidance(update(this.ai.globalPatches));
+      if(found.scope==='session')this.ai.sessionPatches=update(this.ai.sessionPatches);
+      return this.guidanceResult(save);
+    });
   }
   async view() {
     const raw = await this.storage.read('current','service_view');
@@ -1355,15 +1421,21 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
   }
   /** System replay is bound to the original user text, before deriving rules from volatile conversation context. */
   async recoverBehaviorConfigRequest(input:string,request:ConfigurationRequest){
+    const replay=await this.recoverSystemConfigurationRequest(input,request);
+    return replay?.kind==='style'?replay.view:null;
+  }
+  async recoverSystemConfigurationRequest(input:string,request:ConfigurationRequest){
     const tx=safeParse(configurationRequestSchema,{game_id:request.game_id,expected_revision:request.expected_revision,request_id:request.request_id});
     if(!tx.request_id)return null;
     const save=await this.storage.read('current','request_recovery');
     if(!save)return null;
     const receipt=save.runtime.receipts.find(item=>item.id===tx.request_id);
-    if(!receipt?.fingerprint.startsWith('behavior-config:input:'))return null;
+    const kind=receipt?.fingerprint.startsWith('behavior-config:input:')?'style':
+      receipt?.fingerprint.startsWith('behavior-guidance:input:')?'guidance':null;
+    if(!kind)return null;
     assert(tx.game_id===undefined||tx.game_id===save.game_id,'游戏已切换');
-    assert(receipt.fingerprint===behaviorInputFingerprint(input),'请求 ID 已用于另一操作');
-    return publicView(save);
+    assert(receipt!.fingerprint===(kind==='style'?behaviorInputFingerprint(input):guidanceFingerprint(null,input)),'请求 ID 已用于另一操作');
+    return {kind,view:publicView(save)};
   }
   /** Validate the complete edit, then prepare and save one image using the existing receipt protocol. */
   async updateBehaviorConfig(raw:unknown,request?:ConfigurationRequest,sourceInput?:string){

@@ -1,14 +1,14 @@
 # Four-theme acceptance ledger — 2026-10-20
 
-This mutable ledger groups the handoff requirements into 40 work packages. It does not replace or edit frozen acceptance v1–v19. A **completed** row means the stated bounded implementation has offline developer evidence (C/D), not that the whole theme has passed real-provider, production or human acceptance. **Partial** means working implementation and evidence exist but material requirements remain. **Unfinished** means the stated acceptance has not been established; it does not imply that every related source file is absent. Packages differ in size, so counts are evidence for engineering estimates, not an equal-weight completion formula.
+This mutable ledger groups the handoff requirements into 40 work packages. It does not replace or edit frozen acceptance v1–v21. A **completed** row means the stated bounded implementation has offline developer evidence (C/D), not that the whole theme has passed real-provider, production or human acceptance. **Partial** means working implementation and evidence exist but material requirements remain. **Unfinished** means the stated acceptance has not been established; it does not imply that every related source file is absent. Packages differ in size, so counts are evidence for engineering estimates, not an equal-weight completion formula.
 
 | Theme | Completed | Partial | Unfinished | Existing development estimate |
 |---|---:|---:|---:|---:|
-| ① Reliability | 4 | 5 | 1 | ~61% |
+| ① Reliability | 4 | 6 | 0 | ~61% |
 | ② Natural-language actions | 3 | 5 | 2 | ~50% |
 | ③ Autonomous persistent world | 3 | 5 | 2 | ~42% |
 | ④ Narrator and experience | 2 | 5 | 3 | ~31% |
-| Total | 12 | 20 | 8 | ~46% |
+| Total | 12 | 21 | 7 | ~46% |
 
 The estimate remains unchanged. Shared final gates—latest complete offline snapshot, broader multi-world tests, process-kill/multi-process acceptance, authorized real-provider tests, deployment and human QA—remain open. Historical passes do not establish those gates for later edits.
 
@@ -25,7 +25,7 @@ The estimate remains unchanged. Shared final gates—latest complete offline sna
 | R7 | Extension development/install and external workspace effects | Partial | installation/registration fault tests; remaining workspace/kill boundaries |
 | R8 | Frontend synchronization and all System/media mutation paths | Partial | HTTP/browser evidence; several unidentified/external mutations remain |
 | R9 | Read-time current/view migration race acceptance | Partial | stale-read and failed-parent cases fixed under the existing canonical lock; migration 107-test regression passed; media/cross-instance/OS boundaries remain |
-| R10 | World/global/session behavior-guidance cross-store removal/replay acceptance | Unfinished | distinct persistence stores; not covered by R4 |
+| R10 | World/global/session behavior-guidance cross-store removal/replay acceptance | Partial | world receipts and scoped enable/remove; ambiguous legacy IDs stop before writing; global cache reconciles after saved response loss; durable global/session identity and scope moves remain open |
 
 ## ② Natural-language actions
 

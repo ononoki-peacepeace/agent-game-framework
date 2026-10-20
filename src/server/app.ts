@@ -689,8 +689,13 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   app.get('/api/system/tools',async(_req,res)=>{const info=await service.modules();res.json(toolAvailability(info.capabilities));});
   app.get('/api/system/behavior',async(_req,res)=>res.json(await service.behaviorConfig()));
   app.get('/api/system/behavior-guidance',async(_req,res)=>res.json(await service.behaviorGuidance()));
-  app.post('/api/system/behavior-guidance/:id/enabled',async(req,res)=>res.json(await service.setBehaviorPatchEnabled(req.params.id,Boolean(req.body?.enabled))));
-  app.post('/api/system/behavior-guidance/:id/remove',async(req,res)=>res.json(await service.removeBehaviorPatch(String(req.params.id))));
+  const guidanceMutationSchema=z.strictObject({scope:z.enum(['world','global','session']).optional(),game_id:z.string().uuid().optional(),
+    expected_revision:z.number().int().nonnegative().optional(),request_id:z.string().uuid().optional()});
+  app.post('/api/system/behavior-guidance/:id/enabled',async(req,res)=>{
+    const {enabled,...request}=safeParse(guidanceMutationSchema.extend({enabled:z.boolean()}),req.body);
+    res.json(await service.setBehaviorPatchEnabled(req.params.id,enabled,request));
+  });
+  app.post('/api/system/behavior-guidance/:id/remove',async(req,res)=>res.json(await service.removeBehaviorPatch(String(req.params.id),safeParse(guidanceMutationSchema,req.body??{}))));
   app.get('/api/system/content',async(_req,res)=>res.json(await service.contentAllowances()));
   app.post('/api/characters/:id/persona',async(req,res)=>res.json(await service.setCharacterPersona({...req.body,entity_id:req.params.id})));
   app.get('/api/narrative/debug',async(_req,res)=>res.json(await service.narrativeDebug()));
@@ -779,9 +784,9 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     if(body.development_task_id)return res.json(await processSystem({...body,input}));
     // A durable configuration receipt precedes semantic interpretation: a replayed
     // short correction may no longer have its original conversation after restart.
-    const configurationReplay=await service.recoverBehaviorConfigRequest(input,body);
-    if(configurationReplay)return res.json({category:'BEHAVIOR_CONFIGURATION',tool_id:null,side_effect_level:'configuration',
-      needs_confirmation:false,message:'已找到这条风格配置的提交记录，并同步当前配置。',view:configurationReplay});
+    const configurationReplay=await service.recoverSystemConfigurationRequest(input,body);
+    if(configurationReplay)return res.json({category:configurationReplay.kind==='guidance'?'AI_BEHAVIOR_FEEDBACK':'BEHAVIOR_CONFIGURATION',tool_id:null,side_effect_level:'configuration',
+      needs_confirmation:false,message:'已找到这条配置的提交记录，并同步当前配置。',view:configurationReplay.view});
     const gate=await routeContext(service,input,'system_input');
     if(gate.destination==='AMBIGUOUS')return res.json({category:'UNKNOWN',tool_id:null,side_effect_level:'none',needs_confirmation:false,message:gate.clarification,clarification:gate.clarification,session:await routingClarification(service,input,gate.clarification!)});
     if(gate.semantic?.kind==='read_only'){
