@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "e173ac8",
+  "assessed_source": "19c8108",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -295,9 +295,11 @@
         "tests/p0a-migration-read-races.test.ts",
         "tests/migration-two-process.test.ts",
         "tests/current-write-guard.test.ts",
-        "docs/migration-process-write-guard.md"
+        "docs/migration-process-write-guard.md",
+        "docs/migration-external-image.md",
+        "tests/migration-external-image.test.ts"
       ],
-      "basis": "Product8affb2f: actual strict live-child SIGKILL before/after migration persistence for current/view,timeout thenkill/retry,corrupt coordination safe stop and postkill request replay pass. Fixture autoexit and sandboxHTTP failures retained;full preparation/replace/external replacement/OS error matrix remains unverified."
+      "basis": "Product8affb2f: actual strict live-child SIGKILL before/after migration persistence for current/view,timeout thenkill/retry,corrupt coordination safe stop and postkill request replay pass. Fixture autoexit and sandboxHTTP failures retained;full preparation/replace/external replacement/OS error matrix remains unverified. Product19c8108:realfsrenamebefore/afterSIGKILL withvalidatedflushedtemp/currentviewoldornewcompleteimage;externalcanonicalreceipt/samerevision/newgame andcorrupt/missingrecoverycontrols. ServerstoredJSONSyntaxErrorHTTP400counterexamples repairedto503,failedinputidentity/exactrestartreplay/noactions. Correctedbaseline2fail6controls,final8files106pass/build39666. Preparationkill andcompleteOS/externalwriter matrixremainunverified."
     },
     "R10.1": {
       "status": "met",
@@ -3218,6 +3220,23 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "migration-external-image",
+      "type": "repair",
+      "source": "19c8108",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R9.4",
+          "result": "Actualatomicrenamekill/externalreplacement/recovery/errorclassificationevidence;correctedbaseline2fail6controls,final8files106pass/zeroskip/build. Preparationkill/fullmatrixremainopen.",
+          "evidence": [
+            "docs/migration-external-image.md",
+            "tests/migration-external-image.test.ts",
+            "tests/migration-two-process.test.ts"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -3949,6 +3968,18 @@
         "tests/scene-count-authority.test.ts"
       ],
       "summary": "Three supported quotation forms are scanned as current authoritative presence;legitimate quoted recollections falsely rejected. Repaired and verified101pass/build,withdrawal preserved."
+    },
+    {
+      "id": "stored-json-http-classification",
+      "scope": "original",
+      "condition": "R9.4",
+      "status": "repaired",
+      "source": "19c8108",
+      "evidence": [
+        "docs/migration-external-image.md",
+        "tests/migration-external-image.test.ts"
+      ],
+      "summary": "Externally corrupted current JSON surfaced as malformed request400;onlyExpressbodyparsermarkersnowrequest400,serverSyntaxError503,exactfailedinputreplay/no generation retained."
     }
   ]
 }
