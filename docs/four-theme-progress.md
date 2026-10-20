@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：80f9084。整体 **60.00%**（96/160 个固定条件满足）。未满足 28，待验证 36。
+计分版本 v1；评估源代码：d1721f4。整体 **60.00%**（96/160 个固定条件满足）。未满足 28，待验证 36。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -95,6 +95,7 @@
 | equipped-item-sale | repair | A8.3: Equipped SELL now requires explicit UNEQUIP before settlement;complete dynamic item matrix remains open；完整条件保持开放; N6.3: Equipped SELL now requires explicit UNEQUIP before settlement;complete dynamic item matrix remains open；完整条件保持开放 | +0.000 pp |
 | item-action-degraded-prose | repair | N8.2: Four item-action fallbacks and compound child prose retain actual item/quantity/payment;full failed/unexecuted multi-goal naturalness remains open；完整条件保持开放; N3.3: Four item-action fallbacks and compound child prose retain actual item/quantity/payment;full failed/unexecuted multi-goal naturalness remains open；完整条件保持开放 | +0.000 pp |
 | post-item-complete-offline-snapshot | repair | R5.4: Current228-file2252pass exact coverage on538fixed hashes;initial native failure retained,30passing reports/31attempts;no root-cause stability claim；完整条件保持开放 | +0.000 pp |
+| sealed-equipment-access | repair | A8.3: EQUIP sealed source/nested access repaired with player/NPC/exterior controls;full dynamic item/multi-world matrix remains open；完整条件保持开放; N6.3: EQUIP sealed source/nested access repaired with player/NPC/exterior controls;full dynamic item/multi-world matrix remains open；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -255,7 +256,7 @@
 |---|---|---|---|
 | A8.1 | 已有 Freeform 身体动作及环境能力可结算 | 满足 | [low-stakes-open-goal.test.ts](../tests/low-stakes-open-goal.test.ts) |
 | A8.2 | 距离、身体和环境前提不能由描写虚构满足 | 满足 | [low-stakes-open-goal.test.ts](../tests/low-stakes-open-goal.test.ts) |
-| A8.3 | 开放交互涵盖各类物品、地形及能力的动态前提 | 未满足 | [low-stakes-open-goal.test.ts](../tests/low-stakes-open-goal.test.ts), [sealed-item-movement.test.ts](../tests/sealed-item-movement.test.ts), [sealed-item-movement.md](../docs/sealed-item-movement.md), [sealed-item-damage.test.ts](../tests/sealed-item-damage.test.ts), [sealed-item-damage.md](../docs/sealed-item-damage.md), [tracked-item-sale.test.ts](../tests/tracked-item-sale.test.ts), [tracked-item-sale.md](../docs/tracked-item-sale.md), [equipped-item-sale.test.ts](../tests/equipped-item-sale.test.ts), [equipped-item-sale.md](../docs/equipped-item-sale.md) |
+| A8.3 | 开放交互涵盖各类物品、地形及能力的动态前提 | 未满足 | [low-stakes-open-goal.test.ts](../tests/low-stakes-open-goal.test.ts), [sealed-item-movement.test.ts](../tests/sealed-item-movement.test.ts), [sealed-item-movement.md](../docs/sealed-item-movement.md), [sealed-item-damage.test.ts](../tests/sealed-item-damage.test.ts), [sealed-item-damage.md](../docs/sealed-item-damage.md), [tracked-item-sale.test.ts](../tests/tracked-item-sale.test.ts), [tracked-item-sale.md](../docs/tracked-item-sale.md), [equipped-item-sale.test.ts](../tests/equipped-item-sale.test.ts), [equipped-item-sale.md](../docs/equipped-item-sale.md), [sealed-equipment-access.test.ts](../tests/sealed-equipment-access.test.ts), [sealed-equipment-access.md](../docs/sealed-equipment-access.md) |
 | A8.4 | 多世界自由动作语料通过，游戏内失败原样保留 | 待验证 | [low-stakes-open-goal.test.ts](../tests/low-stakes-open-goal.test.ts) |
 
 ## A9 Broad multi-world natural-language acceptance corpus
@@ -417,7 +418,7 @@
 |---|---|---|---|
 | N6.1 | 物品与可用资产的存在受权威事实限制 | 满足 | [initial-possessions.test.ts](../tests/initial-possessions.test.ts), [local-scene-materialization.test.ts](../tests/local-scene-materialization.test.ts), [narrative-firewall-observability.test.ts](../tests/narrative-firewall-observability.test.ts) |
 | N6.2 | 已有持有与 materialization/firewall 回归阻止虚构可用物 | 满足 | [initial-possessions.test.ts](../tests/initial-possessions.test.ts), [local-scene-materialization.test.ts](../tests/local-scene-materialization.test.ts), [narrative-firewall-observability.test.ts](../tests/narrative-firewall-observability.test.ts) |
-| N6.3 | 开放容器、环境物、临时物与转交组合有固定覆盖 | 未满足 | [initial-possessions.test.ts](../tests/initial-possessions.test.ts), [local-scene-materialization.test.ts](../tests/local-scene-materialization.test.ts), [narrative-firewall-observability.test.ts](../tests/narrative-firewall-observability.test.ts), [contained-evidence-access.test.ts](../tests/contained-evidence-access.test.ts), [contained-evidence-access.md](../docs/contained-evidence-access.md), [sealed-item-movement.test.ts](../tests/sealed-item-movement.test.ts), [sealed-item-movement.md](../docs/sealed-item-movement.md), [sealed-item-damage.test.ts](../tests/sealed-item-damage.test.ts), [sealed-item-damage.md](../docs/sealed-item-damage.md), [tracked-item-sale.test.ts](../tests/tracked-item-sale.test.ts), [tracked-item-sale.md](../docs/tracked-item-sale.md), [equipped-item-sale.test.ts](../tests/equipped-item-sale.test.ts), [equipped-item-sale.md](../docs/equipped-item-sale.md) |
+| N6.3 | 开放容器、环境物、临时物与转交组合有固定覆盖 | 未满足 | [initial-possessions.test.ts](../tests/initial-possessions.test.ts), [local-scene-materialization.test.ts](../tests/local-scene-materialization.test.ts), [narrative-firewall-observability.test.ts](../tests/narrative-firewall-observability.test.ts), [contained-evidence-access.test.ts](../tests/contained-evidence-access.test.ts), [contained-evidence-access.md](../docs/contained-evidence-access.md), [sealed-item-movement.test.ts](../tests/sealed-item-movement.test.ts), [sealed-item-movement.md](../docs/sealed-item-movement.md), [sealed-item-damage.test.ts](../tests/sealed-item-damage.test.ts), [sealed-item-damage.md](../docs/sealed-item-damage.md), [tracked-item-sale.test.ts](../tests/tracked-item-sale.test.ts), [tracked-item-sale.md](../docs/tracked-item-sale.md), [equipped-item-sale.test.ts](../tests/equipped-item-sale.test.ts), [equipped-item-sale.md](../docs/equipped-item-sale.md), [sealed-equipment-access.test.ts](../tests/sealed-equipment-access.test.ts), [sealed-equipment-access.md](../docs/sealed-equipment-access.md) |
 | N6.4 | 多世界物品描写与后续可用性完全一致 | 待验证 | [initial-possessions.test.ts](../tests/initial-possessions.test.ts), [local-scene-materialization.test.ts](../tests/local-scene-materialization.test.ts), [narrative-firewall-observability.test.ts](../tests/narrative-firewall-observability.test.ts) |
 
 ## N7 Long-term continuity and contradictory expression prevention
