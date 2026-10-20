@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Equipped-item sale prerequisite — 2026-10-21
+
+Parent90ff29f; this source checkpoint makes equipped SELL a structured world-unavailable refusal before settlement,requiring explicit UNEQUIP. Baseline2fail/1UNEQUIPcontrol;final5files77pass/zero skip and isolated build/session39032 passed. Actual disk/new-service repeated refusal preserves bytes/state,zero generation;not HTTP. No schema/Core/retry/pricing interface changes. See docs/equipped-item-sale.md. A8.3/N6.3 remain open,60%=96/160,+0. Complete222files2192pass stays8b5d2df/evidence9acea32. Next: review generic registered-action fallback against actual Core facts,then remaining four-theme matrices. Original dirt retained; no source WIP after checkpoint.
+
 ## Tracked-item sale lifecycle — 2026-10-21
 
 Parent3d746f4; this source checkpoint repairs SELL placement/owner cleanup and refuses sealed sources/filled containers before payment. Baseline3fail/1legacycontrol,expanded4fail/1control; final6files105pass/zero skip and isolated build/session99871 passed. Eight focused cases include real JsonStore/new-service sale replay(one payment/receipt),buy-back and sealed refusal with unchanged bytes/zero generation;not HTTP. No schema/Core/retry/pricing change. See docs/tracked-item-sale.md. A8.3/N6.3 remain open,60%=96/160,+0. Complete222files2192pass stays8b5d2df/evidence9acea32. Next: reproduce equipped-item sale access,then remaining fixed four-theme matrices. Original QA dirt/untracked notes preserved; no source WIP after this checkpoint.
