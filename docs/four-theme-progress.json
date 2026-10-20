@@ -703,11 +703,12 @@
       "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
     },
     "W4.2": {
-      "status": "met",
+      "status": "unmet",
       "evidence": [
-        "tests/npc-physical-plan-continuity.test.ts"
+        "tests/npc-physical-plan-continuity.test.ts",
+        "tests/npc-social-notification-credit.test.ts"
       ],
-      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim. Counterexamplea616649/productc3ac8fb: new listener inherits relayer bank100 and travels despite only1/10minute current interval;2fail/1lawful25min control. Withdrawn pending repair."
     },
     "W4.3": {
       "status": "unmet",
@@ -2364,6 +2365,22 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "npc-notification-credit-withdrawal",
+      "type": "evidence_correction",
+      "source": "c3ac8fb",
+      "transitions": [
+        {
+          "id": "W4.2",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "tests/npc-social-notification-credit.test.ts"
+          ],
+          "reason": "New listener time credit includes old relayer bank preceding notification;2fail/1control."
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -2995,6 +3012,17 @@
         "docs/future-execute-window.md"
       ],
       "summary": "Future execute ignored explicit window/day in selection and fast planner; now only original authorized due commitment can run."
+    },
+    {
+      "id": "npc-notification-credit",
+      "scope": "original",
+      "condition": "W4.2",
+      "status": "open",
+      "source": "c3ac8fb",
+      "evidence": [
+        "tests/npc-social-notification-credit.test.ts"
+      ],
+      "summary": "New invitation inherits relayer old time bank, letting notification cause retroactive receiver travel."
     }
   ]
 }
