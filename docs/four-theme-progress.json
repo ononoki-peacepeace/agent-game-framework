@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "6f4a300",
+  "assessed_source": "6946982",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -712,9 +712,11 @@
         "tests/routine.test.ts",
         "docs/routine-partial-interruption.md",
         "tests/routine-local-elapsed.test.ts",
-        "docs/routine-local-elapsed.md"
+        "docs/routine-local-elapsed.md",
+        "tests/routine-unreachable-location.test.ts",
+        "docs/routine-unreachable-location.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. a84616d: interrupted AI routine interval retains actual Core time/event/foreground, discards unearned full rewards and completed prose/history endpoint, and does not complete schedule block. Corrected2fail/5controls + block1fail; final6distinctfiles70pass/build, real disk/service replay. Whole travel/local/long-duration adaptive matrix remains open. 6f4a300: local block credit adds actual Core elapsed, not requested duration after interruption; work/sleep2fail/2controls, actual disk prefix90 and explicit test acknowledgement to120/+8 once;5files58pass/build. Full matrix still open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. a84616d: interrupted AI routine interval retains actual Core time/event/foreground, discards unearned full rewards and completed prose/history endpoint, and does not complete schedule block. Corrected2fail/5controls + block1fail; final6distinctfiles70pass/build, real disk/service replay. Whole travel/local/long-duration adaptive matrix remains open. 6f4a300: local block credit adds actual Core elapsed, not requested duration after interruption; work/sleep2fail/2controls, actual disk prefix90 and explicit test acknowledgement to120/+8 once;5files58pass/build. Full matrix still open. 6946982: remote activity cannot interpret zero usable routes as already local; corrected2fail/1control, actual GameService/JsonStore refusal preserves bytes/time/wage/location across restart;5files46pass/build. Original default-known fixture mistake retained; full matrix remains open."
     },
     "W4.4": {
       "status": "unverified",
@@ -2240,6 +2242,22 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "routine-unreachable-location",
+      "type": "repair",
+      "source": "6946982",
+      "transitions": [],
+      "observations": [
+        {
+          "id": "W4.3",
+          "result": "Remote usable-route prerequisite repaired; actual refusal and local controls pass; full condition remains open",
+          "evidence": [
+            "tests/routine-unreachable-location.test.ts",
+            "docs/routine-unreachable-location.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -2813,6 +2831,18 @@
         "docs/routine-local-elapsed.md"
       ],
       "summary": "Interrupted local WAIT counted requested120/480 instead of actual60 in block_progress; now actual canonical clock delta."
+    },
+    {
+      "id": "routine-unreachable-location",
+      "scope": "original",
+      "condition": "W4.3",
+      "status": "repaired",
+      "source": "6946982",
+      "evidence": [
+        "tests/routine-unreachable-location.test.ts",
+        "docs/routine-unreachable-location.md"
+      ],
+      "summary": "No filtered routes returned empty path and ran remote work locally; now existing unreachable stop applies."
     }
   ]
 }

@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：6f4a300。整体 **60.00%**（96/160 个固定条件满足）。未满足 28，待验证 36。
+计分版本 v1；评估源代码：6946982。整体 **60.00%**（96/160 个固定条件满足）。未满足 28，待验证 36。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：30 已修复，4 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：30 已修复，5 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -76,6 +76,7 @@
 | routine-partial-interruption | repair | 无条件状态变化 | +0.000 pp |
 | routine-local-elapsed | repair | 无条件状态变化 | +0.000 pp |
 | post-routine-offline-snapshot | evidence_correction | 无条件状态变化 | +0.000 pp |
+| routine-unreachable-location | repair | 无条件状态变化 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -290,7 +291,7 @@
 |---|---|---|---|
 | W4.1 | 自主生活调度保留已有物理行动连续性 | 满足 | [npc-physical-plan-continuity.test.ts](../tests/npc-physical-plan-continuity.test.ts) |
 | W4.2 | 时间额度与欠账连续且不重复推进 | 满足 | [npc-physical-plan-continuity.test.ts](../tests/npc-physical-plan-continuity.test.ts) |
-| W4.3 | 日程、旅行、突发中断与资源变化协调调整 | 未满足 | [npc-physical-plan-continuity.test.ts](../tests/npc-physical-plan-continuity.test.ts), [routine.test.ts](../tests/routine.test.ts), [routine-partial-interruption.md](../docs/routine-partial-interruption.md), [routine-local-elapsed.test.ts](../tests/routine-local-elapsed.test.ts), [routine-local-elapsed.md](../docs/routine-local-elapsed.md) |
+| W4.3 | 日程、旅行、突发中断与资源变化协调调整 | 未满足 | [npc-physical-plan-continuity.test.ts](../tests/npc-physical-plan-continuity.test.ts), [routine.test.ts](../tests/routine.test.ts), [routine-partial-interruption.md](../docs/routine-partial-interruption.md), [routine-local-elapsed.test.ts](../tests/routine-local-elapsed.test.ts), [routine-local-elapsed.md](../docs/routine-local-elapsed.md), [routine-unreachable-location.test.ts](../tests/routine-unreachable-location.test.ts), [routine-unreachable-location.md](../docs/routine-unreachable-location.md) |
 | W4.4 | 多世界长时间生活行为丰富且持续可执行 | 待验证 | [npc-physical-plan-continuity.test.ts](../tests/npc-physical-plan-continuity.test.ts) |
 
 ## W5 Persistent long/short goals, executable plans and blocked-plan revision
