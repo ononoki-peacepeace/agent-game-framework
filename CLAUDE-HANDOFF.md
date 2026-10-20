@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Legacy social policy assessment — 2026-10-20
+
+Product source stays `b4c018f`; reviewed design is docs/legacy-social-policy-strategy.md. Read-only inspection confirms compiled town and formal world both have two relationship dimensions but no explicit event_deltas; formal world has13 character entities. Existing absence means no automatic receipt deltas, not inferred semantics. Proposed author-selected, prospective migration preserves numeric relationships and existing facts; prior receipts need reviewed no-backfill bookkeeping and request identity/fault evidence before any use. No migration implementation or formal policy decision is claimed. W9.1/W9.2 evidence is now concrete; W9.3/W9.4 remain unverified. Source manifest remains unchanged while four-shard190-file offline verification runs (first48files484pass; later shards pending). Original QA bytes are backed up for restoration. No formal save/3100/paid/deploy changes.
+
 ## Compound degraded prose continuation — 2026-10-20
 
 Reviewed source `b4c018f`; score remains58.125%=93/160 (30unmet/37unverified), macro12/22/6. Progress JSON records the resolved original N3.3 omission and bounded N8.2 evidence without new met transitions. Current source is checkpointed; only original QA/audit dirt remains after the documentation checkpoint. Next selected audit: W5 repeated blocked-goal recovery selection and long-term plan revision, using existing fixed protocol.
