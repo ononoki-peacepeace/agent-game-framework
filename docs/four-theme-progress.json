@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "75e8abb",
+  "assessed_source": "16a5ff7",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -2866,6 +2866,38 @@
           "evidence": [
             "tests/conditional-activity-interruption.test.ts",
             "docs/conditional-activity-interruption.md"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "long-hold-interruption",
+      "type": "repair",
+      "source": "16a5ff7",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "A7.3",
+          "result": "Short Core HOLD interruption fact survives long-label truncation;actual0/1minute goals unfinished/dependents skipped,grounded prose;first/replay notice consistency repaired. Baseline4fail2controls,expanded2noticefail retained;final8files94pass/build,2actual disk/service exact-response replays. Full matrix open.",
+          "evidence": [
+            "tests/long-hold-interruption.test.ts",
+            "docs/long-hold-interruption.md"
+          ]
+        },
+        {
+          "id": "N3.3",
+          "result": "Short Core HOLD interruption fact survives long-label truncation;actual0/1minute goals unfinished/dependents skipped,grounded prose;first/replay notice consistency repaired. Baseline4fail2controls,expanded2noticefail retained;final8files94pass/build,2actual disk/service exact-response replays. Full matrix open.",
+          "evidence": [
+            "tests/long-hold-interruption.test.ts",
+            "docs/long-hold-interruption.md"
+          ]
+        },
+        {
+          "id": "N8.2",
+          "result": "Short Core HOLD interruption fact survives long-label truncation;actual0/1minute goals unfinished/dependents skipped,grounded prose;first/replay notice consistency repaired. Baseline4fail2controls,expanded2noticefail retained;final8files94pass/build,2actual disk/service exact-response replays. Full matrix open.",
+          "evidence": [
+            "tests/long-hold-interruption.test.ts",
+            "docs/long-hold-interruption.md"
           ]
         }
       ]
