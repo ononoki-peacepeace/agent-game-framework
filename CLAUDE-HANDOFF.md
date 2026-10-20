@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Item action degraded prose — 2026-10-21
+
+Parent33a99bf; this source checkpoint renders BUY/SELL/EQUIP/UNEQUIP from exact existing successful deterministic Core facts and reuses it for compound children. Baseline8fail;final7files56pass/zero skip and final isolated build/session68456 passed. Twelve focused cases cover refusal/content-filter,actual BUY→EQUIP order,quantity2/zero price,hidden/failure/foreign/incomplete controls and actual JsonStore/new-service prose replay with unchanged bytes/zero generation. Initial expanded54pass/1fail was wrong aggregate action-type expectation,preserved and corrected to child types. No schema/Core/receipt/budget interface changes. See docs/item-action-degraded-prose.md for reviewed Chinese outputs. N8.2/N3.3 stay open,60%=96/160,+0. Complete222files2192pass stays8b5d2df/evidence9acea32. Next: pin latest source and refresh complete offline coverage after accumulated item/access/prose edits. Original dirt retained; no source WIP after checkpoint.
+
 ## Equipped-item sale prerequisite — 2026-10-21
 
 Parent90ff29f; this source checkpoint makes equipped SELL a structured world-unavailable refusal before settlement,requiring explicit UNEQUIP. Baseline2fail/1UNEQUIPcontrol;final5files77pass/zero skip and isolated build/session39032 passed. Actual disk/new-service repeated refusal preserves bytes/state,zero generation;not HTTP. No schema/Core/retry/pricing interface changes. See docs/equipped-item-sale.md. A8.3/N6.3 remain open,60%=96/160,+0. Complete222files2192pass stays8b5d2df/evidence9acea32. Next: review generic registered-action fallback against actual Core facts,then remaining four-theme matrices. Original dirt retained; no source WIP after checkpoint.

@@ -361,6 +361,31 @@ export function canonicalPerceptionNarrative(save:SavePackage,receipt:Receipt,hi
     canonicalResolutionNarrative(receipt,hidden,true)].filter(Boolean).join('\n');
 }
 
+const itemActionTypes=new Set(['BUY','SELL','EQUIP','UNEQUIP']);
+/** Only built-in Core fact formats supply item, quantity and paid amount. Never
+ * infer a trade from effects or the current inventory, which may already differ. */
+function itemActionNarrative(receipt:Receipt,hidden:boolean){
+  if(!itemActionTypes.has(receipt.semantic_action)||hidden||receipt.outcome!=='success'||receipt.kind!=='DETERMINISTIC')return null;
+  for(const fact of receipt.canonical_facts){
+    if(receipt.semantic_action==='BUY'||receipt.semantic_action==='SELL'){
+      const verb=receipt.semantic_action==='BUY'?'购买':'出售';
+      const match=new RegExp(`^${verb} ([1-9]\\d*) × ([\\s\\S]+)，金额 (\\d+) ([\\s\\S]+)。$`).exec(fact);
+      if(match)return receipt.semantic_action==='BUY'?
+        `你买下了${match[1]}件${match[2]}，付了${match[3]}${match[4]}。`:
+        `你卖出了${match[1]}件${match[2]}，收到了${match[3]}${match[4]}。`;
+    }
+    if(receipt.semantic_action==='EQUIP'){
+      const match=/^装备 ([\s\S]+) 到 [a-zA-Z0-9_-]+。$/.exec(fact);
+      if(match)return `你装备好了${match[1]}。`;
+    }
+    if(receipt.semantic_action==='UNEQUIP'){
+      const match=/^卸下 ([\s\S]+)。$/.exec(fact);
+      if(match)return `你卸下了${match[1]}。`;
+    }
+  }
+  return null;
+}
+
 /** Multi-step grounded degradation: a compound turn must never collapse into one
  * generic completion line. Present each settled step's confirmed facts in order,
  * without inventing any world state beyond the committed receipts. */
@@ -376,6 +401,7 @@ export function canonicalCompoundNarrative(save:SavePackage,hidden:boolean,steps
       isSettledPerception(save,step)?canonicalPerceptionNarrative(save,step,hidden):
       step.semantic_action==='TALK'?`你向${name}开了口。`:
       step.semantic_action==='WAIT'?`你等了${step.time_cost}分钟。`:
+      itemActionTypes.has(step.semantic_action)?canonicalResolutionNarrative(step,hidden):
       facts.length?facts.join(' '):canonicalResolutionNarrative(step,hidden);
     return `${index+1}、${text}`;
   });
@@ -397,6 +423,7 @@ export function canonicalResolutionNarrative(receipt:Receipt,hidden:boolean,perc
       hidden?'你仔细查看了当前区域。眼前能确认的仍是已经看见的情形。':
         '你仔细观察了一会儿，在这次检查范围内暂时没有发现明显异常或新的线索。';
   }
+  const itemNarrative=itemActionNarrative(receipt,hidden);if(itemNarrative)return itemNarrative;
   const outcome=hidden?'这次尝试已经进行，结果目前尚不可确认。':
     receipt.outcome==='partial_success'?'这次尝试取得了部分进展。':
     ['success','strong_success'].includes(receipt.outcome)?'这次尝试已完成。':'这次尝试没有达到预期。';
