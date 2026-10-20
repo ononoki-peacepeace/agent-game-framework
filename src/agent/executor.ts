@@ -7,7 +7,7 @@ import type {GameService} from '../server/service.js';
 import {publicView} from '../core/state.js';
 import {assert,GameError} from '../core/schema.js';
 import {agentResult,recoveryContext,type AgentResult,type UIAction} from './contracts.js';
-import {createAgentPlan,fastPlan,hasUserCondition,PlanConversionError} from './planner.js';
+import {createAgentPlan,fastPlan,hasUserCondition,PlanConversionError,assertConditionalOwnership} from './planner.js';
 import {checkChoiceOffer} from '../core/choice-offer.js';
 import {classifyChoiceExecution} from '../core/choice-availability.js';
 import type {AgentPlan,AtomicGoal,FutureIntent} from './plan-schema.js';
@@ -294,6 +294,7 @@ export async function handleChoiceInput(service:GameService,body:PlanRequest,off
  return handleAgentInput(service,body);
 }
 export async function executePlan(service:GameService,body:PlanRequest,plan:AgentPlan,startRoutine?:(body:any)=>Promise<any>,repetition?:import('../system/goals.js').GoalSpec['repetition'],repeatedPerception=false,physicalIntent?:import('../system/goals.js').GoalSpec['physical_intent'],semanticAction?:import('../system/goals.js').GoalSpec['play_action']):Promise<AgentResult>{
+ assertConditionalOwnership(plan.goals);
  let save=await service.current();
  if(save.game_id!==body.game_id||save.state_revision!==body.expected_revision){
   // Nothing was applied yet, so a plan that only reads may be replayed once by the client. A plan that could

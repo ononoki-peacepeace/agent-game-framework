@@ -1,5 +1,13 @@
 # Claude Code starting handoff
 
+## Conditional dependency authorization continuation — 2026-10-20
+
+Continuing from `13122b1`, the checkpoint containing this section validates condition ownership both at planning and before execution of legacy snapshots. A mutating goal or nested condition cannot depend directly on a condition without a branch; each branch has one explicit condition owner. Ambiguity stops the whole plan before an earlier independent write. Read-only dependent queries, valid then/else and nested current evaluation are preserved. Planner/executor must travel together; no public schema change.
+
+Baseline5/5 failed. First expanded95/98 retained: two controls incorrectly expected absent-character presence to be false rather than unknown, plus an existing error-text compatibility assertion. Final9 files/140 passed after using explicit public familiarity for true/false and a separate unknown test; strict TypeScript recorded in SESSION. This is an original-scope A7.3 finding, not a new weighted item. No full acceptance condition closes, so overall remains56.875%,91/31/38 and12/21/7. Do not inflate progress by counting test cases as weighted conditions.
+
+Next concrete follow-up: reproduce deferred FutureIntent losing outer condition guards and validating a condition against the action recipient instead of its own entity. Continue broader dynamic/compound intent, NPC long-term variety and natural prose. Production/3100/Provider/Claude/QA originals remain protected.
+
 ## Durable guidance identity and measurable progress — 2026-10-20
 
 Branch `codex/claude-takeover-integration`, continuing from `f4bf805`. The checkpoint containing this section adds `GuidanceRequests` using existing StoredInputRecord atomic storage and namespaced child IDs. Identified global/session put/enable/remove is not re-executed after deletion, failed effects, terminal loss or service restart. Running intents stop safely; session content is not restored by identity replay. Parent HTTP records are separate; global cache reconciliation and world/legacy-style atomic commits are retained. No Save schema or storage-interface change. Integrate recovery helper, service and HTTP/outcome classification together. Cross-scope moves, multi-process/external writers and OS-kill boundaries remain unfinished.

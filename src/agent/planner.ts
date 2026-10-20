@@ -10,6 +10,7 @@ import type {AIRuntime} from '../ai/runtime.js';
 import {hasMultipleClauses,hasInteractionDependentClause} from './goal-contract.js';
 import type {GoalSpec} from '../system/goals.js';
 import {CandidateValidationError,schemaIssues,type SchemaRepairIssue} from '../ai/failures.js';
+import {GameError} from '../core/schema.js';
 
 export const hasUserCondition=(text:string)=>/如果|假如|要是|(?:^|[，,。；;])若(?:是)?|只要|当.{1,60}时|除非|满足.{1,40}才|.{1,40}的话(?:就|[，,])|趁.{1,60}(?:时|候|[，,])|等.{1,60}(?:就|[，,])|.{1,40}一.{1,30}就/.test(text);
 function conditionalActionText(text:string){
@@ -27,8 +28,21 @@ const temporal=(text:string):GoalInput['temporal_scope']=>({scope:/明天|后天
  * nothing: the reference is resolved from what that goal actually committed, never from narrative expectation.
  */
 const resultProducingGoalTypes=new Set(['WORLD_ACTION','WORLD_SPEECH','WORLD_GOAL','WORLD_LOOKUP','WORLD_QUERY']);
+const guardedGoalTypes=new Set(['CONDITIONAL_INTENT','WORLD_ACTION','WORLD_SPEECH','WORLD_GOAL','CONTINUE_ROUTINE',
+ 'FUTURE_INTENT','SCHEDULED_INTENT','CANCEL_FUTURE','EXECUTE_FUTURE']);
+/** A dependency proves ordering, not authorization to ignore a false condition.
+ * Nested conditions need an outer guard; multiple owners cannot silently select the first. */
+export function assertConditionalOwnership(goals:ReadonlyArray<Pick<GoalInput,'goal_id'|'type'|'depends_on'|'branch'>>){
+ for(const goal of goals){
+  const parents=goal.depends_on.filter(id=>goals.some(parent=>parent.goal_id===id&&parent.type==='CONDITIONAL_INTENT'));
+  if(goal.branch&&parents.length!==1)throw new GameError('条件依赖必须有且只有一个直接条件归属；计划尚未执行。',409);
+  if(parents.length&&!goal.branch&&guardedGoalTypes.has(goal.type))
+   throw new GameError('条件依赖缺少明确分支授权；计划尚未执行。',409);
+ }
+}
 export function validatePlan(raw:unknown):AgentPlan {
  const {goals}=blueprintSchema.parse(raw),ids=new Set(goals.map(g=>g.goal_id));if(ids.size!==goals.length)throw Error('重复 goal_id');
+ assertConditionalOwnership(goals);
  for(const g of goals){if(g.depends_on.some(id=>!ids.has(id)||id===g.goal_id))throw Error('无效依赖');if(g.result_ref&&(!g.depends_on.includes(g.result_ref.from_goal_id)||!goals.some(previous=>previous.goal_id===g.result_ref!.from_goal_id&&resultProducingGoalTypes.has(previous.type))))throw Error('运行时引用必须依赖同一次输入中能观察到该结果的公开世界目标');if(g.branch&&!g.depends_on.some(id=>goals.find(x=>x.goal_id===id)?.type==='CONDITIONAL_INTENT'))throw Error('分支缺少条件依赖');if(g.type==='CONDITIONAL_INTENT'&&!g.condition)throw Error('缺少条件');if(g.condition&&g.type!=='CONDITIONAL_INTENT')throw Error('条件必须由独立条件节点判定');if(['WORLD_ACTION','WORLD_SPEECH','WORLD_GOAL','CONTINUE_ROUTINE','EXECUTE_FUTURE'].includes(g.type)&&g.temporal_scope.scope!=='now')throw Error('未来意图不能作为当前行动');}
  const order:string[]=[],remaining=new Set(ids);while(remaining.size){const ready=goals.filter(g=>remaining.has(g.goal_id)&&g.depends_on.every(id=>order.includes(id)));if(!ready.length)throw Error('依赖图存在循环');for(const g of ready){order.push(g.goal_id);remaining.delete(g.goal_id);}}
  return {plan_id:randomUUID(),goals:goals.map(g=>({...g,status:'pending',side_effect_level:['FUTURE_INTENT','SCHEDULED_INTENT','CANCEL_FUTURE'].includes(g.type)?'player_plan':['WORLD_ACTION','WORLD_SPEECH','WORLD_GOAL','CONTINUE_ROUTINE','EXECUTE_FUTURE'].includes(g.type)?'world':'none',requires_confirmation:false})),dependencies:goals.flatMap(g=>g.depends_on.map(from=>({from,to:g.goal_id}))),execution_order:order,ui_policy:'one_primary_panel',status:'pending'};
