@@ -1,5 +1,11 @@
 # Claude Code starting handoff
 
+## Complete offline snapshot and migration log repair — 2026-10-20
+
+Frozen source `6ae2581` / product `b4c018f`:190 files,1927 tests,1926pass1fail, no missing/duplicate files, all488 source hashes unchanged. Original shard2 crashed0xC0000409 without report; replacements2a/2b passed on identical source. Only failure is real migration logging twice; single-file rerun reproduces. Snapshot and original crashes remain failed evidence, not green. QA originals restored byte-for-byte. See docs/current-offline-snapshot.md.
+
+Current source batch replaces the discarded-image migration with pure migrationReasons/routine-setup precheck, then retains locked reread and actual normalization. No schema/commit/lease changes. Focused7files49pass and complete isolated build passed. R5.4 unverified; score59.375%=95met/28unmet/37unverified unchanged. No paid/production/3100/deploy/push/Claude changes. Invalid W5 multi-active-plan fixture was withdrawn and preserved outside tests; it established no product defect.
+
 ## Legacy social policy assessment — 2026-10-20
 
 Design checkpoint `9544101`; fixed ledger now59.375%=95/160 (28unmet/37unverified), macro12/23/5. Only W9.1/W9.2 changed to met (+1.25pp) for their explicit inventory/design deliverables; this is not migration success or a formal-world policy decision. Complete-suite shard verification is still pending and earns no score yet.

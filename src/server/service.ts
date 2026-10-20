@@ -5,7 +5,7 @@ import {updateInteraction} from '../core/interaction.js';
 import {checkpointTurn,canUndo,historyAvailable,imageHash,worldImage,worldKeys} from '../core/turn-history.js';
 import {avatarCropSchema,type AvatarCropMetadata} from '../shared/avatar.js';
 import {calendarSchema} from '../routine/schema.js';
-import {migrateInstalledWorld,type InstalledWorld} from '../routine/migration.js';
+import {migrationReasons,migrateInstalledWorld,type InstalledWorld} from '../routine/migration.js';
 import { settleRoutine,applyLifePatches } from './routine-controller.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
@@ -318,10 +318,14 @@ export class GameService {
     return this.ensureBaseFeatures(raw).save;
   }
   private async normalizeCurrentRead(raw:SavePackage,source:'service_current'|'service_view'){
-    const upgraded=this.ensureBaseFeatures(raw);
     // The owning mutation will persist this normalization with its prepared
     // transaction. Concurrent projections must never write a stale world image.
-    if(!upgraded.changed||this.busy||this.routineLease)return upgraded.save;
+    if(this.busy||this.routineLease)return this.ensureBaseFeatures(raw).save;
+    // Inspect without migrating: otherwise the discarded snapshot emits a
+    // second completed migration before the locked reread does the real work.
+    const missingRoutine=raw.definition.enabled_modules.includes('routine')&&
+      !raw.entities.find(entity=>entity.id===raw.player_state.entity_id)?.components.routine;
+    if(!missingRoutine&&!migrationReasons(raw,this.installedWorlds).length)return this.ensureBaseFeatures(raw).save;
     return this.exclusive(()=>this.media(async()=>{
       // A world transaction may have committed while the original read awaited
       // I/O. Re-read under the mutation lock before deciding what to persist.
