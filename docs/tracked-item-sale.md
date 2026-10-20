@@ -1,0 +1,9 @@
+# Tracked-item sale lifecycle
+
+Parent `3d746f4`, preceding product `f537de7`. A valid owned tracked item could not be sold: SELL reduced its inventory quantity but left a placement referencing an unheld item. The initial legal baseline has 3 failures/1 legacy control; expanded baseline has 4 failures/1 control, adding a filled-container world refusal. Source/scenario hashes and failed reports remain in the ignored takeover checkpoint directory (`tracked-item-sale-*`).
+
+SELL now checks sealed ancestors and held container contents before payment or inventory mutation. When the sold quantity reaches zero it removes the inventory entry and old placement, and clears the seller's ownership marker. It requires taking contents out before selling their container. No automatic opening, schema, Core commit, retry, pricing or BUY algorithm changes.
+
+Final isolated regression: 6 files, 105/105 tests, zero skips; isolated build passed (session 99871). The eight focused cases cover root/nested tracked items, sealed refusal, legacy inventory, filled-container refusal, buying the same item back, actual JsonStore/service recreation with one sale receipt/payment, and repeated sealed refusal with unchanged disk bytes and zero generation. Successful replay also leaves disk bytes/state unchanged and generates nothing. These are service recreation tests, not HTTP restart tests. Narrator refusal in the persisted sale confirms the actual Core settlement survives prose degradation.
+
+A8.3/N6.3 remain open: this bounded repair does not close equipped-item, consumption or the complete item/environment matrix. Overall remains 60% (96/160), net zero. The complete 222-file/2192-test snapshot belongs to earlier `8b5d2df`, not this source. Original dirt, formal save, frozen criteria, production service, paid providers and Claude checkout are preserved.

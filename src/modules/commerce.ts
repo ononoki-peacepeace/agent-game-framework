@@ -3,6 +3,7 @@ import { assert, dictionary, id, integer } from '../core/schema.js';
 import type { ActionContext, Module } from '../core/registry.js';
 import type { Inventory } from './inventory.js';
 import {worldAssert} from '../agent/outcome.js';
+import {unsealedContainerAncestors} from '../core/item-access.js';
 export type Wallet = { balances: Record<string, number> };
 export type Shop = { currency_id: string; stock: Record<string, number>; prices: Record<string, { buy: number; sell: number }> };
 function trade(c: ActionContext, buying: boolean) {
@@ -13,6 +14,11 @@ function trade(c: ActionContext, buying: boolean) {
   const shop = c.store.component<Shop>(shopId, 'shop');
   worldAssert(c.store.component<{ location_id: string }>(shopId, 'location').location_id === c.store.component<{ location_id: string }>(c.action.actor_id, 'location').location_id, 'not_present','商店不在当前位置');
   const inv = c.store.component<Inventory>(c.action.actor_id, 'inventory');
+  if(!buying){
+    worldAssert(unsealedContainerAncestors(c.save,c.store.entity(item)),'unavailable','物品仍在密封或不可接触的容器内，当前不能出售');
+    worldAssert(!Object.entries(inv.placements??{}).some(([child,parent])=>parent===item&&(inv.items[child]??0)>0),
+      'unavailable','请先取出容器里的物品，再出售这个容器');
+  }
   const wallet = c.store.component<Wallet>(c.action.actor_id, 'wallet');
   const till = c.store.component<Wallet>(shopId, 'wallet');
   worldAssert(shop.prices[item], 'unavailable','商店不交易该物品');
@@ -25,6 +31,11 @@ function trade(c: ActionContext, buying: boolean) {
   payee.balances[shop.currency_id] = (payee.balances[shop.currency_id] ?? 0) + total;
   shop.stock[item] = (shop.stock[item] ?? 0) + (buying ? -qty : qty);
   inv.items[item] = (inv.items[item] ?? 0) + (buying ? qty : -qty);
+  if(!buying&&inv.items[item]===0){
+    delete inv.items[item];if(inv.placements)delete inv.placements[item];
+    const definition=c.store.entity(item).components.item;
+    if(definition?.owner_id===c.action.actor_id)delete definition.owner_id;
+  }
   c.advance(c.save.definition.ruleset.trade_minutes);
   c.emit({ type: 'on_entity_changed', entity_id: shopId });
   c.emit({ type: 'on_entity_changed', entity_id: c.action.actor_id });

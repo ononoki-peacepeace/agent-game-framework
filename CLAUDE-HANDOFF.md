@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Tracked-item sale lifecycle — 2026-10-21
+
+Parent3d746f4; this source checkpoint repairs SELL placement/owner cleanup and refuses sealed sources/filled containers before payment. Baseline3fail/1legacycontrol,expanded4fail/1control; final6files105pass/zero skip and isolated build/session99871 passed. Eight focused cases include real JsonStore/new-service sale replay(one payment/receipt),buy-back and sealed refusal with unchanged bytes/zero generation;not HTTP. No schema/Core/retry/pricing change. See docs/tracked-item-sale.md. A8.3/N6.3 remain open,60%=96/160,+0. Complete222files2192pass stays8b5d2df/evidence9acea32. Next: reproduce equipped-item sale access,then remaining fixed four-theme matrices. Original QA dirt/untracked notes preserved; no source WIP after this checkpoint.
+
 ## Sealed item damage prerequisites — 2026-10-21
 
 Parentc3dff1a; this source checkpoint adds existing ancestry guard before registered DAMAGE_ITEM RNG and shared item-condition mutation. Baseline4fail/2accessiblecontrols; final6files111pass/zero skip and isolated build/session98266 passed. Actual scene/held disk/service repeated refusal preserves time/items/evidence/bytes,zero generation;registration refusal also zero RNG. Accessible Core damage/evidence destruction controls pass. No schema/commit/retry interfaces changed. See docs/sealed-item-damage.md. A8.3/N6.3 remain open,60%=96/160,+0. Complete222files2192pass stays8b5d2df/evidence9acea32. Next: reproduce tracked-item trade lifecycle and sealed/equipped/container sale prerequisites;do not assume damage/movement tests establish trading. Original dirt/safety preserved.
