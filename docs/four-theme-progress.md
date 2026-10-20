@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：3675e38。整体 **60.00%**（96/160 个固定条件满足）。未满足 28，待验证 36。
+计分版本 v1；评估源代码：9917459。整体 **60.00%**（96/160 个固定条件满足）。未满足 28，待验证 36。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：11 已修复，0 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：13 已修复，0 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -36,6 +36,7 @@
 | npc-own-resource-context | repair | W5.3: Owner balances/held quantities now support bounded resource-aware blocked-plan revision; long goal and single Core execution preserved; full long-term matrix remains open；完整条件保持开放 | +0.000 pp |
 | npc-legacy-long-goal | repair | W5.3: Legacy arrival completes the travel plan but preserves long goals and short goals with other active work; broader revision matrix remains open；完整条件保持开放 | +0.000 pp |
 | npc-ended-goal-execution | repair | W5.3: Ended goals cannot authorize lingering legacy/typed plans after reload; stale plans abandoned without MOVE or goal mutation; full adaptive matrix remains open；完整条件保持开放 | +0.000 pp |
+| partial-plan-visible-status | repair | N3.3: Earlier settled story no longer hides blocked/unexecuted later stages; client preserves explicit feedback; complete compound matrix remains open；完整条件保持开放; R5.3: Later technical failure carries earlier committed receipts and truthful partial-failure message; every-exit audit remains open；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -79,7 +80,7 @@
 |---|---|---|---|
 | R5.1 | 已有故障矩阵区分技术失败与游戏内失败，保留已提交步骤 | 满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md) |
 | R5.2 | 已有分层修复与安全停止测试验证不重复 Core 副作用 | 满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md) |
-| R5.3 | 逐条关闭矩阵中仍未核验的嵌套故障出口 | 未满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md) |
+| R5.3 | 逐条关闭矩阵中仍未核验的嵌套故障出口 | 未满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md), [partial-plan-visible-status.test.ts](../tests/partial-plan-visible-status.test.ts), [partial-plan-visible-status.md](../docs/partial-plan-visible-status.md) |
 | R5.4 | 最新完整离线代码快照全套通过，旧失败不得改写为通过 | 满足 | [current-offline-snapshot.md](../docs/current-offline-snapshot.md) |
 
 ## R6 Pending/background jobs and asynchronous restart continuation
@@ -331,7 +332,7 @@
 |---|---|---|---|
 | N3.1 | 复合行动叙述聚合已结算步骤 | 满足 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts) |
 | N3.2 | 身体和发言结果以凭据为准不重演 | 满足 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts) |
-| N3.3 | 多步叙述完整表达成功、失败与未执行的区别 | 未满足 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts), [compound-degraded-prose.test.ts](../tests/compound-degraded-prose.test.ts), [compound-degraded-prose.md](../docs/compound-degraded-prose.md) |
+| N3.3 | 多步叙述完整表达成功、失败与未执行的区别 | 未满足 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts), [compound-degraded-prose.test.ts](../tests/compound-degraded-prose.test.ts), [compound-degraded-prose.md](../docs/compound-degraded-prose.md), [partial-plan-visible-status.test.ts](../tests/partial-plan-visible-status.test.ts), [partial-plan-visible-status.md](../docs/partial-plan-visible-status.md) |
 | N3.4 | 多世界长复合动作描写自然且不漏步骤 | 待验证 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts) |
 
 ## N4 Facts, presence, perception and legal-description false rejection balance

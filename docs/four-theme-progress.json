@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "3675e38",
+  "assessed_source": "9917459",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -136,7 +136,9 @@
     "R5.3": {
       "status": "unmet",
       "evidence": [
-        "docs/qa-ai-recovery-coverage.md"
+        "docs/qa-ai-recovery-coverage.md",
+        "tests/partial-plan-visible-status.test.ts",
+        "docs/partial-plan-visible-status.md"
       ],
       "basis": "Known remaining implementation or acceptance gap in the existing ledger."
     },
@@ -943,7 +945,9 @@
       "evidence": [
         "tests/compound-narration-aggregation.test.ts",
         "tests/compound-degraded-prose.test.ts",
-        "docs/compound-degraded-prose.md"
+        "docs/compound-degraded-prose.md",
+        "tests/partial-plan-visible-status.test.ts",
+        "docs/partial-plan-visible-status.md"
       ],
       "basis": "Known remaining implementation or acceptance gap in the existing ledger. Source b4c018f fixes inherited-last-step degradation omission; final11files109pass, isolated build passed, full condition remains open."
     },
@@ -1481,6 +1485,30 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "partial-plan-visible-status",
+      "type": "repair",
+      "source": "9917459",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "N3.3",
+          "result": "Earlier settled story no longer hides blocked/unexecuted later stages; client preserves explicit feedback; complete compound matrix remains open",
+          "evidence": [
+            "tests/partial-plan-visible-status.test.ts",
+            "docs/partial-plan-visible-status.md"
+          ]
+        },
+        {
+          "id": "R5.3",
+          "result": "Later technical failure carries earlier committed receipts and truthful partial-failure message; every-exit audit remains open",
+          "evidence": [
+            "tests/partial-plan-visible-status.test.ts",
+            "docs/partial-plan-visible-status.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -1779,6 +1807,30 @@
         "docs/npc-ended-goal-execution.md"
       ],
       "summary": "Valid ended-goal snapshots still executed old plans. Baseline4fail; final8files67pass/build passed. No whole-condition credit."
+    },
+    {
+      "id": "partial-plan-hidden-stop",
+      "scope": "original",
+      "condition": "N3.3",
+      "status": "resolved",
+      "source": "9917459",
+      "evidence": [
+        "tests/partial-plan-visible-status.test.ts",
+        "docs/partial-plan-visible-status.md"
+      ],
+      "summary": "Valid WAIT plus later world/provider stop reproduced; final10files113pass/build passed. No whole-condition credit."
+    },
+    {
+      "id": "partial-plan-failure-receipts",
+      "scope": "original",
+      "condition": "R5.3",
+      "status": "resolved",
+      "source": "9917459",
+      "evidence": [
+        "tests/partial-plan-visible-status.test.ts",
+        "docs/partial-plan-visible-status.md"
+      ],
+      "summary": "Valid WAIT plus later world/provider stop reproduced; final10files113pass/build passed. No whole-condition credit."
     }
   ]
 }
