@@ -1008,7 +1008,22 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       });
     },owner));
   }
-  async configureCalendar(raw:unknown,gameId:string,revision:number){return this.exclusive(async()=>{const save=await this.current();assert(save.game_id===gameId&&save.state_revision===revision,'状态已更新，请刷新后重试');save.calendar=safeParse(calendarSchema,raw);migrateInstalledWorld(save,this.installedWorlds);save.state_revision++;await this.storage.write(validateSave(save));return publicView(save);});}
+  async configureCalendar(raw:unknown,gameId:string,revision:number,requestId=randomUUID()){
+    const calendar=safeParse(calendarSchema,raw),tx=safeParse(z.strictObject({game_id:z.string().uuid(),expected_revision:z.number().int().nonnegative(),request_id:z.string().uuid()}),
+      {game_id:gameId,expected_revision:revision,request_id:requestId});
+    const fingerprint=createHash('sha256').update(JSON.stringify({calendar_configuration:calendar})).digest('hex');
+    return this.exclusive(async()=>{
+      const save=await this.current();assert(save.game_id===tx.game_id,'游戏已切换');
+      const receipt=save.runtime.receipts.find(entry=>entry.id===tx.request_id);
+      if(receipt){assert(receipt.fingerprint===fingerprint,'请求 ID 已用于另一操作');return publicView(save);}
+      assert(save.state_revision===tx.expected_revision,'状态已更新，请刷新后重试');
+      save.calendar=calendar;migrateInstalledWorld(save,this.installedWorlds);save.state_revision++;
+      save.runtime.receipts=[...save.runtime.receipts,{id:tx.request_id,fingerprint,revision:save.state_revision}].slice(-100);
+      const validated=validateSave(save);
+      await prepareRequestCommit(tx.game_id,tx.request_id,fingerprint,tx.expected_revision);
+      await this.storage.write(validated);return publicView(validated);
+    });
+  }
   async acknowledgeTask(_id:string,_gameId:string,_revision:number,_outcome:'completed'|'cancelled'='completed'):Promise<never>{throw new GameError('不能手工标记任务完成或取消日历事件；任务结果必须由已登记的任务规则结算',410);}
   async checkpoint() { return this.exclusive(async () => { const save = await this.current(); await this.storage.write(save, 'checkpoint'); return publicView(save); }); }
   async narrativeCommand(raw:{request_id:string;game_id:string;expected_revision:number},command:StoryCommand){

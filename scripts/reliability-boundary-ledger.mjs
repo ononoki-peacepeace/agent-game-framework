@@ -10,6 +10,7 @@ const evidence={
   performDeclaredActivity:{status:'prepared_transaction_fault_tested',evidence:['tests/p0a-input-terminal-recovery.test.ts'],limit:'All activity/NPC/time semantics are not proved by the commit boundary.'},
   manageModule:{status:'prepared_transaction_fault_tested',evidence:['tests/p0a-input-terminal-recovery.test.ts','tests/modules-capability.test.ts'],limit:'Checkpoint/current before/after failures tested; no power-loss or cross-process acceptance.'},
   extensionTransaction:{status:'prepared_transaction_fault_tested',evidence:['tests/p0a-input-terminal-recovery.test.ts','tests/extensions.test.ts'],limit:'Host approval, external workspaces, installation callbacks and all extension actions have separate effects.'},
+  configureCalendar:{status:'prepared_transaction_fault_tested',evidence:['tests/p0a-calendar-configuration-recovery.test.ts'],limit:'Optional request ID, existing Core receipt and parent prepare; legacy callers without an ID cannot identify a duplicate. Migration read effects remain separate.'},
   setAvatar:{status:'asset_retention_fault_tested',evidence:['tests/p0a-media-commit-recovery.test.ts'],limit:'Media binding has no durable request identity yet; retention is not automatic provider replay or garbage collection.'},
   setVisualAsset:{status:'asset_retention_fault_tested',evidence:['tests/p0a-media-commit-recovery.test.ts'],limit:'Media binding has no durable request identity yet; retention is not automatic provider replay or garbage collection.'},
  },

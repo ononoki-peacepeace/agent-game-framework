@@ -673,7 +673,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   app.get('/api/routine/jobs',async(_req,res)=>res.json(await jobView(await jobs.get())));
   app.get('/api/routine/jobs/:id',async(req,res)=>res.json(await jobView(await jobs.get(req.params.id))));
   app.post('/api/routine/jobs/:id/cancel',async(req,res)=>res.json(await jobView(await jobs.cancel(req.params.id))));
-  app.post('/api/calendar',async(req,res)=>res.json(await service.configureCalendar(req.body.calendar,req.body.game_id,req.body.expected_revision)));
+  app.post('/api/calendar',async(req,res)=>res.json(await service.configureCalendar(req.body.calendar,req.body.game_id,req.body.expected_revision,req.body.request_id)));
   app.post('/api/routine/tasks/:id/acknowledge',async(req,res)=>{
     const body=safeParse(z.strictObject({game_id:z.string().uuid(),expected_revision:z.number().int().min(0),outcome:z.enum(['completed','cancelled']).default('completed')}),req.body);
     res.json(await service.acknowledgeTask(req.params.id,body.game_id,body.expected_revision,body.outcome));
