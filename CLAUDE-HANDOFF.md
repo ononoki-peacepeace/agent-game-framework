@@ -1,5 +1,13 @@
 # Claude Code starting handoff
 
+## Media/canonical continuation — 2026-10-20
+
+Parent reviewed source `37b2741` (guidance batch:116 tests and full build passed). The checkpoint containing this section coordinates short canonical edits, idle migrations and final world replacements with the existing media queue; media reads normalize privately to avoid recursive locking. Long turns still permit media during model work. Their parent intent now records the actual committed receipt predecessor when media advances revision during narration. No Save schema or protocol changes; no RNG/time/action replay.
+
+Evidence: media-canonical-baseline19/19 real failures, expanded14 files/134 passed including real HTTP failure/restart with matching receipts and media under a routine lease; adjacent Core/compound/NPC relationship/Narrator/time/routine10 files/67 passed. Latest strict TypeScript and exact source checkpoint are recorded in the takeover SESSION. Earlier guidance full build predates the media-only source change. Single-service listed paths only; external writers, multiple processes, GC and paid-provider response identity remain open. The next selected action-binding audit found that planner referents precede uniquely named source recipients and pronoun context; verify with failing cases before changing that path.
+
+Overall46%; scoped offline acceptance completed/partial/unfinished:4/6/0,3/5/2,3/5/2,2/5/3,total12/21/7. New additive frozenv22. Production/3100/Provider/Claude originals and prior dirty QA files remain protected.
+
 ## Guidance continuation — 2026-10-20
 
 Continue on `codex/claude-takeover-integration` from `db8bfc4`; the checkpoint containing this section adds world-guidance request receipts, source-text System recovery, explicitly scoped enable/remove, ambiguity rejection before any cross-store side effects, global write-failure cache reconciliation and shared initialization. The global file remains the existing array format and uses the shared atomic writer. Service/compiler/System/app/client changes must be integrated together; no Save schema or storage interface changes. Existing unique-ID callers stay compatible; ambiguous legacy IDs require explicit scope. Retained feedback requests do not regenerate self-overrides or re-enable a later-disabled rule.

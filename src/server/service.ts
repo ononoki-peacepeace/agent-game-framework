@@ -291,19 +291,25 @@ export class GameService {
     const raw = await this.storage.read('current','service_current'); assert(raw, '请先开始新游戏或导入存档');
     return this.normalizeCurrentRead(raw,'service_current');
   }
+  /** Already owned by the presentation queue: normalize in memory and commit with that media write. */
+  private async presentationCurrent(){
+    await this.ensureGlobalGuidance();
+    const raw=await this.storage.read('current','service_current');assert(raw,'请先开始新游戏或导入存档');
+    return this.ensureBaseFeatures(raw).save;
+  }
   private async normalizeCurrentRead(raw:SavePackage,source:'service_current'|'service_view'){
     const upgraded=this.ensureBaseFeatures(raw);
     // The owning mutation will persist this normalization with its prepared
     // transaction. Concurrent projections must never write a stale world image.
     if(!upgraded.changed||this.busy||this.routineLease)return upgraded.save;
-    return this.exclusive(async()=>{
+    return this.exclusive(()=>this.media(async()=>{
       // A world transaction may have committed while the original read awaited
       // I/O. Re-read under the mutation lock before deciding what to persist.
       const latest=await this.storage.read('current',source);assert(latest,'请先开始新游戏或导入存档');
       const normalized=this.ensureBaseFeatures(latest);
       if(normalized.changed)await this.storage.write(normalized.save);
       return normalized.save;
-    });
+    }));
   }
   private async ensureGlobalGuidance(){
     if(this.globalGuidanceLoaded)return;
@@ -360,7 +366,7 @@ export class GameService {
   async putBehaviorPatch(raw:unknown,request?:ConfigurationRequest,sourceInput?:string){
     const patch=behaviorPatchSchema.parse(raw);
     assert(patch.overrides!==patch.id,'行为指导不能覆盖自身');
-    return this.exclusive(async()=>{
+    return this.exclusive(()=>this.media(async()=>{
       const save=await this.current(),fingerprint=guidanceFingerprint({put:patch},sourceInput);
       if(this.guidanceIdentity(save,request,fingerprint).replayed)return this.guidanceResult(save);
       assert(!this.guidanceCandidates(save,patch.id).some(item=>item.scope!==patch.scope),'指导 ID 已存在于另一范围，请明确处理原范围');
@@ -375,11 +381,11 @@ export class GameService {
       }
       this.logger.info('behavior.patch.updated',{module:'framework',revision:save.state_revision,metadata:{id:patch.id,scope:patch.scope,category:patch.category,enabled:patch.enabled}});
       return this.guidanceResult(save);
-    });
+    }));
   }
   async removeBehaviorPatch(id:string,request?:GuidanceRequest){
     const options=safeParse(guidanceRequestSchema,request??{});
-    return this.exclusive(async()=>{
+    return this.exclusive(()=>this.media(async()=>{
       const save=await this.current(),fingerprint=guidanceFingerprint({remove:id,scope:options.scope??null});
       if(this.guidanceIdentity(save,options,fingerprint).replayed)return this.guidanceResult(save);
       const candidates=this.guidanceCandidates(save,id,options.scope);
@@ -389,11 +395,11 @@ export class GameService {
       if(scope==='global'&&candidates.length)await this.writeGlobalGuidance(this.ai.globalPatches.filter(item=>item.id!==id));
       if(scope==='session')this.ai.sessionPatches=this.ai.sessionPatches.filter(item=>item.id!==id);
       return this.guidanceResult(save);
-    });
+    }));
   }
   async setBehaviorPatchEnabled(id:string,enabled:boolean,request?:GuidanceRequest){
     safeParse(z.boolean(),enabled);const options=safeParse(guidanceRequestSchema,request??{});
-    return this.exclusive(async()=>{
+    return this.exclusive(()=>this.media(async()=>{
       const save=await this.current(),fingerprint=guidanceFingerprint({enabled,id,scope:options.scope??null});
       if(this.guidanceIdentity(save,options,fingerprint).replayed)return this.guidanceResult(save);
       const candidates=this.guidanceCandidates(save,id,options.scope);
@@ -404,7 +410,7 @@ export class GameService {
       if(found.scope==='global'&&found.patch.enabled!==enabled)await this.writeGlobalGuidance(update(this.ai.globalPatches));
       if(found.scope==='session')this.ai.sessionPatches=update(this.ai.sessionPatches);
       return this.guidanceResult(save);
-    });
+    }));
   }
   async view() {
     const raw = await this.storage.read('current','service_view');
@@ -413,13 +419,13 @@ export class GameService {
   }
   /** Clarification is request metadata, but its whole-save write still needs the canonical mutation lock. */
   async updateWorldClarification(gameId:string,revision:number,value:SavePackage['pending_world_clarification']){
-    return this.exclusive(async()=>{
+    return this.exclusive(()=>this.media(async()=>{
       const latest=await this.storage.read('current','semantic_context');
       if(!latest||latest.game_id!==gameId||latest.state_revision!==revision)return false;
       assert(!value||value.created_revision===revision,'澄清上下文版本不一致');
       if(value)latest.pending_world_clarification=value;else delete latest.pending_world_clarification;
       await this.storage.write(validateSave(latest));return true;
-    });
+    }));
   }
   async newGame(description?: string, promptText?: string, promptProfile?: unknown, provenance?: WorldCreationProvenance, roleplayConfig?:RoleplayConfig) {
     return withRequestBudget(()=>this.exclusive(async () => {
@@ -437,7 +443,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       }
       if (blank) save.last_turn = { narrative: '', speaker: null, dialogue: null, choices: [], context_actions: [] };
       if (!save.last_turn) save.last_turn = { narrative: save.definition.meta.description, speaker: null, dialogue: null, choices: [], context_actions: [] };
-      await this.storage.write(save); return publicView(save);
+      await this.media(()=>this.storage.write(save)); return publicView(save);
     }));
   }
   async turn(raw: unknown,owner?:string,signal?:AbortSignal,onPhase?:(phase:string)=>void,compileOnly=false,completeFutureId?:string,compoundSteps?:readonly string[],forceFreeform=false,
@@ -1093,7 +1099,9 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       if(worldTurn)checkpointTurn(beforeTurn,next,req.request_id);
       onPhase?.('committing');
       const diff = summarizeSaveDiff(current, next), commit = trace.span('save.commit');
-      await prepareRequestCommit(req.game_id,req.request_id,fingerprint,current.state_revision);
+      // Media may advance revision during model work. Recovery matches the
+      // actual receipt predecessor, rather than the original pre-narration view.
+      await prepareRequestCommit(req.game_id,req.request_id,fingerprint,next.state_revision-1);
       signal?.throwIfAborted();
       await this.storage.write(next);
       this.pendingTurns.delete(req.request_id);await this.storage.clearPending?.(req.request_id).catch(error=>observe('warn','resolution.pending_cleanup_failed',{module:'turn',request_id:req.request_id,metadata:{reason:errorText(error)}}));
@@ -1108,7 +1116,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
     const calendar=safeParse(calendarSchema,raw),tx=safeParse(z.strictObject({game_id:z.string().uuid(),expected_revision:z.number().int().nonnegative(),request_id:z.string().uuid()}),
       {game_id:gameId,expected_revision:revision,request_id:requestId});
     const fingerprint=createHash('sha256').update(JSON.stringify({calendar_configuration:calendar})).digest('hex');
-    return this.exclusive(async()=>{
+    return this.exclusive(()=>this.media(async()=>{
       const save=await this.current();assert(save.game_id===tx.game_id,'游戏已切换');
       const receipt=save.runtime.receipts.find(entry=>entry.id===tx.request_id);
       if(receipt){assert(receipt.fingerprint===fingerprint,'请求 ID 已用于另一操作');return publicView(save);}
@@ -1118,12 +1126,12 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       const validated=validateSave(save);
       await prepareRequestCommit(tx.game_id,tx.request_id,fingerprint,tx.expected_revision);
       await this.storage.write(validated);return publicView(validated);
-    });
+    }));
   }
   async acknowledgeTask(_id:string,_gameId:string,_revision:number,_outcome:'completed'|'cancelled'='completed'):Promise<never>{throw new GameError('不能手工标记任务完成或取消日历事件；任务结果必须由已登记的任务规则结算',410);}
   async checkpoint() { return this.exclusive(async () => { const save = await this.current(); await this.storage.write(save, 'checkpoint'); return publicView(save); }); }
   async narrativeCommand(raw:{request_id:string;game_id:string;expected_revision:number},command:StoryCommand){
-    return this.exclusive(async()=>{
+    return this.exclusive(()=>this.media(async()=>{
       const current=await this.current(),fingerprint=`narrative:${command}`;
       assert(raw.game_id===current.game_id,'游戏已切换，请刷新');
       const receipt=current.runtime.receipts.find(entry=>entry.id===raw.request_id);if(receipt){assert(receipt.fingerprint===fingerprint,'请求 ID 已用于另一操作');return {view:publicView(current),message:''};}
@@ -1134,7 +1142,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       checkpointTurn(before,next,raw.request_id);const validated=validateSave(next);
       await prepareRequestCommit(raw.game_id,raw.request_id,fingerprint,current.state_revision);
       await this.storage.write(validated);return {view:publicView(validated),message};
-    });
+    }));
   }
   async undo(raw:unknown){
     const req=safeParse(z.strictObject({request_id:z.string().uuid(),game_id:z.string().uuid(),expected_revision:z.number().int().min(0)}),raw);
@@ -1194,14 +1202,14 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
     const raw = await this.storage.read('checkpoint'); assert(raw, '还没有手动保存的检查点');
     const save = this.ensureBaseFeatures(raw).save;
     save.game_id = randomUUID(); save.ai.threads = {}; save.runtime.receipts = [];
-    await this.storage.write(save); return publicView(save);
+    await this.media(()=>this.storage.write(save)); return publicView(save);
   }); }
   async import(raw: unknown) { return this.exclusive(async () => {
     const isSave = !!raw && typeof raw === 'object' && 'state_revision' in raw;
     let save = isSave ? importSave(migrateInstalledWorld(structuredClone(raw) as SavePackage,this.installedWorlds).save) : newSave(raw);
     save = this.ensureBaseFeatures(save).save;
     if (!save.last_turn) save.last_turn = { narrative: save.definition.meta.description, speaker: null, dialogue: null, choices: [], context_actions: [] };
-    await this.storage.write(save); return publicView(save);
+    await this.media(()=>this.storage.write(save)); return publicView(save);
   }); }
   async previewCharacterCard(raw:unknown,gameId:string,expectedRevision:number){
     return withRequestBudget(async()=>{
@@ -1271,7 +1279,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
   }
   async setAvatar(entityId: string, avatarId: string | null, gameId: string, _expectedRevision?: number,crop?:AvatarCropMetadata) {
     return this.media(async () => {
-      const save = await this.current();
+      const save = await this.presentationCurrent();
       if (save.game_id !== gameId) throw new GameError('游戏已切换，请刷新后操作', 409);
       const entity = save.entities.find(e => e.id === entityId);
       assert(entity?.components.identity, '目标没有可设置头像的身份信息');
@@ -1285,7 +1293,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
   }
   async setVisualAsset(entityId: string, slot: string, assetId: string, gameId: string, _expectedRevision?: number) {
     return this.media(async () => {
-      const save = await this.current();
+      const save = await this.presentationCurrent();
       if (save.game_id !== gameId) throw new GameError('游戏已切换，请刷新后操作', 409);
       const entity = save.entities.find(e => e.id === entityId);
       assert(entity?.components.identity, '目标没有可设置人物图片的身份信息');
@@ -1300,7 +1308,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
     });
   }
   async performDeclaredActivity(raw:{activity_id:string;game_id:string;expected_revision:number;request_id:string}){
-    return this.exclusive(async()=>{
+    return this.exclusive(()=>this.media(async()=>{
       const input=safeParse(z.strictObject({activity_id:z.string().min(1).max(80),game_id:z.string().uuid(),expected_revision:z.number().int().nonnegative(),request_id:z.string().uuid()}),raw);
       const current=await this.current(),fingerprint=createHash('sha256').update(JSON.stringify({activity_id:input.activity_id})).digest('hex');
       assert(current.game_id===input.game_id,'Game changed; refresh and retry');
@@ -1321,7 +1329,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       next.last_turn={narrative:rule.label+' completed.',speaker:null,dialogue:null,choices:[],context_actions:[]};
       await prepareRequestCommit(input.game_id,input.request_id,fingerprint,current.state_revision);
       await this.storage.write(validateSave(next));return this.project(next);
-    });
+    }));
   }
   async modules() {
     const save = await this.current();
@@ -1329,7 +1337,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
   }
   /** Module lifecycle is a canonical mutation: same revision/idempotency rules as a turn. */
   async manageModule(raw: unknown, command: 'enable' | 'disable' | 'remove') {
-    return this.exclusive(async () => {
+    return this.exclusive(()=>this.media(async () => {
       const body = safeParse(z.strictObject({ module: z.string().regex(/^[a-z][a-z0-9_]{0,63}$/), confirmed: z.boolean(), game_id: z.string().uuid(), expected_revision: z.number().int().min(0), request_id: z.string().uuid() }), raw);
       const current = await this.current();
       if (current.game_id !== body.game_id) throw new GameError('游戏已切换，请刷新后操作', 409);
@@ -1355,7 +1363,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       view.notices.push(turn.facts.join(' '));
       this.logger.info('module.lifecycle', { module: 'framework', request_id: body.request_id, revision: next.state_revision, metadata: { command, target: body.module } });
       return view;
-    });
+    }));
   }
   async behaviorConfig() {
     return (await this.current()).behavior_config;
@@ -1371,7 +1379,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
     assert((input.tone&&input.scopes.length)||input.allowed_topics.length,'缺少可保存的叙事偏好');
     const fingerprint=createHash('sha256').update(JSON.stringify({narrative_preferences:{...input,
       scopes:[...new Set(input.scopes)].sort(),allowed_topics:[...new Set(input.allowed_topics)].sort()}})).digest('hex');
-    return this.exclusive(async()=>{
+    return this.exclusive(()=>this.media(async()=>{
       const save=await this.current(),now=new Date().toISOString();
       const tx=request?.request_id?safeParse(z.strictObject({game_id:z.string().uuid(),expected_revision:z.number().int().nonnegative(),request_id:z.string().uuid()}),
         {game_id:request.game_id??save.game_id,expected_revision:request.expected_revision??save.state_revision,request_id:request.request_id}):undefined;
@@ -1399,7 +1407,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       this.logger.info('narrative.preferences.updated',{module:'framework',revision:save.state_revision,
         metadata:{scopes:input.scopes,tone:input.tone,allowed_topics:input.allowed_topics}});
       return publicView(save);
-    });
+    }));
   }
   /** Per-character expression guidance. This is a canonical, revision-bound configuration edit, not a world turn. */
   async setCharacterPersona(raw:unknown){
@@ -1451,7 +1459,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
     // replay must not reinterpret a correction against a later or missing conversation context.
     const fingerprint=sourceInput===undefined?'behavior-config:changes:'+createHash('sha256').update(JSON.stringify(input)).digest('hex'):
       behaviorInputFingerprint(sourceInput);
-    return this.exclusive(async()=>{
+    return this.exclusive(()=>this.media(async()=>{
       const save=await this.current(),tx=safeParse(z.strictObject({game_id:z.string().uuid(),expected_revision:z.number().int().nonnegative(),request_id:z.string().uuid()}),
         {game_id:request?.game_id??save.game_id,expected_revision:request?.expected_revision??save.state_revision,request_id:request?.request_id??randomUUID()});
       assert(save.game_id===tx.game_id,'游戏已切换');
@@ -1469,7 +1477,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       this.logger.info('behavior.config.updated',{module:'framework',request_id:tx.request_id,revision:save.state_revision,
         metadata:{set:rules.map(rule=>({scope:rule.scope,op:rule.op})),remove:input.remove}});
       const view=publicView(validated);view.notices.push(rules.length?'已更新运行时风格配置。':'已恢复所选范围的默认风格。');return view;
-    });
+    }));
   }
   async export() { return exportSave(await this.current()); }
 
