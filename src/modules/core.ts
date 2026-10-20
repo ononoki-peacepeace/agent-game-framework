@@ -6,7 +6,7 @@ import {advanceWorldSegment} from '../core/runtime.js';
 import { lifecycleActions } from './lifecycle.js';
 import { genderValues } from '../shared/gender.js';
 import { AGE_MAX, identityAge } from '../shared/age.js';
-import {interruptedHoldFact} from '../core/completion-evidence.js';
+import {interruptedHoldFact,interruptedWaitFact} from '../core/completion-evidence.js';
 
 export const coreModule: Module = {
   id: 'core', version: '0.1.0',
@@ -53,6 +53,7 @@ export const coreModule: Module = {
         if(segment.interrupted)break;
       }
       const time=c.save.runtime.time;
+      if(elapsed<requested)c.facts.unshift(interruptedWaitFact(elapsed));
       c.facts.push(elapsed<requested?
         `等待被需要玩家回应的事件打断；当前时间是第${time.day}日${String(Math.floor(time.minute/60)).padStart(2,'0')}:${String(time.minute%60).padStart(2,'0')}。`:
         `时间来到第${time.day}日${String(Math.floor(time.minute/60)).padStart(2,'0')}:${String(time.minute%60).padStart(2,'0')}。`);

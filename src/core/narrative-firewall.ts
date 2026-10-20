@@ -414,7 +414,7 @@ export function canonicalCompoundNarrative(save:SavePackage,hidden:boolean,steps
       step.movement_route?canonicalMovementNarrative(step,save):
       isSettledPerception(save,step)?canonicalPerceptionNarrative(save,step,hidden):
       step.semantic_action==='TALK'?`你向${name}开了口。`:
-      step.semantic_action==='WAIT'?`你等了${step.time_cost}分钟。`:
+      step.semantic_action==='WAIT'?canonicalResolutionNarrative(step,hidden):
       step.semantic_action==='HOLD'?canonicalResolutionNarrative(step,hidden):
       itemActionTypes.has(step.semantic_action)?canonicalResolutionNarrative(step,hidden):
       activityActionNarrative(step,hidden)??
@@ -426,6 +426,9 @@ export function canonicalCompoundNarrative(save:SavePackage,hidden:boolean,steps
 
 export function canonicalResolutionNarrative(receipt:Receipt,hidden:boolean,perception=false){
   if(receipt.environment&&!hidden)return receipt.canonical_facts.join(' ');
+  if(receipt.semantic_action==='WAIT'&&!hidden&&receipt.kind==='DETERMINISTIC'&&receipt.outcome==='success')
+    return receipt.time_cost===0?'你停了下来。':
+      interruptedActivity(receipt)?`你等了${receipt.time_cost}分钟便停了下来。`:`你等了${receipt.time_cost}分钟。`;
   if(receipt.physical_outcome){
     const physical=receipt.physical_outcome;
     return !physical.contact?'这次强制动作没能建立接触，没有造成已确认的伤害。':

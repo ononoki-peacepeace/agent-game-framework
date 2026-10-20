@@ -104,7 +104,7 @@ function narrationFallback(save: SavePackage, action: Parameters<typeof applyPat
     const name=String(target?.components.identity?.name??'对方');
     if(receipt.semantic_action==='TALK')return {narrative:`你向${name}开了口。`};
     if(receipt.semantic_action==='WAIT'){
-      const waited=receipt.time_cost>0?`你等了${receipt.time_cost}分钟。`:'你停了下来。';
+      const waited=canonicalResolutionNarrative(receipt,hidden);
       return {narrative:[waited,save.foreground?.reason].filter(Boolean).join('\n')};
     }
     if(receipt.semantic_action==='HOLD'||receipt.activity||interruptedActivity(receipt))return {narrative:[canonicalResolutionNarrative(receipt,hidden),save.foreground?.reason].filter(Boolean).join('\n')};
