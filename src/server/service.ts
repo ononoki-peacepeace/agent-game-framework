@@ -1065,7 +1065,9 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
         assert(previous.after_hash===imageHash(next),'撤回后的历史快照不一致');
         next.turn_checkpoint={turn_id:previous.turn_id,parent_turn_id:previous.parent_turn_id,before:structuredClone(previous.before),after_hash:previous.after_hash};
       }else delete next.turn_checkpoint;
-      const validated=validateSave(next);await this.storage.write(validated);
+      const validated=validateSave(next);
+      await prepareRequestCommit(req.game_id,req.request_id,fingerprint,current.state_revision);
+      await this.storage.write(validated);
       this.logger.info('turn.reverted',{module:'turn',request_id:req.request_id,revision:validated.state_revision,metadata:{turn_id:cp.turn_id}});
       return publicView(validated);
     }));
@@ -1087,7 +1089,9 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       next.runtime.receipts=[...current.runtime.receipts,{id:req.request_id,fingerprint,revision:current.state_revision+1}].slice(-100);next.state_revision=current.state_revision+1;next.ai={threads:{}};preservePresentation(current,next);
       assert(imageHash(next)===target.after_hash,'历史快照完整性校验失败');
       next.turn_audit=[...(current.turn_audit??[]),{turn_id:current.active_turn_id!,parent_turn_id:target.turn_id,reverted_at:next.state_revision,before:snapshot,after:worldImage(current)}];
-      const validated=validateSave(next);await this.storage.write(validated);this.logger.info('turn.history_restored',{module:'turn',request_id:req.request_id,revision:validated.state_revision,metadata:{turn_id:target.turn_id,discarded:history.length-index-1}});return publicView(validated);
+      const validated=validateSave(next);
+      await prepareRequestCommit(req.game_id,req.request_id,fingerprint,current.state_revision);
+      await this.storage.write(validated);this.logger.info('turn.history_restored',{module:'turn',request_id:req.request_id,revision:validated.state_revision,metadata:{turn_id:target.turn_id,discarded:history.length-index-1}});return publicView(validated);
     }));
   }
   async load() { return this.exclusive(async () => {
@@ -1262,15 +1266,25 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
   }
   async contentAllowances(){return (await this.current()).definition.roleplay_config?.content_allowances??[];}
   /** One revision for a System preference request; no world turn or action resolution. */
-  async setNarrativePreferences(raw:unknown){
+  async setNarrativePreferences(raw:unknown,request?:{game_id?:string;expected_revision?:number;request_id?:string}){
     const input=safeParse(z.strictObject({
       scopes:z.array(z.enum(['narration','dialogue','assistant'])).max(3),
       tone:z.enum(['literary','concise','natural','plain','first_person','third_person','mature']).nullable(),
       allowed_topics:z.array(z.enum(['violence','crime','romance','adult_intimacy','substance_use','politics','trauma'])).max(7),
     }),raw);
     assert((input.tone&&input.scopes.length)||input.allowed_topics.length,'缺少可保存的叙事偏好');
+    const fingerprint=createHash('sha256').update(JSON.stringify({narrative_preferences:{...input,
+      scopes:[...new Set(input.scopes)].sort(),allowed_topics:[...new Set(input.allowed_topics)].sort()}})).digest('hex');
     return this.exclusive(async()=>{
       const save=await this.current(),now=new Date().toISOString();
+      const tx=request?.request_id?safeParse(z.strictObject({game_id:z.string().uuid(),expected_revision:z.number().int().nonnegative(),request_id:z.string().uuid()}),
+        {game_id:request.game_id??save.game_id,expected_revision:request.expected_revision??save.state_revision,request_id:request.request_id}):undefined;
+      if(tx){
+        assert(save.game_id===tx.game_id,'游戏已切换');
+        const receipt=save.runtime.receipts.find(item=>item.id===tx.request_id);
+        if(receipt){assert(receipt.fingerprint===fingerprint,'请求 ID 已用于另一操作');return publicView(save);}
+        assert(save.state_revision===tx.expected_revision,'状态已更新，请刷新后重试');
+      }
       if(input.tone)for(const scope of input.scopes){
         const rule={scope,op:'tone' as const,value:input.tone,application:'per_message' as const,
           raw:`tone:${input.tone}`,enabled:true,created_at:now};
@@ -1282,7 +1296,10 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
         save.definition.roleplay_config=config;
       }
       save.state_revision++;
-      await this.storage.write(validateSave(save));
+      if(tx)save.runtime.receipts=[...save.runtime.receipts,{id:tx.request_id,fingerprint,revision:save.state_revision}].slice(-100);
+      const validated=validateSave(save);
+      if(tx)await prepareRequestCommit(tx.game_id,tx.request_id,fingerprint,tx.expected_revision);
+      await this.storage.write(validated);
       this.logger.info('narrative.preferences.updated',{module:'framework',revision:save.state_revision,
         metadata:{scopes:input.scopes,tone:input.tone,allowed_topics:input.allowed_topics}});
       return publicView(save);

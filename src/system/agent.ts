@@ -305,7 +305,7 @@ async function resolveUnderstanding(service: GameService, view: ReturnType<typeo
     }
     const allowedTopics=preference.mode==='allow'?requestedTopics:[];
     if(hasStyle||allowedTopics.length){
-      const next=await service.setNarrativePreferences({scopes:hasStyle?preference.scopes:[],tone:hasStyle?preference.tone:null,allowed_topics:allowedTopics});
+      const next=await service.setNarrativePreferences({scopes:hasStyle?preference.scopes:[],tone:hasStyle?preference.tone:null,allowed_topics:allowedTopics},context.requestEnvelope);
       const updated=await service.current(),rules=updated.behavior_config;
       const parts=[hasStyle?`语言/叙事风格：${behaviorSummary(rules)}`:null,
         allowedTopics.length?`世界题材允许范围：${contentAllowanceSummary(updated.definition.roleplay_config?.content_allowances??[])}`:null].filter(Boolean);

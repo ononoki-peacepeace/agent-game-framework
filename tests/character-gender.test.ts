@@ -33,7 +33,7 @@ describe('character gender', () => {
     expect(identityOf(stored!, base.characters[0].id).gender).toBe('male');
   });
 
-  it('keeps a defined gender across turns and restarts, hands it to the narrator, and changes nothing else', async () => {
+  it('keeps defined gender and character profiles across turns and restarts while settling authored social contact', async () => {
     const base = await blueprint();
     base.player.gender = 'female';
     base.characters[0].gender = 'male';
@@ -64,14 +64,19 @@ describe('character gender', () => {
     // A service restart on the same store keeps the same value.
     const restarted = service(store, new MockAIAdapter(base));
     expect(identityOf(await restarted.current(), npcId).gender).toBe('male');
-    // Names, identity text, character profile and relationships are untouched by the turn.
+    // Names, identity text and profiles stay fixed; the authored TALK policy owns familiarity.
     const shape = (save: SavePackage, id: string) => ({
       identity: { ...identityOf(save, id) },
       character: save.entities.find(entity => entity.id === id)!.components.character,
       relationships: save.entities.find(entity => entity.id === playerId)!.components.relationships,
     });
-    expect(shape(after, npcId)).toEqual(shape(before, npcId));
-    expect(shape(after, playerId)).toEqual(shape(before, playerId));
+    expect(before.definition.ruleset.relationship_dimensions.familiarity.event_deltas?.contact).toBe(1);
+    const expected=structuredClone(before);
+    const rel=expected.entities.find(entity=>entity.id===playerId)!.components.relationships as
+      {entries:Record<string,Record<string,number>>};
+    rel.entries[npcId]={...rel.entries[npcId],familiarity:1};
+    expect(shape(after, npcId)).toEqual(shape(expected, npcId));
+    expect(shape(after, playerId)).toEqual(shape(expected, playerId));
   });
 
   it('loads a legacy world without any gender field and never infers one from name or appearance', async () => {

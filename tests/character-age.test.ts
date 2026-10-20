@@ -66,8 +66,15 @@ describe('character age and life horizon', () => {
       character: save.entities.find(entity => entity.id === id)!.components.character,
       relationships: save.entities.find(entity => entity.id === playerId)!.components.relationships,
     });
-    expect(shape(after, npcId)).toEqual(shape(before, npcId));
-    expect(shape(after, playerId)).toEqual(shape(before, playerId));
+    // The authored TALK policy changes familiarity; identity/profile and every other
+    // relationship value still have to match the complete before image.
+    expect(before.definition.ruleset.relationship_dimensions.familiarity.event_deltas?.contact).toBe(1);
+    const expected=structuredClone(before);
+    const rel=expected.entities.find(entity=>entity.id===playerId)!.components.relationships as
+      {entries:Record<string,Record<string,number>>};
+    rel.entries[npcId]={...rel.entries[npcId],familiarity:1};
+    expect(shape(after, npcId)).toEqual(shape(expected, npcId));
+    expect(shape(after, playerId)).toEqual(shape(expected, playerId));
   });
 
   it('never infers an age for a legacy character, and keeps the unknown case explicit', async () => {
