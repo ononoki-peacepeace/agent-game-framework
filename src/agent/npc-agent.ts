@@ -128,8 +128,10 @@ export function buildNpcAgentContext(save:SavePackage,npcId:string,event:NpcAgen
           statement:item.statement,release_condition:item.release_condition})).slice(0,6),
       self_state_instruction:'若本次决定改变了自己的姿态或是否闭眼，必须填写 self_state；只写在台词里不会被世界记录。'+
         '若 pending_release_conditions 中的条件此刻已经发生，就在 self_state 里写出恢复后的姿态或睁眼，否则该状态会继续有效。'},
+    own_wallet:npc.components.wallet?structuredClone(npc.components.wallet):null,
     own_possessions:save.entities.filter(entity=>Number((npc.components.inventory?.items as Record<string,number>|undefined)?.[entity.id]??0)>0)
-      .map(entity=>({id:entity.id,name:entity.components.identity?.name??null,condition:entity.components.item?.condition??'intact'})).slice(0,30),
+      .map(entity=>({id:entity.id,name:entity.components.identity?.name??null,quantity:Number((npc.components.inventory?.items as Record<string,number>|undefined)?.[entity.id]??0),
+        condition:entity.components.item?.condition??'intact'})).slice(0,30),
     knowledge:state.knowledge.slice(-40),beliefs:state.beliefs.slice(-40),memories,
     historical_presence:selected.historical_presence,
     own_recent_settled_actions:recentSettledActions(save,npcId),
