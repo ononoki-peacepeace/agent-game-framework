@@ -32,6 +32,7 @@ import {agentSkills} from './skills/index.js';
 import type {exploreLocation} from './location-exploration.js';
 import {engineOutcome,gameOutcome,gameNarrative,engineMessage,safeEngineMessage,WorldBlockedError} from './outcome.js';
 import {resolveTemporalWait} from './temporal-wait.js';
+import {interruptedActivity} from '../core/completion-evidence.js';
 import {applyNpcDecision,applyNpcProposedAction,recordSceneObservation} from './npc-agent.js';
 import {isActivePerception} from './perception.js';
 import {resolveEntities} from './entities.js';
@@ -380,7 +381,7 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
  }
  const initialTime=save.runtime.time.day*save.definition.ruleset.minutes_per_day+save.runtime.time.minute;
  const initialSave=save;let stateReadable=true;
- plan.plan_id=body.request_id;plan.status='running';let clarification:string|null=null,awarenessStatus:AgentResult['awareness_status'];let stepOutcome:AgentResult['outcome']|null=null;const ui:UIAction[]=[],changes:string[]=[],calls:AgentResult['tool_calls']=[],futures:FutureIntent[]=[];
+ plan.plan_id=body.request_id;plan.status='running';let clarification:string|null=null,awarenessStatus:AgentResult['awareness_status'];let stepOutcome:AgentResult['outcome']|null=null;let partialNarrative:string|null=null;const ui:UIAction[]=[],changes:string[]=[],partialChanges:string[]=[],calls:AgentResult['tool_calls']=[],futures:FutureIntent[]=[];
  for(const id of plan.execution_order){const goal=plan.goals.find(g=>g.goal_id===id)!;
   const compoundWorldGoals=plan.goals.filter(goal=>goal.side_effect_level==='world');
   if(plan.contract?.execution_mode==='staged'&&
@@ -496,8 +497,17 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
       ...(body.end_conversation&&goal.type==='WORLD_SPEECH'?{end_conversation:true}:{}),
       ...(choiceSpeech?{action:{type:'TALK',target_id:goal.target_entities[0],parameters:{topic:goal.normalized_goal}}}:{input:goal.normalized_goal})},
       undefined,undefined,undefined,false,undefined,undefined,Boolean(semanticAction||repetition||body.choice_offer_id&&goal.type==='WORLD_ACTION'),undefined,repeatedPerception,repetition,{target_ids:goal.target_entities,physical_intent:physicalIntent});
-    save=await service.current();message=result.last_turn?.narrative??'行动已处理。';changes.push('world_action:'+id);
-    const sequence=save.resolution_receipts?.find(receipt=>receipt.request_id===childId(body.request_id,id))?.repetition;
+    save=await service.current();message=result.last_turn?.narrative??'行动已处理。';
+    const settled=save.resolution_receipts?.find(receipt=>receipt.request_id===childId(body.request_id,id)&&receipt.commit_status==='committed');
+    if(settled&&interruptedActivity(settled)){
+      goal.status='blocked';goal.result={summary:'这段活动因需要处理的事情而暂停，原目标尚未完成。'};
+      partialNarrative=message;
+      partialChanges.push('world_action:'+id);calls.push({tool_id:goal.type,ok:true});
+      stepOutcome=gameOutcome(settled.time_cost>0?'partial_progress':'interrupted','plan_step',save.state_revision,
+        changes,[settled.request_id],settled.time_cost>0?'partial':'unresolved');break;
+    }
+    changes.push('world_action:'+id);
+    const sequence=settled?.repetition;
     if(sequence&&['budget','interrupted'].includes(sequence.stopped_by)&&sequence.elapsed_seconds<sequence.requested_seconds){
       goal.status='unresolved';goal.result={summary:message};calls.push({tool_id:goal.type,ok:true});
       stepOutcome=gameOutcome('partial_progress','plan_step',save.state_revision,changes);break;
@@ -545,11 +555,11 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
    conditionFalse?'condition_false':stepOutcome?.type==='game'?stepOutcome.kind:
      plan.status==='completed'?'completed':changes.length?'partial_progress':'unresolved_goal',
    'plan_execution',save.state_revision,changes,committedSince(initialSave,save),
-   plan.status==='completed'?'completed':changes.length?'partial':'unresolved');
+   plan.status==='completed'?'completed':changes.length||stepOutcome?.type==='game'&&stepOutcome.goal_status==='partial'?'partial':'unresolved');
  const narratedSteps=plan.goals.filter(goal=>goal.status==='completed'&&
    ['WORLD_ACTION','WORLD_SPEECH'].includes(goal.type)).map(goal=>goal.result?.summary?.trim()).filter((text):text is string=>Boolean(text));
  const committedNarrative=committedSince(initialSave,save).length?
-   [...new Set(narratedSteps.length?narratedSteps:[save.last_turn?.narrative?.trim()].filter((text):text is string=>Boolean(text)))].join('\n'):'';
+   [...new Set(narratedSteps.length?[...narratedSteps,...(partialNarrative?[partialNarrative]:[])]:[save.last_turn?.narrative?.trim()].filter((text):text is string=>Boolean(text)))].join('\n'):'';
  const stopped=plan.goals.filter(goal=>['blocked','unresolved','failed','waiting_for_player'].includes(goal.status))
    .map(goal=>`“${goal.normalized_goal}”尚未完成${goal.result?.summary?`：${goal.result.summary}`:'。'}`);
  const skipped=plan.goals.filter(goal=>goal.status==='skipped').map(goal=>goal.normalized_goal);
@@ -563,7 +573,7 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
    presentation:finalOutcome.type==='engine_failure'?'failure':committedNarrative?'story':'assistant',clarification,
    ...(committedNarrative?{story:committedNarrative}:{}),
    ...(awarenessStatus?{awareness_status:awarenessStatus}:{}),plan_id:plan.plan_id,plan,results,future_intents:futures,
-   ui_actions:storyOnly?[]:oneNavigation(ui),canonical_changes:changes,tool_calls:calls,time_advanced:delta,
+   ui_actions:storyOnly?[]:oneNavigation(ui),canonical_changes:[...changes,...partialChanges],tool_calls:calls,time_advanced:delta,
    ...(stateReadable?{view:publicView(save)}:{})});
 }
 const requests=new WeakMap<GameService,Map<string,{input:string;result:Promise<AgentResult>}>>();

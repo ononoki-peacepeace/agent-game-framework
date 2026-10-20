@@ -3,6 +3,11 @@ import type {SavePackage} from './schema.js';
 export const interruptedActivityFact=(minutes:number)=>`本次普通活动因需要处理的事情而暂停，实际经过 ${minutes} 分钟。`;
 /** An occurred interval is not completion of the requested activity after a foreground handoff. */
 export function interruptedActivity(receipt:NonNullable<SavePackage['resolution_receipts']>[number]){
+  if(receipt.semantic_action==='HOLD'&&receipt.kind==='DETERMINISTIC'&&receipt.outcome==='success')
+    return receipt.canonical_facts.some(fact=>{
+      const match=/^在当前位置持续进行「[\s\S]+」，实际经过 (\d+) 分钟，因需要处理的事情而暂停$/.exec(fact);
+      return Boolean(match&&Number(match[1])===receipt.time_cost);
+    });
   return receipt.kind==='DETERMINISTIC'&&receipt.outcome==='success'&&
     receipt.canonical_facts.includes(interruptedActivityFact(receipt.time_cost))&&
     (receipt.time_cost===0&&!receipt.activity&&!receipt.effects.includes('activity')||
