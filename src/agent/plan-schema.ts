@@ -57,6 +57,8 @@ export const futureIntentSchema=z.strictObject({
  source_text:z.string().max(4000),target_date:z.number().int().min(0).nullable(),time_window:temporalSchema.shape.window,
  target_entities:z.array(ref).max(10),goal:z.string().max(2000),condition:conditionSchema.nullable(),
  condition_expected:z.boolean().default(true),
+ // Optional for legacy saves; retains every inherited branch guard for deferred execution.
+ condition_guards:z.array(z.strictObject({condition:conditionSchema,expected:z.boolean()})).min(1).max(12).optional(),
  status:z.enum(['planned','due','cancelled','completed','expired','superseded']),completed_by_request:z.string().uuid().nullable(),
 });
 export type FutureIntent=z.infer<typeof futureIntentSchema>;

@@ -1,5 +1,13 @@
 # Claude Code starting handoff
 
+## Deferred condition authority continuation — 2026-10-20
+
+From `5642c28`, the checkpoint containing this section fixes the two original A7.3 follow-ups. FutureIntent has additive optional `condition_guards`; registration preserves inherited/nested branch constraints and due execution checks each condition's own public entity, including legacy single-condition records. False/unknown conditions stop before model/Core work; ELSE retains expected=false. Legacy fields are also checked and cannot be overridden by new guards. Existing commit/replay/target checks remain.
+
+Ship plan-schema, future helper and executor together: old saves are accepted without migration; old strict-schema binaries cannot read the new optional field until upgraded. No production/mixed-version deployment performed. Core/public types derive from the existing schema; no Claude unmerged dependency. Baseline7/7 failed, first3files59pass, final10files165pass including11 direct future cases and real JsonStore restart; strict TypeScript in SESSION. No latest full-suite claim.
+
+Both findings now have runtime evidence and are fixed, but broad A7.3/A7.4 mixed/dynamic intent remains open. Overall56.875%,91met/31unmet/38unverified,40 packages12/21/7 unchanged; no test-case-count score inflation. Next: NPC long-term plans/social variety, then Narrator natural quality and broader compound intent. Keep original QA/audit edits, Claude checkout, production save and3100 safe; no paid Provider or push.
+
 ## Conditional dependency authorization continuation — 2026-10-20
 
 Continuing from `13122b1`, the checkpoint containing this section validates condition ownership both at planning and before execution of legacy snapshots. A mutating goal or nested condition cannot depend directly on a condition without a branch; each branch has one explicit condition owner. Ambiguity stops the whole plan before an earlier independent write. Read-only dependent queries, valid then/else and nested current evaluation are preserved. Planner/executor must travel together; no public schema change.

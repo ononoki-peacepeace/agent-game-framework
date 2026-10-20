@@ -15,7 +15,7 @@ import {planGameRequest} from './game.js';
 import type {TruthQueryResult} from './truth-query.js';
 import {applyAssistantStyle} from '../ai/behavior.js';
 import {relationshipCondition} from '../shared/relationship.js';
-import {dueAssessment} from './future.js';
+import {dueAssessment,futureConditionGuards,futureConditionsHold} from './future.js';
 import {recentReferent} from '../core/recent-referent.js';
 import {sceneAnchor} from '../core/interaction.js';
 import {executeOpenWorldGoal,runContractPlan,canExecuteContractPlan,discoverContractCandidates} from './affordances.js';
@@ -419,7 +419,8 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
    }else if(['FUTURE_INTENT','SCHEDULED_INTENT'].includes(goal.type)){
     assert(goal.target_entities.every(id=>view.entities.some(e=>e.id===id)),'目标不在玩家可知范围');
     const condition=dependencies.find(g=>g.type==='CONDITIONAL_INTENT')?.condition??null;
-    const intent:FutureIntent={id:childId(body.request_id,id),plan_id:plan.plan_id,goal_id:id,created_at:{...view.time},source_text:body.input,target_date:goal.temporal_scope.day_offset>0?view.time.day+goal.temporal_scope.day_offset:goal.temporal_scope.scope==='scheduled'?view.time.day:null,time_window:goal.temporal_scope.window,target_entities:goal.target_entities,goal:goal.normalized_goal,condition,condition_expected:goal.branch!=='else',status:'planned',completed_by_request:null};
+    const guards=futureConditionGuards(plan,goal);
+    const intent:FutureIntent={id:childId(body.request_id,id),plan_id:plan.plan_id,goal_id:id,created_at:{...view.time},source_text:body.input,target_date:goal.temporal_scope.day_offset>0?view.time.day+goal.temporal_scope.day_offset:goal.temporal_scope.scope==='scheduled'?view.time.day:null,time_window:goal.temporal_scope.window,target_entities:goal.target_entities,goal:goal.normalized_goal,condition,condition_expected:goal.branch!=='else',...(guards.length?{condition_guards:guards}:{}),status:'planned',completed_by_request:null};
     await service.agentTransaction({...body,request_id:childId(body.request_id,'write:'+id),expected_revision:save.state_revision},{input:body.input,goal},next=>{next.future_intents??=[];assert(next.future_intents.length<500,'未来计划数量已达上限');next.future_intents.push(intent);});
     save=await service.current();futures.push(intent);changes.push('future_intent:'+intent.id);message='已记下你的打算：'+intent.goal+'。这不是已经发生的事实，也未获得对方同意。';
    }else if(goal.type==='LIST_FUTURE'){
@@ -435,7 +436,7 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
     const player=view.entities.find(e=>e.id===view.player_id)!;assert(Number(player.components.condition?.hp??100)>0,'玩家当前状态不适合执行');
     assert(intent.target_entities.length===1,'此版本只执行目标明确的单人物社交尝试');
     const target=view.entities.find(e=>e.id===intent.target_entities[0]);assert(target&&target.components.location&&player.components.location&&target.components.location.location_id===player.components.location.location_id,'目标当前不在可确认的同一地点，请先处理位置或可用性');
-    if(intent.condition){const truth=intent.condition.kind==='familiar'?relationshipCondition(view,target):intent.condition.kind==='present'?true:null;assert(truth!==null&&truth===intent.condition_expected,'当前已知条件不再满足，计划保留但未执行');}
+    assert(futureConditionsHold(view,intent),'当前已知条件不再满足，计划保留但未执行');
     const action=await service.ai.interpret(save,intent.goal) as import('../shared/contracts.js').ActionInput;
     assert(['TALK','SOCIAL_INTERACT'].includes(action.type)&&action.target_id===target.id,'实际行动尚不能确认为对该人物的社交尝试，计划保留');
     const attempt=childId(body.request_id,'attempt:'+id);
