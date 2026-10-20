@@ -65,6 +65,14 @@ function presenceAliases(name:string){
   return [name.replace(/\s/g,''),...name.split(/\s+/).filter(part=>part.length>=2)].filter(Boolean);
 }
 
+function presenceCount(raw:string):number|null{
+  if(/^\d+$/.test(raw))return Number(raw);
+  const digits:Record<string,number>={零:0,〇:0,一:1,二:2,两:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9};
+  if(Object.hasOwn(digits,raw))return digits[raw];
+  const tens=/^([一二两三四五六七八九])?十([一二两三四五六七八九])?$/.exec(raw);
+  return tens?(tens[1]?digits[tens[1]]:1)*10+(tens[2]?digits[tens[2]]:0):null;
+}
+
 /** A literal joined list followed by the checked predicate has plural
  * subjects. Names mentioned as listeners, possessors or objects do not. */
 function jointNarrativeSubjects<T extends {components:{identity?:{name?:unknown}}}>(text:string,people:T[],predicate:RegExp){
@@ -86,7 +94,10 @@ export function validateScenePresenceNarrative(save:SavePackage,prose:string,cla
   const here=save.entities.find(entity=>entity.id===save.player_state.entity_id)?.components.location?.location_id;
   const people=save.entities.filter(entity=>entity.id!==save.player_state.entity_id&&entity.components.character);
   let subjects:typeof people=[];
-  const sentences=prose.replace(/[“「『][^”」』]*[”」』]/g,'').split(/[。！？\n]/);
+  // Quoted speech can recall another time or make a character's own claim;
+  // only the unquoted narration asserts the current authoritative scene.
+  const unquoted=prose.replace(/[“「『][^”」』]*[”」』]/g,'');
+  const sentences=unquoted.split(/[。！？\n]/);
   for(let index=0;index<sentences.length;index++){
     const sentence=sentences[index];
     const compact=sentence.replace(/\s/g,'');
@@ -121,10 +132,10 @@ export function validateScenePresenceNarrative(save:SavePackage,prose:string,cla
       throw new GameError('旁白把不在当前地点的人物描写为在场',503);
   }
   const actual=people.filter(entity=>entity.components.location?.location_id===here).length+1;
-  const match=prose.match(/(?:只剩下?|只有|就剩下?)(?:我们|你们|他们|她们)?([一二三四五六七八九十两\d]+)(?:个)?人/);
-  if(match){const values:Record<string,number>={一:1,二:2,两:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10};
-    const count=values[match[1]]??Number(match[1]);
-    if(Number.isFinite(count)&&count!==actual)throw new GameError('旁白人数与权威在场名单不一致',503);}
+  for(const match of unquoted.matchAll(/(?:只剩下?|只有|就剩下?)(?:我们|你们|他们|她们)?([零〇一二三四五六七八九十两\d]+)(?:个)?人/g)){
+    const count=presenceCount(match[1]);
+    if(count!==null&&count!==actual)throw new GameError('旁白人数与权威在场名单不一致',503);
+  }
 }
 
 /** Reject prose that asserts mechanical effects absent from the committed program receipt. */
