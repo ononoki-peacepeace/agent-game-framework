@@ -37,6 +37,7 @@
 | npc-legacy-long-goal | repair | W5.3: Legacy arrival completes the travel plan but preserves long goals and short goals with other active work; broader revision matrix remains open；完整条件保持开放 | +0.000 pp |
 | npc-ended-goal-execution | repair | W5.3: Ended goals cannot authorize lingering legacy/typed plans after reload; stale plans abandoned without MOVE or goal mutation; full adaptive matrix remains open；完整条件保持开放 | +0.000 pp |
 | partial-plan-visible-status | repair | N3.3: Earlier settled story no longer hides blocked/unexecuted later stages; client preserves explicit feedback; complete compound matrix remains open；完整条件保持开放; R5.3: Later technical failure carries earlier committed receipts and truthful partial-failure message; every-exit audit remains open；完整条件保持开放 | +0.000 pp |
+| current-complete-offline-snapshot-1957 | repair | R5.4: Refreshed already-met versioned complete offline evidence:195files1957pass,494unchanged hashes; native failed attempt preserved；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 

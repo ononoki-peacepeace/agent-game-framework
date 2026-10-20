@@ -147,7 +147,7 @@
       "evidence": [
         "docs/current-offline-snapshot.md"
       ],
-      "basis": "Source486bd2f fixed190-file/488-hash manifest, full1927/1927pass with no missing/duplicated files or source changes, build passed. Earlier failed run/native crash retained. Offline snapshot only; later product edits need fresh evidence."
+      "basis": "Product9917459/ledger6be22bb fixed195-file494-hash complete offline snapshot1957/1957pass, exact coverage once, build pass; original shard5 native0xC0000409 retained, exact halves passed. Native stability and later source edits need new evidence."
     },
     "R6.1": {
       "status": "met",
@@ -1506,6 +1506,21 @@
           "evidence": [
             "tests/partial-plan-visible-status.test.ts",
             "docs/partial-plan-visible-status.md"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "current-complete-offline-snapshot-1957",
+      "type": "repair",
+      "source": "9917459",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R5.4",
+          "result": "Refreshed already-met versioned complete offline evidence:195files1957pass,494unchanged hashes; native failed attempt preserved",
+          "evidence": [
+            "docs/current-offline-snapshot.md"
           ]
         }
       ]

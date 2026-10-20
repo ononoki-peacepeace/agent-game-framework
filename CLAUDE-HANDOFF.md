@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Current complete offline snapshot — 2026-10-20
+
+Product source `9917459`, ledger `6be22bb`: fresh195files1957/1957pass, all494pinned source/config hashes unchanged, exact file coverage once. Original shard5 native0xC0000409/noJSON retained; exact halves5a/5b passed. Native crash cause unknown; test coverage success is not process-stability acceptance. Complete isolated build passed; QA originals restored byte-for-byte,27frozen hashes match,formal-save hash unchanged. See docs/current-offline-snapshot.md and ignored current-offline-summary.json. R5.4 evidence refresh only;60%=96met/28unmet/36unverified unchanged. No source WIP; original historical dirt preserved. Next: reproduce compound physical-first/TALK-last firewall injury/perception checks against actual child receipts; inspect reaction ownership separately, never fabricate reactions. No3100/paid/deploy/push/Claude changes.
+
 ## Partial plan result visibility — 2026-10-20
 
 Parent `cb1786d`; source checkpoint containing this section keeps settled story separate from world-stop/unexecuted-goal feedback and retains prior receipt IDs in later engine failures. Client shows explicit incomplete feedback beside its supplied story, including state-refresh race. Executor/client must travel together; no Save/Core interface change. Corrected baseline hidden world stop plus missing engine receipt; malformed location fixtures are not product failures. First81/82, final10files113pass; build in local SESSION. See docs/partial-plan-visible-status.md. N3.3/R5.3 stay open;60%=96/160 unchanged. Original dirty QA/audit and untracked files preserved. Next: pin and rerun complete current-source offline snapshot, then remaining fixed matrices. No formal save/3100/paid/deploy/push/Claude changes.
