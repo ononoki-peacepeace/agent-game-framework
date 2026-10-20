@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "abd2ac1",
+  "assessed_source": "8e2a0f6",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -138,9 +138,11 @@
       "evidence": [
         "docs/qa-ai-recovery-coverage.md",
         "tests/partial-plan-visible-status.test.ts",
-        "docs/partial-plan-visible-status.md"
+        "docs/partial-plan-visible-status.md",
+        "tests/plan-handoff-failure.test.ts",
+        "docs/plan-handoff-failure.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 8e2a0f6: between-step handoff failures retain settled prefix/receipt and skipped guards do not pause read-only alternatives;3fail/1control,7distinctfiles57pass/build. Full fixed matrix remains open."
     },
     "R5.4": {
       "status": "met",
@@ -489,9 +491,11 @@
     "A7.3": {
       "status": "unmet",
       "evidence": [
-        "tests/goal-contract-batch2.test.ts"
+        "tests/goal-contract-batch2.test.ts",
+        "tests/plan-handoff-failure.test.ts",
+        "docs/plan-handoff-failure.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 8e2a0f6: between-step handoff failures retain settled prefix/receipt and skipped guards do not pause read-only alternatives;3fail/1control,7distinctfiles57pass/build. Full fixed matrix remains open."
     },
     "A7.4": {
       "status": "unverified",
@@ -1871,6 +1875,13 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "plan-handoff-failure",
+      "type": "repair",
+      "source": "8e2a0f6",
+      "transitions": [],
+      "note": "Baseline3fail/1control; final7distinctfiles57pass/build. R5.3/A7.3 remain unmet; no whole-condition credit. Direct executor rebuilt-service continuation only, not HTTP/process-kill acceptance."
     }
   ],
   "new_risks": [],
@@ -2302,6 +2313,18 @@
         "docs/npc-active-plan-revision.md"
       ],
       "summary": "Eight lawful viable-plan projection/admission cases failed; actual ongoing method now prioritized ahead of abstract plans,10files93pass/build, no whole-condition credit."
+    },
+    {
+      "id": "plan-handoff-failure",
+      "scope": "original",
+      "condition": "R5.3",
+      "status": "resolved",
+      "source": "8e2a0f6",
+      "evidence": [
+        "tests/plan-handoff-failure.test.ts",
+        "docs/plan-handoff-failure.md"
+      ],
+      "summary": "Handoff read failure escaped after settled WAIT; false branch inspected too early. Boundary/authorization repair,7files57pass/build; persistent storage/finalizers remain open."
     }
   ]
 }
