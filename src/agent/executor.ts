@@ -436,7 +436,9 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
     assert(matches.length===1,matches.length?'有多个打算符合，请补充目标、日期或具体活动。':'没有找到对应的未完成打算。');
     await service.agentTransaction({...body,request_id:childId(body.request_id,'cancel:'+id),expected_revision:save.state_revision},{cancel:matches[0].id},next=>{next.future_intents!.find(i=>i.id===matches[0].id)!.status='cancelled';});save=await service.current();changes.push('cancel_future:'+matches[0].id);message='已取消：'+matches[0].goal;
    }else if(goal.type==='EXECUTE_FUTURE'){
-    const candidates=(save.future_intents??[]).filter(i=>i.status==='due'&&(!goal.target_entities.length||goal.target_entities.every(id=>i.target_entities.includes(id))));
+    const candidates=(save.future_intents??[]).filter(i=>i.status==='due'&&(!goal.target_entities.length||goal.target_entities.every(id=>i.target_entities.includes(id)))&&
+      (!goal.temporal_scope.day_offset||i.target_date===view.time.day+goal.temporal_scope.day_offset)&&
+      (goal.temporal_scope.window==='any'||i.time_window===goal.temporal_scope.window));
     assert(candidates.length===1,'请明确一个已到期的打算；未到期计划不会提前执行');const intent=candidates[0];
     assert(!await service.handoffBlocker(),'当前前台事务或事件需要先处理');
     const player=view.entities.find(e=>e.id===view.player_id)!;assert(Number(player.components.condition?.hp??100)>0,'玩家当前状态不适合执行');

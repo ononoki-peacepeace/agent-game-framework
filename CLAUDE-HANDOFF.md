@@ -1,5 +1,10 @@
 # Claude Code starting handoff
 
+## Future execution date/window authority — 2026-10-21
+
+Parent0445cb8; source checkpoint containing this section retains original execution window/day offset in fastPlan and filters due intentions before actual social action. Direct2fail/1ambiguitycontrol; expanded original-language3newfail after first repair. Final5files57pass/build; actual JsonStore/new-service afternoon original input settles one TALK/completes afternoon only, replay refreshed revision does not generate or change bytes. No schema/Core/retry change; integrate planner+executor together. See docs/future-execute-window.md. A7.3/A7.4 stay open;60%=96/160,+0. Full215files2149pass stays6f4a300. Next: review actual selected goal content versus same-recipient future ambiguity and remaining fixed matrices. Original dirt/safety preserved.
+
+
 ## Routine world-blocked outcome — 2026-10-21
 
 Parent5026c8a; source checkpoint containing this section emits existing structured route_unavailable WorldBlockedError and classifies only this class as interrupted game job. Unknown programmer/provider errors remain technical. Baseline1fail/2controls; final5files40pass/build. Actual route path/no work effects/lease release and JsonStore+job log terminal restart/original job replay pass, bytes unchanged/zero generation. Integrate scheduler+jobs together, no schema/Core/retry change. See docs/routine-world-block-outcome.md. R5.1 explicit withdrawal/restoration net0 to60%=96/160; R5.3/R6 full matrices open. Full215files2149pass remains6f4a300. Next: evaluate fixed W4.3 sleep/work/rest/travel/interrupt resource matrix coverage, continue remaining themes. Original dirt/safety preserved.
