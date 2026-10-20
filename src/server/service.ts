@@ -28,6 +28,7 @@ import type { PendingTurn,SaveStorage } from '../storage/json-store.js';
 import type { AIRuntime } from '../ai/runtime.js';
 import {withRequestBudget,generateWithinRequestBudget} from '../ai/request-budget.js';
 import {prepareRequestCommit} from '../recovery/request-context.js';
+import {GuidanceRequests} from '../recovery/guidance-request.js';
 import type { WorldPackage } from '../core/schema.js';
 import {prepareCharacterImport,adaptationSchema,type ImportCandidate} from '../characters/import.js';
 import {authoredCharacter} from '../characters/authoring.js';
@@ -326,6 +327,19 @@ export class GameService {
   private guidanceResult(save:SavePackage){
     return {view:publicView(save),patches:[...this.ai.globalPatches,...(save.behavior_patches??[]),...this.ai.sessionPatches]};
   }
+  private guidanceRequests?:GuidanceRequests;
+  private guidanceJournal(){return this.guidanceRequests??=new GuidanceRequests(this.storage);}
+  private async guidanceReplayed(save:SavePackage,request:ConfigurationRequest|undefined,fingerprint:string){
+    const tx=this.guidanceIdentity(save,request,fingerprint);
+    return tx.replayed||!!request?.request_id&&await this.guidanceJournal().recover(tx.game_id,tx.request_id,fingerprint);
+  }
+  private async writeNonWorldGuidance(save:SavePackage,request:ConfigurationRequest|undefined,fingerprint:string,
+    scope:'global'|'session',mutate:()=>Promise<void>){
+    const tx=this.guidanceIdentity(save,request,fingerprint);
+    if(request?.request_id)await this.guidanceJournal().run(tx.game_id,tx.request_id,fingerprint,scope,mutate);
+    else await mutate();
+    return this.guidanceResult(save);
+  }
   private guidanceIdentity(save:SavePackage,request:ConfigurationRequest|undefined,fingerprint:string){
     const tx=safeParse(configurationRequestSchema,{game_id:request?.game_id??save.game_id,
       expected_revision:request?.expected_revision??save.state_revision,request_id:request?.request_id??randomUUID()});
@@ -368,32 +382,36 @@ export class GameService {
     assert(patch.overrides!==patch.id,'行为指导不能覆盖自身');
     return this.exclusive(()=>this.media(async()=>{
       const save=await this.current(),fingerprint=guidanceFingerprint({put:patch},sourceInput);
-      if(this.guidanceIdentity(save,request,fingerprint).replayed)return this.guidanceResult(save);
+      if(await this.guidanceReplayed(save,request,fingerprint))return this.guidanceResult(save);
       assert(!this.guidanceCandidates(save,patch.id).some(item=>item.scope!==patch.scope),'指导 ID 已存在于另一范围，请明确处理原范围');
-      if(patch.scope==='session')this.ai.sessionPatches=[...this.ai.sessionPatches.filter(item=>item.id!==patch.id),patch].slice(-100);
-      else if(patch.scope==='global'){
-        const next=[...this.ai.globalPatches.filter(item=>item.id!==patch.id),patch].slice(-100);
-        if(JSON.stringify(next)!==JSON.stringify(this.ai.globalPatches))await this.writeGlobalGuidance(next);
-      }else{
+      if(patch.scope==='world'){
         return this.writeWorldGuidance(save,request,fingerprint,()=>{
           save.behavior_patches=[...(save.behavior_patches??[]).filter(item=>item.id!==patch.id),patch].slice(-100);
         });
       }
-      this.logger.info('behavior.patch.updated',{module:'framework',revision:save.state_revision,metadata:{id:patch.id,scope:patch.scope,category:patch.category,enabled:patch.enabled}});
-      return this.guidanceResult(save);
+      return this.writeNonWorldGuidance(save,request,fingerprint,patch.scope,async()=>{
+        if(patch.scope==='session')this.ai.sessionPatches=[...this.ai.sessionPatches.filter(item=>item.id!==patch.id),patch].slice(-100);
+        else{
+          const next=[...this.ai.globalPatches.filter(item=>item.id!==patch.id),patch].slice(-100);
+          if(JSON.stringify(next)!==JSON.stringify(this.ai.globalPatches))await this.writeGlobalGuidance(next);
+        }
+        this.logger.info('behavior.patch.updated',{module:'framework',revision:save.state_revision,metadata:{id:patch.id,scope:patch.scope,category:patch.category,enabled:patch.enabled}});
+      });
     }));
   }
   async removeBehaviorPatch(id:string,request?:GuidanceRequest){
     const options=safeParse(guidanceRequestSchema,request??{});
     return this.exclusive(()=>this.media(async()=>{
       const save=await this.current(),fingerprint=guidanceFingerprint({remove:id,scope:options.scope??null});
-      if(this.guidanceIdentity(save,options,fingerprint).replayed)return this.guidanceResult(save);
+      if(await this.guidanceReplayed(save,options,fingerprint))return this.guidanceResult(save);
       const candidates=this.guidanceCandidates(save,id,options.scope);
       assert(candidates.length<=1,'多个范围存在同一指导 ID，请指定范围');
       const scope=candidates[0]?.scope??options.scope;
       if(scope==='world')return this.writeWorldGuidance(save,options,fingerprint,()=>{save.behavior_patches=(save.behavior_patches??[]).filter(item=>item.id!==id);});
-      if(scope==='global'&&candidates.length)await this.writeGlobalGuidance(this.ai.globalPatches.filter(item=>item.id!==id));
-      if(scope==='session')this.ai.sessionPatches=this.ai.sessionPatches.filter(item=>item.id!==id);
+      if(scope==='global'||scope==='session')return this.writeNonWorldGuidance(save,options,fingerprint,scope,async()=>{
+        if(scope==='global'&&candidates.length)await this.writeGlobalGuidance(this.ai.globalPatches.filter(item=>item.id!==id));
+        if(scope==='session')this.ai.sessionPatches=this.ai.sessionPatches.filter(item=>item.id!==id);
+      });
       return this.guidanceResult(save);
     }));
   }
@@ -401,15 +419,16 @@ export class GameService {
     safeParse(z.boolean(),enabled);const options=safeParse(guidanceRequestSchema,request??{});
     return this.exclusive(()=>this.media(async()=>{
       const save=await this.current(),fingerprint=guidanceFingerprint({enabled,id,scope:options.scope??null});
-      if(this.guidanceIdentity(save,options,fingerprint).replayed)return this.guidanceResult(save);
+      if(await this.guidanceReplayed(save,options,fingerprint))return this.guidanceResult(save);
       const candidates=this.guidanceCandidates(save,id,options.scope);
       assert(candidates.length<=1,'多个范围存在同一指导 ID，请指定范围');
       const found=candidates[0];assert(found,'行为指导不存在');
       const update=(items:BehaviorPatch[])=>items.map(item=>item.id===id?{...item,enabled}:item);
       if(found.scope==='world')return this.writeWorldGuidance(save,options,fingerprint,()=>{save.behavior_patches=update(save.behavior_patches??[]);});
-      if(found.scope==='global'&&found.patch.enabled!==enabled)await this.writeGlobalGuidance(update(this.ai.globalPatches));
-      if(found.scope==='session')this.ai.sessionPatches=update(this.ai.sessionPatches);
-      return this.guidanceResult(save);
+      return this.writeNonWorldGuidance(save,options,fingerprint,found.scope,async()=>{
+        if(found.scope==='global'&&found.patch.enabled!==enabled)await this.writeGlobalGuidance(update(this.ai.globalPatches));
+        if(found.scope==='session')this.ai.sessionPatches=update(this.ai.sessionPatches);
+      });
     }));
   }
   async view() {
@@ -1440,8 +1459,9 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
     const receipt=save.runtime.receipts.find(item=>item.id===tx.request_id);
     const kind=receipt?.fingerprint.startsWith('behavior-config:input:')?'style':
       receipt?.fingerprint.startsWith('behavior-guidance:input:')?'guidance':null;
-    if(!kind)return null;
     assert(tx.game_id===undefined||tx.game_id===save.game_id,'游戏已切换');
+    if(!kind)return await this.guidanceJournal().recover(save.game_id,tx.request_id,guidanceFingerprint(null,input))?
+      {kind:'guidance' as const,view:publicView(save)}:null;
     assert(receipt!.fingerprint===(kind==='style'?behaviorInputFingerprint(input):guidanceFingerprint(null,input)),'请求 ID 已用于另一操作');
     return {kind,view:publicView(save)};
   }

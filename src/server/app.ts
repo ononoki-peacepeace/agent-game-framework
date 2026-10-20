@@ -900,7 +900,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     const transactions=record?.recovery?.transactions??[];
     const expected=(req.body as {expected_revision?:unknown})?.expected_revision;
     const sameWorld=Boolean(save&&record&&save.game_id===record.game_id);
-    const certain=sameWorld&&(transactions.length>0?
+    const certain=classified.state_certain!==false&&sameWorld&&(transactions.length>0?
       transactions.every(transaction=>receipts.includes(transaction.request_id)||save!.state_revision===transaction.expected_revision):
       save!.state_revision===expected);
     const outcome=engineOutcome(code,stage,sameWorld?save!.state_revision:null,certain,
@@ -937,7 +937,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     // anything that could write state stays manual. Unclassifiable input is manual on purpose.
     // The executor classifies a conflict from the real plan when it has one; the text-based check is the fallback
     // for conflicts raised before a plan exists (routine jobs, module management, direct turn requests).
-    const retryPolicy = status === 409 ? ((error as { retry_policy?: string }).retry_policy ?? readOnlyConflictPolicy(req,publicState)) : null;
+    const retryPolicy = (error as { retry_policy?: string }).retry_policy ?? (status === 409 ? readOnlyConflictPolicy(req,publicState) : null);
     res.status(status).json({ error: human(playerFacingError(error, malformed)), ...(retryPolicy ? { retry_policy: retryPolicy } : {}) });
   });
   function readOnlyConflictPolicy(req:express.Request,view:ReturnType<GameService['project']>|null){

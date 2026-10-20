@@ -1,0 +1,1088 @@
+{
+  "version": 1,
+  "source_commit": "f4bf805",
+  "scope": "Existing 40-package ledger; four fixed conditions per package, equal theme and package weights. Evidence credit, not hours or probability.",
+  "packages": [
+    {
+      "id": "R1",
+      "title": "Identified HTTP requests: persistent replay/status within retained receipt history",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "R1.1",
+          "weight": 0.625,
+          "pass": "相同请求与参数在保留期内返回原结果；不得再次提交"
+        },
+        {
+          "id": "R1.2",
+          "weight": 0.625,
+          "pass": "相同 ID 不同参数被拒绝，游戏隔离不串线"
+        },
+        {
+          "id": "R1.3",
+          "weight": 0.625,
+          "pass": "重启后可查询已提交请求并复用原响应"
+        },
+        {
+          "id": "R1.4",
+          "weight": 0.625,
+          "pass": "保留期边界显式说明，过期记录不冒充可无限重放"
+        }
+      ]
+    },
+    {
+      "id": "R2",
+      "title": "One-image JsonStore save and commit-response failure handling",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "R2.1",
+          "weight": 0.625,
+          "pass": "单次世界修改只提交完整且通过校验的存档镜像"
+        },
+        {
+          "id": "R2.2",
+          "weight": 0.625,
+          "pass": "原子替换前失败保留旧镜像，不留下半份 JSON"
+        },
+        {
+          "id": "R2.3",
+          "weight": 0.625,
+          "pass": "替换后响应丢失能根据凭据识别已经提交"
+        },
+        {
+          "id": "R2.4",
+          "weight": 0.625,
+          "pass": "故障注入验证旧存档与新存档二选一；不宣称 OS 断电保证"
+        }
+      ]
+    },
+    {
+      "id": "R3",
+      "title": "Undo/history original-request preparation and committed receipt replay",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "R3.1",
+          "weight": 0.625,
+          "pass": "Undo 与历史修改提交前准备原请求身份"
+        },
+        {
+          "id": "R3.2",
+          "weight": 0.625,
+          "pass": "保存后响应丢失可查到原修改凭据"
+        },
+        {
+          "id": "R3.3",
+          "weight": 0.625,
+          "pass": "重放不重复 Undo、不重复推进版本和历史"
+        },
+        {
+          "id": "R3.4",
+          "weight": 0.625,
+          "pass": "恢复准备失败时不写存档，配置与 Undo 相邻回归通过"
+        }
+      ]
+    },
+    {
+      "id": "R4",
+      "title": "Legacy multi-scope style edit and contextual move as one transaction",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "R4.1",
+          "weight": 0.625,
+          "pass": "多范围旧风格配置与移动只写一次完整镜像"
+        },
+        {
+          "id": "R4.2",
+          "weight": 0.625,
+          "pass": "前后写故障覆盖原有11个故障注入条件"
+        },
+        {
+          "id": "R4.3",
+          "weight": 0.625,
+          "pass": "原始文本重启重放不重新解释上下文、不重复写"
+        },
+        {
+          "id": "R4.4",
+          "weight": 0.625,
+          "pass": "移动只修改指定范围及操作，其他规则保留并拒绝并发冲突"
+        }
+      ]
+    },
+    {
+      "id": "R5",
+      "title": "Every Semantic/Planner/Goal/Executor/Freeform technical failure exit",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "R5.1",
+          "weight": 0.625,
+          "pass": "已有故障矩阵区分技术失败与游戏内失败，保留已提交步骤"
+        },
+        {
+          "id": "R5.2",
+          "weight": 0.625,
+          "pass": "已有分层修复与安全停止测试验证不重复 Core 副作用"
+        },
+        {
+          "id": "R5.3",
+          "weight": 0.625,
+          "pass": "逐条关闭矩阵中仍未核验的嵌套故障出口"
+        },
+        {
+          "id": "R5.4",
+          "weight": 0.625,
+          "pass": "最新完整离线代码快照全套通过，旧失败不得改写为通过"
+        }
+      ]
+    },
+    {
+      "id": "R6",
+      "title": "Pending/background jobs and asynchronous restart continuation",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "R6.1",
+          "weight": 0.625,
+          "pass": "持久请求和后台任务可识别中断且保留进度"
+        },
+        {
+          "id": "R6.2",
+          "weight": 0.625,
+          "pass": "未证实提交的 prepared 工作保守停止且不自动重复"
+        },
+        {
+          "id": "R6.3",
+          "weight": 0.625,
+          "pass": "可恢复的异步工作重启后继续未提交部分并准确结算"
+        },
+        {
+          "id": "R6.4",
+          "weight": 0.625,
+          "pass": "进程强杀覆盖关键准备、提交、终结窗口且查询结果一致"
+        }
+      ]
+    },
+    {
+      "id": "R7",
+      "title": "Extension development/install and external workspace effects",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "R7.1",
+          "weight": 0.625,
+          "pass": "开发安装失败保留明确阶段、退出码及构建输出"
+        },
+        {
+          "id": "R7.2",
+          "weight": 0.625,
+          "pass": "注册和安装受影响回归及真实本地自扩展重新验收通过"
+        },
+        {
+          "id": "R7.3",
+          "weight": 0.625,
+          "pass": "外部工作区每类副作用具有恢复身份及安全撤回或停止"
+        },
+        {
+          "id": "R7.4",
+          "weight": 0.625,
+          "pass": "强杀外部工具与嵌套构建后重启验收通过"
+        }
+      ]
+    },
+    {
+      "id": "R8",
+      "title": "Frontend synchronization and all System/media mutation paths",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "R8.1",
+          "weight": 0.625,
+          "pass": "同实例 System 与媒体写协调，19个已复现覆盖写故障消失"
+        },
+        {
+          "id": "R8.2",
+          "weight": 0.625,
+          "pass": "长回合图片可写且最终凭据、HTTP 重启重放不重复行动"
+        },
+        {
+          "id": "R8.3",
+          "weight": 0.625,
+          "pass": "图片 Provider 身份、外部写者、资产 GC 不遗失权威修改"
+        },
+        {
+          "id": "R8.4",
+          "weight": 0.625,
+          "pass": "前端所有写路径在断连、迟到响应、多客户端下同步正确"
+        }
+      ]
+    },
+    {
+      "id": "R9",
+      "title": "Read-time current/view migration race acceptance",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "R9.1",
+          "weight": 0.625,
+          "pass": "空闲 current/view 迁移在现有锁内重读后写"
+        },
+        {
+          "id": "R9.2",
+          "weight": 0.625,
+          "pass": "父请求准备失败不先迁移，媒体交叉不覆盖新凭据"
+        },
+        {
+          "id": "R9.3",
+          "weight": 0.625,
+          "pass": "多个服务实例或进程读迁移竞争不覆盖新提交"
+        },
+        {
+          "id": "R9.4",
+          "weight": 0.625,
+          "pass": "进程强杀及外部替换时迁移结果和错误分类可验证"
+        }
+      ]
+    },
+    {
+      "id": "R10",
+      "title": "World/global/session behavior-guidance cross-store removal/replay acceptance",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "R10.1",
+          "weight": 0.625,
+          "pass": "world 指导写入、启停、删除均准备请求并保存原凭据"
+        },
+        {
+          "id": "R10.2",
+          "weight": 0.625,
+          "pass": "范围冲突先拒绝；全局写后丢响应从磁盘恢复缓存"
+        },
+        {
+          "id": "R10.3",
+          "weight": 0.625,
+          "pass": "global/session 删除或重启后仍识别原请求且不重新执行"
+        },
+        {
+          "id": "R10.4",
+          "weight": 0.625,
+          "pass": "明确范围移动的跨存储失败恢复与竞争策略通过验收"
+        }
+      ]
+    },
+    {
+      "id": "A1",
+      "title": "Compound speech stages bind their own uniquely authorized named recipient",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "A1.1",
+          "weight": 0.625,
+          "pass": "各复合发言阶段绑定原文授权的唯一姓名"
+        },
+        {
+          "id": "A1.2",
+          "weight": 0.625,
+          "pass": "上游猜测不能覆盖原文直接收件人"
+        },
+        {
+          "id": "A1.3",
+          "weight": 0.625,
+          "pass": "依赖结果保留先前收件人与阶段身份"
+        },
+        {
+          "id": "A1.4",
+          "weight": 0.625,
+          "pass": "真实歧义要求澄清，实际 TALK 命中正确人物且重放不重复"
+        }
+      ]
+    },
+    {
+      "id": "A2",
+      "title": "Repeated physical attempts retain Core outcomes with one aggregate social consequence",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "A2.1",
+          "weight": 0.625,
+          "pass": "重复身体尝试分别保留 Core 结果"
+        },
+        {
+          "id": "A2.2",
+          "weight": 0.625,
+          "pass": "同一有界请求的社交后果只聚合一次"
+        },
+        {
+          "id": "A2.3",
+          "weight": 0.625,
+          "pass": "不同真实事件保持独立结算"
+        },
+        {
+          "id": "A2.4",
+          "weight": 0.625,
+          "pass": "持久化、重放与 Undo 不重复关系或丢失原始失败"
+        }
+      ]
+    },
+    {
+      "id": "A3",
+      "title": "Declared result references and explicit dependency ordering in bounded plans",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "A3.1",
+          "weight": 0.625,
+          "pass": "声明结果引用只使用已经证实的先前结果"
+        },
+        {
+          "id": "A3.2",
+          "weight": 0.625,
+          "pass": "显式依赖按顺序执行且不跳过前提"
+        },
+        {
+          "id": "A3.3",
+          "weight": 0.625,
+          "pass": "失败或不成立依赖保留真实部分完成状态"
+        },
+        {
+          "id": "A3.4",
+          "weight": 0.625,
+          "pass": "已完成子目标恢复时不再执行"
+        }
+      ]
+    },
+    {
+      "id": "A4",
+      "title": "General intent understanding and original-goal completion",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "A4.1",
+          "weight": 0.625,
+          "pass": "已有 Semantic 对齐和目标契约拒绝替换最终目标"
+        },
+        {
+          "id": "A4.2",
+          "weight": 0.625,
+          "pass": "已实现完成证据核验，准备动作不冒充目标完成"
+        },
+        {
+          "id": "A4.3",
+          "weight": 0.625,
+          "pass": "开放表达的意图、边界、原目标完成有代表性离线覆盖"
+        },
+        {
+          "id": "A4.4",
+          "weight": 0.625,
+          "pass": "当前模型在代表性多世界原始语句上通过目标完成验收"
+        }
+      ]
+    },
+    {
+      "id": "A5",
+      "title": "NPC/item/place/scene-object binding across worlds",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "A5.1",
+          "weight": 0.625,
+          "pass": "NPC/item/place/scene-object 的现有候选绑定受公开场景约束"
+        },
+        {
+          "id": "A5.2",
+          "weight": 0.625,
+          "pass": "原文收件人优先于 Planner 错人，依赖执行命中正确实体"
+        },
+        {
+          "id": "A5.3",
+          "weight": 0.625,
+          "pass": "跨世界别名、同名、缺席和混合角色覆盖所有对象类别"
+        },
+        {
+          "id": "A5.4",
+          "weight": 0.625,
+          "pass": "固定多世界绑定语料通过，歧义不猜测"
+        }
+      ]
+    },
+    {
+      "id": "A6",
+      "title": "Pronouns and contextual references",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "A6.1",
+          "weight": 0.625,
+          "pass": "公开对话焦点与唯一在场候选支持已有代词绑定"
+        },
+        {
+          "id": "A6.2",
+          "weight": 0.625,
+          "pass": "话题人物不当收件人，真实歧义不能被 Planner 猜测解除"
+        },
+        {
+          "id": "A6.3",
+          "weight": 0.625,
+          "pass": "跨句代词、多个动作角色及上下文切换有确定验收"
+        },
+        {
+          "id": "A6.4",
+          "weight": 0.625,
+          "pass": "固定多世界指代语料通过且无过度澄清回退"
+        }
+      ]
+    },
+    {
+      "id": "A7",
+      "title": "Composite/conditional goals and partial completion",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "A7.1",
+          "weight": 0.625,
+          "pass": "已有复合与条件契约表达依赖及部分完成"
+        },
+        {
+          "id": "A7.2",
+          "weight": 0.625,
+          "pass": "条件不成立或被世界拒绝不触发技术重试翻盘"
+        },
+        {
+          "id": "A7.3",
+          "weight": 0.625,
+          "pass": "混合条件、动态目标和中途改变意图保留原授权边界"
+        },
+        {
+          "id": "A7.4",
+          "weight": 0.625,
+          "pass": "固定组合语料及重启后续执行全部通过"
+        }
+      ]
+    },
+    {
+      "id": "A8",
+      "title": "Freeform physical interaction and dynamic body/distance/environment prerequisites",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "A8.1",
+          "weight": 0.625,
+          "pass": "已有 Freeform 身体动作及环境能力可结算"
+        },
+        {
+          "id": "A8.2",
+          "weight": 0.625,
+          "pass": "距离、身体和环境前提不能由描写虚构满足"
+        },
+        {
+          "id": "A8.3",
+          "weight": 0.625,
+          "pass": "开放交互涵盖各类物品、地形及能力的动态前提"
+        },
+        {
+          "id": "A8.4",
+          "weight": 0.625,
+          "pass": "多世界自由动作语料通过，游戏内失败原样保留"
+        }
+      ]
+    },
+    {
+      "id": "A9",
+      "title": "Broad multi-world natural-language acceptance corpus",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "A9.1",
+          "weight": 0.625,
+          "pass": "建立固定且代表性的多世界自然语言验收集及明确期望"
+        },
+        {
+          "id": "A9.2",
+          "weight": 0.625,
+          "pass": "覆盖意图、绑定、条件、前提、部分完成与恢复的组合"
+        },
+        {
+          "id": "A9.3",
+          "weight": 0.625,
+          "pass": "在当前源代码上运行完整离线语料并保留逐项结果"
+        },
+        {
+          "id": "A9.4",
+          "weight": 0.625,
+          "pass": "独立复核遗漏与失败，不能只用历史或挑选样例宣布通过"
+        }
+      ]
+    },
+    {
+      "id": "A10",
+      "title": "Current-source real-provider open-action acceptance",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "A10.1",
+          "weight": 0.625,
+          "pass": "经授权在当前代码与明确模型版本上跑开放行动"
+        },
+        {
+          "id": "A10.2",
+          "weight": 0.625,
+          "pass": "保留原始输入、输出、Core 证据与失败，不只人工摘要"
+        },
+        {
+          "id": "A10.3",
+          "weight": 0.625,
+          "pass": "真实模型的多世界组合语句满足固定原目标验收"
+        },
+        {
+          "id": "A10.4",
+          "weight": 0.625,
+          "pass": "真实模型重试不重复副作用且成本与失败预算有记录"
+        }
+      ]
+    },
+    {
+      "id": "W1",
+      "title": "Sourced NPC knowledge and multi-hop hearsay in declared policy worlds",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "W1.1",
+          "weight": 0.625,
+          "pass": "NPC 知识具有直接来源或合法传递来源"
+        },
+        {
+          "id": "W1.2",
+          "weight": 0.625,
+          "pass": "多跳传闻保留来源链和可区分置信"
+        },
+        {
+          "id": "W1.3",
+          "weight": 0.625,
+          "pass": "私密与不在场信息不通过传播规则泄漏"
+        },
+        {
+          "id": "W1.4",
+          "weight": 0.625,
+          "pass": "声明政策世界的传播持久化与重放保持一致"
+        }
+      ]
+    },
+    {
+      "id": "W2",
+      "title": "Per-character private cognition projection",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "W2.1",
+          "weight": 0.625,
+          "pass": "各人物私有认知按角色独立形成投影"
+        },
+        {
+          "id": "W2.2",
+          "weight": 0.625,
+          "pass": "记忆、目标、关系只投影允许内容"
+        },
+        {
+          "id": "W2.3",
+          "weight": 0.625,
+          "pass": "其他人物不可读到无来源私密认知"
+        },
+        {
+          "id": "W2.4",
+          "weight": 0.625,
+          "pass": "投影验证和持久化回归通过且不引入全知"
+        }
+      ]
+    },
+    {
+      "id": "W3",
+      "title": "Authored social events settle from authoritative receipts once",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "W3.1",
+          "weight": 0.625,
+          "pass": "作者社交事件来自权威行动凭据"
+        },
+        {
+          "id": "W3.2",
+          "weight": 0.625,
+          "pass": "相同凭据只结算一次且不同事件独立"
+        },
+        {
+          "id": "W3.3",
+          "weight": 0.625,
+          "pass": "重复身体尝试聚合社交反应不改写物理结果"
+        },
+        {
+          "id": "W3.4",
+          "weight": 0.625,
+          "pass": "关系持久化、重放及 Undo 验收通过"
+        }
+      ]
+    },
+    {
+      "id": "W4",
+      "title": "Autonomous routines and time-credit continuity",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "W4.1",
+          "weight": 0.625,
+          "pass": "自主生活调度保留已有物理行动连续性"
+        },
+        {
+          "id": "W4.2",
+          "weight": 0.625,
+          "pass": "时间额度与欠账连续且不重复推进"
+        },
+        {
+          "id": "W4.3",
+          "weight": 0.625,
+          "pass": "日程、旅行、突发中断与资源变化协调调整"
+        },
+        {
+          "id": "W4.4",
+          "weight": 0.625,
+          "pass": "多世界长时间生活行为丰富且持续可执行"
+        }
+      ]
+    },
+    {
+      "id": "W5",
+      "title": "Persistent long/short goals, executable plans and blocked-plan revision",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "W5.1",
+          "weight": 0.625,
+          "pass": "短期和长期目标及计划已有持久结构"
+        },
+        {
+          "id": "W5.2",
+          "weight": 0.625,
+          "pass": "即时执行计划和阻塞计划有已验证修订路径"
+        },
+        {
+          "id": "W5.3",
+          "weight": 0.625,
+          "pass": "长期目标根据新事实、关系与失败作持续调整"
+        },
+        {
+          "id": "W5.4",
+          "weight": 0.625,
+          "pass": "跨重启多世界长过程计划执行和修订均验收通过"
+        }
+      ]
+    },
+    {
+      "id": "W6",
+      "title": "Body/resources and transient perception continuity",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "W6.1",
+          "weight": 0.625,
+          "pass": "身体和资源变化由程序事实控制"
+        },
+        {
+          "id": "W6.2",
+          "weight": 0.625,
+          "pass": "瞬时感知与现场连续性已有回归保护"
+        },
+        {
+          "id": "W6.3",
+          "weight": 0.625,
+          "pass": "多世界长时资源消耗、恢复、行动前提保持因果"
+        },
+        {
+          "id": "W6.4",
+          "weight": 0.625,
+          "pass": "压力及重启模拟无体力、位置、感知漂移"
+        }
+      ]
+    },
+    {
+      "id": "W7",
+      "title": "Memory, NPC interactions and long-term relationship causality",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "W7.1",
+          "weight": 0.625,
+          "pass": "既有经历记忆影响 NPC 决策"
+        },
+        {
+          "id": "W7.2",
+          "weight": 0.625,
+          "pass": "已有关系与自主交互因果回归通过"
+        },
+        {
+          "id": "W7.3",
+          "weight": 0.625,
+          "pass": "多个 NPC 的长期互动、记忆矛盾和关系变化可解释"
+        },
+        {
+          "id": "W7.4",
+          "weight": 0.625,
+          "pass": "多世界长期社会模拟保持持久且不重复结算"
+        }
+      ]
+    },
+    {
+      "id": "W8",
+      "title": "Background incidents, macro arcs and player absence",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "W8.1",
+          "weight": 0.625,
+          "pass": "玩家缺席时背景事件按既有规则推进"
+        },
+        {
+          "id": "W8.2",
+          "weight": 0.625,
+          "pass": "既有48小时模拟行动、事件结算无离屏信息泄漏"
+        },
+        {
+          "id": "W8.3",
+          "weight": 0.625,
+          "pass": "宏观事件与角色行为有多种因果路径而非固定重复"
+        },
+        {
+          "id": "W8.4",
+          "weight": 0.625,
+          "pass": "扩展多世界长期模拟验证事件变化与回归稳定"
+        }
+      ]
+    },
+    {
+      "id": "W9",
+      "title": "Explicit policy/data decisions for legacy-world social authoring",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "W9.1",
+          "weight": 0.625,
+          "pass": "明确旧世界社交政策与作者数据缺口"
+        },
+        {
+          "id": "W9.2",
+          "weight": 0.625,
+          "pass": "制定可审查的兼容数据策略及禁止默认虚构原则"
+        },
+        {
+          "id": "W9.3",
+          "weight": 0.625,
+          "pass": "离线副本验证政策缺失、启用与迁移的行为"
+        },
+        {
+          "id": "W9.4",
+          "weight": 0.625,
+          "pass": "经明确授权后执行所需正式数据变更或确认无需迁移"
+        }
+      ]
+    },
+    {
+      "id": "W10",
+      "title": "Multi-world extended-duration and future multiplayer acceptance",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "W10.1",
+          "weight": 0.625,
+          "pass": "建立固定多世界长期模拟场景与失败标准"
+        },
+        {
+          "id": "W10.2",
+          "weight": 0.625,
+          "pass": "定义未来多人共享权威、竞争和重连语义"
+        },
+        {
+          "id": "W10.3",
+          "weight": 0.625,
+          "pass": "离线长时多实例或多进程场景通过"
+        },
+        {
+          "id": "W10.4",
+          "weight": 0.625,
+          "pass": "多人目标按既定范围通过独立验收"
+        }
+      ]
+    },
+    {
+      "id": "N1",
+      "title": "Ordinary/refine Narrator share private cognition projection",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "N1.1",
+          "weight": 0.625,
+          "pass": "普通 Narrator 使用私有认知投影"
+        },
+        {
+          "id": "N1.2",
+          "weight": 0.625,
+          "pass": "refine 使用同样投影和权限边界"
+        },
+        {
+          "id": "N1.3",
+          "weight": 0.625,
+          "pass": "人物在场与感知限制不因 refine 被绕过"
+        },
+        {
+          "id": "N1.4",
+          "weight": 0.625,
+          "pass": "运行时集成回归证明无全知泄漏"
+        }
+      ]
+    },
+    {
+      "id": "N2",
+      "title": "Technical narration repair does not replay committed world effects",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "N2.1",
+          "weight": 0.625,
+          "pass": "叙述技术修复使用已结算事实"
+        },
+        {
+          "id": "N2.2",
+          "weight": 0.625,
+          "pass": "已提交行动不因重述再次执行"
+        },
+        {
+          "id": "N2.3",
+          "weight": 0.625,
+          "pass": "局部失败保留已完成步骤及原请求凭据"
+        },
+        {
+          "id": "N2.4",
+          "weight": 0.625,
+          "pass": "有界重试、回退与重启恢复回归通过"
+        }
+      ]
+    },
+    {
+      "id": "N3",
+      "title": "Multi-step physical/speech presentation retains settled steps",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "N3.1",
+          "weight": 0.625,
+          "pass": "复合行动叙述聚合已结算步骤"
+        },
+        {
+          "id": "N3.2",
+          "weight": 0.625,
+          "pass": "身体和发言结果以凭据为准不重演"
+        },
+        {
+          "id": "N3.3",
+          "weight": 0.625,
+          "pass": "多步叙述完整表达成功、失败与未执行的区别"
+        },
+        {
+          "id": "N3.4",
+          "weight": 0.625,
+          "pass": "多世界长复合动作描写自然且不漏步骤"
+        }
+      ]
+    },
+    {
+      "id": "N4",
+      "title": "Facts, presence, perception and legal-description false rejection balance",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "N4.1",
+          "weight": 0.625,
+          "pass": "已有事实、在场和感知校验阻止越权描写"
+        },
+        {
+          "id": "N4.2",
+          "weight": 0.625,
+          "pass": "已知合法描写及误拒边界有回归证据"
+        },
+        {
+          "id": "N4.3",
+          "weight": 0.625,
+          "pass": "扩大合法比喻、转述和场景表述语料降低误拒"
+        },
+        {
+          "id": "N4.4",
+          "weight": 0.625,
+          "pass": "多世界误放与误拒均按固定期望验收"
+        }
+      ]
+    },
+    {
+      "id": "N5",
+      "title": "NPC speech reflects personality, memory and relationships",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "N5.1",
+          "weight": 0.625,
+          "pass": "人物发言可获得受限人格与记忆上下文"
+        },
+        {
+          "id": "N5.2",
+          "weight": 0.625,
+          "pass": "关系与私有认知已经接入叙述路径"
+        },
+        {
+          "id": "N5.3",
+          "weight": 0.625,
+          "pass": "固定盲评或可复核样例区分人物声线和关系变化"
+        },
+        {
+          "id": "N5.4",
+          "weight": 0.625,
+          "pass": "真实模型多人物对话质量经授权验收"
+        }
+      ]
+    },
+    {
+      "id": "N6",
+      "title": "Inventory/object grounding and no invented usable assets",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "N6.1",
+          "weight": 0.625,
+          "pass": "物品与可用资产的存在受权威事实限制"
+        },
+        {
+          "id": "N6.2",
+          "weight": 0.625,
+          "pass": "已有持有与 materialization/firewall 回归阻止虚构可用物"
+        },
+        {
+          "id": "N6.3",
+          "weight": 0.625,
+          "pass": "开放容器、环境物、临时物与转交组合有固定覆盖"
+        },
+        {
+          "id": "N6.4",
+          "weight": 0.625,
+          "pass": "多世界物品描写与后续可用性完全一致"
+        }
+      ]
+    },
+    {
+      "id": "N7",
+      "title": "Long-term continuity and contradictory expression prevention",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "N7.1",
+          "weight": 0.625,
+          "pass": "已有短期场景及事件连续性验证"
+        },
+        {
+          "id": "N7.2",
+          "weight": 0.625,
+          "pass": "记忆与私有认知投影不会直接自相矛盾"
+        },
+        {
+          "id": "N7.3",
+          "weight": 0.625,
+          "pass": "长时角色表达、位置、承诺及事件回忆保持一致"
+        },
+        {
+          "id": "N7.4",
+          "weight": 0.625,
+          "pass": "多世界长过程读写重启后的叙事连续性验收通过"
+        }
+      ]
+    },
+    {
+      "id": "N8",
+      "title": "Natural degraded narration quality across scene types",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "N8.1",
+          "weight": 0.625,
+          "pass": "固定各类场景降级描写质量标准与样例"
+        },
+        {
+          "id": "N8.2",
+          "weight": 0.625,
+          "pass": "降级文本自然表达已结算事实及未完成部分"
+        },
+        {
+          "id": "N8.3",
+          "weight": 0.625,
+          "pass": "身体、对话、观察、移动的降级文本逐项验收通过"
+        },
+        {
+          "id": "N8.4",
+          "weight": 0.625,
+          "pass": "当前模型与离线回退组合均不输出工具式总结"
+        }
+      ]
+    },
+    {
+      "id": "N9",
+      "title": "Broad multi-world differentiated prose benchmark",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "N9.1",
+          "weight": 0.625,
+          "pass": "固定多世界差异化文本基准和可复核评分表"
+        },
+        {
+          "id": "N9.2",
+          "weight": 0.625,
+          "pass": "覆盖人物声音、节奏、感知、自然度和连续性"
+        },
+        {
+          "id": "N9.3",
+          "weight": 0.625,
+          "pass": "当前源代码跑完整基准并公开逐项未达标结果"
+        },
+        {
+          "id": "N9.4",
+          "weight": 0.625,
+          "pass": "独立或人工复核通过，不能用事实测试替代质量验收"
+        }
+      ]
+    },
+    {
+      "id": "N10",
+      "title": "Current-source real-provider and human play acceptance",
+      "weight": 2.5,
+      "conditions": [
+        {
+          "id": "N10.1",
+          "weight": 0.625,
+          "pass": "经授权使用当前代码及真实 Provider 进行叙述验收"
+        },
+        {
+          "id": "N10.2",
+          "weight": 0.625,
+          "pass": "多世界真实游戏长会话有人类体验证据"
+        },
+        {
+          "id": "N10.3",
+          "weight": 0.625,
+          "pass": "用户验收叙述自然度、行动感与事实一致性"
+        },
+        {
+          "id": "N10.4",
+          "weight": 0.625,
+          "pass": "授权部署后的正式环境验收与回退方案完成"
+        }
+      ]
+    }
+  ],
+  "verification_protocol_sha256": "5b86acc8f13adb32e4f9281881ee1febed6af92f17cc4ca9419c26af3d87282d"
+}

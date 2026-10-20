@@ -1,0 +1,1311 @@
+{
+  "version": 1,
+  "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
+  "assessed_source": "f4bf805",
+  "conditions": {
+    "R1.1": {
+      "status": "met",
+      "evidence": [
+        "tests/request-restart-recovery.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R1.2": {
+      "status": "met",
+      "evidence": [
+        "tests/request-restart-recovery.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R1.3": {
+      "status": "met",
+      "evidence": [
+        "tests/request-restart-recovery.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R1.4": {
+      "status": "met",
+      "evidence": [
+        "tests/request-restart-recovery.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R2.1": {
+      "status": "met",
+      "evidence": [
+        "tests/storage-service.test.ts",
+        "tests/p0a-behavior-config-recovery.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R2.2": {
+      "status": "met",
+      "evidence": [
+        "tests/storage-service.test.ts",
+        "tests/p0a-behavior-config-recovery.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R2.3": {
+      "status": "met",
+      "evidence": [
+        "tests/storage-service.test.ts",
+        "tests/p0a-behavior-config-recovery.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R2.4": {
+      "status": "met",
+      "evidence": [
+        "tests/storage-service.test.ts",
+        "tests/p0a-behavior-config-recovery.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R3.1": {
+      "status": "met",
+      "evidence": [
+        "tests/p0a-history-request-recovery.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R3.2": {
+      "status": "met",
+      "evidence": [
+        "tests/p0a-history-request-recovery.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R3.3": {
+      "status": "met",
+      "evidence": [
+        "tests/p0a-history-request-recovery.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R3.4": {
+      "status": "met",
+      "evidence": [
+        "tests/p0a-history-request-recovery.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R4.1": {
+      "status": "met",
+      "evidence": [
+        "tests/p0a-behavior-config-recovery.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R4.2": {
+      "status": "met",
+      "evidence": [
+        "tests/p0a-behavior-config-recovery.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R4.3": {
+      "status": "met",
+      "evidence": [
+        "tests/p0a-behavior-config-recovery.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R4.4": {
+      "status": "met",
+      "evidence": [
+        "tests/p0a-behavior-config-recovery.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R5.1": {
+      "status": "met",
+      "evidence": [
+        "docs/qa-ai-recovery-coverage.md"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R5.2": {
+      "status": "met",
+      "evidence": [
+        "docs/qa-ai-recovery-coverage.md"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R5.3": {
+      "status": "unmet",
+      "evidence": [
+        "docs/qa-ai-recovery-coverage.md"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "R5.4": {
+      "status": "unverified",
+      "evidence": [
+        "docs/qa-ai-recovery-coverage.md"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "R6.1": {
+      "status": "met",
+      "evidence": [
+        "tests/request-restart-recovery.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R6.2": {
+      "status": "met",
+      "evidence": [
+        "tests/request-restart-recovery.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R6.3": {
+      "status": "unmet",
+      "evidence": [
+        "tests/request-restart-recovery.test.ts"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "R6.4": {
+      "status": "unverified",
+      "evidence": [
+        "tests/request-restart-recovery.test.ts"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "R7.1": {
+      "status": "met",
+      "evidence": [
+        "docs/build-performance-diagnosis-2026-10-20.md"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R7.2": {
+      "status": "met",
+      "evidence": [
+        "docs/build-performance-diagnosis-2026-10-20.md"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R7.3": {
+      "status": "unmet",
+      "evidence": [
+        "docs/build-performance-diagnosis-2026-10-20.md"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "R7.4": {
+      "status": "unverified",
+      "evidence": [
+        "docs/build-performance-diagnosis-2026-10-20.md"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "R8.1": {
+      "status": "met",
+      "evidence": [
+        "docs/media-canonical-coordination.md"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R8.2": {
+      "status": "met",
+      "evidence": [
+        "docs/media-canonical-coordination.md"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R8.3": {
+      "status": "unmet",
+      "evidence": [
+        "docs/media-canonical-coordination.md"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "R8.4": {
+      "status": "unverified",
+      "evidence": [
+        "docs/media-canonical-coordination.md"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "R9.1": {
+      "status": "met",
+      "evidence": [
+        "tests/p0a-migration-read-races.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R9.2": {
+      "status": "met",
+      "evidence": [
+        "tests/p0a-migration-read-races.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R9.3": {
+      "status": "unmet",
+      "evidence": [
+        "tests/p0a-migration-read-races.test.ts"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "R9.4": {
+      "status": "unverified",
+      "evidence": [
+        "tests/p0a-migration-read-races.test.ts"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "R10.1": {
+      "status": "met",
+      "evidence": [
+        "docs/behavior-guidance-recovery.md"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R10.2": {
+      "status": "met",
+      "evidence": [
+        "docs/behavior-guidance-recovery.md"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "R10.3": {
+      "status": "unmet",
+      "evidence": [
+        "docs/behavior-guidance-recovery.md"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "R10.4": {
+      "status": "unmet",
+      "evidence": [
+        "docs/behavior-guidance-recovery.md"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "A1.1": {
+      "status": "met",
+      "evidence": [
+        "tests/goal-stage-person-binding.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A1.2": {
+      "status": "met",
+      "evidence": [
+        "tests/goal-stage-person-binding.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A1.3": {
+      "status": "met",
+      "evidence": [
+        "tests/goal-stage-person-binding.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A1.4": {
+      "status": "met",
+      "evidence": [
+        "tests/goal-stage-person-binding.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A2.1": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-relationship-repetition.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A2.2": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-relationship-repetition.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A2.3": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-relationship-repetition.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A2.4": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-relationship-repetition.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A3.1": {
+      "status": "met",
+      "evidence": [
+        "tests/goal-contract-batch3.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A3.2": {
+      "status": "met",
+      "evidence": [
+        "tests/goal-contract-batch3.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A3.3": {
+      "status": "met",
+      "evidence": [
+        "tests/goal-contract-batch3.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A3.4": {
+      "status": "met",
+      "evidence": [
+        "tests/goal-contract-batch3.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A4.1": {
+      "status": "met",
+      "evidence": [
+        "tests/goal-contract-batch1.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A4.2": {
+      "status": "met",
+      "evidence": [
+        "tests/goal-contract-batch1.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A4.3": {
+      "status": "unmet",
+      "evidence": [
+        "tests/goal-contract-batch1.test.ts"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "A4.4": {
+      "status": "unverified",
+      "evidence": [
+        "tests/goal-contract-batch1.test.ts"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "A5.1": {
+      "status": "met",
+      "evidence": [
+        "tests/goal-stage-person-binding.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A5.2": {
+      "status": "met",
+      "evidence": [
+        "tests/goal-stage-person-binding.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A5.3": {
+      "status": "unmet",
+      "evidence": [
+        "tests/goal-stage-person-binding.test.ts"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "A5.4": {
+      "status": "unverified",
+      "evidence": [
+        "tests/goal-stage-person-binding.test.ts"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "A6.1": {
+      "status": "met",
+      "evidence": [
+        "tests/goal-stage-person-binding.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A6.2": {
+      "status": "met",
+      "evidence": [
+        "tests/goal-stage-person-binding.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A6.3": {
+      "status": "unmet",
+      "evidence": [
+        "tests/goal-stage-person-binding.test.ts"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "A6.4": {
+      "status": "unverified",
+      "evidence": [
+        "tests/goal-stage-person-binding.test.ts"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "A7.1": {
+      "status": "met",
+      "evidence": [
+        "tests/goal-contract-batch2.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A7.2": {
+      "status": "met",
+      "evidence": [
+        "tests/goal-contract-batch2.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A7.3": {
+      "status": "unmet",
+      "evidence": [
+        "tests/goal-contract-batch2.test.ts"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "A7.4": {
+      "status": "unverified",
+      "evidence": [
+        "tests/goal-contract-batch2.test.ts"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "A8.1": {
+      "status": "met",
+      "evidence": [
+        "tests/low-stakes-open-goal.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A8.2": {
+      "status": "met",
+      "evidence": [
+        "tests/low-stakes-open-goal.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "A8.3": {
+      "status": "unmet",
+      "evidence": [
+        "tests/low-stakes-open-goal.test.ts"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "A8.4": {
+      "status": "unverified",
+      "evidence": [
+        "tests/low-stakes-open-goal.test.ts"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "A9.1": {
+      "status": "unmet",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "A9.2": {
+      "status": "unmet",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "A9.3": {
+      "status": "unverified",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "A9.4": {
+      "status": "unverified",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "A10.1": {
+      "status": "unverified",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "A10.2": {
+      "status": "unverified",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "A10.3": {
+      "status": "unverified",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "A10.4": {
+      "status": "unverified",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "W1.1": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-information-propagation.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W1.2": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-information-propagation.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W1.3": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-information-propagation.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W1.4": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-information-propagation.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W2.1": {
+      "status": "met",
+      "evidence": [
+        "tests/narrator-character-cognition.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W2.2": {
+      "status": "met",
+      "evidence": [
+        "tests/narrator-character-cognition.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W2.3": {
+      "status": "met",
+      "evidence": [
+        "tests/narrator-character-cognition.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W2.4": {
+      "status": "met",
+      "evidence": [
+        "tests/narrator-character-cognition.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W3.1": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-relationships.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W3.2": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-relationships.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W3.3": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-relationships.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W3.4": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-relationships.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W4.1": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-physical-plan-continuity.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W4.2": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-physical-plan-continuity.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W4.3": {
+      "status": "unmet",
+      "evidence": [
+        "tests/npc-physical-plan-continuity.test.ts"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "W4.4": {
+      "status": "unverified",
+      "evidence": [
+        "tests/npc-physical-plan-continuity.test.ts"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "W5.1": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-persistent-plans.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W5.2": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-persistent-plans.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W5.3": {
+      "status": "unmet",
+      "evidence": [
+        "tests/npc-persistent-plans.test.ts"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "W5.4": {
+      "status": "unverified",
+      "evidence": [
+        "tests/npc-persistent-plans.test.ts"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "W6.1": {
+      "status": "met",
+      "evidence": [
+        "tests/perception-transient-continuity.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W6.2": {
+      "status": "met",
+      "evidence": [
+        "tests/perception-transient-continuity.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W6.3": {
+      "status": "unmet",
+      "evidence": [
+        "tests/perception-transient-continuity.test.ts"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "W6.4": {
+      "status": "unverified",
+      "evidence": [
+        "tests/perception-transient-continuity.test.ts"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "W7.1": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-experience.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W7.2": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-experience.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W7.3": {
+      "status": "unmet",
+      "evidence": [
+        "tests/npc-experience.test.ts"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "W7.4": {
+      "status": "unverified",
+      "evidence": [
+        "tests/npc-experience.test.ts"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "W8.1": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-long-world.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W8.2": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-long-world.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "W8.3": {
+      "status": "unmet",
+      "evidence": [
+        "tests/npc-long-world.test.ts"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "W8.4": {
+      "status": "unverified",
+      "evidence": [
+        "tests/npc-long-world.test.ts"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "W9.1": {
+      "status": "unmet",
+      "evidence": [
+        "docs/claude-takeover-integration.md"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "W9.2": {
+      "status": "unmet",
+      "evidence": [
+        "docs/claude-takeover-integration.md"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "W9.3": {
+      "status": "unverified",
+      "evidence": [
+        "docs/claude-takeover-integration.md"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "W9.4": {
+      "status": "unverified",
+      "evidence": [
+        "docs/claude-takeover-integration.md"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "W10.1": {
+      "status": "unmet",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "W10.2": {
+      "status": "unmet",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "W10.3": {
+      "status": "unverified",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "W10.4": {
+      "status": "unverified",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "N1.1": {
+      "status": "met",
+      "evidence": [
+        "tests/narrator-character-cognition.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "N1.2": {
+      "status": "met",
+      "evidence": [
+        "tests/narrator-character-cognition.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "N1.3": {
+      "status": "met",
+      "evidence": [
+        "tests/narrator-character-cognition.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "N1.4": {
+      "status": "met",
+      "evidence": [
+        "tests/narrator-character-cognition.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "N2.1": {
+      "status": "met",
+      "evidence": [
+        "tests/narrative-bounded-retry.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "N2.2": {
+      "status": "met",
+      "evidence": [
+        "tests/narrative-bounded-retry.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "N2.3": {
+      "status": "met",
+      "evidence": [
+        "tests/narrative-bounded-retry.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "N2.4": {
+      "status": "met",
+      "evidence": [
+        "tests/narrative-bounded-retry.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "N3.1": {
+      "status": "met",
+      "evidence": [
+        "tests/compound-narration-aggregation.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "N3.2": {
+      "status": "met",
+      "evidence": [
+        "tests/compound-narration-aggregation.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "N3.3": {
+      "status": "unmet",
+      "evidence": [
+        "tests/compound-narration-aggregation.test.ts"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "N3.4": {
+      "status": "unverified",
+      "evidence": [
+        "tests/compound-narration-aggregation.test.ts"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "N4.1": {
+      "status": "met",
+      "evidence": [
+        "tests/narrative-firewall-observability.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "N4.2": {
+      "status": "met",
+      "evidence": [
+        "tests/narrative-firewall-observability.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "N4.3": {
+      "status": "unmet",
+      "evidence": [
+        "tests/narrative-firewall-observability.test.ts"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "N4.4": {
+      "status": "unverified",
+      "evidence": [
+        "tests/narrative-firewall-observability.test.ts"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "N5.1": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-dialogue-style.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "N5.2": {
+      "status": "met",
+      "evidence": [
+        "tests/npc-dialogue-style.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "N5.3": {
+      "status": "unmet",
+      "evidence": [
+        "tests/npc-dialogue-style.test.ts"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "N5.4": {
+      "status": "unverified",
+      "evidence": [
+        "tests/npc-dialogue-style.test.ts"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "N6.1": {
+      "status": "met",
+      "evidence": [
+        "tests/initial-possessions.test.ts",
+        "tests/local-scene-materialization.test.ts",
+        "tests/narrative-firewall-observability.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "N6.2": {
+      "status": "met",
+      "evidence": [
+        "tests/initial-possessions.test.ts",
+        "tests/local-scene-materialization.test.ts",
+        "tests/narrative-firewall-observability.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "N6.3": {
+      "status": "unmet",
+      "evidence": [
+        "tests/initial-possessions.test.ts",
+        "tests/local-scene-materialization.test.ts",
+        "tests/narrative-firewall-observability.test.ts"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "N6.4": {
+      "status": "unverified",
+      "evidence": [
+        "tests/initial-possessions.test.ts",
+        "tests/local-scene-materialization.test.ts",
+        "tests/narrative-firewall-observability.test.ts"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "N7.1": {
+      "status": "met",
+      "evidence": [
+        "tests/continuity.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "N7.2": {
+      "status": "met",
+      "evidence": [
+        "tests/continuity.test.ts"
+      ],
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+    },
+    "N7.3": {
+      "status": "unmet",
+      "evidence": [
+        "tests/continuity.test.ts"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "N7.4": {
+      "status": "unverified",
+      "evidence": [
+        "tests/continuity.test.ts"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "N8.1": {
+      "status": "unmet",
+      "evidence": [
+        "tests/narration-degradation-http.test.ts"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "N8.2": {
+      "status": "unmet",
+      "evidence": [
+        "tests/narration-degradation-http.test.ts"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "N8.3": {
+      "status": "unverified",
+      "evidence": [
+        "tests/narration-degradation-http.test.ts"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "N8.4": {
+      "status": "unverified",
+      "evidence": [
+        "tests/narration-degradation-http.test.ts"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "N9.1": {
+      "status": "unmet",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "N9.2": {
+      "status": "unmet",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+    },
+    "N9.3": {
+      "status": "unverified",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "N9.4": {
+      "status": "unverified",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "N10.1": {
+      "status": "unverified",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "N10.2": {
+      "status": "unverified",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "N10.3": {
+      "status": "unverified",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    },
+    "N10.4": {
+      "status": "unverified",
+      "evidence": [
+        "docs/four-theme-acceptance-status.md"
+      ],
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+    }
+  },
+  "changes": [
+    {
+      "batch": "baseline-v1",
+      "source": "f4bf805",
+      "type": "accounting_baseline",
+      "transitions": [],
+      "note": "First reproducible baseline; no repair credit and no comparison to old subjective 46%."
+    }
+  ],
+  "new_risks": [],
+  "baseline_statuses": {
+    "R1.1": "met",
+    "R1.2": "met",
+    "R1.3": "met",
+    "R1.4": "met",
+    "R2.1": "met",
+    "R2.2": "met",
+    "R2.3": "met",
+    "R2.4": "met",
+    "R3.1": "met",
+    "R3.2": "met",
+    "R3.3": "met",
+    "R3.4": "met",
+    "R4.1": "met",
+    "R4.2": "met",
+    "R4.3": "met",
+    "R4.4": "met",
+    "R5.1": "met",
+    "R5.2": "met",
+    "R5.3": "unmet",
+    "R5.4": "unverified",
+    "R6.1": "met",
+    "R6.2": "met",
+    "R6.3": "unmet",
+    "R6.4": "unverified",
+    "R7.1": "met",
+    "R7.2": "met",
+    "R7.3": "unmet",
+    "R7.4": "unverified",
+    "R8.1": "met",
+    "R8.2": "met",
+    "R8.3": "unmet",
+    "R8.4": "unverified",
+    "R9.1": "met",
+    "R9.2": "met",
+    "R9.3": "unmet",
+    "R9.4": "unverified",
+    "R10.1": "met",
+    "R10.2": "met",
+    "R10.3": "unmet",
+    "R10.4": "unmet",
+    "A1.1": "met",
+    "A1.2": "met",
+    "A1.3": "met",
+    "A1.4": "met",
+    "A2.1": "met",
+    "A2.2": "met",
+    "A2.3": "met",
+    "A2.4": "met",
+    "A3.1": "met",
+    "A3.2": "met",
+    "A3.3": "met",
+    "A3.4": "met",
+    "A4.1": "met",
+    "A4.2": "met",
+    "A4.3": "unmet",
+    "A4.4": "unverified",
+    "A5.1": "met",
+    "A5.2": "met",
+    "A5.3": "unmet",
+    "A5.4": "unverified",
+    "A6.1": "met",
+    "A6.2": "met",
+    "A6.3": "unmet",
+    "A6.4": "unverified",
+    "A7.1": "met",
+    "A7.2": "met",
+    "A7.3": "unmet",
+    "A7.4": "unverified",
+    "A8.1": "met",
+    "A8.2": "met",
+    "A8.3": "unmet",
+    "A8.4": "unverified",
+    "A9.1": "unmet",
+    "A9.2": "unmet",
+    "A9.3": "unverified",
+    "A9.4": "unverified",
+    "A10.1": "unverified",
+    "A10.2": "unverified",
+    "A10.3": "unverified",
+    "A10.4": "unverified",
+    "W1.1": "met",
+    "W1.2": "met",
+    "W1.3": "met",
+    "W1.4": "met",
+    "W2.1": "met",
+    "W2.2": "met",
+    "W2.3": "met",
+    "W2.4": "met",
+    "W3.1": "met",
+    "W3.2": "met",
+    "W3.3": "met",
+    "W3.4": "met",
+    "W4.1": "met",
+    "W4.2": "met",
+    "W4.3": "unmet",
+    "W4.4": "unverified",
+    "W5.1": "met",
+    "W5.2": "met",
+    "W5.3": "unmet",
+    "W5.4": "unverified",
+    "W6.1": "met",
+    "W6.2": "met",
+    "W6.3": "unmet",
+    "W6.4": "unverified",
+    "W7.1": "met",
+    "W7.2": "met",
+    "W7.3": "unmet",
+    "W7.4": "unverified",
+    "W8.1": "met",
+    "W8.2": "met",
+    "W8.3": "unmet",
+    "W8.4": "unverified",
+    "W9.1": "unmet",
+    "W9.2": "unmet",
+    "W9.3": "unverified",
+    "W9.4": "unverified",
+    "W10.1": "unmet",
+    "W10.2": "unmet",
+    "W10.3": "unverified",
+    "W10.4": "unverified",
+    "N1.1": "met",
+    "N1.2": "met",
+    "N1.3": "met",
+    "N1.4": "met",
+    "N2.1": "met",
+    "N2.2": "met",
+    "N2.3": "met",
+    "N2.4": "met",
+    "N3.1": "met",
+    "N3.2": "met",
+    "N3.3": "unmet",
+    "N3.4": "unverified",
+    "N4.1": "met",
+    "N4.2": "met",
+    "N4.3": "unmet",
+    "N4.4": "unverified",
+    "N5.1": "met",
+    "N5.2": "met",
+    "N5.3": "unmet",
+    "N5.4": "unverified",
+    "N6.1": "met",
+    "N6.2": "met",
+    "N6.3": "unmet",
+    "N6.4": "unverified",
+    "N7.1": "met",
+    "N7.2": "met",
+    "N7.3": "unmet",
+    "N7.4": "unverified",
+    "N8.1": "unmet",
+    "N8.2": "unmet",
+    "N8.3": "unverified",
+    "N8.4": "unverified",
+    "N9.1": "unmet",
+    "N9.2": "unmet",
+    "N9.3": "unverified",
+    "N9.4": "unverified",
+    "N10.1": "unverified",
+    "N10.2": "unverified",
+    "N10.3": "unverified",
+    "N10.4": "unverified"
+  }
+}

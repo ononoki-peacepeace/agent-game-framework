@@ -53,6 +53,7 @@ export function gameNarrative(outcome:Extract<FrameworkOutcome,{type:'game'}>,fa
 
 export const safeEngineMessage='这一回合没有完成安全结算。请刷新当前世界状态，再决定是否重试。';
 export function engineMessage(outcome:Extract<FrameworkOutcome,{type:'engine_failure'}>){
+  if(outcome.stage==='guidance_configuration')return '行为指导请求未能可靠完成；部分配置可能已经保存。请查看当前指导列表，不要重复提交原请求。';
   if(outcome.receipt_ids.length||outcome.committed_steps.length)
     return outcome.stage==='natural_scene'?
       '此前已保存的状态记录保持有效；后续交流未能可靠完成。请查看当前世界状态后再决定下一步。':

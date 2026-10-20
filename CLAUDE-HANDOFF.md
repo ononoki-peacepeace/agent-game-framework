@@ -1,5 +1,15 @@
 # Claude Code starting handoff
 
+## Durable guidance identity and measurable progress — 2026-10-20
+
+Branch `codex/claude-takeover-integration`, continuing from `f4bf805`. The checkpoint containing this section adds `GuidanceRequests` using existing StoredInputRecord atomic storage and namespaced child IDs. Identified global/session put/enable/remove is not re-executed after deletion, failed effects, terminal loss or service restart. Running intents stop safely; session content is not restored by identity replay. Parent HTTP records are separate; global cache reconciliation and world/legacy-style atomic commits are retained. No Save schema or storage-interface change. Integrate recovery helper, service and HTTP/outcome classification together. Cross-scope moves, multi-process/external writers and OS-kill boundaries remain unfinished.
+
+Evidence: durable baseline8 tests/7 failures; adjacent final9 files/144 passed; added complete boundary matrix51 passed (overlapping suites). Strict TypeScript and exact final commit are recorded in takeover SESSION. No latest full-suite/full-build claim; the original failed nested self-extension remains historical, later bounded self-extension passed as previously recorded.
+
+Progress now uses the original40 packages, four fixed conditions each, equal25% themes/2.5% packages/0.625pp conditions. Definitions plus21-package concrete verification protocol are SHA256 pinned, with baseline statuses, validated transition chains and separate new-risk register. Baseline56.25%=90 met/32 unmet/38 unverified, counts12/21/7; changing method earns zero repair credit. R10.3 is the only selected score transition for this repair, to be recorded against the reviewed source commit after final verification. Do not reuse old46% or treat historical local suites as current complete acceptance. The generated report is docs/four-theme-progress.md.
+
+Next product work: broader mixed conditional/dependent/pronoun semantics, NPC long-term goal/social variety and natural Narrator quality. Keep development active; do not stop at progress accounting. Production/3100/paid Provider/push/Claude edits and preexisting QA/audit files remain protected.
+
 ## Source recipient continuation — 2026-10-20
 
 Reviewed source `b255d17` follows media `7f94529` and guidance `37b2741`. It fixes Planner speech referents overriding directly source-owned recipients or actual pronoun context. Existing multi-person stage roles remain; genuine pronoun ambiguity still requires binding. Role review additionally protects named discussion subjects (“向他询问林舟”) against being selected as addressees, while direct “询问林舟他…” retains Lin. All intermediate failures are preserved. Actual Core TALK and completed-plan replay tests preserve the authorized recipient. No public schema/interface change. Baseline4 failed/6 controls passed; final adjacent9 files/144 tests passed; final complete strict TypeScript25.70s/exit0. Exact final checkpoint is in the takeover SESSION. Arbitrary cross-sentence coreference and real-model audience-role quality remain unfinished.

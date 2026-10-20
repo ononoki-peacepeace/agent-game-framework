@@ -1,6 +1,6 @@
 # Four-theme acceptance ledger — 2026-10-20
 
-This mutable ledger groups the handoff requirements into 40 work packages. It does not replace or edit frozen acceptance v1–v23. A **completed** row means the stated bounded implementation has offline developer evidence (C/D), not that the whole theme has passed real-provider, production or human acceptance. **Partial** means working implementation and evidence exist but material requirements remain. **Unfinished** means the stated acceptance has not been established; it does not imply that every related source file is absent. Packages differ in size, so counts are evidence for engineering estimates, not an equal-weight completion formula.
+This ledger groups the handoff requirements into the original 40 work packages. It does not replace or edit frozen acceptance v1–v23. Current scoring uses [160 fixed conditions and their evidence](four-theme-progress.md), with machine-readable definitions, states and batch deltas. The old estimates below are retired historical estimates, not current progress. A **completed** row means bounded offline developer evidence (C/D), not real-provider, production or human acceptance. The original row classifications are preserved for comparison; the condition report independently derives current classifications.
 
 | Theme | Completed | Partial | Unfinished | Existing development estimate |
 |---|---:|---:|---:|---:|
@@ -10,7 +10,7 @@ This mutable ledger groups the handoff requirements into 40 work packages. It do
 | ④ Narrator and experience | 2 | 5 | 3 | ~31% |
 | Total | 12 | 21 | 7 | ~46% |
 
-The estimate remains unchanged. Shared final gates—latest complete offline snapshot, broader multi-world tests, process-kill/multi-process acceptance, authorized real-provider tests, deployment and human QA—remain open. Historical passes do not establish those gates for later edits.
+Do not reuse the historical 46% as a current estimate. The first reproducible condition baseline is 56.25% (90 met / 32 unmet / 38 unverified), with zero repair credit for changing the accounting method. Shared final gates—latest complete offline snapshot, broader multi-world tests, process-kill/multi-process acceptance, authorized real-provider tests, deployment and human QA—remain open. Historical passes do not establish those gates for later edits.
 
 ## ① Reliability
 
