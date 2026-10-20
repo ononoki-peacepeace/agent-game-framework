@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "c6a7e84",
+  "assessed_source": "7ecc07b",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -965,9 +965,11 @@
       "evidence": [
         "tests/narrative-firewall-observability.test.ts",
         "tests/compound-physical-firewall.test.ts",
-        "docs/compound-physical-firewall.md"
+        "docs/compound-physical-firewall.md",
+        "tests/compound-degraded-prose.test.ts",
+        "docs/physical-reaction-speech-integrity.md"
       ],
-      "basis": "Existing factual/presence/perception tests plus compound physical-child counterexample repair; explicit met withdrawal/restoration recorded, final8files79pass/build at 8ae218b; wider N4.3/N4.4 remain open."
+      "basis": "Existing factual/presence/perception tests plus compound physical-child counterexample repair; explicit met withdrawal/restoration recorded, final8files79pass/build at 8ae218b; wider N4.3/N4.4 remain open. 7ecc07b: actual settled reaction words required in beats/legacy dialogue; explicit withdrawal/restoration, net0."
     },
     "N4.2": {
       "status": "met",
@@ -1646,6 +1648,58 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "settled-reaction-speech-counterexample",
+      "type": "evidence_correction",
+      "source": "c6a7e84",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "tests/compound-degraded-prose.test.ts",
+            "docs/physical-reaction-speech-integrity.md"
+          ],
+          "reason": "Two lawful service counterexamples let a Narrator reverse settled reaction speech using another line by the same speaker;8controls passed."
+        }
+      ]
+    },
+    {
+      "batch": "settled-reaction-speech-repair",
+      "type": "repair",
+      "source": "7ecc07b",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "tests/compound-degraded-prose.test.ts",
+            "docs/physical-reaction-speech-integrity.md"
+          ],
+          "reason": "Require actual utterance in beats or legacy dialogue; both compound orders and lawful controls pass.10files71pass, final prompt regression2files21pass/build. Net0 restoration."
+        }
+      ],
+      "condition_checks": [
+        {
+          "id": "N3.3",
+          "result": "Saved reaction words preserved through bounded repair/degradation; broad multi-world quality remains open",
+          "evidence": [
+            "tests/compound-degraded-prose.test.ts",
+            "docs/physical-reaction-speech-integrity.md"
+          ]
+        },
+        {
+          "id": "N8.2",
+          "result": "Saved reaction words preserved through bounded repair/degradation; broad multi-world quality remains open",
+          "evidence": [
+            "tests/compound-degraded-prose.test.ts",
+            "docs/physical-reaction-speech-integrity.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -2005,6 +2059,18 @@
         "docs/compound-reaction-ownership.md"
       ],
       "summary": "Baseline6fail; after repair pending-budget2fail/5controls exposed extra calls and were fixed; final13distinct files81pass/build. No whole-condition credit."
+    },
+    {
+      "id": "settled-reaction-speech-substitution",
+      "scope": "original",
+      "condition": "N4.1",
+      "status": "resolved",
+      "source": "7ecc07b",
+      "evidence": [
+        "tests/compound-degraded-prose.test.ts",
+        "docs/physical-reaction-speech-integrity.md"
+      ],
+      "summary": "Any-speech-by-speaker guard allowed reversing actual reaction;2fail/8controls. Fixed exact stored-utterance preservation, explicit withdrawal/restoration net0."
     }
   ]
 }
