@@ -8,6 +8,7 @@ import {behaviorPatchSchema,type BehaviorPatch} from '../ai/guidance.js';
 import {z} from 'zod';
 import {inputRecoverySchema} from '../recovery/request-context.js';
 import {replaceWithBoundedRetry,writeAtomicJson} from './atomic-json.js';
+import {withCurrentImageWrite} from './current-write-guard.js';
 export interface PendingTurn {game_id:string;request_id:string;fingerprint:string;expected_revision:number;candidate:SavePackage;action:Action;facts:string[];generic:boolean}
 const inputRecordSchema=z.strictObject({version:z.literal(1),game_id:z.string().uuid(),request_id:z.string().uuid(),
   fingerprint:z.string().regex(/^[a-f0-9]{64}$/),state:z.enum(['running','completed','failed']),started_at:z.number(),
@@ -16,7 +17,7 @@ const inputRecordSchema=z.strictObject({version:z.literal(1),game_id:z.string().
 export type StoredInputRecord=z.infer<typeof inputRecordSchema>;
 export type SaveReadSource='unspecified'|'service_current'|'service_view'|'turn_commit_check'|'request_recovery'|'semantic_context';
 export interface SaveStorage { read(slot?: 'current' | 'checkpoint',source?:SaveReadSource): Promise<SavePackage | null>; write(save: SavePackage, slot?: 'current' | 'checkpoint'): Promise<void>;
-  /** Optional guarded read migration; false means re-read. Same-process coordination only. */
+  /** Optional guarded read migration; false means re-read. Requires cooperating current writers. */
   writeMigration?(expected:SavePackage,migrated:SavePackage):Promise<boolean>;
   /** Internal storage guarantees; never derived from save data or model output. */
   consumeReadValidation?(save:SavePackage):boolean;readonly validatesWrites?:boolean;
@@ -24,7 +25,8 @@ export interface SaveStorage { read(slot?: 'current' | 'checkpoint',source?:Save
   readGlobalGuidance?():Promise<BehaviorPatch[]>;writeGlobalGuidance?(patches:BehaviorPatch[]):Promise<void>;
   readInputRecord?(gameId:string,requestId:string):Promise<StoredInputRecord|null>;writeInputRecord?(record:StoredInputRecord):Promise<void> }
 // All JsonStore instances for one lexical path coordinate current-image writes.
-// This is not an inter-process or external-writer lock.
+// SQLite additionally coordinates cooperating JsonStore processes; external raw
+// writers and general stale canonical transactions remain outside this guard.
 const currentWrites=new Map<string,Promise<void>>();
 export class JsonStore implements SaveStorage {
   readonly validatesWrites=true;
@@ -82,7 +84,8 @@ export class JsonStore implements SaveStorage {
   }
   private currentWrite<T>(operation:()=>Promise<T>):Promise<T>{
     const path=resolve(this.directory,'current.json'),key=process.platform==='win32'?path.toLowerCase():path;
-    const prior=currentWrites.get(key)??Promise.resolve(),run=prior.then(operation,operation);
+    const prior=currentWrites.get(key)??Promise.resolve(),guarded=()=>withCurrentImageWrite(this.directory,operation);
+    const run=prior.then(guarded,guarded);
     const settled=run.then(()=>undefined,()=>undefined);currentWrites.set(key,settled);
     void settled.then(()=>{if(currentWrites.get(key)===settled)currentWrites.delete(key);});
     return run;
