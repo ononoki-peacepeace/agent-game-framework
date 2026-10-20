@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：486bd2f。整体 **60.00%**（96/160 个固定条件满足）。未满足 28，待验证 36。
+计分版本 v1；评估源代码：f41c301。整体 **60.00%**（96/160 个固定条件满足）。未满足 28，待验证 36。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：7 已修复，0 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：8 已修复，0 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -32,6 +32,7 @@
 | legacy-social-policy-strategy | repair | W9.1: unmet → met; W9.2: unmet → met | +1.250 pp |
 | complete-offline-snapshot-1927 | repair | R5.4: All190 fixed files executed,1926/1927pass; migration log failure and original process crash retained. Repair49pass/build passed; no full-condition closure.；完整条件保持开放 | +0.000 pp |
 | repaired-complete-offline-snapshot | repair | R5.4: unverified → met | +0.625 pp |
+| source-recipient-topic-authority | repair | A5.3: Explicit source listener overrides named topic and all model recipient hints; absent/same-name/alternative controls pass; wider object/alias matrices remain open；完整条件保持开放; A6.3: Single-clause topic/listener roles fixed; arbitrary cross-sentence coreference remains open；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 

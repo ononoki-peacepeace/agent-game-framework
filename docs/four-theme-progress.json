@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "486bd2f",
+  "assessed_source": "f41c301",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -1403,6 +1403,30 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "source-recipient-topic-authority",
+      "type": "repair",
+      "source": "f41c301",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "A5.3",
+          "result": "Explicit source listener overrides named topic and all model recipient hints; absent/same-name/alternative controls pass; wider object/alias matrices remain open",
+          "evidence": [
+            "tests/source-recipient-topic-authority.test.ts",
+            "docs/source-recipient-topic-authority.md"
+          ]
+        },
+        {
+          "id": "A6.3",
+          "result": "Single-clause topic/listener roles fixed; arbitrary cross-sentence coreference remains open",
+          "evidence": [
+            "tests/source-recipient-topic-authority.test.ts",
+            "docs/source-recipient-topic-authority.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -1653,6 +1677,18 @@
         "tests/observability-idle.test.ts"
       ],
       "summary": "Current/read migration ran before and after locked reread, repeating work/logs. Existing assertion reproduced, pure precheck avoids discarded migration; 7files49pass and build passed. Multi-process R9.3 remains open."
+    },
+    {
+      "id": "source-listener-topic-hints",
+      "scope": "original",
+      "condition": "A5.3",
+      "status": "resolved",
+      "source": "f41c301",
+      "evidence": [
+        "tests/source-recipient-topic-authority.test.ts",
+        "docs/source-recipient-topic-authority.md"
+      ],
+      "summary": "Actual TALK previously targeted topic NPC; explicit address now owns all binding hint paths and target_entities. Baseline4fail plus hint3fail; final14files203pass/build passed, no whole-condition closure."
     }
   ]
 }
