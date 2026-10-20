@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Complete post-item offline coverage — 2026-10-21
+
+Product80f9084/evidence starting362b3cb:228files2252/2252pass,zero skip,538pinned hashes unchanged,exact selected coverage once. Initial20process attempt had native0xC0000409 at19(no report),retained;19passed reports+11fresh single-file reports give30passing-report coverage,31total attempts. Identical-product isolated build/session68456 passed. Original QA/27frozen/formal SHA match. Native cause unresolved. See docs/post-item-offline-snapshot.md/ignored post-item-offline-summary.json. R5.4 refresh only;60%=96/160,+0. No active tests/source WIP after evidence commit. Next: copy ignored sealed-equipment-test-candidate.ts into tests,run formal baseline before repair;built-code preflight player/NPC sealed2fail/open2controls. Then continue fixed four-theme matrices. Original dirt/safety preserved.
+
 ## Item action degraded prose — 2026-10-21
 
 Parent33a99bf; this source checkpoint renders BUY/SELL/EQUIP/UNEQUIP from exact existing successful deterministic Core facts and reuses it for compound children. Baseline8fail;final7files56pass/zero skip and final isolated build/session68456 passed. Twelve focused cases cover refusal/content-filter,actual BUY→EQUIP order,quantity2/zero price,hidden/failure/foreign/incomplete controls and actual JsonStore/new-service prose replay with unchanged bytes/zero generation. Initial expanded54pass/1fail was wrong aggregate action-type expectation,preserved and corrected to child types. No schema/Core/receipt/budget interface changes. See docs/item-action-degraded-prose.md for reviewed Chinese outputs. N8.2/N3.3 stay open,60%=96/160,+0. Complete222files2192pass stays8b5d2df/evidence9acea32. Next: pin latest source and refresh complete offline coverage after accumulated item/access/prose edits. Original dirt retained; no source WIP after checkpoint.
