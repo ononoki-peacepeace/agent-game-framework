@@ -65,14 +65,14 @@ function presenceAliases(name:string){
   return [name.replace(/\s/g,''),...name.split(/\s+/).filter(part=>part.length>=2)].filter(Boolean);
 }
 
-/** A literal joined list followed by a presence/travel predicate has plural
+/** A literal joined list followed by the checked predicate has plural
  * subjects. Names mentioned as listeners, possessors or objects do not. */
-function jointPresenceSubjects<T extends {components:{identity?:{name?:unknown}}}>(text:string,people:T[]){
+function jointNarrativeSubjects<T extends {components:{identity?:{name?:unknown}}}>(text:string,people:T[],predicate:RegExp){
   if(people.length<2)return [];
   const aliases=people.flatMap(person=>presenceAliases(String(person.components.identity?.name??'')))
     .sort((a,b)=>b.length-a.length).map(name=>name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
   const name=`(?:${aliases.join('|')})`;
-  const joined=new RegExp(`^(?:随后|随即|接着|然后|这时|同时)?(${name}(?:(?:以及|和|与|、|跟)${name})+)(?=(?:两人|二人|三人|四人|一行人|一起|一同|都|也|仍然|仍|依然|早已|已经|没有|尚未|还没|不曾|未曾|并未|没能|不愿|不想|不肯|不能|不会|不要|不再|打算|准备|想要|真正|实际|立即|直接|曾经|成功|能够|继续|主动|将要|迈步|再|就|被|去|要|会)*(?:离开|离去|走出|走了|上去了|跨过门槛|跨出门|退出房间|站在|坐在|就在|留在))`).exec(text)?.[1];
+  const joined=new RegExp(`^(?:随后|随即|接着|然后|这时|同时)?(${name}(?:(?:以及|和|与|、|跟)${name})+)(?=(?:两人|二人|三人|四人|一行人|一起|一同|都|也|仍然|仍|依然|早已|已经|没有|尚未|还没|不曾|未曾|并未|没能|不愿|不想|不肯|不能|不会|不要|不再|打算|准备|想要|真正|实际|立即|直接|曾经|成功|能够|继续|主动|将要|迈步|再|就|被|去|要|会)*${predicate.source})`).exec(text)?.[1];
   return joined?people.filter(person=>presenceAliases(String(person.components.identity?.name??'')).some(alias=>joined.includes(alias))):[];
 }
 
@@ -94,7 +94,7 @@ export function validateScenePresenceNarrative(save:SavePackage,prose:string,cla
       const name=String(entity.components.identity?.name??'');
       return presenceAliases(name).some(alias=>compact.includes(alias));
     });
-    const joint=jointPresenceSubjects(compact,named);
+    const joint=jointNarrativeSubjects(compact,named,/(?:离开|离去|走出|走了|上去了|跨过门槛|跨出门|退出房间|站在|坐在|就在|留在)/);
     // Independently named clauses must not disappear just because the whole
     // sentence has multiple people. Keep single-subject implicit continuations
     // together; a player clause must not inherit the preceding NPC's identity.
@@ -244,17 +244,22 @@ export function validatePerceptionNarrative(save:SavePackage,receipt:Receipt,res
   // Narration attributes by the nearest named subject, matching presence validation.
   const people=save.entities.filter(entity=>entity.components.character);
   const prose=[result.narrative,...(result.scene_beats??[]).filter(beat=>beat.kind==='narration').map(beat=>beat.text)].join('\n');
-  let subject:typeof people[number]|undefined;
-  for(const sentence of prose.split(/[。！？\n]/)){
+  let subjects:typeof people=[];
+  const sentences=prose.split(/[。！？\n]/);
+  for(let index=0;index<sentences.length;index++){
+    const sentence=sentences[index];
     const compact=sentence.replace(/\s/g,'');
     const named=people.filter(entity=>{
       const name=String(entity.components.identity?.name??'');
-      return [name.replace(/\s/g,''),...name.split(/\s+/).filter(part=>part.length>=2)]
-        .some(alias=>alias&&compact.includes(alias));
+      return presenceAliases(name).some(alias=>compact.includes(alias));
     });
-    if(named.length===1)subject=named[0];else if(named.length>1)subject=undefined;
+    const joint=jointNarrativeSubjects(compact,named,/(?:看|目睹|亲眼|眼睁睁|全都看见)/);
+    if((named.length>1&&joint.length!==named.length||/[，,；;](?:你|玩家)/.test(compact))&&/[，,；;]/.test(sentence)){
+      sentences.splice(index+1,0,...sentence.split(/[，,；;]/));subjects=[];continue;
+    }
+    if(named.length===1)subjects=named;else if(named.length>1)subjects=joint;
     else if(!/^(?:随后|随即|接着|然后|这时|同时)?(?:她|他)/.test(compact))continue;
-    if(!subject||!blind.has(subject.id))continue;
+    if(!subjects.some(subject=>blind.has(subject.id)))continue;
     const issues=visualClaimIssues(compact,vision);
     if(issues.length)reject(sentence,issues[0]);
   }

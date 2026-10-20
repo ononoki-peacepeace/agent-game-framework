@@ -262,6 +262,10 @@ No new Claude work is reviewed or taken over by this record. Original QA JSON
 and audit notes remain uncommitted in Codex; generated evidence, private runtime
 and formal saves are excluded from commits. No push or deployment occurred.
 Overall four-theme estimate remains about 45%; this is not an acceptance rate.
+## Multi-subject event-time perception — 2026-10-21
+
+Parent d2947cc; source checkpoint containing this section keeps actual event-time sight restrictions for independently named/player clauses and explicit joined observers. Reuses the literal joint matcher with visual predicates; singular continuations and sighted/negative/possessor controls preserved. Actual Core receipt, no fabricated NPC reaction or schema/settlement change. Baseline6fail/4controls; final9files85pass including real HTTP continuity/compound-child regression; complete isolated build in local SESSION. N4.1 withdrawal/restoration net0 once ledger recorded; N4.3/N4.4 open, fixed target60%=96/160. See docs/perception-subjects.md. Latest full207files2064pass remains1bad19e. Next: pin fresh complete offline inventory/hashes after all recent repairs; preserve original failure reports, QA dirt, formal save and frozen specs. Then continue four-theme matrices.
+
 ## Joint NPC presence subjects — 2026-10-21
 
 Parent b52a6e5; source checkpoint containing this section fixes explicit joined NPC names disappearing from presence validation. Literal joined lists followed by presence/travel predicates are checked for each member; possessors/colleagues/denials/future/local/quoted controls remain legal. No Core/schema/interface change or invented NPC result. Baseline7fail/6controls; first3files42pass, final8files94pass; complete isolated build in local SESSION. N4.1 explicit withdrawal/restoration net0; N4.3/N4.4 remain open, target fixed score60%=96/160 once restoration recorded. See docs/scene-presence-groups.md. Latest full207files2064pass remains1bad19e. Original dirt and all safety boundaries preserved. Next: audit legal/current subject attribution against authoritative settled reactions; continue all four-theme matrices.
