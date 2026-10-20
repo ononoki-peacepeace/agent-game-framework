@@ -87,7 +87,12 @@ export function validateScenePresenceNarrative(save:SavePackage,prose:string,cla
       if(token==='离开'&&attentionMovement(compact.slice(0,match.index).split(/[，,；;]/).at(-1)??''))return false;
       // "走了两步/几步" is local stepping, never evidence of leaving the scene.
       if(token==='走了'&&/^[一二两三四五六七八九十百\d]+步/.test(compact.slice(match.index+token.length)))return false;
-      return !/(?:没有|尚未|还没|不曾|未曾|并未|没能|不愿|不想|不肯|不能|不会|不要|别让|不再|打算|准备|想要|如果|要是).{0,16}(?:离开|离去|走出|走了|上去了|跨过|跨出|退出)/.test(compact);
+      // A denial/intention belongs to this occurrence, not every later verb in
+      // the sentence. Contrast and clause boundaries may introduce real travel.
+      const prefix=compact.slice(0,match.index).split(/[，,；;]|但是|可是|随后|然后|接着|却|但/).at(-1)??'';
+      const guarded=/(?:没有|尚未|还没|不曾|未曾|并未|没能|不愿|不想|不肯|不能|不会|不要|别让|不再|打算|准备|想要)(?:(?:真正|实际|立即|直接|已经|曾经|成功|能够|继续|主动|变成|将要|迈步|再|就|被|去|要|会)){0,5}$/.test(prefix)||
+        /(?:如果|要是).{0,16}$/.test(prefix);
+      return !guarded;
     });
     if(present&&departed)throw new GameError('旁白声称在场人物已经离场，但没有权威位置变更',503);
     if(!present&&/(?:站在|坐在|就在|留在)(?:这里|眼前|你身旁|你面前|原地)/.test(compact))

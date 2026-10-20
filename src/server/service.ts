@@ -853,6 +853,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
             if(!receipt)try{validateScenePresenceNarrative(next,result.narrative,result.presence_claims);}
             catch(error){
               if(attempt<3){repair={reason:errorText(error),schema_feedback:{issues:[{path:'presence_claims',code:'presence_conflict',expected:'已结算在场事实',message:errorText(error)}],previous_output:generationRepair(new CandidateValidationError('narrator',[],result))!.previous_output}};continue;}
+              degradeNarration(narrationFailureReason(error));
               observe('warn','narrative.safe_fallback',{module:'turn',request_id:req.request_id,
                 metadata:{reason:'scene_presence_unverified',narrator_attempts:attempt}});
               return {...result,...narrationFallback(next,turn.action,current,compoundSteps),speaker:null,dialogue:null,

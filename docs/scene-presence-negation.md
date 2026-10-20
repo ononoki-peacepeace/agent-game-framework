@@ -1,0 +1,9 @@
+# Departure negation stays local to its assertion
+
+Parent `055367a`. Executor/test inputs and hashes were saved before reproduction in local `scene-presence-negation-scenarios.json`. Initial 12 cases: five failures/seven controls. Earlier denied or intended departure suppressed every later departure verb in the same sentence, so the service could publish “林舟没有离开，但随后走出了房间。” while Lin's Core position remained unchanged. N4.1 was explicitly withdrawn from met to unmet (95/160,59.375%) pending repair.
+
+Each departure occurrence now checks its own prefix, bounded by clause/contrast/sequential markers. Denial/intention must directly govern that verb through supported modifiers; “没有犹豫地离开” is actual departure. Conditional language, quoted speech, attention, local steps, genuine denial and preparation stay legal. No position, NPC response or world result is invented. The no-receipt scene-presence fallback also records its already existing degradation rather than incorrectly leaving presentation normal.
+
+The first repair run was 48/49: the service correctly replaced the false prose but exposed the missing degradation marker. Expanded 16-case run was 14/16: that marker plus the “没有犹豫地离开” false exemption remained. Both intermediate reports are retained. Final six-file/80-test regression and complete isolated build are recorded in SESSION. The final 17-case file contains six illegal departure assertions, nine legal controls and two service normal/fallback cases; fallback retries remain three, with one WAIT receipt/minute and no replay effects.
+
+N4.1 is restored only after this bounded regression; withdrawal/restoration is net zero: **60.00%,96/160,+0**. N4.3/N4.4 remain open for broader description/multi-world scope, including complex subject attribution. Latest full-suite evidence still belongs to `29e6a5f`, before later edits. Frozen criteria, original dirt, formal save and service/Provider boundaries are preserved.
