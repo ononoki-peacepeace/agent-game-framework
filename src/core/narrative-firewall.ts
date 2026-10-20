@@ -61,6 +61,21 @@ function matchedSnippet(prose:string,start:number,length:number){
   return excerpt.replace(/\s+/g,' ').slice(0,100);
 }
 
+function presenceAliases(name:string){
+  return [name.replace(/\s/g,''),...name.split(/\s+/).filter(part=>part.length>=2)].filter(Boolean);
+}
+
+/** A literal joined list followed by a presence/travel predicate has plural
+ * subjects. Names mentioned as listeners, possessors or objects do not. */
+function jointPresenceSubjects<T extends {components:{identity?:{name?:unknown}}}>(text:string,people:T[]){
+  if(people.length<2)return [];
+  const aliases=people.flatMap(person=>presenceAliases(String(person.components.identity?.name??'')))
+    .sort((a,b)=>b.length-a.length).map(name=>name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
+  const name=`(?:${aliases.join('|')})`;
+  const joined=new RegExp(`^(?:随后|随即|接着|然后|这时|同时)?(${name}(?:(?:以及|和|与|、|跟)${name})+)(?=(?:两人|二人|三人|四人|一行人|一起|一同|都|也|仍然|仍|依然|早已|已经|没有|尚未|还没|不曾|未曾|并未|没能|不愿|不想|不肯|不能|不会|不要|不再|打算|准备|想要|真正|实际|立即|直接|曾经|成功|能够|继续|主动|将要|迈步|再|就|被|去|要|会)*(?:离开|离去|走出|走了|上去了|跨过门槛|跨出门|退出房间|站在|坐在|就在|留在))`).exec(text)?.[1];
+  return joined?people.filter(person=>presenceAliases(String(person.components.identity?.name??'')).some(alias=>joined.includes(alias))):[];
+}
+
 /** Current-scene prose cannot turn a player's presupposition or an old paragraph into an NPC MOVE. */
 export function validateScenePresenceNarrative(save:SavePackage,prose:string,claims:readonly {entity_id:string;location_id:string}[]=[]){
   for(const claim of claims){
@@ -70,26 +85,25 @@ export function validateScenePresenceNarrative(save:SavePackage,prose:string,cla
   }
   const here=save.entities.find(entity=>entity.id===save.player_state.entity_id)?.components.location?.location_id;
   const people=save.entities.filter(entity=>entity.id!==save.player_state.entity_id&&entity.components.character);
-  let subject:typeof people[number]|undefined;
+  let subjects:typeof people=[];
   const sentences=prose.replace(/[“「『][^”」』]*[”」』]/g,'').split(/[。！？\n]/);
   for(let index=0;index<sentences.length;index++){
     const sentence=sentences[index];
     const compact=sentence.replace(/\s/g,'');
     const named=people.filter(entity=>{
       const name=String(entity.components.identity?.name??'');
-      const aliases=[name.replace(/\s/g,''),...name.split(/\s+/).filter(part=>part.length>=2)];
-      return aliases.some(alias=>alias&&compact.includes(alias));
+      return presenceAliases(name).some(alias=>compact.includes(alias));
     });
+    const joint=jointPresenceSubjects(compact,named);
     // Independently named clauses must not disappear just because the whole
     // sentence has multiple people. Keep single-subject implicit continuations
     // together; a player clause must not inherit the preceding NPC's identity.
-    if((named.length>1||/[，,；;](?:你|玩家)/.test(compact))&&/[，,；;]/.test(sentence)){
-      sentences.splice(index+1,0,...sentence.split(/[，,；;]/));subject=undefined;continue;
+    if((named.length>1&&joint.length!==named.length||/[，,；;](?:你|玩家)/.test(compact))&&/[，,；;]/.test(sentence)){
+      sentences.splice(index+1,0,...sentence.split(/[，,；;]/));subjects=[];continue;
     }
-    if(named.length===1)subject=named[0];else if(named.length>1)subject=undefined;
+    if(named.length===1)subjects=named;else if(named.length>1)subjects=joint;
     else if(!/^(?:随后|随即|接着|然后)?(?:她|他)/.test(compact))continue;
-    if(!subject)continue;
-    const present=subject.components.location?.location_id===here;
+    if(!subjects.length)continue;
     const departed=[...compact.matchAll(/(?:离开|离去|走出|走了|上去了|跨过门槛|跨出门|退出房间)/g)].some(match=>{
       const token=match[0];
       if(token==='离开'&&attentionMovement(compact.slice(0,match.index).split(/[，,；;]/).at(-1)??''))return false;
@@ -102,8 +116,8 @@ export function validateScenePresenceNarrative(save:SavePackage,prose:string,cla
         /(?:如果|要是).{0,16}$/.test(prefix);
       return !guarded;
     });
-    if(present&&departed)throw new GameError('旁白声称在场人物已经离场，但没有权威位置变更',503);
-    if(!present&&/(?:站在|坐在|就在|留在)(?:这里|眼前|你身旁|你面前|原地)/.test(compact))
+    if(subjects.some(subject=>subject.components.location?.location_id===here)&&departed)throw new GameError('旁白声称在场人物已经离场，但没有权威位置变更',503);
+    if(subjects.some(subject=>subject.components.location?.location_id!==here)&&/(?:站在|坐在|就在|留在)(?:这里|眼前|你身旁|你面前|原地)/.test(compact))
       throw new GameError('旁白把不在当前地点的人物描写为在场',503);
   }
   const actual=people.filter(entity=>entity.components.location?.location_id===here).length+1;
