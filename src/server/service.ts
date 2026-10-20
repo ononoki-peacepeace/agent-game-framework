@@ -335,10 +335,16 @@ export class GameService {
     return this.exclusive(()=>this.media(async()=>{
       // A world transaction may have committed while the original read awaited
       // I/O. Re-read under the mutation lock before deciding what to persist.
-      const latest=await this.storage.read('current',source);assert(latest,'请先开始新游戏或导入存档');
-      const normalized=this.ensureBaseFeatures(latest);
-      if(normalized.changed)await this.storage.write(normalized.save);
-      return normalized.save;
+      for(let attempt=0;attempt<3;attempt++){
+        const latest=await this.storage.read('current',source);assert(latest,'请先开始新游戏或导入存档');
+        const expected=this.storage.writeMigration?structuredClone(latest):null;
+        const normalized=this.ensureBaseFeatures(latest);
+        if(!normalized.changed)return normalized.save;
+        if(this.storage.writeMigration){
+          if(await this.storage.writeMigration(expected!,normalized.save))return normalized.save;
+        }else{await this.storage.write(normalized.save);return normalized.save;}
+      }
+      throw new GameError('存档在读取迁移期间持续更新，请刷新后重试。',409);
     }));
   }
   private async ensureGlobalGuidance(){

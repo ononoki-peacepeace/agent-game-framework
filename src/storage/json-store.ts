@@ -1,5 +1,5 @@
 import { mkdir, open, readFile, unlink, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join,resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { validateSave } from '../core/state.js';
 import type { Action,SavePackage } from '../core/schema.js';
@@ -16,11 +16,16 @@ const inputRecordSchema=z.strictObject({version:z.literal(1),game_id:z.string().
 export type StoredInputRecord=z.infer<typeof inputRecordSchema>;
 export type SaveReadSource='unspecified'|'service_current'|'service_view'|'turn_commit_check'|'request_recovery'|'semantic_context';
 export interface SaveStorage { read(slot?: 'current' | 'checkpoint',source?:SaveReadSource): Promise<SavePackage | null>; write(save: SavePackage, slot?: 'current' | 'checkpoint'): Promise<void>;
+  /** Optional guarded read migration; false means re-read. Same-process coordination only. */
+  writeMigration?(expected:SavePackage,migrated:SavePackage):Promise<boolean>;
   /** Internal storage guarantees; never derived from save data or model output. */
   consumeReadValidation?(save:SavePackage):boolean;readonly validatesWrites?:boolean;
   readPending?(requestId:string):Promise<PendingTurn|null>;writePending?(turn:PendingTurn):Promise<void>;clearPending?(requestId:string):Promise<void>;
   readGlobalGuidance?():Promise<BehaviorPatch[]>;writeGlobalGuidance?(patches:BehaviorPatch[]):Promise<void>;
   readInputRecord?(gameId:string,requestId:string):Promise<StoredInputRecord|null>;writeInputRecord?(record:StoredInputRecord):Promise<void> }
+// All JsonStore instances for one lexical path coordinate current-image writes.
+// This is not an inter-process or external-writer lock.
+const currentWrites=new Map<string,Promise<void>>();
 export class JsonStore implements SaveStorage {
   readonly validatesWrites=true;
   private readonly validatedReads=new WeakSet<SavePackage>();
@@ -75,7 +80,26 @@ export class JsonStore implements SaveStorage {
     }
     catch (e) { if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null; throw e; }
   }
+  private currentWrite<T>(operation:()=>Promise<T>):Promise<T>{
+    const path=resolve(this.directory,'current.json'),key=process.platform==='win32'?path.toLowerCase():path;
+    const prior=currentWrites.get(key)??Promise.resolve(),run=prior.then(operation,operation);
+    const settled=run.then(()=>undefined,()=>undefined);currentWrites.set(key,settled);
+    void settled.then(()=>{if(currentWrites.get(key)===settled)currentWrites.delete(key);});
+    return run;
+  }
+  async writeMigration(expected:SavePackage,migrated:SavePackage){
+    const expectedImage=structuredClone(expected),candidate=structuredClone(migrated);
+    return this.currentWrite(async()=>{
+      const current=await this.read('current','service_current');
+      if(!current||JSON.stringify(current)!==JSON.stringify(expectedImage))return false;
+      await this.persist(candidate,'current');return true;
+    });
+  }
   async write(save: SavePackage, slot: 'current' | 'checkpoint' = 'current') {
+    const snapshot=structuredClone(save);
+    return slot==='current'?this.currentWrite(()=>this.persist(snapshot,slot)):this.persist(snapshot,slot);
+  }
+  private async persist(save: SavePackage, slot: 'current' | 'checkpoint') {
     this.reads.delete(slot);
     const started = performance.now(), validated = validateSave(save), text = JSON.stringify(validated, null, 2);
     try {
