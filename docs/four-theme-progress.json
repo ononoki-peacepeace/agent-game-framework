@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "6946982",
+  "assessed_source": "c872222",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -1173,9 +1173,11 @@
         "docs/degraded-prose-acceptance.v1.json",
         "docs/degraded-prose-grounding.md",
         "tests/degraded-prose-grounding.test.ts",
-        "tests/__snapshots__/degraded-prose-grounding.test.ts.snap"
+        "tests/__snapshots__/degraded-prose-grounding.test.ts.snap",
+        "tests/wait-interruption-fallback.test.ts",
+        "docs/wait-interruption-fallback.md"
       ],
-      "basis": "All required physical, dialogue, observation and movement cases pass after both controlled refusal and content-filter failures, with Core/replay assertions; bounded offline developer acceptance. Source 1b0cb30; adjacent9files82pass and isolated complete build passed. Real-model/human gates remain open."
+      "basis": "All required physical, dialogue, observation and movement cases pass after both controlled refusal and content-filter failures, with Core/replay assertions; bounded offline developer acceptance. Source 1b0cb30; adjacent9files82pass and isolated complete build passed. Real-model/human gates remain open. Counterexamplef08fd70/product6946982: zero-minute interrupted WAIT fallback claims waited a while and omits canonical handoff reason;4fail/1control. N8.3 withdrawn pending repair. Repairedc872222: zero-time WAIT only stops, positive time from Core receipt, existing foreground reason retained; accepted opportunity-backed fixture, original-source corrected4fail/1control, final6files50pass/build. Ordinary waiting/six-scene/compound/partial/replay neighbors pass; wider N8.2 stays open."
     },
     "N8.4": {
       "status": "unverified",
@@ -2258,6 +2260,39 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "wait-interruption-fallback-withdrawal",
+      "type": "evidence_correction",
+      "source": "6946982",
+      "transitions": [
+        {
+          "id": "N8.3",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "tests/wait-interruption-fallback.test.ts"
+          ],
+          "reason": "Zero-time waiting prose fabricates elapsed interval and partial wait loses actual handoff;4fail/1control."
+        }
+      ]
+    },
+    {
+      "batch": "wait-interruption-fallback-repair",
+      "type": "repair",
+      "source": "c872222",
+      "transitions": [
+        {
+          "id": "N8.3",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "tests/wait-interruption-fallback.test.ts",
+            "docs/wait-interruption-fallback.md"
+          ],
+          "reason": "Truthful zero/positive elapsed time and actual player handoff in bounded fallback;50pass/build, original failure reports retained."
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -2843,6 +2878,17 @@
         "docs/routine-unreachable-location.md"
       ],
       "summary": "No filtered routes returned empty path and ran remote work locally; now existing unreachable stop applies."
+    },
+    {
+      "id": "wait-interruption-fallback",
+      "scope": "original",
+      "condition": "N8.3",
+      "status": "repaired",
+      "source": "6946982",
+      "evidence": [
+        "tests/wait-interruption-fallback.test.ts"
+      ],
+      "summary": "Fallback describes waiting despite0elapsed and hides actual player appointment interruption."
     }
   ]
 }
