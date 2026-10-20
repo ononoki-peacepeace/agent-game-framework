@@ -1,7 +1,7 @@
 import {afterEach,expect,it,vi} from 'vitest';
 import {fork,type ChildProcess} from 'node:child_process';
 import {once} from 'node:events';
-import {mkdtemp,rm} from 'node:fs/promises';
+import {mkdtemp,rm,readFile,readdir} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {randomUUID} from 'node:crypto';
@@ -10,8 +10,9 @@ import {JsonStore} from '../src/storage/json-store.js';
 import {GameService} from '../src/server/service.js';
 import * as atomic from '../src/storage/atomic-json.js';
 import {sparseSetup} from './sparse-fixture.js';
+import {validateSave} from '../src/core/state.js';
 
-type Notice={kind:string;save?:SavePackage;calls?:number};
+type Notice={kind:string;save?:SavePackage;calls?:number;temporary?:string};
 function launch(directory:string,mode:string,method='current'){
  const child=fork(resolve('tests/fixtures/migration-write-worker.ts'),[directory,mode,method],{
   execArgv:['--import','tsx'],stdio:['ignore','ignore','pipe','ipc'],windowsHide:true,
@@ -61,15 +62,23 @@ it.each((['current','view'] as const).flatMap(method=>(['canonical','media','sam
   expect(f.ai.metrics.requests).toBe(0);
  }finally{release();await pending?.catch(()=>undefined);await reap(worker?.child);await rm(directory,{recursive:true,force:true});}
 },30000);
-it.each((['current','view'] as const).flatMap(method=>(['before','after'] as const).map(boundary=>({method,boundary}))))(
+it.each((['current','view'] as const).flatMap(method=>(['before','after','atomic_before','atomic_after'] as const).map(boundary=>({method,boundary}))))(
  'releases independent-process migration on SIGKILL $boundary replacement for $method',async({method,boundary})=>{
  const f=await sparseSetup(),legacy=await f.service.current();delete legacy.routine_meta;
  const directory=await mkdtemp(join(tmpdir(),'agf-process-migration-kill-'));let worker:ReturnType<typeof launch>|undefined;
  try{
-  const store=new JsonStore(directory);await store.write(legacy);worker=launch(directory,'kill_'+boundary,method);await worker.wait('ready');
-  worker.child.send({kind:'go'});await worker.wait('boundary');await killAtBoundary(worker.child);
+  const store=new JsonStore(directory);await store.write(legacy);
+  worker=launch(directory,boundary.startsWith('atomic_')?boundary:'kill_'+boundary,method);await worker.wait('ready');
+  worker.child.send({kind:'go'});const reached=await worker.wait('boundary');
+  if(boundary==='atomic_before'){
+   expect(resolve(reached.temporary!)).toContain(resolve(directory));
+   const prepared=validateSave(JSON.parse(await readFile(reached.temporary!,'utf8')));
+   expect(prepared.routine_meta).toBeDefined();expect(prepared.runtime).toEqual(legacy.runtime);
+  }
+  await killAtBoundary(worker.child);
   const after=(await new JsonStore(directory).read())!,stripped=structuredClone(after);delete stripped.routine_meta;
-  expect(stripped).toEqual(legacy);expect(Boolean(after.routine_meta)).toBe(boundary==='after');
+  expect(stripped).toEqual(legacy);expect(Boolean(after.routine_meta)).toBe(boundary.endsWith('after'));
+  if(boundary.startsWith('atomic_'))expect((await readdir(directory)).filter(name=>name.endsWith('.tmp'))).toHaveLength(boundary==='atomic_before'?1:0);
   const service=new GameService(new JsonStore(directory),f.ai,legacy.definition),request={game_id:legacy.game_id,expected_revision:legacy.state_revision,request_id:randomUUID()};
   let calls=0;const mutate=(save:SavePackage)=>{calls++;save.gm_state.flags.after_kill_retained=true;};
   await service.agentTransaction(request,{after_kill:true},mutate);const saved=(await store.read())!;

@@ -5,6 +5,9 @@ import {GameService} from '../../src/server/service.js';
 import {AIRuntime} from '../../src/ai/runtime.js';
 import {MockAIAdapter} from '../../src/ai/mock.js';
 import type {SavePackage} from '../../src/core/schema.js';
+import fsPromises from 'node:fs/promises';
+import {syncBuiltinESMExports} from 'node:module';
+import {resolve} from 'node:path';
 
 const [directory,mode,method='current']=process.argv.slice(2);
 if(!directory||!mode||!process.send)throw Error('Isolated migration worker requires directory/mode/IPC');
@@ -19,7 +22,17 @@ const ai=new AIRuntime(new MockAIAdapter()),service=new GameService(store,ai,ini
 // An unresolved Promise alone does not keep a child process alive.
 process.on('message',async()=>{
  try{
-  if(mode==='kill_before'||mode==='kill_after'){
+  if(mode==='atomic_before'||mode==='atomic_after'){
+   const rename=fsPromises.rename;
+   fsPromises.rename=async(...args)=>{
+    const target=resolve(String(args[1]))===resolve(join(directory,'current.json'));
+    const pause=async()=>{process.send!({kind:'boundary',temporary:String(args[0])});await new Promise<never>(()=>{});};
+    if(target&&mode==='atomic_before')await pause();await rename(...args);
+    if(target&&mode==='atomic_after')await pause();
+   };
+   syncBuiltinESMExports();
+   if(method==='view')await service.view();else await service.current();
+  }else if(mode==='kill_before'||mode==='kill_after'){
    const persist=Reflect.get(store,'persist') as (save:SavePackage,slot:'current'|'checkpoint')=>Promise<void>;
    const pause=async()=>{process.send!({kind:'boundary'});await new Promise<never>(()=>{});};
    Reflect.set(store,'persist',async(save:SavePackage,slot:'current'|'checkpoint')=>{

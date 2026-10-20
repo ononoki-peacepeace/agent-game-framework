@@ -54,6 +54,12 @@ export interface AppNetworkOptions { allowLan?: boolean }
 export interface AppDevelopmentOptions { coreExecutor?: CodingAgentExecutor; coreInstaller?: CoreCandidateInstaller; imageProvider?: ImageGenerationProvider }
 // Build/process marker: lets anyone confirm which dist a running 3100 server actually loaded.
 const STARTED_AT = new Date().toISOString();
+function malformedRequestBody(error:unknown){
+  const type=(error as {type?:unknown})?.type;
+  // JSON syntax errors from saved files or providers are server failures, not
+  // evidence that the player's HTTP request body was malformed.
+  return type==='entity.parse.failed'||type==='entity.too.large';
+}
 /**
  * Player-facing error text. GameError and readable provider failures keep their wording; raw Zod/JSON
  * issue dumps, stack frames and internal action names are replaced with an actionable sentence while the
@@ -874,7 +880,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
   }
   /** Shared terminal classification, also used inside the durable input boundary. */
   async function inputFailure(error:unknown,req:express.Request,record?:InputRecord){
-    const malformed=error instanceof SyntaxError||(error as {type?:string})?.type==='entity.too.large';
+    const malformed=malformedRequestBody(error);
     const status=error instanceof GameError?error.status:malformed?400:503;
     // Error recovery is read-only: service.view() may run migrations and write a save.
     const save=await service.storage.read('current','request_recovery').catch(()=>null);
@@ -918,7 +924,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     if(req.path==='/api/input'){
       const failure=await inputFailure(error,req);res.status(failure.status).json(failure.body);return;
     }
-    const malformed = error instanceof SyntaxError || (error as { type?: string })?.type === 'entity.too.large';
+    const malformed = malformedRequestBody(error);
     const status = error instanceof GameError ? error.status : malformed ? 400 : 503;
     // Error reporting must not trigger loading migrations or another save write.
     const recoverySave=await service.storage.read('current','request_recovery').catch(()=>null);
