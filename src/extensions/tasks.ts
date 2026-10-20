@@ -42,6 +42,8 @@ export const developmentPlanSchema=z.strictObject({
 export const generationSchema=z.strictObject({spec:specSchema.nullable(),capability_gaps:z.array(capabilityGapSchema).max(10)});
 export type CapabilityGap=z.infer<typeof capabilityGapSchema>;
 export interface CoreProposal {problem:string;proposed_api:string[];impact:string[];migration:string;tests:string[];rollback:string;risk:string;minimum_change_review?:ChangePlan['minimum_change_review'];canonical_change_warning?:string|null;status:'pending'|'approved';approved_at?:string}
+const extensionInstallRequestSchema=z.strictObject({candidate_version:z.string(),confirmed:z.literal(true),migration_confirmed:z.boolean().default(false),game_id:z.string().uuid(),expected_revision:z.number().int().min(0),request_id:z.string().uuid()});
+const extensionInstallIntentSchema=z.strictObject({job_id:z.string().uuid(),request:extensionInstallRequestSchema,goal_resume:z.enum(['not_started','started','completed','failed'])});
 export interface DevelopmentTask {
  kind?:'extension'|'capability';
  id:string;game_id:string;trace_id?:string;extension_id:string;original_request:string;normalized_requirements:string[];requirement_history:string[];
@@ -63,6 +65,7 @@ export interface DevelopmentTask {
  capability_registration?:{stage:'prepared'|'registered';goal_resume:'not_started'|'started'|'completed'|'failed'};
  change_plan?:ChangePlan|null;
  core_install?:CoreInstallRecord|null;
+ extension_install?:z.infer<typeof extensionInstallIntentSchema>;
 }
 const inputSchema=z.strictObject({request:z.string().min(1).max(3000),request_id:z.string().uuid(),extension_id:z.string().regex(/^[a-z][a-z0-9_]{0,63}$/).refine(x=>!['constructor','prototype','__proto__'].includes(x)).optional(),change_plan:changePlanSchema.optional()});
 const sdk='SDK 支持扩展自有 number/flag/text 字段、extension/entity scope、可读 label、increment/decrement/set/toggle 动作，以及 panel/modal/contextual_panel；人物宿主只支持 character_detail/character_card。人物独立属性必须声明 entity scope 和真实 host projection。不支持任意代码、连续输入、随机游戏规则、世界状态写入。只能开发 SDK 可表达的需求。';
@@ -88,7 +91,17 @@ export class DevelopmentTasks {
    else{t.status='paused';t.installed_version=null;t.message='此能力包在当前运行时尚未注册；保留已验证产物，可继续校验与注册，原目标不会自动重放。';}
   }catch(error){t.status='failed';t.installed_version=null;t.message='能力包产物身份无法核验，未自动恢复注册。';this.history(t,'capability_recovery_failed',String((error as Error).message).slice(0,1500));}
  }
- for(const t of this.tasks){const installed=current?.game_id===t.game_id?current.extensions?.[t.extension_id]:undefined;const candidate=t.artifacts.at(-1)?.manifest;if(installed&&candidate&&installed.version===t.current_version&&JSON.stringify(installed.manifest)===JSON.stringify(candidate)){t.status='installed';t.installed_version=installed.version;t.message='已从存档确认此版本安装成功。';}}
+ for(const t of this.tasks){
+  if(t.extension_install){
+   const intent=extensionInstallIntentSchema.parse(t.extension_install);
+   assert(intent.job_id===t.candidate_job_id&&intent.request.game_id===t.game_id&&intent.request.candidate_version===t.current_version,'任务安装意图身份不匹配');
+   const {candidate_version,migration_confirmed,...tx}=intent.request;
+   if(await this.builder.recoverInstallation(intent.job_id,tx,migration_confirmed)){t.status='installed';t.installed_version=t.current_version;t.message='已按安装收据核验成功；原目标不会因重启自动重放。';}
+   else{t.status='failed';t.message='安装结果尚未确认，已停止自动重放；需求和检查点已保留。';}
+   continue;
+  }
+  const installed=current?.game_id===t.game_id?current.extensions?.[t.extension_id]:undefined;const candidate=t.artifacts.at(-1)?.manifest;if(installed&&candidate&&installed.version===t.current_version&&JSON.stringify(installed.manifest)===JSON.stringify(candidate)){t.status='installed';t.installed_version=installed.version;t.message='已从存档确认此版本安装成功。';}
+ }
  }catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}}
  private async recoverApprovedCore(){
   for(const id of this.interruptedCore){
@@ -268,11 +281,12 @@ export class DevelopmentTasks {
  t.installed_version=live?.version??null;
  this.history(t,'requirements_changed',request);t.requirement_history.push(request);t.normalized_requirements.push(request);t.revision++;t.delegated_choice=isDelegateAnswer(request);
  const [major,minor,patch]=t.current_version.split('.').map(Number);t.current_version=[major,minor,patch+1].join('.');
+ delete t.extension_install;
  t.attempts=0;t.budget.max_attempts=Math.max(3,t.milestones.length*2+1);t.preview=null;t.candidate_job_id=null;t.capability_gaps=[];t.core_proposal=null;t.status='planning';
  t.replan_required=true;await this.persist();this.launch(t);return structuredClone(t);
  }
  async resume(id:string){return this.control(id,()=>this.resumeTask(id));}
- private async resumeTask(id:string){const t=await this.find(id);assert(!this.runs.size&&['paused','failed'].includes(t.status),'当前任务不能恢复');if(t.kind==='capability'){
+ private async resumeTask(id:string){const t=await this.find(id);assert(!this.runs.size&&['paused','failed'].includes(t.status),'当前任务不能恢复');assert(!t.extension_install,'安装结果已有持久意图，请核验原安装请求或明确修改需求，不能自动重新构建');if(t.kind==='capability'){
  const descriptors=await this.capabilityDescriptors(t);
  // Legacy installed packages have no durable goal callback identity. Re-register
  // only after explicit resume; never replay an unprovable original goal.
@@ -370,13 +384,29 @@ export class DevelopmentTasks {
  }
  async install(id:string,raw:unknown){return this.control(id,()=>this.installTask(id,raw));}
  private async installTask(id:string,raw:unknown){
- const t=await this.find(id);const current=await this.builder.host.service.current();assert((current.extensions?.[t.extension_id]?.version??null)===t.installed_version,'已安装版本改变，请重新准备候选');assert(t.status==='ready_for_preview'&&t.candidate_job_id&&t.preview,'候选尚未通过验证');
- const body=z.strictObject({candidate_version:z.string(),confirmed:z.literal(true),migration_confirmed:z.boolean().optional(),game_id:z.string().uuid(),expected_revision:z.number().int().min(0),request_id:z.string().uuid()}).parse(raw);
+ const t=await this.find(id),body=extensionInstallRequestSchema.parse(raw);
+ const {migration_confirmed,candidate_version,...tx}=body;
+ if(t.extension_install){
+  assert(JSON.stringify(t.extension_install.request)===JSON.stringify(body),'安装请求标识或参数改变，已停止自动重放');
+  const committed=await this.builder.recoverInstallation(t.extension_install.job_id,tx,migration_confirmed);
+  assert(committed,'安装结果尚未确认，已停止自动重放，请检查世界状态');
+  t.status='installed';t.installed_version=t.current_version;t.message='已按安装收据核验成功；没有重复安装或恢复原目标。';await this.persist();
+  return this.builder.host.service.project(committed);
+ }
+ const current=await this.builder.host.service.current();assert((current.extensions?.[t.extension_id]?.version??null)===t.installed_version,'已安装版本改变，请重新准备候选');assert(t.status==='ready_for_preview'&&t.candidate_job_id&&t.preview,'候选尚未通过验证');
  assert(body.game_id===t.game_id,'世界已切换');assert(body.candidate_version===t.current_version,'候选已更新，请重新预览');assert(!t.preview.migration.length||body.migration_confirmed===true,'需要明确确认状态迁移');
+ assert(current.game_id===body.game_id,'世界已切换');assert(current.state_revision===body.expected_revision,'状态已更新，未安装');
  assert(!this.installing.has(id),'安装正在提交');this.installing.add(id);try{
- const {migration_confirmed,candidate_version,...tx}=body;const view=await this.builder.install(t.candidate_job_id,tx,migration_confirmed);
+ t.extension_install={job_id:t.candidate_job_id,request:body,goal_resume:'not_started'};
+ try{await this.persist();}catch(error){delete t.extension_install;throw error;}
+ const view=await this.builder.install(t.candidate_job_id,tx,migration_confirmed);
  t.status='installed';t.installed_version=t.current_version;t.message='版本已安装，可以继续提出修改要求。';this.history(t,'installed',t.current_version);await this.persist();
- if(this.onInstalled)try{await this.onInstalled(structuredClone(t));}catch(error){this.history(t,'goal_resume_failed',String((error as Error).message).slice(0,1000));await this.persist();}
+ if(this.onInstalled){
+  t.extension_install.goal_resume='started';await this.persist();
+  try{await this.onInstalled(structuredClone(t));t.extension_install.goal_resume='completed';}
+  catch(error){t.extension_install.goal_resume='failed';this.history(t,'goal_resume_failed',String((error as Error).message).slice(0,1000));}
+  await this.persist();
+ }
  return view;
  }finally{this.installing.delete(id);}
  }

@@ -27,6 +27,56 @@ async function setup(override?:(r:AIRequest)=>unknown|Promise<unknown>,coreExecu
 }
 const start=async(f:Awaited<ReturnType<typeof setup>>,request='增加一个我可以切换的状态开关')=>f.tasks.start({request,request_id:randomUUID()});
 const tx=async(f:Awaited<ReturnType<typeof setup>>)=>{const s=await f.service.current();return {game_id:s.game_id,expected_revision:s.state_revision,request_id:randomUUID()};};
+it.each(['world_after','task_journal','callback_start','callback_journal'] as const)('recovers a committed development installation after %s without reinstalling or replaying its goal',async(point)=>{
+ const resume=vi.fn(async()=>{}),f=await setup(undefined,undefined,resume),task=await start(f),ready=await f.tasks.wait(task.id);
+ const input={...await tx(f),confirmed:true,candidate_version:ready.current_version},write=f.store.write.bind(f.store),atomicWrite=atomic.writeAtomicJson;let failed=false;
+ const worldSpy=point==='world_after'?vi.spyOn(f.store,'write').mockImplementation(async(save,slot)=>{
+  await write(save,slot);if(!failed&&slot!=='checkpoint'){failed=true;throw Error('installed world response lost');}
+ }):null;
+ const journalSpy=point==='world_after'?null:vi.spyOn(atomic,'writeAtomicJson').mockImplementation(async(path,value)=>{
+  const data=value as {tasks?:{status:string;extension_install?:{goal_resume:string}}[]};
+  if(!failed&&path===join(f.dir,'tasks.json')&&data.tasks?.some(t=>t.status==='installed')&&(point==='task_journal'||(point==='callback_start'?data.tasks?.some(t=>t.extension_install?.goal_resume==='started'):resume.mock.calls.length>0))){
+   failed=true;throw Error('installed task journal failed');
+  }await atomicWrite(path,value);
+ });
+ try{
+  await expect(f.tasks.install(task.id,input)).rejects.toThrow();expect(failed).toBe(true);
+  const after=await f.service.current(),priorCalls=resume.mock.calls.length,install=vi.spyOn(f.host,'install');
+  expect(after.extensions?.[task.extension_id].version).toBe(ready.current_version);
+  const restarted=new DevelopmentTasks(new ExtensionDevelopment(f.host),()=>f.adapter,undefined,resume);await restarted.ready;
+  await expect(restarted.install(task.id,{...input,request_id:randomUUID()})).rejects.toThrow('安装请求标识');
+  await restarted.install(task.id,input);expect(install).not.toHaveBeenCalled();expect(resume).toHaveBeenCalledTimes(priorCalls);
+  expect((await restarted.get(task.id)).status).toBe('installed');expect(await f.service.current()).toEqual(after);
+ }finally{worldSpy?.mockRestore();journalSpy?.mockRestore();}
+},20000);
+it('persists the task installation intent before dispatch and safely retries a failed initial journal',async()=>{
+ const resume=vi.fn(async()=>{}),f=await setup(undefined,undefined,resume),task=await start(f),ready=await f.tasks.wait(task.id);
+ const input={...await tx(f),confirmed:true,candidate_version:ready.current_version},write=atomic.writeAtomicJson,install=vi.spyOn(f.host,'install');let failed=false;
+ const spy=vi.spyOn(atomic,'writeAtomicJson').mockImplementation(async(path,value)=>{
+  if(!failed&&path===join(f.dir,'tasks.json')&&(value as any).tasks?.some((t:any)=>t.extension_install)){failed=true;throw Error('task prepare journal failed');}
+  await write(path,value);
+ });
+ try{await expect(f.tasks.install(task.id,input)).rejects.toThrow('task prepare journal failed');expect(install).not.toHaveBeenCalled();
+  await f.tasks.install(task.id,input);await f.tasks.install(task.id,input);expect(install).toHaveBeenCalledOnce();expect(resume).toHaveBeenCalledOnce();
+ }finally{spy.mockRestore();}
+},20000);
+it('does not dispatch a prepared task installation whose builder outcome was never recorded',async()=>{
+ const resume=vi.fn(async()=>{}),f=await setup(undefined,undefined,resume),task=await start(f),ready=await f.tasks.wait(task.id);
+ const input={...await tx(f),confirmed:true,candidate_version:ready.current_version},before=await f.service.current();
+ const dispatch=vi.spyOn(f.builder,'install').mockRejectedValueOnce(Error('dispatch lost before builder intent'));
+ await expect(f.tasks.install(task.id,input)).rejects.toThrow('dispatch lost');dispatch.mockRestore();
+ const install=vi.spyOn(f.host,'install'),restarted=new DevelopmentTasks(new ExtensionDevelopment(f.host),()=>f.adapter,undefined,resume);
+ await expect(restarted.install(task.id,input)).rejects.toThrow('安装结果尚未确认');
+ await expect(restarted.resume(task.id)).rejects.toThrow('持久意图');
+ expect(install).not.toHaveBeenCalled();expect(resume).not.toHaveBeenCalled();expect(await f.service.current()).toEqual(before);
+},20000);
+it('rejects a stale installation revision before recording an uncertain task intent',async()=>{
+ const f=await setup(),task=await start(f),ready=await f.tasks.wait(task.id),current=await f.service.current();
+ const input={...await tx(f),confirmed:true,candidate_version:ready.current_version},install=vi.spyOn(f.host,'install');
+ await expect(f.tasks.install(task.id,{...input,expected_revision:current.state_revision+1})).rejects.toThrow('状态已更新');
+ expect((await f.tasks.get(task.id)).extension_install).toBeUndefined();expect(install).not.toHaveBeenCalled();
+ await f.tasks.install(task.id,input);expect(install).toHaveBeenCalledOnce();
+},20000);
 it('replaying an installed update request cannot revise the task or rebuild its candidate twice',async()=>{
  const f=await setup(),task=await start(f),ready=await f.tasks.wait(task.id);
  await f.tasks.install(task.id,{...await tx(f),confirmed:true,candidate_version:ready.current_version});

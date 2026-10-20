@@ -1,5 +1,5 @@
 import {afterEach,describe,expect,it,vi} from 'vitest';
-import {mkdtemp,readFile,rm} from 'node:fs/promises';
+import {mkdtemp,readFile,rm,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -25,6 +25,96 @@ async function fixture(){
     close:()=>rm(directory,{recursive:true,force:true})};
 }
 describe('P0-A extension background lifecycle',()=>{
+  it('does not approve or install if the durable installation intent fails, then permits a safe retry',async()=>{
+    const f=await fixture();try{
+      const dev=new ExtensionDevelopment(f.host),job=await dev.start({...f.input(),use_codex:false});await dev.wait(job.job_id);
+      const approve=vi.spyOn(f.host,'approve'),install=vi.spyOn(f.host,'install');
+      vi.spyOn(atomic,'writeAtomicJson').mockRejectedValueOnce(Error('install prepare failure'));
+      const tx={game_id:f.baseline.game_id,expected_revision:f.baseline.state_revision,request_id:randomUUID(),confirmed:true};
+      await expect(dev.install(job.job_id,tx)).rejects.toThrow('install prepare failure');
+      expect(approve).not.toHaveBeenCalled();expect(install).not.toHaveBeenCalled();expect(await f.service.current()).toEqual(f.baseline);
+      await dev.install(job.job_id,tx);expect(install).toHaveBeenCalledTimes(1);
+    }finally{await f.close();}
+  },15000);
+  it('serializes concurrent installation duplicates and stops an uncertain uncommitted attempt on restart',async()=>{
+    const f=await fixture();try{
+      const dev=new ExtensionDevelopment(f.host),job=await dev.start({...f.input(),use_codex:false});await dev.wait(job.job_id);
+      const install=vi.spyOn(f.host,'install').mockRejectedValueOnce(Error('install dispatch failed'));
+      const tx={game_id:f.baseline.game_id,expected_revision:f.baseline.state_revision,request_id:randomUUID(),confirmed:true};
+      const result=await Promise.allSettled([dev.install(job.job_id,tx),dev.install(job.job_id,tx)]);
+      expect(result.map(r=>r.status)).toEqual(['rejected','rejected']);expect(install).toHaveBeenCalledTimes(1);
+      const restarted=new ExtensionDevelopment(f.host);await restarted.ready;
+      await expect(restarted.install(job.job_id,tx)).rejects.toThrow('尚未确认');expect(install).toHaveBeenCalledTimes(1);
+      expect(await f.service.current()).toEqual(f.baseline);
+    }finally{await f.close();}
+  },15000);
+  it.each(['receipt_missing','receipt_wrong','removed','undo'] as const)('does not recover an installed candidate from %s evidence',async(kind)=>{
+    const f=await fixture();try{
+      const dev=new ExtensionDevelopment(f.host),job=await dev.start({...f.input(),use_codex:false});await dev.wait(job.job_id);
+      const tx={game_id:f.baseline.game_id,expected_revision:f.baseline.state_revision,request_id:randomUUID(),confirmed:true};
+      await dev.install(job.job_id,tx);const save=await f.service.current();
+      if(kind==='receipt_missing')save.runtime.receipts=[];
+      if(kind==='receipt_wrong')save.runtime.receipts.find(r=>r.id===tx.request_id)!.fingerprint='incorrect';
+      if(kind==='removed')save.extensions![job.manifest?.extension_id??'isolated_candidate'].installed=false;
+      if(kind==='undo'){
+        const receipt=save.runtime.receipts.find(r=>r.id===tx.request_id)!;
+        save.turn_audit??=[];save.turn_audit.push({turn_id:randomUUID(),parent_turn_id:null,reverted_at:receipt.revision+1,before:{},after:{}});
+      }
+      await f.service.storage.write(save);const restarted=new ExtensionDevelopment(f.host);await restarted.ready;
+      expect(await restarted.get()).toMatchObject({status:'failed'});
+      await expect(restarted.install(job.job_id,tx)).rejects.toThrow('尚未确认');expect(await f.service.storage.read()).toEqual(save);
+    }finally{await f.close();}
+  },15000);
+  it('rejects an invalid legacy workspace before exposing it as an installable candidate',async()=>{
+    const f=await fixture();try{
+      await writeFile(join(f.directory,'development.json'),JSON.stringify([{job_id:randomUUID(),request_id:randomUUID(),
+        status:'ready',phase:'preview',message:'old',logs:[],manifest:null,hash:null,workspace:join(f.directory,'..','outside')} ]));
+      const dev=new ExtensionDevelopment(f.host);await expect(dev.ready).rejects.toThrow();
+      expect(await f.service.current()).toEqual(f.baseline);
+    }finally{await f.close();}
+  });
+  it('keeps a durable legacy job visible but cannot install an unbound old-world candidate',async()=>{
+    const f=await fixture();try{
+      const id=randomUUID();await writeFile(join(f.directory,'development.json'),JSON.stringify([{job_id:id,request_id:randomUUID(),
+        status:'ready',phase:'preview',message:'old',logs:[],manifest:null,hash:null,workspace:join(f.directory,'workspaces',id)}]));
+      const dev=new ExtensionDevelopment(f.host);await dev.ready;
+      expect(await dev.get()).toMatchObject({job_id:id,status:'failed'});
+      expect(await f.service.current()).toEqual(f.baseline);
+    }finally{await f.close();}
+  });
+  it('cannot install a candidate generated for a previous world',async()=>{
+    const f=await fixture();try{
+      const dev=new ExtensionDevelopment(f.host),job=await dev.start({...f.input(),use_codex:false});
+      expect((await dev.wait(job.job_id)).status).toBe('ready');
+      const switched=structuredClone(f.baseline);switched.game_id=randomUUID();await f.service.storage.write(switched);
+      await expect(dev.install(job.job_id,{game_id:switched.game_id,expected_revision:switched.state_revision,
+        request_id:randomUUID(),confirmed:true})).rejects.toThrow('世界');
+      expect(await f.service.current()).toEqual(switched);
+    }finally{await f.close();}
+  },15000);
+  it.each(['world_after','journal_after'] as const)('recovers installation after %s failure without reapplying the manifest',async(point)=>{
+    const f=await fixture();try{
+      const dev=new ExtensionDevelopment(f.host),job=await dev.start({...f.input(),use_codex:false});await dev.wait(job.job_id);
+      const tx={game_id:f.baseline.game_id,expected_revision:f.baseline.state_revision,request_id:randomUUID(),confirmed:true};
+      const write=f.service.storage.write.bind(f.service.storage),atomicWrite=atomic.writeAtomicJson;let failed=false;
+      if(point==='world_after')vi.spyOn(f.service.storage,'write').mockImplementation(async(save,slot)=>{
+        await write(save,slot);if(!failed&&slot!=='checkpoint'){failed=true;throw Error('world committed response lost');}
+      });
+      else vi.spyOn(atomic,'writeAtomicJson').mockImplementation(async(path,value)=>{
+        if(!failed&&path===join(f.directory,'development.json')&&(value as {status:string}[]).some(j=>j.status==='installed')){
+          failed=true;throw Error('installed job journal failed');
+        }await atomicWrite(path,value);
+      });
+      await expect(dev.install(job.job_id,tx)).rejects.toThrow();expect(failed).toBe(true);
+      const after=await f.service.current();expect(after.state_revision).toBe(f.baseline.state_revision+1);
+      const hostInstall=vi.spyOn(f.host,'install');const restarted=new ExtensionDevelopment(f.host);await restarted.ready;
+      expect(await restarted.get()).toMatchObject({job_id:job.job_id,status:'installed'});
+      await restarted.install(job.job_id,tx);expect(hostInstall).not.toHaveBeenCalled();
+      expect(await f.service.current()).toEqual(after);
+      await expect(restarted.install(job.job_id,{...tx,request_id:randomUUID(),expected_revision:after.state_revision})).rejects.toThrow();
+      expect(await f.service.current()).toEqual(after);
+    }finally{await f.close();}
+  },15000);
   it('validates a durable duplicate against the original request and workspace options',async()=>{
     const f=await fixture();try{
       const generate=vi.fn(async()=>{throw Error('offline stop');});
