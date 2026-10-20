@@ -68,7 +68,7 @@ Do not reuse the historical 46% as a current estimate. The first reproducible co
 | N5 | NPC speech reflects personality, memory and relationships | Partial | cognition integration exists; voice distinction not broadly accepted |
 | N6 | Inventory/object grounding and no invented usable assets | Partial | possession/materialization/firewall tests; open-world breadth remains |
 | N7 | Long-term continuity and contradictory expression prevention | Partial | continuity/cognition tests; long-duration experience unaccepted |
-| N8 | Natural degraded narration quality across scene types | Unfinished | factual fallbacks exist; no broad naturalness acceptance |
+| N8 | Natural degraded narration quality across scene types | Partial | 1b0cb30: fixed six-scene standards and reviewed Chinese snapshots; required physical/dialogue/observe/move cases pass both offline refusal/content-filter failures, adjacent 9 files/82 passed and full isolated build passed. General compound/unexecuted prose and current real-model composition remain open; see degraded-prose-grounding.md |
 | N9 | Broad multi-world differentiated prose benchmark | Unfinished | no representative quality benchmark passed |
 | N10 | Current-source real-provider and human play acceptance | Unfinished | authorization/human participation required |
 

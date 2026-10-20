@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "506906d",
+  "assessed_source": "1b0cb30",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -1063,11 +1063,14 @@
       "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
     },
     "N8.1": {
-      "status": "unmet",
+      "status": "met",
       "evidence": [
-        "tests/narration-degradation-http.test.ts"
+        "docs/degraded-prose-acceptance.v1.json",
+        "docs/degraded-prose-grounding.md",
+        "tests/degraded-prose-grounding.test.ts",
+        "tests/__snapshots__/degraded-prose-grounding.test.ts.snap"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Fixed six-scene matrix, explicit prose/grounding criteria and individually reviewed Chinese outputs. Source 1b0cb30; adjacent9files82pass and isolated complete build passed. Real-model/human gates remain open."
     },
     "N8.2": {
       "status": "unmet",
@@ -1077,11 +1080,14 @@
       "basis": "Known remaining implementation or acceptance gap in the existing ledger."
     },
     "N8.3": {
-      "status": "unverified",
+      "status": "met",
       "evidence": [
-        "tests/narration-degradation-http.test.ts"
+        "docs/degraded-prose-acceptance.v1.json",
+        "docs/degraded-prose-grounding.md",
+        "tests/degraded-prose-grounding.test.ts",
+        "tests/__snapshots__/degraded-prose-grounding.test.ts.snap"
       ],
-      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+      "basis": "All required physical, dialogue, observation and movement cases pass after both controlled refusal and content-filter failures, with Core/replay assertions; bounded offline developer acceptance. Source 1b0cb30; adjacent9files82pass and isolated complete build passed. Real-model/human gates remain open."
     },
     "N8.4": {
       "status": "unverified",
@@ -1223,6 +1229,59 @@
         }
       ],
       "note": "Original-scope finding resolved; full long-term revision/fairness and multi-world72h acceptance remain open. Score delta0."
+    },
+    {
+      "batch": "grounded-degraded-prose",
+      "type": "repair",
+      "source": "1b0cb30",
+      "transitions": [
+        {
+          "id": "N8.1",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "docs/degraded-prose-acceptance.v1.json",
+            "docs/degraded-prose-grounding.md",
+            "tests/degraded-prose-grounding.test.ts",
+            "tests/__snapshots__/degraded-prose-grounding.test.ts.snap"
+          ],
+          "reason": "Fixed six-scene matrix, explicit prose/grounding criteria and individually reviewed Chinese outputs."
+        },
+        {
+          "id": "N8.3",
+          "before": "unverified",
+          "after": "met",
+          "evidence": [
+            "docs/degraded-prose-acceptance.v1.json",
+            "docs/degraded-prose-grounding.md",
+            "tests/degraded-prose-grounding.test.ts",
+            "tests/__snapshots__/degraded-prose-grounding.test.ts.snap"
+          ],
+          "reason": "All required physical, dialogue, observation and movement cases pass after both controlled refusal and content-filter failures, with Core/replay assertions; bounded offline developer acceptance."
+        }
+      ],
+      "condition_checks": [
+        {
+          "id": "N8.2",
+          "result": "Six simple scenes repaired; general compound and unexecuted portions remain open",
+          "evidence": [
+            "docs/degraded-prose-acceptance.v1.json",
+            "docs/degraded-prose-grounding.md",
+            "tests/degraded-prose-grounding.test.ts",
+            "tests/__snapshots__/degraded-prose-grounding.test.ts.snap"
+          ]
+        },
+        {
+          "id": "N8.4",
+          "result": "Offline refusal/content-filter only; no authorized current real-model evidence",
+          "evidence": [
+            "docs/degraded-prose-acceptance.v1.json",
+            "docs/degraded-prose-grounding.md",
+            "tests/degraded-prose-grounding.test.ts",
+            "tests/__snapshots__/degraded-prose-grounding.test.ts.snap"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -1436,6 +1495,20 @@
         "docs/npc-objective-projection.md"
       ],
       "summary": "Bounded recovery plans and their owned goals now remain visible and manageable together; priorities/ended IDs preserved. Baseline4 failures/1 control; final10 files/91 passed."
+    },
+    {
+      "id": "generic-refusal-prose",
+      "scope": "original",
+      "condition": "N8.2",
+      "status": "resolved",
+      "source": "1b0cb30",
+      "evidence": [
+        "docs/degraded-prose-acceptance.v1.json",
+        "docs/degraded-prose-grounding.md",
+        "tests/degraded-prose-grounding.test.ts",
+        "tests/__snapshots__/degraded-prose-grounding.test.ts.snap"
+      ],
+      "summary": "Safety degradation no longer replaces six distinct Core-settled scenes with save/generation boilerplate. Original12fail, interrupted4fail, final9files82pass; complete N8.2 still open."
     }
   ]
 }

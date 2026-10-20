@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：506906d。整体 **56.88%**（91/160 个固定条件满足）。未满足 31，待验证 38。
+计分版本 v1；评估源代码：1b0cb30。整体 **58.13%**（93/160 个固定条件满足）。未满足 30，待验证 37。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -9,8 +9,8 @@
 | ① 可靠性 | 29 | 6 | 5 | 4/6/0 | 72.5% |
 | ② 自然语言行动 | 22 | 7 | 11 | 3/5/2 | 55.0% |
 | ③ 自主持续世界 | 22 | 9 | 9 | 3/5/2 | 55.0% |
-| ④ Narrator 与体验 | 18 | 9 | 13 | 2/5/3 | 45.0% |
-| 合计 | 91 | 31 | 38 | 12/21/7 | 56.88% |
+| ④ Narrator 与体验 | 20 | 8 | 12 | 2/6/2 | 50.0% |
+| 合计 | 93 | 30 | 37 | 12/22/6 | 58.13% |
 
 旧台账的12/21/7是工作包人工分类，保留作历史。这里的完成/部分/未完成由4个条件满足数推导，不能与旧分类混用。旧46%为退役估计；首次建立口径不是产品进展，不计算相对46%的提升。
 
@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：4 已修复，0 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：5 已修复，0 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -27,6 +27,7 @@
 | conditional-owner | repair | A7.3: 修复条件归属及执行前校验；19个直接用例、相邻140项通过；完整条件保持开放 | +0.000 pp |
 | future-condition-authority | repair | A7.3: 修复未来条件对象与外层条件持久化；11个直接用例、相邻165项通过；完整条件保持开放 | +0.000 pp |
 | npc-objective-projection | repair | W5.3: 修复受阻计划与所属长期目标的上下文错位；7个直接用例、相邻91项通过；完整条件保持开放 | +0.000 pp |
+| grounded-degraded-prose | repair | N8.1: unmet → met; N8.3: unverified → met | +1.250 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -365,9 +366,9 @@
 
 | 条件 | 具体通过条件 | 状态 | 依据 |
 |---|---|---|---|
-| N8.1 | 固定各类场景降级描写质量标准与样例 | 未满足 | [narration-degradation-http.test.ts](../tests/narration-degradation-http.test.ts) |
+| N8.1 | 固定各类场景降级描写质量标准与样例 | 满足 | [degraded-prose-acceptance.v1.json](../docs/degraded-prose-acceptance.v1.json), [degraded-prose-grounding.md](../docs/degraded-prose-grounding.md), [degraded-prose-grounding.test.ts](../tests/degraded-prose-grounding.test.ts), [degraded-prose-grounding.test.ts.snap](../tests/__snapshots__/degraded-prose-grounding.test.ts.snap) |
 | N8.2 | 降级文本自然表达已结算事实及未完成部分 | 未满足 | [narration-degradation-http.test.ts](../tests/narration-degradation-http.test.ts) |
-| N8.3 | 身体、对话、观察、移动的降级文本逐项验收通过 | 待验证 | [narration-degradation-http.test.ts](../tests/narration-degradation-http.test.ts) |
+| N8.3 | 身体、对话、观察、移动的降级文本逐项验收通过 | 满足 | [degraded-prose-acceptance.v1.json](../docs/degraded-prose-acceptance.v1.json), [degraded-prose-grounding.md](../docs/degraded-prose-grounding.md), [degraded-prose-grounding.test.ts](../tests/degraded-prose-grounding.test.ts), [degraded-prose-grounding.test.ts.snap](../tests/__snapshots__/degraded-prose-grounding.test.ts.snap) |
 | N8.4 | 当前模型与离线回退组合均不输出工具式总结 | 待验证 | [narration-degradation-http.test.ts](../tests/narration-degradation-http.test.ts) |
 
 ## N9 Broad multi-world differentiated prose benchmark

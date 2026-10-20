@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Current acceptance checkpoint — 2026-10-20
+
+Reviewed Narrator source `1b0cb30` follows `225bd69`. Fixed-weight ledger now58.125%=93/160,30unmet/37unverified: only N8.1 and N8.3 newly met (+1.25pp). N8.2/N8.4 remain open. Final9files82pass and full isolated build passed; all27 prior frozen hashes match, production SHA remains94109AA75B66ED021619A3A7CC9C2795A714D36B2DADFA109B1C8CEB67455DE9. No source WIP after this acceptance checkpoint; original dirty QA/audit notes remain. Sandbox HTTP EACCES was an environment failure, rerun with loopback access passed. No full-suite/real-model/deployment claim. Next: reproduce compound degraded narration losing scene-specific outcomes/unexecuted distinctions; preserve receipts and authorization boundaries.
+
 ## Narrator degraded prose continuation — 2026-10-20
 
 Branch `codex/claude-takeover-integration`, parent HEAD `225bd69`; the checkpoint containing this section completes the interrupted service/test/manifest batch. Refusal/content-filter fallback now uses existing Core receipt renderers for physical/move/observe and registered receipts for TALK/WAIT. No schema or settlement changes. Six fixed scene types have reviewed Chinese snapshots; witness speech is reused only through existing typed/perception validation. Original baseline12fail, interrupted8pass4fail, resumed12pass; final adjacent9files82pass and complete isolated build passed. Exact source commit is recorded in the next acceptance checkpoint. docs/degraded-prose-grounding.md records examples and limits.
