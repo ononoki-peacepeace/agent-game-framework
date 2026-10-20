@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "0e6b9c8",
+  "assessed_source": "c6a7e84",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -947,9 +947,11 @@
         "tests/compound-degraded-prose.test.ts",
         "docs/compound-degraded-prose.md",
         "tests/partial-plan-visible-status.test.ts",
-        "docs/partial-plan-visible-status.md"
+        "docs/partial-plan-visible-status.md",
+        "tests/compound-reaction-budget.test.ts",
+        "docs/compound-reaction-ownership.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. Source b4c018f fixes inherited-last-step degradation omission; final11files109pass, isolated build passed, full condition remains open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. Source b4c018f fixes inherited-last-step degradation omission; final11files109pass, isolated build passed, full condition remains open. Source c6a7e84 binds actual compound child reactions with shared durable budget;13distinct files81pass/build; full condition remains open."
     },
     "N3.4": {
       "status": "unverified",
@@ -1097,9 +1099,11 @@
       "evidence": [
         "tests/narration-degradation-http.test.ts",
         "tests/compound-degraded-prose.test.ts",
-        "docs/compound-degraded-prose.md"
+        "docs/compound-degraded-prose.md",
+        "tests/compound-reaction-budget.test.ts",
+        "docs/compound-reaction-ownership.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. Source b4c018f fixes inherited-last-step degradation omission; final11files109pass, isolated build passed, full condition remains open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. Source b4c018f fixes inherited-last-step degradation omission; final11files109pass, isolated build passed, full condition remains open. Source c6a7e84 binds actual compound child reactions with shared durable budget;13distinct files81pass/build; full condition remains open."
     },
     "N8.3": {
       "status": "met",
@@ -1616,6 +1620,32 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "compound-reaction-ownership",
+      "type": "repair",
+      "source": "c6a7e84",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "N3.3",
+          "result": "Actual child speech, shared two-generation stage, pending budget/replay verified; broader failed/unexecuted multi-world prose remains open",
+          "evidence": [
+            "tests/compound-degraded-prose.test.ts",
+            "tests/compound-reaction-budget.test.ts",
+            "docs/compound-reaction-ownership.md"
+          ]
+        },
+        {
+          "id": "N8.2",
+          "result": "Actual child speech, shared two-generation stage, pending budget/replay verified; broader failed/unexecuted multi-world prose remains open",
+          "evidence": [
+            "tests/compound-degraded-prose.test.ts",
+            "tests/compound-reaction-budget.test.ts",
+            "docs/compound-reaction-ownership.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -1962,6 +1992,19 @@
         "docs/repeated-physical-narrative-scope.md"
       ],
       "summary": "8ae218b introduced raw-attempt paragraph misvalidation. Corrected1fail/1control, final11files104pass/build. Explicit withdrawal and restoration; no score gain."
+    },
+    {
+      "id": "compound-reaction-ownership",
+      "scope": "original",
+      "condition": "N3.3",
+      "status": "resolved",
+      "source": "c6a7e84",
+      "evidence": [
+        "tests/compound-degraded-prose.test.ts",
+        "tests/compound-reaction-budget.test.ts",
+        "docs/compound-reaction-ownership.md"
+      ],
+      "summary": "Baseline6fail; after repair pending-budget2fail/5controls exposed extra calls and were fixed; final13distinct files81pass/build. No whole-condition credit."
     }
   ]
 }
