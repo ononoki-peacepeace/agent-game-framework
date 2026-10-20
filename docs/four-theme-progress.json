@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "396d1be",
+  "assessed_source": "b2c22d0",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -246,9 +246,11 @@
     "R8.3": {
       "status": "unmet",
       "evidence": [
-        "docs/media-canonical-coordination.md"
+        "docs/media-canonical-coordination.md",
+        "tests/image-existing-content.test.ts",
+        "docs/image-existing-content.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. b2c22d0 rejects corrupt/truncated existing content-addressed image bytes before binding;baseline2fail2controls,final5files42pass/build,actual JsonStore/save bytes unchanged. Provider identity/GC/external writer matrix remains open."
     },
     "R8.4": {
       "status": "unverified",
@@ -2955,6 +2957,22 @@
           "evidence": [
             "tests/migration-two-service.test.ts",
             "docs/migration-two-service.md"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "image-existing-content",
+      "type": "repair",
+      "source": "b2c22d0",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R8.3",
+          "result": "Existing content-addressed image EEXIST now verifies bytes before binding;corrupt/truncated assets stop without overwriting/deleting/save mutation or retry. Baseline2fail2controls,final5files42pass/build. Full request-identity/GC/external writer gate remains open.",
+          "evidence": [
+            "tests/image-existing-content.test.ts",
+            "docs/image-existing-content.md"
           ]
         }
       ]
