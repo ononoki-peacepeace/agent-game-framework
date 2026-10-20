@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "1bad19e",
+  "assessed_source": "975f705",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -142,9 +142,11 @@
         "tests/plan-handoff-failure.test.ts",
         "docs/plan-handoff-failure.md",
         "tests/plan-unreadable-state.test.ts",
-        "docs/plan-unreadable-state.md"
+        "docs/plan-unreadable-state.md",
+        "tests/plan-committed-failure-summary.test.ts",
+        "docs/plan-committed-failure-summary.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 8e2a0f6: between-step handoff failures retain settled prefix/receipt and skipped guards do not pause read-only alternatives;3fail/1control,7distinctfiles57pass/build. Full fixed matrix remains open. 92b86cd: persistent staged-plan recovery/final reads return uncertain outcomes with confirmed receipts and no cached view; initial2fail, final8files61pass/build. Other exits remain open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 8e2a0f6: between-step handoff failures retain settled prefix/receipt and skipped guards do not pause read-only alternatives;3fail/1control,7distinctfiles57pass/build. Full fixed matrix remains open. 92b86cd: persistent staged-plan recovery/final reads return uncertain outcomes with confirmed receipts and no cached view; initial2fail, final8files61pass/build. Other exits remain open. 975f705: after actual WAIT commit, contract/provider response failures no longer claim unchanged state or suggest blind retry; baseline2fail, final6files27pass/build. Every-exit matrix remains open."
     },
     "R5.4": {
       "status": "met",
@@ -1974,6 +1976,13 @@
       "source": "1bad19e",
       "transitions": [],
       "note": "207files2064/2064pass across16fresh shards,515hashes match, exact coverage once; original QA/frozen27/formal hash preserved. Complete build on identical product. R5.4 already met/net0; other matrices remain open. Initial documentation generation rejected unsupported evidence_refresh type; corrected to existing evidence_correction enum without modifying scoring script."
+    },
+    {
+      "batch": "plan-committed-failure-summary",
+      "type": "repair",
+      "source": "975f705",
+      "transitions": [],
+      "note": "Two actual post-commit failure-summary counterexamples; final6files27pass/build. R5.3 remains unmet/net0; previous207files2064pass snapshot remains1bad19e."
     }
   ],
   "new_risks": [],
@@ -2453,6 +2462,18 @@
         "docs/scene-presence-subjects.md"
       ],
       "summary": "Multi-named sentence checks were discarded; bounded named/player clause scoping repaired, first3regressions retained and fixed. Rich attribution remains open."
+    },
+    {
+      "id": "plan-committed-failure-summary",
+      "scope": "original",
+      "condition": "R5.3",
+      "status": "resolved",
+      "source": "975f705",
+      "evidence": [
+        "tests/plan-committed-failure-summary.test.ts",
+        "docs/plan-committed-failure-summary.md"
+      ],
+      "summary": "Failed-step prose contradicted saved receipt and changed state; wording now requires state inspection, no settlement/retry-policy change."
     }
   ]
 }
