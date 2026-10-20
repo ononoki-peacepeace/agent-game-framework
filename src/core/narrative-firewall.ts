@@ -314,7 +314,15 @@ export function canonicalCompoundNarrative(save:SavePackage,hidden:boolean,steps
   const lines=steps.map((step,index)=>{
     const facts=(step.canonical_facts??[]).filter(fact=>
       !fact.startsWith('尝试行动：')&&!fact.startsWith('本次行动经过 '));
-    const text=facts.length?facts.join(' '):canonicalResolutionNarrative(step,hidden,isSettledPerception(save,step));
+    const name=String(save.entities.find(entity=>entity.id===step.target_id)?.components.identity?.name??'对方');
+    // The aggregate inherits its last step's type; render the actual child
+    // receipts before using generic facts so preceding speech is not lost.
+    const text=step.physical_outcome?physicalNarrativeFallback(save,step,hidden).narrative:
+      step.movement_route?canonicalMovementNarrative(step,save):
+      isSettledPerception(save,step)?canonicalPerceptionNarrative(save,step,hidden):
+      step.semantic_action==='TALK'?`你向${name}开了口。`:
+      step.semantic_action==='WAIT'?`你等了${step.time_cost}分钟。`:
+      facts.length?facts.join(' '):canonicalResolutionNarrative(step,hidden);
     return `${index+1}、${text}`;
   });
   return lines.join('\n');

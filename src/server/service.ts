@@ -81,17 +81,23 @@ function applyOptionalEnrichment(save: SavePackage, patches: unknown[], action: 
   return next;
 }
 /** Player-facing prose for the rare case where narration itself failed: never a tool summary, never an internal id. */
-function narrationFallback(save: SavePackage, action: Parameters<typeof applyPatches>[2],prior:SavePackage):
+function narrationFallback(save: SavePackage, action: Parameters<typeof applyPatches>[2],prior:SavePackage,compound?:readonly string[]):
   Pick<NonNullable<SavePackage['last_turn']>,'narrative'|'scene_beats'> {
   const receipt=save.resolution_receipts?.find(entry=>entry.request_id===action.id);
   if(receipt){
     const hidden=Boolean(save.resolution_history?.find(check=>check.check_id===receipt.check_id||check.request_id===receipt.request_id)?.hidden);
     const related=save.resolution_receipts?.filter(entry=>!prior.resolution_receipts?.some(old=>old.request_id===entry.request_id))??[];
+    const steps=compound?.map((_,index)=>save.resolution_receipts?.find(entry=>entry.request_id===compoundStepId(action.id,index)))
+      .filter((entry):entry is NonNullable<typeof entry>=>Boolean(entry));
+    if(steps&&steps.length>1){
+      const narrative=canonicalCompoundNarrative(save,hidden,steps);
+      const speech=receipt.physical_outcome?physicalNarrativeFallback(save,receipt,hidden,related).scene_beats.filter(beat=>beat.kind==='speech'):[];
+      return {narrative,scene_beats:speech.length?[
+        ...(narrative.match(/[\s\S]{1,1200}/g)??[]).map(text=>({kind:'narration' as const,text})),...speech]:[]};
+    }
     if(receipt.physical_outcome)return physicalNarrativeFallback(save,receipt,hidden,related);
     if(receipt.movement_route)return {narrative:canonicalMovementNarrative(receipt,save)};
     if(isSettledPerception(save,receipt))return {narrative:canonicalPerceptionNarrative(save,receipt,hidden)};
-    const steps=related.filter(entry=>entry.actor_id===receipt.actor_id&&entry.request_id!==receipt.request_id);
-    if(steps.length>1)return {narrative:canonicalCompoundNarrative(save,hidden,steps)};
     const target=save.entities.find(entity=>entity.id===receipt.target_id);
     const name=String(target?.components.identity?.name??'对方');
     if(receipt.semantic_action==='TALK')return {narrative:`你向${name}开了口。`};
@@ -824,7 +830,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
               if(attempt<3){repair={reason:errorText(error),schema_feedback:{issues:[{path:'presence_claims',code:'presence_conflict',expected:'已结算在场事实',message:errorText(error)}],previous_output:generationRepair(new CandidateValidationError('narrator',[],result))!.previous_output}};continue;}
               observe('warn','narrative.safe_fallback',{module:'turn',request_id:req.request_id,
                 metadata:{reason:'scene_presence_unverified',narrator_attempts:attempt}});
-              return {...result,...narrationFallback(next,turn.action,current),speaker:null,dialogue:null,
+              return {...result,...narrationFallback(next,turn.action,current,compoundSteps),speaker:null,dialogue:null,
                 scene_beats:[],choices:[],choice_semantics:[],context_actions:[],patches:[],interaction:null,
                 item_claims:[],stable_locations:[],mechanical_claims:[],presence_claims:[]};
             }
@@ -902,6 +908,14 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
                 if(attempt===3){
                 observe('warn','narrative.retry_exhausted',{module:'turn',request_id:req.request_id,
                   metadata:{attempts_used:attempt,reason:reason.slice(0,200)}});
+                  if(compoundReceipts&&compoundReceipts.length>1){
+                    degradeNarration(reason);
+                    observe('warn','narrative.safe_fallback',{module:'turn',request_id:req.request_id,
+                      metadata:{reason:'compound_steps_unverified',narrator_attempts:attempt}});
+                    return {...result,...narrationFallback(next,turn.action,current,compoundSteps),
+                      speaker:null,dialogue:null,choices:[],choice_semantics:[],context_actions:[],
+                      patches:[],interaction:null,item_claims:[],stable_locations:[],mechanical_claims:[],presence_claims:[]};
+                  }
                   if(receipt.physical_outcome){
                     degradeNarration(reason);
                     observe('warn','narrative.safe_fallback',{module:'turn',request_id:req.request_id,
@@ -927,15 +941,6 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
                     return {...result,narrative:canonicalMovementNarrative(receipt,next),speaker:null,dialogue:null,choices:[],
                       choice_semantics:[],context_actions:[],patches:[],interaction:null,
                       item_claims:[],stable_locations:[],mechanical_claims:[]};
-                  }
-                  const settledCompoundReceipts=compoundReceipts?.filter((step):step is NonNullable<typeof step>=>Boolean(step));
-                  if(settledCompoundReceipts&&settledCompoundReceipts.length>1){
-                    degradeNarration(reason);
-                    observe('warn','narrative.safe_fallback',{module:'turn',request_id:req.request_id,
-                      metadata:{reason:'compound_steps_unverified',narrator_attempts:attempt}});
-                    return {...result,narrative:canonicalCompoundNarrative(next,Boolean(check?.hidden),settledCompoundReceipts),
-                      scene_beats:[],speaker:null,dialogue:null,choices:[],choice_semantics:[],context_actions:[],
-                      patches:[],interaction:null,item_claims:[],stable_locations:[],mechanical_claims:[],presence_claims:[]};
                   }
                 throw error;
               }
@@ -991,17 +996,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
             observe('warn','narrative.safe_fallback',{module:'turn',request_id:req.request_id,
               metadata:{reason:failureReason(error),action:turn.action.type,receipt_id:settledReceipt.request_id}});
             delete next.ai.threads.narrator;
-            const check=next.resolution_history?.find(entry=>entry.request_id===req.request_id);
-            const settledCompoundReceipts=(compoundSteps?.map((_,index)=>
-              next.resolution_receipts?.find(entry=>entry.request_id===compoundStepId(req.request_id,index)))??[])
-              .filter((step):step is NonNullable<typeof step>=>Boolean(step));
-            const degraded=(settledCompoundReceipts.length>1&&!settledReceipt.physical_outcome&&!settledReceipt.movement_route)?
-              {narrative:canonicalCompoundNarrative(next,Boolean(check?.hidden),settledCompoundReceipts)}:
-              settledReceipt.physical_outcome?physicalNarrativeFallback(next,settledReceipt,Boolean(check?.hidden),
-              next.resolution_receipts?.filter(r=>!current.resolution_receipts?.some(old=>old.request_id===r.request_id))):
-              {narrative:settledReceipt.movement_route?canonicalMovementNarrative(settledReceipt,next):
-                isSettledPerception(next,settledReceipt)?canonicalPerceptionNarrative(next,settledReceipt,Boolean(check?.hidden)):
-                  canonicalResolutionNarrative(settledReceipt,Boolean(check?.hidden))};
+            const degraded=narrationFallback(next,turn.action,current,compoundSteps);
             next.last_turn={...degraded,speaker:null,dialogue:null,choices:[],context_actions:[]};
             notices.push('本次行动已完成并保存；场景描写暂时采用已验证的结算结果。');
           }else{
@@ -1024,7 +1019,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
         observe('warn','narration.safety_degraded',{module:'turn',request_id:req.request_id,metadata:{action:turn.action.type,reason:failureReason(error)}});
         degradeNarration(failureReason(error));
         delete next.ai.threads.narrator;
-        next.last_turn = { ...narrationFallback(next, turn.action,current), speaker: null, dialogue: null, choices: [], context_actions: [] };
+        next.last_turn = { ...narrationFallback(next, turn.action,current,compoundSteps), speaker: null, dialogue: null, choices: [], context_actions: [] };
         notices.push('本次行动已完成并保存；这一刻的场景描写暂时没有生成。');
         }
       }

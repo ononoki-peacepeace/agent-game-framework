@@ -1,0 +1,11 @@
+# Compound degraded prose retains ordered settled stages
+
+Baseline `70fdf63` reproduced two failures: after TALK followed by a successful physical step, both controlled refusal and timeout produced only the final physical narrative. The aggregate receipt inherits its final child's typed fields, so the physical branch hid the earlier speech before compound handling could run.
+
+Service fallback now selects the explicit compound child request IDs before interpreting aggregate fields. It does not infer a compound from repetition attempts or background NPC receipts. The same bounded renderer serves refusal, structured provider failure and exhausted fact-validation repair. The Core compound renderer uses the child's physical/movement/perception/registered speech/wait facts where available, retaining ordered legacy fact fallback for other actions. Already validated physical witness speech remains in typed beats, alongside the full compound narrative so the UI cannot hide earlier steps.
+
+No Core settlement, authorization, Save schema or public interface changed. Integrate `src/server/service.ts` and `src/core/narrative-firewall.ts` together. Receipt identity, world time, retry budget and commit behavior are unchanged.
+
+Developer evidence: [compound-degraded-prose.test.ts](../tests/compound-degraded-prose.test.ts) uses actual local compound Core execution and controlled offline Narrator failure. Initial 2/2 failed. Expanded 6/6 pass for speech→physical and physical→speech with refusal, timeout and fact-conflict exhaustion. Assertions cover child/root committed receipts, harm, ordered prose without internal labels, actual `SceneStory` HTML retaining both stages, validated witness speech, one revision and duplicate-request saved-state equality without another Narrator call. First adjacent regression: 4 files / 34 passed. Final regression: 11 files / 109 passed; complete isolated build passed. These reports overlap and are not additive.
+
+This closes the concrete original N3.3/N8.2 omission, with no whole-condition score change. Local compound candidates still require all steps to succeed before one commit. General failed/unexecuted multi-goal prose, generic activity wording, long sequences, multi-world naturalness and real-provider/human evaluation remain open. Existing correct numbering/fact assertions are retained.
