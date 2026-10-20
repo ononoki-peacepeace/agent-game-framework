@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "b2c22d0",
+  "assessed_source": "968f26f",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -2973,6 +2973,30 @@
           "evidence": [
             "tests/image-existing-content.test.ts",
             "docs/image-existing-content.md"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "npc-long-route-plan",
+      "type": "repair",
+      "source": "968f26f",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "W4.3",
+          "result": "Typed MOVE multi-edge route above240credit cap makes actual first-edge progress;original destination/cursor retained until arrival,matching time boundary,dependent work/long motive/disk restart/closed route controls. Baseline2fail1control,final7files59pass/build. Singleedge>240 and full matrices remain open.",
+          "evidence": [
+            "tests/npc-long-route-plan.test.ts",
+            "docs/npc-long-route-plan.md"
+          ]
+        },
+        {
+          "id": "W5.3",
+          "result": "Typed MOVE multi-edge route above240credit cap makes actual first-edge progress;original destination/cursor retained until arrival,matching time boundary,dependent work/long motive/disk restart/closed route controls. Baseline2fail1control,final7files59pass/build. Singleedge>240 and full matrices remain open.",
+          "evidence": [
+            "tests/npc-long-route-plan.test.ts",
+            "docs/npc-long-route-plan.md"
           ]
         }
       ]

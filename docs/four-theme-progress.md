@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：b2c22d0。整体 **60.63%**（97/160 个固定条件满足）。未满足 28，待验证 35。
+计分版本 v1；评估源代码：968f26f。整体 **60.63%**（97/160 个固定条件满足）。未满足 28，待验证 35。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -109,6 +109,7 @@
 | post-wait-complete-offline-snapshot | repair | R5.4: Refresh already-met full offline evidence:238files2371pass/zero skip,550unchanged hashes,exact coverage once;20fresh isolated process exit0,build61704 passed. Historical failures and separate real R9.3 two-service preflight failure retained.；完整条件保持开放 | +0.000 pp |
 | migration-two-service | repair | R9.3: Same-process same-path JsonStore migration guarded against other instances canonical/media/same-revision writes;full-image compare,entry snapshots,3conflict safe stop/fault recovery. Formal2fail6controls,queued8pass1fail retained;final7files57pass/build. Cross-process half of full condition remains open.；完整条件保持开放 | +0.000 pp |
 | image-existing-content | repair | R8.3: Existing content-addressed image EEXIST now verifies bytes before binding;corrupt/truncated assets stop without overwriting/deleting/save mutation or retry. Baseline2fail2controls,final5files42pass/build. Full request-identity/GC/external writer gate remains open.；完整条件保持开放 | +0.000 pp |
+| npc-long-route-plan | repair | W4.3: Typed MOVE multi-edge route above240credit cap makes actual first-edge progress;original destination/cursor retained until arrival,matching time boundary,dependent work/long motive/disk restart/closed route controls. Baseline2fail1control,final7files59pass/build. Singleedge>240 and full matrices remain open.；完整条件保持开放; W5.3: Typed MOVE multi-edge route above240credit cap makes actual first-edge progress;original destination/cursor retained until arrival,matching time boundary,dependent work/long motive/disk restart/closed route controls. Baseline2fail1control,final7files59pass/build. Singleedge>240 and full matrices remain open.；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
