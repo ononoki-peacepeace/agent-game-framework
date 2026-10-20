@@ -1,0 +1,9 @@
+# Preserve the actual settled reaction utterance
+
+On source `c6a7e84` / ledger `0e7537f`, a reaction decision said “先停一下。” but the Narrator could replace it with “我愿意再来一次。” and still receive normal presentation. The existing check admitted any speech by the same NPC. Both physical-first and physical-last compound cases reproduced this fact violation; eight controls passed.
+
+The service now requires the actual stored reaction utterance, with only outer whitespace ignored, in either its matching speech beat or the legacy speaker/dialogue pair. A substituted utterance enters the existing bounded Narrator repair loop, then falls back to real saved speech; Core effects are not replayed. The Narrator context explicitly explains that the speech has already happened and must retain the original words. This check is limited to settled physical reaction speech: it does not declare every ordinary dialogue line pre-authored, and does not replace broader temporal/subject attribution work.
+
+The expanded fourteen-case prose fixture checks both action orders, both dialogue representations, lawful controls, refusal/timeout/conflict, replay, actual scene rendering and the real runtime prompt. Ten files / 71 tests passed before the final prompt-only guidance addition; final two files / 21 tests include that guidance and the pending shared-budget cases. These counts overlap. The complete isolated build is recorded in the local SESSION. An earlier command named a nonexistent optional scene-beats test; its report correctly contains six actual files / 52 passes, not seven. It is superseded by the ten-existing-file command.
+
+The N4.1 counterexample and repair are recorded as an explicit evidence withdrawal/restoration, net zero. N3.3 and N8.2 remain open. Overall stays 60.00% (96/160); no full-suite, real-provider, production or human quality acceptance is claimed.

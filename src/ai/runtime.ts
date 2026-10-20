@@ -696,7 +696,7 @@ export class AIRuntime {
           .map(entity=>({id:entity.id,name:entity.components.identity?.name})),
         instruction:'这里的当前位置高于旧段落和玩家话中的预设。目送某人离开、声称只剩两人，只是玩家表达，不证明那人已经完成 MOVE。没有相应位置结算，不得写人物跨门、离开、脚步远去或已不在场；历史中相冲突的旁白不能继续当作事实。'},
       presence_claim_policy:'旁白对人物当前在场或离场作事实断言时，在 presence_claims 填 entity_id 与该人物已结算的 location_id，程序将核对权威位置；没有断言时填空数组。这只是事实引用，不会移动人物。转述人物的疑问、计划或可能说谎的台词不应被当成权威位置声明。',
-      ...(significantIncidents.length?{significant_incident:significantIncidents.at(-1),
+      ...(significantIncidents.length?{settled_reaction_speech_policy:'反应 decision.speech 是人物已经说出的原话。直接对白须保留该原话并绑定同一 speaker_id，不能用同一人物的新台词替代、改写或反转其意愿；可在原话前后自然组织旁白。',significant_incident:significantIncidents.at(-1),
         ...(compoundReceipts?{significant_incidents:significantIncidents}:{})}:{}),
       ...(perceptionFacts.length?{perception_result:{canonical_facts:perceptionFacts,
         instruction:'玩家刚完成一次权威调查。正文必须自然交代玩家实际查看了什么以及这些事实所支持的新发现或本次范围内无新发现；NPC 可以随后回应，但不能只让 NPC 追问玩家有无发现。仅凭这些已结算事实写结果，不补造线索、人物或隐藏真相。'}}:{}),

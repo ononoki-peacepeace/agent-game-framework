@@ -864,9 +864,9 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
               for(const physical of (compoundReceipts??[receipt]).filter(step=>step?.physical_outcome))for(const npcId of physical!.physical_outcome!.witness_ids){
                 const said=next.npc_agent_state?.[npcId]?.last_decisions.findLast(decision=>
                   decision.event_ref===`reaction:${physical!.request_id}`)?.speech;
-                if(said&&!result.scene_beats?.some(beat=>beat.kind==='speech'&&beat.speaker_id===npcId)&&
-                  !(result.speaker===npcId&&result.dialogue?.trim()))
-                  throw new GameError(`本轮已发生的人物发言缺少对应台词（speaker_id=${npcId}）；请在完整正文和有序对白中呈现已有回应，不能只写开口或说完。`,503);
+                if(said&&!result.scene_beats?.some(beat=>beat.kind==='speech'&&beat.speaker_id===npcId&&beat.utterance.trim()===said.trim())&&
+                  !(result.speaker===npcId&&result.dialogue?.trim()===said.trim()))
+                  throw new GameError(`本轮已发生的人物发言缺少对应台词（speaker_id=${npcId}）；请保留已有回应的原话，不能用同一人物的其他台词替代，也不能只写开口或说完。`,503);
               }
               for(const beat of result.scene_beats??[])if(beat.kind==='speech'){
                 const speaker=next.entities.find(entity=>entity.id===beat.speaker_id&&entity.components.character);
