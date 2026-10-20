@@ -22,6 +22,11 @@ The shared base and Claude checkout are unchanged by these Codex-only commits:
   exceptions to existing HTTP receipt recovery. Subsequent tests: 2 files / 37
   tests and broader System 6 files / 54 tests passed (overlapping reports);
   TypeScript passed. The full suite above precedes this second commit.
+- `d78015d4eb43a2653a2315ae0b72dc57273339b5`: optional calendar request UUID,
+  existing Core receipt and parent prepare, with UI/HTTP forwarding. Calendar,
+  routine and continuity regression: 4 files / 58 tests passed; input/calendar
+  regression: 2 files / 38 tests passed (overlapping). Build and latest TypeScript
+  passed. No latest combined full-suite run is claimed.
 
 Public dependencies: the optional `DevelopmentTask.extension_install` field and
 `ExtensionDevelopment.recoverInstallation` method must be integrated together.
@@ -29,6 +34,10 @@ No Core/Save Schema change or new receipt protocol is required. Existing Claude
 work can continue from the shared base without these commits. See
 `docs/extension-install-recovery.md` and `docs/system-error-recovery.md` after
 reviewed integration; do not silently assume these Codex-only methods exist.
+Calendar's optional fourth `configureCalendar` parameter and optional HTTP
+`request_id` are compatible with older callers; those older callers cannot
+identify duplicate submissions. Integrate service, route and UI changes together.
+See `docs/calendar-request-recovery.md` for remaining migration/receipt limits.
 
 Remaining Codex work includes configuration request identity, migration/history
 boundaries, further workspace failures and natural-language goal dependencies.
