@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "8e2a0f6",
+  "assessed_source": "92b86cd",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -140,9 +140,11 @@
         "tests/partial-plan-visible-status.test.ts",
         "docs/partial-plan-visible-status.md",
         "tests/plan-handoff-failure.test.ts",
-        "docs/plan-handoff-failure.md"
+        "docs/plan-handoff-failure.md",
+        "tests/plan-unreadable-state.test.ts",
+        "docs/plan-unreadable-state.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 8e2a0f6: between-step handoff failures retain settled prefix/receipt and skipped guards do not pause read-only alternatives;3fail/1control,7distinctfiles57pass/build. Full fixed matrix remains open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 8e2a0f6: between-step handoff failures retain settled prefix/receipt and skipped guards do not pause read-only alternatives;3fail/1control,7distinctfiles57pass/build. Full fixed matrix remains open. 92b86cd: persistent staged-plan recovery/final reads return uncertain outcomes with confirmed receipts and no cached view; initial2fail, final8files61pass/build. Other exits remain open."
     },
     "R5.4": {
       "status": "met",
@@ -1882,6 +1884,13 @@
       "source": "8e2a0f6",
       "transitions": [],
       "note": "Baseline3fail/1control; final7distinctfiles57pass/build. R5.3/A7.3 remain unmet; no whole-condition credit. Direct executor rebuilt-service continuation only, not HTTP/process-kill acceptance."
+    },
+    {
+      "batch": "plan-unreadable-state",
+      "type": "repair",
+      "source": "92b86cd",
+      "transitions": [],
+      "note": "Initial2raw-read failures; expanded60/61 fixture frontier-order issue corrected, final8files61pass/build. R5.3 remains unmet; no whole-condition credit."
     }
   ],
   "new_risks": [],
@@ -2325,6 +2334,18 @@
         "docs/plan-handoff-failure.md"
       ],
       "summary": "Handoff read failure escaped after settled WAIT; false branch inspected too early. Boundary/authorization repair,7files57pass/build; persistent storage/finalizers remain open."
+    },
+    {
+      "id": "plan-unreadable-state",
+      "scope": "original",
+      "condition": "R5.3",
+      "status": "resolved",
+      "source": "92b86cd",
+      "evidence": [
+        "tests/plan-unreadable-state.test.ts",
+        "docs/plan-unreadable-state.md"
+      ],
+      "summary": "Staged-plan recovery/final read exceptions now preserve only confirmed state and omit stale view. Stops later effects when unreadable; no all-exit or process-kill claim."
     }
   ]
 }
