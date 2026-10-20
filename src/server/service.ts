@@ -19,6 +19,7 @@ import {repairOpeningPossessionsForAction} from '../core/initial-possession-repa
 import {reconcileDuplicateActivePlans} from '../core/pending-repair.js';
 import {applyNarrativeClaims} from '../core/narrative-claims.js';
 import {NarrativePatternError,physicalNarrativeFallback,canonicalResolutionNarrative,canonicalPerceptionNarrative,isSettledPerception,canonicalMovementNarrative,canonicalCompoundNarrative,validateMovementNarrative,validateResolvedNarrative,validateScenePresenceNarrative} from '../core/narrative-firewall.js';
+import {interruptedActivity} from '../core/completion-evidence.js';
 import {isActivePerception} from '../agent/perception.js';
 import {makeCompiledChoiceOffers} from '../core/choice-offer.js';
 import { executeAction, applyPatches } from '../core/runtime.js';
@@ -106,7 +107,7 @@ function narrationFallback(save: SavePackage, action: Parameters<typeof applyPat
       const waited=receipt.time_cost>0?`你等了${receipt.time_cost}分钟。`:'你停了下来。';
       return {narrative:[waited,save.foreground?.reason].filter(Boolean).join('\n')};
     }
-    if(receipt.semantic_action==='HOLD')return {narrative:[canonicalResolutionNarrative(receipt,hidden),save.foreground?.reason].filter(Boolean).join('\n')};
+    if(receipt.semantic_action==='HOLD'||receipt.activity||interruptedActivity(receipt))return {narrative:[canonicalResolutionNarrative(receipt,hidden),save.foreground?.reason].filter(Boolean).join('\n')};
     return {narrative:canonicalResolutionNarrative(receipt,hidden)};
   }
   return {narrative:'你试着按眼前的打算行动。'};

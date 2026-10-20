@@ -5,10 +5,10 @@ import {isActivePerception} from '../agent/perception.js';
 import { observe } from '../observability/index.js';
 import { publicView } from './state.js';
 import { createRegistry } from '../modules/index.js';
-import { executeAction, applyPatches } from './runtime.js';
+import { executeAction, applyPatches,advanceWorldSegment } from './runtime.js';
 import {putItemInInventory,putItemInScene,putItemInSceneContainer,setItemCondition,type Inventory} from '../modules/inventory.js';
 import {bindStorageAction} from './action-binding.js';
-import {activityEvidence,enumeratedInspectionItems,inspectionEvidence,progressChanges,requiresPersistentProgress,type InspectionResult} from './completion-evidence.js';
+import {activityEvidence,interruptedActivityFact,enumeratedInspectionItems,inspectionEvidence,progressChanges,requiresPersistentProgress,type InspectionResult} from './completion-evidence.js';
 import {difficultyBandSchema,prepareCheck,resolutionKindSchema,resolveCheck} from './resolution.js';
 import {secureRng,type RNG} from './dice.js';
 import {normalizeProviderCollections} from '../ai/provider-schema.js';
@@ -481,11 +481,26 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
       id:physical.injury_stage_id,reason:'环境致伤条件尚无可验证依据；仅结算独立接触尝试，不确认环境伤害。'}]}:{})};
   let check=prepareCheck(current,requestId,checkInput);
   const registry = createRegistry(current.definition.enabled_modules);
+  // Pure deterministic activity intervals share HOLD's existing foreground
+  // boundaries. Mechanical, targeted, perceptual and uncertain attempts retain
+  // their own atomic settlement paths.
+  const ordinaryInterval=activityContract.kind==='generic'&&semantic.type==='DETERMINISTIC'&&semantic.domain==='general'&&
+    seconds===undefined&&!observing&&!physical&&!proposal.target_id&&!proposal.item_move&&!proposal.item_change&&
+    !storage&&!proposal.relationship&&!proposal.completion_quote&&!semantic.discover_facts&&!semantic.stages.length&&
+    !proposal.required_conditions?.length&&!localQuery;
+  let activityInterrupted=false;
   // This action exists only inside this invocation; HTTP action payloads cannot provide outcomes.
   registry.actions.register('FREEFORM_ACTION', { resolution_mode:'self', parameters: z.strictObject({}), execute(c) {
     const carried=seconds===undefined?0:(c.save.runtime.scene_seconds??0)+seconds;
     const minutes=seconds===undefined?proposal.minutes:Math.floor(carried/60);
-    if(minutes)c.advance(minutes);
+    if(minutes&&ordinaryInterval){
+      assert(!c.save.foreground?.blocker,'眼前还有需要处理的事情，无法继续这段活动');
+      const limit=Math.max(1,Math.min(60,c.save.definition.ruleset.max_wait_minutes));let elapsed=0;
+      while(elapsed<minutes){
+        const segment=advanceWorldSegment(c,Math.min(minutes-elapsed,limit));elapsed+=segment.elapsed;
+        if(segment.interrupted){activityInterrupted=elapsed<minutes;break;}
+      }
+    }else if(minutes)c.advance(minutes);
     if(physical){
       // Time hooks may execute NPC plans or change bodily conditions. The
       // candidate is still isolated: abort it before contact RNG if its actual
@@ -512,6 +527,7 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
       target_id: proposal.target_id, input, facts: c.facts.slice(0,4).map(fact=>fact.slice(0,300)), time: { ...c.save.runtime.time } }].slice(-100);
   } });
   const turn = executeAction(current, { type: 'FREEFORM_ACTION', ...(target ? { target_id: target.id } : {}), parameters: {} }, requestId, 'ai', rng, registry);
+  if(activityInterrupted)turn.facts.unshift(interruptedActivityFact(turn.action.time_cost));
   turn.facts.push(`本次行动经过 ${turn.action.time_cost} 分钟。`);
   if(settledDestination)turn.facts.push(`局部位置已更新：${settledDestination}`);
   const record=turn.save.resolution_history?.find(entry=>entry.check_id===check.check_id);
@@ -575,11 +591,11 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
   }
   // Perception still completes a real activity even when discovery is empty.
   // The activity contract is independent of whether any new evidence was found.
-  const activity=!physical&&succeeded&&(!inspection.items.length||inspection.status==='complete')&&!unverified.length&&(!proposal.item_move&&!storage||Boolean(storage&&/准备|[，,]/.test(input)))
+  const activity=!(activityInterrupted&&turn.action.time_cost===0)&&!physical&&succeeded&&(!inspection.items.length||inspection.status==='complete')&&!unverified.length&&(!proposal.item_move&&!storage||Boolean(storage&&/准备|[，,]/.test(input)))
     ?activityEvidence(turn.save,input,turn.action.time_cost):undefined;
   if(activity){
     const fact=`进行了活动：${activity.description}（${activity.duration_minutes} 分钟）。`;
-    turn.facts.push(fact);
+    if(activityInterrupted)turn.facts.splice(1,0,fact);else turn.facts.push(fact);
     const actionFact=turn.save.action_facts?.find(entry=>entry.request_id===requestId);
     if(actionFact)actionFact.facts=[...actionFact.facts,fact.slice(0,300)].slice(0,4);
   }

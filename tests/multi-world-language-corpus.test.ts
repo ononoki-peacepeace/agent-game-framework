@@ -190,10 +190,12 @@ describe('fixed multi-world natural-language corpus v1 (controlled offline candi
     expect(after.resolution_receipts?.some(r=>r.actor_id==='npc_lin'&&r.semantic_action==='MOVE')).toBe(true);
     expect(after.background_state?.incidents.find(i=>i.id==='handover')?.status).toBe('resolved');
    }else{
+    expect(result.body.outcome).toMatchObject({type:'game',kind:'partial_progress',goal_status:'partial'});
+    expect(result.body.plan.status).not.toBe('completed');
     expect(after.background_state?.incidents.find(i=>i.id==='handover')?.status).not.toBe('resolved');
     expect(after.last_turn!.narrative).toContain('已接受的值班会面');expect(after.last_turn!.narrative).not.toMatch(/10分钟|十分钟|完成/);
    }
   }
-  if(c.boundary==='restart_replay'||c.boundary==='condition_true'||(c.world==='trade'&&c.boundary==='partial_failure'))expect(await f.replay()).toEqual(result);
+  if(c.boundary==='restart_replay'||c.boundary==='condition_true'||c.boundary==='partial_failure')expect(await f.replay()).toEqual(result);
  },20000);
 });

@@ -9,7 +9,7 @@ import {createRegistry} from '../modules/index.js';
 import type {ActionInput} from '../shared/contracts.js';
 import {currentTrace} from '../observability/trace.js';
 import {engineOutcome,gameOutcome,WorldBlockedError,type FrameworkOutcome} from './outcome.js';
-import {enumeratedInspectionItems} from '../core/completion-evidence.js';
+import {enumeratedInspectionItems,interruptedActivity} from '../core/completion-evidence.js';
 
 export interface WorldAffordance {
   id: string;
@@ -320,6 +320,7 @@ export function verifyContractCompletion(before:SavePackage,after:SavePackage,go
     Boolean(after.resolution_history?.some(record=>record.request_id===requestId&&record.check_id===receipt.check_id&&record.spec.domain==='perception'));
   if(completion.kind==='activity_occurred'){
     if(candidate.operation!=='GENERIC_ACTIVITY')return false;
+    if(interruptedActivity(receipt))return false;
     if(receipt.activity?.occurred===true&&receipt.effects.includes('activity')&&
       receipt.activity.description===goal.normalized_goal.trim().slice(0,300)&&
       receipt.activity.duration_minutes===receipt.time_cost&&receipt.activity.duration_minutes>0&&
@@ -408,14 +409,18 @@ export async function executeContractStep(service:GameService,save:SavePackage,g
     return result;
   }
   const goalCommit=(before:SavePackage,next:SavePackage,committedId:string)=>{
-    if(!verifyContractCompletion(before,next,goal,selected,committedId))
+    const receipt=next.resolution_receipts?.find(entry=>entry.request_id===committedId);
+    const paused=goal.contract?.completion.kind==='activity_occurred'&&selected.operation==='GENERIC_ACTIVITY'&&
+      receipt&&interruptedActivity(receipt);
+    if(!paused&&!verifyContractCompletion(before,next,goal,selected,committedId))
       throw Error('行动缺少目标所需的程序完成证据，候选未提交。');
     // Atomic single-step execution also validates before saving. Persisting an
     // Open Goal is optional; the completion guard is not.
     if(!persistPlan)return;
     if(resumeRequestId&&!next.runtime.receipts.some(receipt=>receipt.id===resumeRequestId))
       next.runtime.receipts.push({id:resumeRequestId,fingerprint:createHash('sha256').update(JSON.stringify({agent_operation:{resume_goal:persistPlan.plan_id}})).digest('hex'),revision:before.state_revision+1});
-    const updated=recordContractStep(persistPlan,goal.goal_id,{status:'completed',reason:receiptSummary(next,committedId),
+    const updated=recordContractStep(persistPlan,goal.goal_id,{status:paused?'blocked':'completed',reason:paused?
+      '这段活动因需要处理的事情而暂停，原目标尚未完成。':receiptSummary(next,committedId),
       candidate:next,observed_revision:next.state_revision,evidence_request_id:committedId,selected,
       output_entities:next.resolution_receipts?.find(entry=>entry.request_id===committedId)?.result_entities});
     next.active_goal={plan:updated,
@@ -485,6 +490,13 @@ export async function executeContractStep(service:GameService,save:SavePackage,g
         'temporary' as const:'deterministic' as const}:{})};
   }
   const after=await service.current(),complete=verifyContractCompletion(save,after,goal,selected,requestId);
+  const activityReceipt=after.resolution_receipts?.find(entry=>entry.request_id===requestId&&entry.commit_status==='committed');
+  if(goal.contract?.completion.kind==='activity_occurred'&&selected.operation==='GENERIC_ACTIVITY'&&activityReceipt&&
+    after.runtime.receipts.some(entry=>entry.id===requestId)&&interruptedActivity(activityReceipt))
+    return {status:'blocked',reason:'这段活动因需要处理的事情而暂停，原目标尚未完成。',candidate:after,
+      observed_revision:after.state_revision,evidence_request_id:requestId,selected,
+      outcome:gameOutcome(activityReceipt.time_cost>0?'partial_progress':'interrupted','contract_step',after.state_revision,[],[requestId],
+        activityReceipt.time_cost>0?'partial':'unresolved')};
   currentTrace()?.info('agent.completion_checked',{metadata:{goal_id:goal.goal_id,
     operation:selected.operation,complete,receipt_found:Boolean(after.resolution_receipts?.some(receipt=>
       receipt.request_id===requestId&&receipt.commit_status==='committed'))}});
@@ -684,12 +696,13 @@ export async function runContractPlan(service:GameService,initial:SavePackage,in
     save=await persistGoalProgress(service,save,plan,plan.status==='completed'?null:question,
       plan.status==='completed'?[]:options,'final');
   const completed=plan.goals.filter(goal=>goal.status==='completed').map(goal=>goal.goal_id);
-  const receipts=plan.goals.flatMap(goal=>goal.contract?.evidence_refs.map(ref=>ref.request_id).filter((id):id is string=>Boolean(id))??[]);
+  const receipts=[...new Set([...plan.goals.flatMap(goal=>goal.contract?.evidence_refs.map(ref=>ref.request_id).filter((id):id is string=>Boolean(id))??[]),
+    ...(lastOutcome?.receipt_ids??[])])];
   const outcome=lastOutcome?.type==='engine_failure'?{...lastOutcome,revision:save.state_revision,
     committed_steps:[...new Set([...lastOutcome.committed_steps,...completed])],receipt_ids:[...new Set([...lastOutcome.receipt_ids,...receipts])]}:gameOutcome(
     plan.status==='completed'?'completed':completed.length?'partial_progress':
       lastOutcome?.type==='game'?lastOutcome.kind:'unresolved_goal',
     'contract_plan',save.state_revision,completed,receipts,
-    plan.status==='completed'?'completed':completed.length?'partial':'unresolved');
+    plan.status==='completed'?'completed':completed.length||lastOutcome?.type==='game'&&lastOutcome.kind==='partial_progress'?'partial':'unresolved');
   return {plan,save,reason,failure:outcome.type==='engine_failure',outcome};
 }

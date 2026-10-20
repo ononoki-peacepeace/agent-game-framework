@@ -1,5 +1,14 @@
 import type {SavePackage} from './schema.js';
 
+export const interruptedActivityFact=(minutes:number)=>`本次普通活动因需要处理的事情而暂停，实际经过 ${minutes} 分钟。`;
+/** An occurred interval is not completion of the requested activity after a foreground handoff. */
+export function interruptedActivity(receipt:NonNullable<SavePackage['resolution_receipts']>[number]){
+  return receipt.kind==='DETERMINISTIC'&&receipt.outcome==='success'&&
+    receipt.canonical_facts.includes(interruptedActivityFact(receipt.time_cost))&&
+    (receipt.time_cost===0&&!receipt.activity&&!receipt.effects.includes('activity')||
+     Boolean(receipt.activity?.occurred)&&receipt.effects.includes('activity')&&receipt.activity!.duration_minutes===receipt.time_cost);
+}
+
 /** A quantified or formal milestone is durable progress, not merely time spent on an activity. */
 export const persistentProgressPattern=/(?:第\s*)?(?:[0-9零一二两三四五六七八九十]+|上|下|这)(?:一|整)?(?:页|章|节|题|段).{0,24}(?:写完|做完|读完|完成)|(?:写完|做完|读完|完成).{0,24}(?:第\s*)?(?:[0-9零一二两三四五六七八九十]+|上|下|这)(?:一|整)?(?:页|章|节|题|段)|(?:全部|整份|整个).{0,24}(?:写完|做完|读完|完成)|(?:写完|做完|读完|完成).{0,24}(?:全部|整份|整个)|(?:正式任务|任务目标).{0,24}(?:完成|做完)/;
 export const requiresPersistentProgress=(input:string)=>persistentProgressPattern.test(input);

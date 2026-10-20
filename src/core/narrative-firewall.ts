@@ -2,7 +2,7 @@ import {GameError,type SavePackage} from './schema.js';
 import type {z} from 'zod';
 import {narrativeResultSchema} from '../ai/contracts.js';
 import {isActivePerception} from '../agent/perception.js';
-import {persistentProgressPattern} from './completion-evidence.js';
+import {persistentProgressPattern,interruptedActivity} from './completion-evidence.js';
 import {currentMap} from './map.js';
 import {publicView} from './state.js';
 import {narrativeLanguageIssues} from '../ai/visible-language.js';
@@ -388,9 +388,14 @@ function itemActionNarrative(receipt:Receipt,hidden:boolean){
 
 function activityActionNarrative(receipt:Receipt,hidden:boolean){
   const activity=receipt.activity;
+  if(!hidden&&interruptedActivity(receipt)&&receipt.time_cost===0)return '你停了下来，这段活动尚未开始。';
   if(hidden||receipt.kind!=='DETERMINISTIC'||receipt.outcome!=='success'||!activity?.occurred||
     !receipt.effects.includes('activity')||activity.duration_minutes!==receipt.time_cost||
     !receipt.canonical_facts.includes(`进行了活动：${activity.description}（${activity.duration_minutes} 分钟）。`))return null;
+  if(interruptedActivity(receipt)){
+    const label=activity.description.replace(/(?:[0-9零一二两三四五六七八九十百]+|半)\s*个?\s*(?:小时|分钟)[。！!]?$/u,'').trim();
+    return `你进行着「${label||activity.description}」这段活动，过了${receipt.time_cost}分钟便停了下来。`;
+  }
   // The receipt proves this activity interval, never the completion of a larger goal.
   return `你进行了「${activity.description}」这段活动，持续了${receipt.time_cost}分钟。`;
 }
