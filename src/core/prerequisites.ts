@@ -3,6 +3,7 @@ import {id,type SavePackage} from './schema.js';
 import {currentMap,localHierarchyTransition,routePath} from './map.js';
 import {createRegistry} from '../modules/index.js';
 import type {Inventory} from '../modules/inventory.js';
+import {unsealedContainerAncestors} from './item-access.js';
 
 export const requirementSchema=z.strictObject({
   kind:z.enum(['entity_exists','same_location','item_held','item_accessible','destination_reachable','capability']),
@@ -53,7 +54,11 @@ export function evaluateWorldPrerequisites(save:SavePackage,input:{target_id?:st
       case 'entity_exists':valid=Boolean(subject)||locations.has(requirement.subject_id);reason='所需对象在当前世界状态中不存在';break;
       case 'same_location':valid=Boolean(here&&(locations.has(requirement.subject_id)?requirement.subject_id===here:subject?.components.location?.location_id===here));reason='所需对象不在当前场景';break;
       case 'item_held':valid=Boolean(subject?.components.item&&(inventory[subject.id]??0)>0);reason='角色没有持有所需物品';break;
-      case 'item_accessible':valid=Boolean(subject?.components.item&&((inventory[subject.id]??0)>0||Boolean(here&&subject.components.location?.location_id===here)));reason='所需物品不在角色可触及的范围';break;
+      case 'item_accessible':
+        valid=Boolean(subject?.components.item&&((inventory[subject.id]??0)>0||Boolean(here&&subject.components.location?.location_id===here)));
+        reason='所需物品不在角色可触及的范围';
+        if(valid&&subject&&!unsealedContainerAncestors(save,subject)){valid=false;reason='所需物品仍在密封或不可接触的容器内';}
+        break;
       case 'destination_reachable':valid=Boolean(here&&locations.has(requirement.subject_id)&&(here===requirement.subject_id||localHierarchyTransition(save,here,requirement.subject_id)||routePath(map.routes,here,requirement.subject_id)?.length));reason='目标地点当前不可到达';break;
       case 'capability':valid=createRegistry(save.definition.enabled_modules).capabilities.has(requirement.subject_id);reason='当前世界尚无执行该行动所需能力';break;
     }

@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Sealed item movement prerequisites — 2026-10-21
+
+Parent398bb37; this source checkpoint shares evidence ancestry via core/item-access and guards inventory source/destination plus generic item_accessible prerequisites,including Freeform's inline transfer. Initial6fail/3controls,expanded8fail/3controls;later scene-destination15pass/1fail and original-language transfer17pass/1fail preserved. Final7files99pass/zero skip and isolated build passed(session84209). Actual disk/service refusal preserves bytes/time/receipts and zero generation;not HTTP. Integrate new helper+inventory+prerequisites+truth together;no save/receipt/commit/budget changes. See docs/sealed-item-movement.md. A8.3/N6.3 full matrices remain open;60%=96/160,+0. Complete222files2192pass remains8b5d2df/evidence9acea32. Next: reproduce registered DAMAGE_ITEM and consumption/trade access boundaries separately;do not claim movement tests establish those paths. Original dirt/safety preserved.
+
 ## Sealed-container evidence access — 2026-10-21
 
 Parent9acea32; this source checkpoint prevents general evidence discovery through sealed scene/owned container ancestors while preserving open containers,anchor-exterior clues and learned knowledge. Initial random4fail/4pass; deterministic5fail/3controls; final6files67pass/zero skip and isolated build passed;initial generic-JSON typing build failure retained. Actual Core INSPECT+refusal/content-filter prose,explicit-ID/NPC observer,disk/new-service replay covered;not HTTP. No schema/receipt/commit/time/model-budget changes. Integrate truth accessibility only. See docs/contained-evidence-access.md. N4.1 withdrawn/restored by following ledger evidence,net0 to60%=96/160; N6.3 full matrix open. Complete222files2192pass remains8b5d2df/evidence9acea32. Next: reproduce sealed-container item extraction/transfer prerequisites,then other fixed four-theme matrices;original dirt/safety preserved.

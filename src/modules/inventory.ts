@@ -4,6 +4,7 @@ import { assert, dictionary, integer, id, type SavePackage } from '../core/schem
 import type { Module } from '../core/registry.js';
 import {prepareCheck,resolveCheck} from '../core/resolution.js';
 import {worldAssert} from '../agent/outcome.js';
+import {unsealedContainerAncestors} from '../core/item-access.js';
 export type Inventory = { items: Record<string, number>; placements?: Record<string, string | null> };
 const itemSchema=z.strictObject({weight:z.number().min(0).max(100000),stackable:z.boolean(),container:z.boolean().optional(),container_id:id.optional(),placed_sequence:z.number().int().nonnegative().optional(),owner_id:id.optional(),condition:z.enum(['intact','damaged','destroyed']).optional(),tags:z.array(z.string().regex(/^[a-z][a-z0-9_]{0,39}$/)).max(12).optional(),tracking:z.enum(['incidental','tracked']).optional()});
 
@@ -16,10 +17,12 @@ function playerInventory(save:SavePackage,actorId=save.player_state.entity_id){
 export function putItemInInventory(save:SavePackage,itemId:string,containerId:string|null=null,actorId=save.player_state.entity_id){
   const {player,inventory}=playerInventory(save,actorId),item=save.entities.find(entity=>entity.id===itemId);
   assert(item?.components.item,'物品不存在');
+  worldAssert(unsealedContainerAncestors(save,item),'unavailable','物品仍在密封或不可接触的容器内，当前不能取出');
   worldAssert(!item.components.item.owner_id||item.components.item.owner_id===actorId,'unavailable','物品属于其他人物，不能直接拿取');
   worldAssert(!(item.components.item.tags as string[]|undefined)?.includes('shared_fixture'),'unavailable','这是共同设施，不能作为个人物品取走');
   assert(!save.entities.some(entity=>entity.id!==player.id&&Number((entity.components.inventory?.items as Record<string,number>|undefined)?.[itemId]??0)>0),'物品已由其他人物持有');
-  if(containerId){const parent=save.entities.find(entity=>entity.id===containerId);assert(parent?.components.item?.container===true&&(inventory.items[containerId]??0)>0,'容器不在角色持有物中');assert(containerId!==itemId,'物品不能装进自身');}
+  if(containerId){const parent=save.entities.find(entity=>entity.id===containerId);assert(parent?.components.item?.container===true&&(inventory.items[containerId]??0)>0,'容器不在角色持有物中');assert(containerId!==itemId,'物品不能装进自身');
+    worldAssert(!(parent.components.item.tags as string[]|undefined)?.includes('sealed')&&unsealedContainerAncestors(save,parent),'unavailable','目标容器仍处于密封或不可接触状态，当前不能放入');}
   assert((inventory.items[itemId]??0)<=1,'堆叠物品不能作为单件物品移动');
   inventory.items[itemId]=1;
   inventory.placements??={};inventory.placements[itemId]=containerId;
@@ -32,6 +35,7 @@ export function putItemInInventory(save:SavePackage,itemId:string,containerId:st
 export function putItemInScene(save:SavePackage,itemId:string,positionLabel:string|null=null,actorId=save.player_state.entity_id){
   const {player,inventory}=playerInventory(save,actorId),item=save.entities.find(entity=>entity.id===itemId);
   assert(item?.components.item&&(inventory.items[itemId]??0)===1,'角色没有持有这件物品');
+  worldAssert(unsealedContainerAncestors(save,item),'unavailable','物品仍在密封或不可接触的容器内，当前不能取出');
   assert(!Object.values(player.components.equipment?.slots??{}).includes(itemId),'请先卸下这件物品');
   assert(!Object.entries(inventory.placements??{}).some(([child,parent])=>parent===itemId&&(inventory.items[child]??0)>0),'请先取出容器里的物品');
   const locationId=player.components.location?.location_id;assert(locationId,'当前场景没有可登记的地点');
@@ -52,7 +56,7 @@ export function putItemInSceneContainer(save:SavePackage,itemId:string,container
   worldAssert(Boolean(actor&&container?.components.item?.container&&container.id!==itemId&&
     container.components.location?.location_id===actor.components.location?.location_id&&
     (!container.components.item.owner_id||container.components.item.owner_id===actorId)&&
-    !(container.components.item.tags as string[]|undefined)?.includes('sealed')),
+    !(container.components.item.tags as string[]|undefined)?.includes('sealed')&&unsealedContainerAncestors(save,container)),
   'unavailable','场景容器不在当前可存放范围');
   putItemInScene(save,itemId,null,actorId);
   const item=save.entities.find(entity=>entity.id===itemId)!;
@@ -102,6 +106,7 @@ export const inventoryModule: Module = {
         const itemId=String(c.action.parameters.item_id),inventory=actor.components.inventory as Inventory|undefined;
         assert(target?.components.character&&target.id!==actor.id&&target.components.location?.location_id===actor.components.location?.location_id,'接收物品的人不在同一地点');
         assert(inventory?.items[itemId]===1,'本人没有持有这件物品');
+        worldAssert(unsealedContainerAncestors(c.save,c.store.entity(itemId)),'unavailable','物品仍在密封或不可接触的容器内，当前不能交付');
         assert(!Object.values(actor.components.equipment?.slots??{}).includes(itemId),'请先卸下这件物品');
         assert(!Object.entries(inventory.placements??{}).some(([child,parent])=>parent===itemId&&(inventory.items[child]??0)>0),'请先取出容器里的物品');
         delete inventory.items[itemId];if(inventory.placements)delete inventory.placements[itemId];
