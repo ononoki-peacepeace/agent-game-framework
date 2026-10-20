@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "source_before_repair": "225bd69",
+  "scope": "N8 bounded offline degraded prose; real-provider composition and broad prose quality remain open",
+  "cases": ["talk", "move", "observe", "physical_failure", "physical_success", "wait"],
+  "provider_failures": ["refusal", "content_filter"],
+  "pass_conditions": [
+    "Each case uses actual Core settlement and retains the same world/replay result after narration failure.",
+    "Story prose has no provider, generation, save, receipt, revision or rules-processing explanation; diagnostics stay in notices/presentation.",
+    "Movement names its actual destination; observation reports only publicly established scenery/findings; speech names its actual addressee without inventing an answer.",
+    "Physical failure/success remains distinguishable and matches contact/harm facts; already authorized witness speech is retained without hidden knowledge.",
+    "Waiting describes the occurred wait; fallback does not claim generic goal success where only an attempt occurred.",
+    "Developer reviews every fixed Chinese output for a readable scene sentence and factual limits; test counts alone do not establish naturalness."
+  ],
+  "open": ["Current real-model plus offline fallback composition", "Broader differentiated prose benchmark and human experience", "Arbitrary compound scenes and extended continuity"]
+}

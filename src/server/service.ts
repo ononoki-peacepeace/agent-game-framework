@@ -81,11 +81,24 @@ function applyOptionalEnrichment(save: SavePackage, patches: unknown[], action: 
   return next;
 }
 /** Player-facing prose for the rare case where narration itself failed: never a tool summary, never an internal id. */
-function narrationFallback(save: SavePackage, action: Parameters<typeof applyPatches>[2]) {
-  const target = action.target_id ? save.entities.find(entity => entity.id === action.target_id) : undefined;
-  const targetName = String(target?.components.identity?.name ?? '对方');
-  if (action.type === 'TALK' || action.type === 'SOCIAL_INTERACT') return `你把话说出口了；${targetName}这一刻的反应没有来得及写出来。事情已经发生，世界时间按规则向前走了一小段。`;
-  return '这个动作已经完成，但这一刻的场景描写没有生成。世界状态已经按规则保存。';
+function narrationFallback(save: SavePackage, action: Parameters<typeof applyPatches>[2],prior:SavePackage):
+  Pick<NonNullable<SavePackage['last_turn']>,'narrative'|'scene_beats'> {
+  const receipt=save.resolution_receipts?.find(entry=>entry.request_id===action.id);
+  if(receipt){
+    const hidden=Boolean(save.resolution_history?.find(check=>check.check_id===receipt.check_id||check.request_id===receipt.request_id)?.hidden);
+    const related=save.resolution_receipts?.filter(entry=>!prior.resolution_receipts?.some(old=>old.request_id===entry.request_id))??[];
+    if(receipt.physical_outcome)return physicalNarrativeFallback(save,receipt,hidden,related);
+    if(receipt.movement_route)return {narrative:canonicalMovementNarrative(receipt,save)};
+    if(isSettledPerception(save,receipt))return {narrative:canonicalPerceptionNarrative(save,receipt,hidden)};
+    const steps=related.filter(entry=>entry.actor_id===receipt.actor_id&&entry.request_id!==receipt.request_id);
+    if(steps.length>1)return {narrative:canonicalCompoundNarrative(save,hidden,steps)};
+    const target=save.entities.find(entity=>entity.id===receipt.target_id);
+    const name=String(target?.components.identity?.name??'对方');
+    if(receipt.semantic_action==='TALK')return {narrative:`你向${name}开了口。`};
+    if(receipt.semantic_action==='WAIT')return {narrative:receipt.time_cost>0?`你等了${receipt.time_cost}分钟。`:'你停下来，等了一会儿。'};
+    return {narrative:canonicalResolutionNarrative(receipt,hidden)};
+  }
+  return {narrative:'你试着按眼前的打算行动。'};
 }
 
 export const requestSchema = z.strictObject({ request_id: z.string().uuid(), game_id: z.string().uuid(), expected_revision: z.number().int().min(0), action: z.unknown().optional(), input: z.string().min(1).max(2000).optional(), end_conversation:z.boolean().optional(),
@@ -811,7 +824,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
               if(attempt<3){repair={reason:errorText(error),schema_feedback:{issues:[{path:'presence_claims',code:'presence_conflict',expected:'已结算在场事实',message:errorText(error)}],previous_output:generationRepair(new CandidateValidationError('narrator',[],result))!.previous_output}};continue;}
               observe('warn','narrative.safe_fallback',{module:'turn',request_id:req.request_id,
                 metadata:{reason:'scene_presence_unverified',narrator_attempts:attempt}});
-              return {...result,narrative:narrationFallback(next,turn.action),speaker:null,dialogue:null,
+              return {...result,...narrationFallback(next,turn.action,current),speaker:null,dialogue:null,
                 scene_beats:[],choices:[],choice_semantics:[],context_actions:[],patches:[],interaction:null,
                 item_claims:[],stable_locations:[],mechanical_claims:[],presence_claims:[]};
             }
@@ -1011,7 +1024,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
         observe('warn','narration.safety_degraded',{module:'turn',request_id:req.request_id,metadata:{action:turn.action.type,reason:failureReason(error)}});
         degradeNarration(failureReason(error));
         delete next.ai.threads.narrator;
-        next.last_turn = { narrative: narrationFallback(next, turn.action), speaker: null, dialogue: null, choices: [], context_actions: [] };
+        next.last_turn = { ...narrationFallback(next, turn.action,current), speaker: null, dialogue: null, choices: [], context_actions: [] };
         notices.push('本次行动已完成并保存；这一刻的场景描写暂时没有生成。');
         }
       }

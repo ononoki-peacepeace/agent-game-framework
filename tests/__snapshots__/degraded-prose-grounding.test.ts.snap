@@ -1,0 +1,31 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`keeps 'move' degradation factual and readable after 'content_filter' 1`] = `"你从中央广场出发，来到街角商店。这段路用了6分钟。"`;
+
+exports[`keeps 'move' degradation factual and readable after 'refusal' 1`] = `"你从中央广场出发，来到街角商店。这段路用了6分钟。"`;
+
+exports[`keeps 'observe' degradation factual and readable after 'content_filter' 1`] = `
+"树影落在石砖上，来往的居民在长椅旁停下脚步。
+你仔细观察了一会儿，在这次检查范围内暂时没有发现明显异常或新的线索。"
+`;
+
+exports[`keeps 'observe' degradation factual and readable after 'refusal' 1`] = `
+"树影落在石砖上，来往的居民在长椅旁停下脚步。
+你仔细观察了一会儿，在这次检查范围内暂时没有发现明显异常或新的线索。"
+`;
+
+exports[`keeps 'physical_failure' degradation factual and readable after 'content_filter' 1`] = `"你对林舟发起了尝试，这一次未能建立接触。"`;
+
+exports[`keeps 'physical_failure' degradation factual and readable after 'refusal' 1`] = `"你对林舟发起了尝试，这一次未能建立接触。"`;
+
+exports[`keeps 'physical_success' degradation factual and readable after 'content_filter' 1`] = `"你的动作触及了林舟。这次动作确实造成了伤害。"`;
+
+exports[`keeps 'physical_success' degradation factual and readable after 'refusal' 1`] = `"你的动作触及了林舟。这次动作确实造成了伤害。"`;
+
+exports[`keeps 'talk' degradation factual and readable after 'content_filter' 1`] = `"你向林舟开了口。"`;
+
+exports[`keeps 'talk' degradation factual and readable after 'refusal' 1`] = `"你向林舟开了口。"`;
+
+exports[`keeps 'wait' degradation factual and readable after 'content_filter' 1`] = `"你等了3分钟。"`;
+
+exports[`keeps 'wait' degradation factual and readable after 'refusal' 1`] = `"你等了3分钟。"`;

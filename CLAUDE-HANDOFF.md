@@ -1,5 +1,11 @@
 # Claude Code starting handoff
 
+## Narrator degraded prose continuation — 2026-10-20
+
+Branch `codex/claude-takeover-integration`, parent HEAD `225bd69`; the checkpoint containing this section completes the interrupted service/test/manifest batch. Refusal/content-filter fallback now uses existing Core receipt renderers for physical/move/observe and registered receipts for TALK/WAIT. No schema or settlement changes. Six fixed scene types have reviewed Chinese snapshots; witness speech is reused only through existing typed/perception validation. Original baseline12fail, interrupted8pass4fail, resumed12pass; final adjacent9files82pass and complete isolated build passed. Exact source commit is recorded in the next acceptance checkpoint. docs/degraded-prose-grounding.md records examples and limits.
+
+Until the ledger update is committed, scored state remains56.875%=91/160 (31unmet/38unverified). Eligible new evidence is N8.1 fixed standards/samples and N8.3 required scene types; N8.2 compound/unexecuted prose and N8.4 real-model composition remain open. Original two dirty QA JSON/four untracked historical notes remain untouched. No paid calls, production save/3100/deploy/push or Claude checkout changes. Next: composite narration of settled/failed/unexecuted stages, then remaining four-theme conditions; do not stop at this stable batch.
+
 ## NPC objective projection continuation — 2026-10-20
 
 From `3f4d083`, the checkpoint containing this section keeps bounded NPC context actionable: up to2 recoverable plans enter the existing12-plan view first, their active owned goals enter the12-goal view, remaining goal slots favor existing priorities. Ended goals cannot appear as active work; reserved IDs remain intact. No wider private context, Save schema or retry budget. Context reads do not mutate state.
