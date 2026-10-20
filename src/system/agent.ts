@@ -80,8 +80,11 @@ const result = (plan: MetaPlan, message: string, toolsList: ToolDescriptor[], ex
 };
 
 /** The System Agent: deterministic capability/tool layer first, model understanding where it adds real value. */
-export async function handleSystemInput(service:GameService,raw:unknown,semantic?:import('../agent/semantic-entry.js').SemanticDecision):Promise<SystemResult>{
+export async function handleSystemInput(service:GameService,raw:unknown,semantic?:import('../agent/semantic-entry.js').SemanticDecision,sourceInput?:string):Promise<SystemResult>{
  const body=safeParse(z.strictObject({input:z.string().min(1).max(2000),confirmed:z.boolean().default(false),session_id:z.string().uuid().nullish(),request_id:z.string().uuid().optional(),game_id:z.string().optional(),expected_revision:z.number().int().nonnegative().optional()}),raw);
+ const replay=await service.recoverBehaviorConfigRequest(sourceInput??body.input,body);
+ if(replay)return {category:'BEHAVIOR_CONFIGURATION',tool_id:null,side_effect_level:'configuration',needs_confirmation:false,
+   message:'已找到这条风格配置的提交记录，并同步当前配置。',view:replay};
  if(isCharacterPersonaInput(body.input)&&(!semantic||semantic.operation_plane==='system_management')){
    const save=await service.current(),view=service.project(save);
    const named=view.entities.some(entity=>entity.id!==view.player_id&&entity.components.character&&
@@ -93,7 +96,7 @@ export async function handleSystemInput(service:GameService,raw:unknown,semantic
      if(understanding.style_target!=='world')return playerFacingSystemResult(await applyCharacterPersonaInput(service,body));
    }
  }
- const value=await sessionInput(service,body,(input,confirmed,context)=>executeSystemInput(service,{input,confirmed,request_id:body.request_id,expected_revision:body.expected_revision,game_id:body.game_id},context,semantic));
+ const value=await sessionInput(service,body,(input,confirmed,context)=>executeSystemInput(service,{input,confirmed,request_id:body.request_id,expected_revision:body.expected_revision,game_id:body.game_id},{...context,sourceInput:sourceInput??body.input},semantic));
  const changePlan=(!semantic||semantic.operation_plane==='framework_development')?
    planFrameworkChange(body.input,{surface:'system'},body.request_id):null;
  const enriched=changePlan?{...value,advanced:{...value.advanced,change_plan:changePlan},...(value.directive?.kind==='extension_development'?{directive:{...value.directive,change_plan:changePlan}}:{})}:value;
@@ -282,7 +285,7 @@ async function resolveUnderstanding(service: GameService, view: ReturnType<typeo
     const patch = understanding.correction
       ? { scope: normalizeBehaviorScope(understanding.correction.scope, text) ?? prior?.scope ?? null, application: understanding.correction.application ?? prior?.application ?? null, value: understanding.correction.value ?? prior?.value ?? null, remove: understanding.correction.remove }
       : { ...(deterministicCorrection(text, prior) ?? {}), remove: false } as { scope: BehaviorScope | null; application: BehaviorApplication | null; value: string | null; remove: boolean };
-    return applyCorrection(service, toolsList, patch, understanding, prior);
+    return applyCorrection(service, toolsList, patch, understanding, prior,context);
   }
   // A model-labelled "correction" that arrives as the answer to a clarification keeps the pending workflow.
   if (answering && understanding.likely_workflow === 'correction') understanding = { ...understanding, likely_workflow: (session.understanding?.likely_workflow ?? 'unclear') as SystemWorkflow };
@@ -488,22 +491,20 @@ function entityFor(view: ReturnType<typeof publicView>, text: string, context: S
   const found = resolveEntities(view, text);
   return found.confident ? found.matches[0] ?? null : null;
 }
-async function applyCorrection(service: GameService, toolsList: AvailableTool[], patch: { scope: BehaviorScope | null; application: BehaviorApplication | null; value: string | null; remove: boolean }, understanding: SystemUnderstanding, prior: ResolvedSystemRequest | null): Promise<SystemResult> {
+async function applyCorrection(service: GameService, toolsList: AvailableTool[], patch: { scope: BehaviorScope | null; application: BehaviorApplication | null; value: string | null; remove: boolean }, understanding: SystemUnderstanding, prior: ResolvedSystemRequest | null,context:SystemExecutionContext): Promise<SystemResult> {
 
   const scope = patch.scope ?? 'assistant';
-  // "不是游戏助手，是故事的最后一句" moves the same configuration; it must not leave a second, unrelated rule.
-  if (patch.scope && prior?.scope && prior.scope !== scope) await service.clearBehaviorConfig(prior.scope);
-
+  const remove=patch.scope&&prior?.scope&&prior.scope!==scope?[{scope:prior.scope,...(prior.op?{op:prior.op}:{})}]:[];
   if (patch.remove) {
-    const next = await service.clearBehaviorConfig(scope), rules = await service.behaviorConfig();
+    const next = await service.updateBehaviorConfig({remove:[...remove,{scope,...(prior?.op?{op:prior.op}:{})}]},context.requestEnvelope,context.sourceInput), rules = await service.behaviorConfig();
     return { category: 'BEHAVIOR_CONFIGURATION', tool_id: 'behavior.clear', side_effect_level: 'configuration', needs_confirmation: false, message: `已取消该范围（${scope}）的风格配置。当前：${behaviorSummary(rules)}`, view: next, understanding, workflow: 'behavior_config' };
   }
-  const ruleOps = { op: 'suffix' as const, value: patch.value ?? '', application: patch.application ?? 'per_message' };
+  const ruleOps = { op: prior?.op??'suffix', value: patch.value ?? '', application: patch.application ?? 'per_message' };
   if (!ruleOps.value) {
     return { category: 'BEHAVIOR_CONFIGURATION', tool_id: null, side_effect_level: 'none', needs_confirmation: false, message: `我理解你在修正上一条风格配置，但我不确定要保留的那句话本身。可以直接说：例如「保留原来的话，只改到旁白」。`, clarification: 'behavior_value', understanding, workflow: 'behavior_config' };
   }
-  const next = await service.setBehaviorConfig({ scope, rule: ruleOps }), rules = await service.behaviorConfig();
-  return { category: 'BEHAVIOR_CONFIGURATION', tool_id: 'behavior.configure', side_effect_level: 'configuration', needs_confirmation: false, message: `已按你的修正更新：${behaviorSummary(rules)}。它只影响措辞，不改动世界事实或玩家控制权。`, advanced: { behavior: rules }, view: next, understanding, workflow: 'behavior_config' };
+  const next = await service.updateBehaviorConfig({set:[{scope,rule:ruleOps}],remove},context.requestEnvelope,context.sourceInput), rules = await service.behaviorConfig();
+  return { category: 'BEHAVIOR_CONFIGURATION', tool_id: 'behavior.configure', side_effect_level: 'configuration', needs_confirmation: false, message: `已按你的修正更新：${behaviorSummary(rules)}。它只影响措辞，不改动世界事实或玩家控制权。`, advanced: { behavior: rules }, view: next, understanding, workflow: 'behavior_config',resolved:resolvedFrom('behavior_config',{scope,...ruleOps},context.latest??'风格修正') };
 }
 /** The deterministic tool switch: unchanged execution semantics, used whenever the request is already clear. */
 async function executeTool(service: GameService, plan: MetaPlan, body: { input: string; confirmed: boolean }, context: SystemExecutionContext, toolsList: AvailableTool[], entityId?: string): Promise<SystemResult> {
@@ -575,15 +576,14 @@ async function executeTool(service: GameService, plan: MetaPlan, body: { input: 
       const targets: BehaviorScope[] = context.behaviorScope ? [context.behaviorScope]
         : detected.length ? detected : plan.args.scope ? [normalizeBehaviorScope(plan.args.scope as string, instruction)!] : [];
       if (!targets.length) return result(plan, `我理解你想给输出加一条固定的写法要求。还缺一项：这条要求作用在哪里——${behaviorScopeQuestion}你可以直接回复「旁白」「人物对话」或「助手」。`, toolsList, { clarification: 'behavior_scope', pending_field: '作用范围' });
-      let next: Awaited<ReturnType<GameService['setBehaviorConfig']>> | null = null;
-      for (const scope of targets) next = await service.setBehaviorConfig({ scope, instruction });
+      const next=await service.updateBehaviorConfig({set:targets.map(scope=>({scope,instruction}))},context.requestEnvelope,context.sourceInput??body.input);
       const rules = await service.behaviorConfig();
       return result(plan, `已记下这条风格要求：${behaviorSummary(rules)}。它只影响措辞，不会修改世界事实、玩家控制权或安全规则。`, toolsList, { advanced: { behavior: rules }, view: next, resolved: resolvedFrom('behavior_config', rules.at(-1) ?? null, instruction) });
 
     }
     case 'behavior.clear': {
       const scope = normalizeBehaviorScope(plan.args.scope as string | null, body.input);
-      const next = await service.clearBehaviorConfig(scope ?? undefined), rules = await service.behaviorConfig();
+      const next = await service.clearBehaviorConfig(scope ?? undefined,context.requestEnvelope,context.sourceInput??body.input), rules = await service.behaviorConfig();
       return result(plan, scope ? `已恢复该范围的默认风格。` : '已恢复全部默认风格。', toolsList, { advanced: { behavior: rules }, view: next });
     }
     case 'framework.development':

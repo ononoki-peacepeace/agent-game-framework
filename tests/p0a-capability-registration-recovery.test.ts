@@ -31,6 +31,21 @@ async function fixture(onInstalled?:()=>Promise<void>){
     close:()=>rm(directory,{recursive:true,force:true})};
 }
 describe('P0-A capability registration effects',()=>{
+  it('persists the failed build stage and bounded compiler output without publishing the capability',async()=>{
+    const f=await fixture();try{
+      command.run.mockResolvedValueOnce({stdout:'verified',stderr:''}).mockRejectedValueOnce(Object.assign(
+        Error('Command failed: npm run build'),{code:2,stdout:'x'.repeat(8000)+'\nsrc/example.ts(8,2): error TS2322: incompatible candidate',stderr:'compiler diagnostic tail'}));
+      const task=await f.tasks.startCapability(f.input()),terminal=await f.tasks.wait(task.id);
+      expect(terminal.status).toBe('failed');expect(f.registry.get('feature.develop')).toBeNull();
+      expect(terminal.test_results.at(-1)).toMatchObject({milestone:'framework_build',passed:false});
+      const detail=terminal.test_results.at(-1)!.detail;
+      expect(detail).toContain('TS2322');expect(detail).toContain('compiler diagnostic tail');expect(detail.length).toBeLessThanOrEqual(1800);
+      expect(terminal.test_results).toContainEqual(expect.objectContaining({milestone:'package',passed:true}));
+      const stored=JSON.parse(await readFile(join(f.directory,'tasks.json'),'utf8')).tasks[0];
+      expect(stored.test_results.at(-1).detail).toBe(detail);expect(command.run).toHaveBeenCalledTimes(2);
+      expect(await f.service.current()).toEqual(f.baseline);
+    }finally{await f.close();}
+  });
   it.each(['hash','path','identity'] as const)('stops recovery when the stored capability artifact has a bad %s',async(kind)=>{
     const f=await fixture();try{
       const task=await f.tasks.startCapability(f.input());await f.tasks.wait(task.id);

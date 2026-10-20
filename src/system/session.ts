@@ -20,6 +20,8 @@ export interface SystemSession {
 }
 /** Everything the executor may need that was resolved by the session (entity, scope, module, previous request). */
 export interface SystemExecutionContext {
+ /** Exact user text before semantic clarification merging; used only for durable request identity. */
+ sourceInput?:string;
  requestEnvelope?:import('./resolver.js').UniversalRequestEnvelope;
  entityId?:string;behaviorScope?:BehaviorScope;behaviorApplication?:BehaviorApplication;moduleId?:string;preferredNames?:string[];
  session:SystemSession;previous?:ResolvedSystemRequest|null;

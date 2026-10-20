@@ -22,6 +22,17 @@ import {withoutInputRecovery} from '../recovery/request-context.js';
 import {withoutRequestBudget,withRequestBudget} from '../ai/request-budget.js';
 import {startTrace,runWithTrace} from '../observability/index.js';
 const runCommand=promisify(execFile);
+/** execFile keeps compiler diagnostics outside Error.message. Persist bounded tails so a failed gate remains diagnosable. */
+function commandFailureDetail(error:unknown){
+ const failure=error as {code?:unknown;signal?:unknown;stdout?:unknown;stderr?:unknown}|null;
+ const output=(name:'stdout'|'stderr')=>{
+  const value=failure?.[name],text=typeof value==='string'?value:Buffer.isBuffer(value)?value.toString('utf8'):'';
+  return text.trim()?`${name}: ${text.trim().slice(-600)}`:'';
+ };
+ const status=typeof failure?.code==='number'?`exit=${failure.code}`:
+  typeof failure?.signal==='string'?`signal=${failure.signal.slice(0,80)}`:'';
+ return [(error instanceof Error?error.message:String(error)).slice(0,400),status,output('stdout'),output('stderr')].filter(Boolean).join('\n').slice(0,1800);
+}
 export type DevelopmentFailureClassification='TRANSIENT_EXECUTION_FAILURE'|'DETERMINISTIC_REQUEST_FAILURE'|'IMPLEMENTATION_FAILURE'|'CAPABILITY_EXTERNAL_BLOCK'|'UNRECOVERABLE_FAILURE';
 export function classifyDevelopmentFailure(message:string):DevelopmentFailureClassification{
  if(/invalid[_ -]?json[_ -]?schema|invalid schema for response_format|malformed request|unsupported parameter|unknown parameter|INVALID_PROVIDER_SCHEMA|deterministic validation/i.test(message))return 'DETERMINISTIC_REQUEST_FAILURE';
@@ -180,15 +191,18 @@ export class DevelopmentTasks {
  }
  private async runCapability(task:DevelopmentTask,descriptors:CapabilityDescriptor[],signal:AbortSignal){
   let registered=false;
+  let failureStage='package';
   try{
    const packagePath=join(task.workspace,'capability-package.json'),payload=JSON.stringify({format_version:1,version:task.current_version,capabilities:descriptors},null,2);await writeFile(packagePath,payload);
    await runCommand(process.execPath,[resolve('node_modules/tsx/dist/cli.mjs'),'scripts/verify-capability-package.ts',packagePath],{cwd:resolve('.'),signal,timeout:60_000,maxBuffer:1024*1024,windowsHide:true});
    task.test_results.push({version:task.current_version,milestone:'package',passed:true,detail:'能力包 schema、依赖与安全边界校验通过。'});task.status='testing';task.message='能力包校验通过，正在执行 Framework build。';await this.persist();
+   failureStage='framework_build';
    const build=process.platform==='win32'
     ?{file:process.env.ComSpec??'cmd.exe',args:['/d','/s','/c','npm run build']}
     :{file:'npm',args:['run','build']};
    await runCommand(build.file,build.args,{cwd:resolve('.'),signal,timeout:10*60_000,maxBuffer:8*1024*1024,windowsHide:true});
    task.test_results.push({version:task.current_version,milestone:'framework_build',passed:true,detail:'npm run build 通过。'});
+   failureStage='registration';
    signal.throwIfAborted();
    const current=await this.builder.host.service.storage.read();
    assert(current?.game_id===task.game_id,'世界已切换，能力包未注册');signal.throwIfAborted();
@@ -203,9 +217,9 @@ export class DevelopmentTasks {
     catch(error){task.capability_registration.goal_resume='failed';this.history(task,'goal_resume_failed',String((error as Error).message).slice(0,1500));task.message='能力包已注册，但恢复原目标失败；已有能力保留，原目标未自动重放。';await this.persist();}
    }
   }catch(error){
-   const detail=String((error as Error).message).slice(0,1500);
+   const detail=commandFailureDetail(error);
    if(registered){task.status='installed';task.installed_version=task.current_version;task.message='能力包已注册，但后续记录或原目标恢复失败；已有能力保留，未重复注册。';this.history(task,'registration_followup_failed',detail);}
-   else{task.status=signal.aborted?'paused':'failed';task.message=signal.aborted?'能力包开发已暂停。':'能力包验证失败，未注册任何能力。';task.test_results.push({version:task.current_version,milestone:'package',passed:false,detail});this.history(task,'stopped',detail);}
+   else{task.status=signal.aborted?'paused':'failed';task.message=signal.aborted?'能力包开发已暂停。':'能力包验证失败，未注册任何能力。';task.test_results.push({version:task.current_version,milestone:failureStage,passed:false,detail});this.history(task,'stopped',detail);}
    await this.persist();
   }
  }

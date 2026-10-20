@@ -93,6 +93,16 @@ export const requestSchema = z.strictObject({ request_id: z.string().uuid(), gam
   // turn is the single MOVE choke point, so the optional pair lets a conditional companion re-decide exactly once
   // per player request without turning a planning convention into an Action DSL.
   player_input: z.string().min(1).max(2000).optional(), player_request_id: z.string().uuid().optional() }).refine(x => (x.action !== undefined) !== (x.input !== undefined), '必须提供 action 或 input 中的一项');
+const behaviorScopeSchema=z.enum(['narration','dialogue','assistant']);
+const behaviorOpSchema=z.enum(['suffix','prefix','tone','constraint']);
+const behaviorSettingSchema=z.strictObject({scope:behaviorScopeSchema,instruction:z.string().min(1).max(200).optional(),
+  rule:z.strictObject({op:behaviorOpSchema,value:z.string().min(1).max(120),
+    application:z.enum(['per_sentence','per_paragraph','per_message','final_sentence']).default('per_message')}).optional()});
+type ConfigurationRequest={game_id?:string;expected_revision?:number;request_id?:string};
+const configurationRequestSchema=z.strictObject({game_id:z.string().uuid().optional(),expected_revision:z.number().int().nonnegative().optional(),request_id:z.string().uuid().optional()});
+function behaviorInputFingerprint(input:string){
+  return 'behavior-config:input:'+createHash('sha256').update(safeParse(z.string().min(1).max(2000),input)).digest('hex');
+}
 // Media fields live in the save for portability, but they are not canonical gameplay state.
 function preservePresentation(source: SavePackage, target: SavePackage) {
   for (const entity of target.entities) {
@@ -1317,38 +1327,56 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
   }
   async narrativeDebug(){const save=await this.current(),truth=save.gm_state.hidden_truth?.commitments??[];return {roleplay_config:save.definition.roleplay_config??null,narrative_state:publicView(save).story??null,hidden_truth_summary:{count:truth.length,commitments:Object.fromEntries(['HARD_TRUTH','SEEDED_TRUTH','UNDEFINED'].map(kind=>[kind,truth.filter(item=>item.commitment===kind).length])),evidence_count:truth.reduce((sum,item)=>sum+item.evidence.length,0),content:'仅返回玩家可见的叙事状态与 GM 计数，不返回秘密正文'}};}
   /** Style configuration is framework configuration: it never advances time and never touches world facts. */
-  async setBehaviorConfig(raw: unknown) {
-    const input = safeParse(z.strictObject({
-      scope: z.enum(['narration','dialogue','assistant']),
-      instruction: z.string().min(1).max(200).optional(),
-      // A contextual correction already resolved by the System Agent arrives as a structured rule, because the
-      // value (for example 「喵~」) may not survive a round-trip through prose parsing.
-      rule: z.strictObject({
-        op: z.enum(['suffix','prefix','tone','constraint']),
-        value: z.string().min(1).max(120),
-        application: z.enum(['per_sentence','per_paragraph','per_message','final_sentence']).default('per_message'),
-      }).optional(),
-    }), raw);
-    assert(input.rule || input.instruction, '缺少风格要求');
-    return this.exclusive(async () => {
-      const save = await this.current();
-      const rule = input.rule
-        ? {...input.rule, scope: input.scope, raw: (input.instruction ?? `${input.rule.op} ${input.rule.value}`).slice(0, 200), enabled: true, created_at: new Date().toISOString()}
-        : parseBehaviorRule(input.instruction!, input.scope);
-      save.behavior_config = [...(save.behavior_config ?? []).filter(existing => !(existing.scope === rule.scope && existing.op === rule.op)), rule].slice(-20);
-      save.state_revision++;
-      await this.storage.write(validateSave(save));
-      this.logger.info('behavior.config.updated', { module: 'framework', revision: save.state_revision, metadata: { scope: rule.scope, op: rule.op, value: rule.value } });
-      const view = publicView(save); view.notices.push('已更新运行时风格配置。'); return view;
-    });
+  async setBehaviorConfig(raw:unknown,request?:ConfigurationRequest,sourceInput?:string){
+    return this.updateBehaviorConfig({set:[raw]},request,sourceInput);
   }
-  async clearBehaviorConfig(scope?: string) {
-    return this.exclusive(async () => {
-      const save = await this.current();
-      save.behavior_config = (save.behavior_config ?? []).filter(rule => scope ? rule.scope !== scope : false);
+  async clearBehaviorConfig(scope?:string,request?:ConfigurationRequest,sourceInput?:string){
+    return this.updateBehaviorConfig({remove:[scope===undefined?{}:{scope}]},request,sourceInput);
+  }
+  /** System replay is bound to the original user text, before deriving rules from volatile conversation context. */
+  async recoverBehaviorConfigRequest(input:string,request:ConfigurationRequest){
+    const tx=safeParse(configurationRequestSchema,{game_id:request.game_id,expected_revision:request.expected_revision,request_id:request.request_id});
+    if(!tx.request_id)return null;
+    const save=await this.storage.read('current','request_recovery');
+    if(!save)return null;
+    const receipt=save.runtime.receipts.find(item=>item.id===tx.request_id);
+    if(!receipt?.fingerprint.startsWith('behavior-config:input:'))return null;
+    assert(tx.game_id===undefined||tx.game_id===save.game_id,'游戏已切换');
+    assert(receipt.fingerprint===behaviorInputFingerprint(input),'请求 ID 已用于另一操作');
+    return publicView(save);
+  }
+  /** Validate the complete edit, then prepare and save one image using the existing receipt protocol. */
+  async updateBehaviorConfig(raw:unknown,request?:ConfigurationRequest,sourceInput?:string){
+    const input=safeParse(z.strictObject({set:z.array(behaviorSettingSchema).max(3).default([]),
+      remove:z.array(z.strictObject({scope:behaviorScopeSchema.optional(),op:behaviorOpSchema.optional()})).max(4).default([])}),raw);
+    assert(input.set.length||input.remove.length,'缺少风格要求');
+    for(const setting of input.set)assert(setting.rule||setting.instruction,'缺少风格要求');
+    const now=new Date().toISOString(),rules=input.set.map(setting=>setting.rule?
+      {...setting.rule,scope:setting.scope,raw:(setting.instruction??`${setting.rule.op} ${setting.rule.value}`).slice(0,200),enabled:true,created_at:now}:
+      parseBehaviorRule(setting.instruction!,setting.scope,now));
+    assert(new Set(rules.map(rule=>`${rule.scope}:${rule.op}`)).size===rules.length,'同一范围的风格规则冲突');
+    // Direct service calls bind the complete edit. System calls bind immutable user text instead:
+    // replay must not reinterpret a correction against a later or missing conversation context.
+    const fingerprint=sourceInput===undefined?'behavior-config:changes:'+createHash('sha256').update(JSON.stringify(input)).digest('hex'):
+      behaviorInputFingerprint(sourceInput);
+    return this.exclusive(async()=>{
+      const save=await this.current(),tx=safeParse(z.strictObject({game_id:z.string().uuid(),expected_revision:z.number().int().nonnegative(),request_id:z.string().uuid()}),
+        {game_id:request?.game_id??save.game_id,expected_revision:request?.expected_revision??save.state_revision,request_id:request?.request_id??randomUUID()});
+      assert(save.game_id===tx.game_id,'游戏已切换');
+      const receipt=save.runtime.receipts.find(item=>item.id===tx.request_id);
+      if(receipt){assert(receipt.fingerprint===fingerprint,'请求 ID 已用于另一操作');return publicView(save);}
+      if(save.state_revision!==tx.expected_revision)throw new GameError('状态已更新，请刷新后重试',409);
+      save.behavior_config=save.behavior_config.filter(rule=>!input.remove.some(selector=>
+        (selector.scope===undefined||selector.scope===rule.scope)&&(selector.op===undefined||selector.op===rule.op)));
+      for(const rule of rules)save.behavior_config=[...save.behavior_config.filter(existing=>!(existing.scope===rule.scope&&existing.op===rule.op)),rule];
       save.state_revision++;
-      await this.storage.write(validateSave(save));
-      const view = publicView(save); view.notices.push(scope ? '已恢复该范围的默认风格。' : '已恢复全部默认风格。'); return view;
+      save.runtime.receipts=[...save.runtime.receipts,{id:tx.request_id,fingerprint,revision:save.state_revision}].slice(-100);
+      const validated=validateSave(save);
+      await prepareRequestCommit(tx.game_id,tx.request_id,fingerprint,tx.expected_revision);
+      await this.storage.write(validated);
+      this.logger.info('behavior.config.updated',{module:'framework',request_id:tx.request_id,revision:save.state_revision,
+        metadata:{set:rules.map(rule=>({scope:rule.scope,op:rule.op})),remove:input.remove}});
+      const view=publicView(validated);view.notices.push(rules.length?'已更新运行时风格配置。':'已恢复所选范围的默认风格。');return view;
     });
   }
   async export() { return exportSave(await this.current()); }

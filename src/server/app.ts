@@ -634,7 +634,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     const worldBody={...body,original_input:body.input,...(gate.resolved_input?{input:gate.resolved_input}:{}),
       ...(gate.end_conversation?{end_conversation:true}:{})};
     if(gate.destination==='SYSTEM_META_INTENT'){
-      const result=await processSystem({input:worldBody.input,confirmed:false,request_id:body.request_id,game_id:body.game_id,expected_revision:body.expected_revision,originating_surface:'world',semantic:gate.semantic});
+      const result=await processSystem({input:worldBody.input,source_input:body.input,confirmed:false,request_id:body.request_id,game_id:body.game_id,expected_revision:body.expected_revision,originating_surface:'world',semantic:gate.semantic});
       // The System surface owns the one authoritative answer; the world column only acknowledges the handover, so
       // the same player-facing text is never carried twice in one response.
       res.json({...agentResult('SYSTEM_META_INTENT','这条内容属于系统设置，已经交给右侧「系统」处理。',{view:await service.view(),ui_actions:[{kind:'open_panel',panel:'system'}]}),system_handoff:{input:body.input,result}});return;
@@ -710,7 +710,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     const result=body.action?await handleSystemAction(service,body.action):await handleSystemInput(service,{
       input:body.input,confirmed:body.confirmed,session_id:body.session_id,request_id:body.request_id,
       game_id:body.game_id,expected_revision:body.expected_revision,
-    },body.semantic);
+    },body.semantic,body.source_input??body.input);
     if(result.category==='CAPABILITY_GAP'&&Array.isArray(result.advanced?.missing)&&result.advanced.missing.some((id:unknown)=>String(id).startsWith('media.image'))){
       const provider=await service.imageProviderStatus();
       const name=(result.advanced?.goal as {targets?:{reference?:string}[]}|undefined)?.targets?.[0]?.reference??'这个人物';
@@ -777,6 +777,11 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
     const body=req.body,input=safeParse(z.string().min(1).max(2000),body.input);
     // A message sent from the development workspace already belongs to that task; it must not be re-routed.
     if(body.development_task_id)return res.json(await processSystem({...body,input}));
+    // A durable configuration receipt precedes semantic interpretation: a replayed
+    // short correction may no longer have its original conversation after restart.
+    const configurationReplay=await service.recoverBehaviorConfigRequest(input,body);
+    if(configurationReplay)return res.json({category:'BEHAVIOR_CONFIGURATION',tool_id:null,side_effect_level:'configuration',
+      needs_confirmation:false,message:'已找到这条风格配置的提交记录，并同步当前配置。',view:configurationReplay});
     const gate=await routeContext(service,input,'system_input');
     if(gate.destination==='AMBIGUOUS')return res.json({category:'UNKNOWN',tool_id:null,side_effect_level:'none',needs_confirmation:false,message:gate.clarification,clarification:gate.clarification,session:await routingClarification(service,input,gate.clarification!)});
     if(gate.semantic?.kind==='read_only'){
@@ -793,7 +798,7 @@ export function createApp(service: GameService, clientDirectory = resolve('dist/
       const result=await handleAgentInput(service,tx,(request)=>jobs.start(request),gate.speech_target_id,Boolean(gate.world_input),gate.semantic);
       return res.json({category:'IN_WORLD_INPUT',tool_id:null,side_effect_level:result.time_advanced||result.canonical_changes?.length?'canonical':'none',needs_confirmation:false,message:result.message||result.view?.last_turn?.narrative||'当前世界没有返回可确认的结果。',view:result.view,...(result.clarification?{clarification:result.clarification}:{}),...(result.ui_actions?{ui_actions:result.ui_actions}:{})});
     }
-    return res.json(await processSystem({input:routedInput,confirmed:body.confirmed??false,request_id:body.request_id??randomUUID(),game_id:body.game_id,expected_revision:body.expected_revision,originating_surface:'system',semantic:gate.semantic,...(body.session_id?{session_id:body.session_id}:{}),...(body.development_task_id?{development_task_id:body.development_task_id}:{})}));
+    return res.json(await processSystem({input:routedInput,source_input:input,confirmed:body.confirmed??false,request_id:body.request_id??randomUUID(),game_id:body.game_id,expected_revision:body.expected_revision,originating_surface:'system',semantic:gate.semantic,...(body.session_id?{session_id:body.session_id}:{}),...(body.development_task_id?{development_task_id:body.development_task_id}:{})}));
   });
   app.post('/api/system/action',async(req,res)=>res.json(await processSystem({action:req.body})));
   app.get('/api/development/tasks',async(_req,res)=>res.json(await developmentTasks.list()));
