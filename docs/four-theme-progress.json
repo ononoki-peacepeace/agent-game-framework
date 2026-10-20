@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "8af0d86",
+  "assessed_source": "8d02f82",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -122,9 +122,11 @@
     "R5.1": {
       "status": "met",
       "evidence": [
-        "docs/qa-ai-recovery-coverage.md"
+        "docs/qa-ai-recovery-coverage.md",
+        "tests/routine-world-block-outcome.test.ts",
+        "docs/routine-world-block-outcome.md"
       ],
-      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim. Counterexample5026c8a/product8af0d86: real route-unavailable routine job becomes unexpected_internal_failure;1fail/2technical controls. Withdrawn pending repair. Repaired8d02f82: explicit WorldBlockedError route_unavailable maps to routine game interruption; unknown program/provider failures stay technical. Baseline1fail/2controls, final5files40pass/build; actual disk job terminal restart/replay no work/time/resource replay."
     },
     "R5.2": {
       "status": "met",
@@ -2311,6 +2313,39 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "routine-world-block-withdrawal",
+      "type": "evidence_correction",
+      "source": "8af0d86",
+      "transitions": [
+        {
+          "id": "R5.1",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "tests/routine-world-block-outcome.test.ts"
+          ],
+          "reason": "Actual world route prerequisite misclassified as engine failure;1fail/2controls."
+        }
+      ]
+    },
+    {
+      "batch": "routine-world-block-repair",
+      "type": "repair",
+      "source": "8d02f82",
+      "transitions": [
+        {
+          "id": "R5.1",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "tests/routine-world-block-outcome.test.ts",
+            "docs/routine-world-block-outcome.md"
+          ],
+          "reason": "Structured canonical route refusal distinguished from technical failure;40pass/build and disk terminal replay."
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -2919,6 +2954,17 @@
         "docs/schedule-label-migration.md"
       ],
       "summary": "Structural migration replaced authored schedule labels with internal IDs when linked entry lacked title; existing label now retained."
+    },
+    {
+      "id": "routine-world-block-outcome",
+      "scope": "original",
+      "condition": "R5.1",
+      "status": "repaired",
+      "source": "8af0d86",
+      "evidence": [
+        "tests/routine-world-block-outcome.test.ts"
+      ],
+      "summary": "Real unavailable route is a programmer-style routine job failure rather than a game interruption."
     }
   ]
 }
