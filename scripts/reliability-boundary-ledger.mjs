@@ -27,6 +27,12 @@ const evidence={
  'src/extensions/host.ts':{
   approve:{status:'durable_approval_fault_tested',evidence:['tests/p0a-extension-lifecycle.test.ts'],limit:'No cross-process serialization lock.'},
  },
+ 'src/system/agent.ts':{
+  executeTool:{status:'system_module_error_propagation_tested',evidence:['tests/p0a-system-module-recovery.test.ts','tests/p0a-input-terminal-recovery.test.ts'],limit:'Only module-management thrown failures; other tool branches have separate contracts.'},
+ },
+ 'src/system/session.ts':{
+  sessionInput:{status:'system_session_error_propagation_tested',evidence:['tests/p0a-system-module-recovery.test.ts','tests/p0a-input-terminal-recovery.test.ts'],limit:'Thrown failures mark session failed and propagate; returned structured failures and every tool side effect remain separate.'},
+ },
  'src/routine/jobs.ts':{
   persist:{status:'atomic_journal_fault_tested',evidence:['tests/p0a-background-journal.test.ts'],limit:'No power-failure guarantee.'},
   start:{status:'detached_lifecycle_fault_tested',evidence:['tests/p0a-background-journal.test.ts'],limit:'Multi-process leases remain unverified.'},
@@ -36,7 +42,7 @@ const evidence={
 const files=new Set([...Object.keys(evidence),'src/extensions/tasks.ts']);
 const sourceLines=new Map(await Promise.all([...files].map(async file=>[file,(await readFile(resolve(file),'utf8')).split(/\r?\n/)])));
 const boundaries=inventory.edges.filter(hook=>files.has(hook.file)&&
- /(?:storage\.(?:write(?:Pending|GlobalGuidance)?|clearPending)$|writeAtomicJson$|^(?:writeFile|rename|copyFile|mkdir)$|\.(?:build|runCore|runCapability|registerMany|install|approve|onInstalled|recoverInstallation)$)/.test(hook.callee))
+ /(?:storage\.(?:write(?:Pending|GlobalGuidance)?|clearPending)$|writeAtomicJson$|^(?:writeFile|rename|copyFile|mkdir|execute)$|\.(?:build|runCore|runCapability|registerMany|install|approve|onInstalled|recoverInstallation|manageModule)$)/.test(hook.callee))
  .map(hook=>{
   const method=inventory.functions.filter(fn=>fn.file===hook.file&&fn.line<=hook.line&&fn.end_line>=hook.line&&
     !fn.name.includes(':callback')).sort((a,b)=>(a.end_line-a.line)-(b.end_line-b.line))[0];
@@ -46,6 +52,8 @@ const boundaries=inventory.edges.filter(hook=>files.has(hook.file)&&
   if(hook.file==='src/server/service.ts'&&method?.name==='manageModule'&&
     /storage\.write\(checkpoint\s*,\s*['"]checkpoint['"]/.test(sourceLines.get(hook.file)?.[hook.line-1]??''))review={...evidence['src/server/service.ts'].manageModule,status:'module_checkpoint_fault_tested'};
   if(review?.status==='installation_effect_fault_tested'&&!/\.(?:install|approve|onInstalled|recoverInstallation)$/.test(hook.callee))review=undefined;
+  if(review?.status==='system_module_error_propagation_tested'&&hook.callee!=='service.manageModule')review=undefined;
+  if(review?.status==='system_session_error_propagation_tested'&&hook.callee!=='execute')review=undefined;
   if(review?.status==='candidate_phase_failure_tested')review={...review,status:'unreviewed',
     limit:'The containing candidate phase is tested, but failure at this exact workspace file boundary has not been injected.'};
   return {...hook,method:method?.name??null,method_start:method?.line??null,

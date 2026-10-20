@@ -128,7 +128,7 @@ export function sessionInput(service:GameService,body:{input:string;confirmed:bo
    else if(result.category==='UNKNOWN'||result.clarification){session.status='waiting_for_clarification';session.clarifications.push({question:result.message,answer:null});}
    else {session.status='completed';session.pending_field=null;}
    return {...result,session:structuredClone(session)};
-  }catch(e){session.status='failed';return reply((e as Error).message);}
+  }catch(e){session.status='failed';throw e;}
  });
  queues.set(service,run);return run;
 }

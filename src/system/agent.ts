@@ -557,7 +557,9 @@ async function executeTool(service: GameService, plan: MetaPlan, body: { input: 
         next = await service.manageModule({ module: moduleId, confirmed: true, game_id: save.game_id, expected_revision: save.state_revision, request_id: crypto.randomUUID() }, tool.tool_id === 'module.enable' ? 'enable' : tool.tool_id === 'module.disable' ? 'disable' : 'remove');
       } catch (error) {
         service.logger.warn('system.module.failed', { module: 'system', metadata: { command: tool.tool_id, target: moduleId, reason: error instanceof Error ? error.message.slice(0, 200) : String(error) } });
-        return result(plan, `这次没能${tool.tool_id === 'module.enable' ? '启用' : '关闭'}「${moduleLabel(moduleId)}」，世界状态没有改变。`, toolsList);
+        // A storage response can fail after commit. Let request recovery inspect
+        // the prepared receipt instead of claiming that nothing changed.
+        throw error;
       }
       return result(plan, `${tool.tool_id === 'module.enable' ? '已启用' : tool.tool_id === 'module.disable' ? '已停用' : '已移除'}「${moduleLabel(moduleId)}」。`, toolsList, { needs_confirmation: false, advanced: { revision: next.revision, panels: next.panels.map(panel => panel.id) } });
     }

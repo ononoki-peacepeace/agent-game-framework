@@ -46,6 +46,29 @@ async function fixture(){
 }
 
 describe('P0-A durable terminal classification and child commit evidence',()=>{
+  it.each(['before','after'] as const)('reconciles a real System module %s-write failure without a false unchanged response',async(point)=>{
+    const f=await fixture();try{
+      f.body.input='我不需要生活模式了。';
+      const route=vi.mocked(router.routeContext).mockResolvedValue({destination:'SYSTEM_META_INTENT',
+        semantic:{kind:'system_operation',operation_plane:'system_management'}} as never);
+      const write=f.store.write.bind(f.store),manage=vi.spyOn(f.service,'manageModule');
+      vi.spyOn(f.store,'write').mockImplementation(async(save,slot)=>{
+        if(point==='before')throw Error('system module write failed before commit');
+        await write(save,slot);throw Error('system module response lost after commit');
+      });
+      const first=await f.post(),after=(await f.store.read())!;
+      expect(first.status).toBe(503);expect(JSON.stringify(first.body)).not.toContain('世界状态没有改变');
+      const receiptIds=after.runtime.receipts.filter(r=>!f.baseline.runtime.receipts.some(old=>old.id===r.id)).map(r=>r.id);
+      expect(receiptIds).toHaveLength(point==='after'?1:0);
+      expect(first.body.outcome).toMatchObject({type:'engine_failure',state_certain:true,receipt_ids:receiptIds});
+      expect(after.runtime.time).toEqual(f.baseline.runtime.time);
+      if(point==='before')expect(after).toEqual(f.baseline);
+      else{expect(after.state_revision).toBe(f.baseline.state_revision+1);expect(after.definition.enabled_modules).not.toContain('routine');}
+      await f.settled();expect(await f.post()).toEqual(first);
+      await f.restart();expect(await f.post()).toEqual(first);expect(await f.store.read()).toEqual(after);
+      expect(manage).toHaveBeenCalledOnce();expect(route).toHaveBeenCalledOnce();
+    }finally{await f.close();}
+  });
   it.each(['checkpoint_before','checkpoint_after','current_before','current_after'] as const)(
     'safely terminates module removal at the %s write boundary without replaying either file',async(point)=>{
       const f=await fixture();try{
