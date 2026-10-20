@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "f9f93f0",
+  "assessed_source": "a253d58",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -412,9 +412,11 @@
     "A4.2": {
       "status": "met",
       "evidence": [
-        "tests/goal-contract-batch1.test.ts"
+        "tests/goal-contract-batch1.test.ts",
+        "tests/open-goal-completion-evidence.test.ts",
+        "docs/open-goal-completion-evidence.md"
       ],
-      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim. Counterexample a954b27/productf9f93f0: remote work travel appears in completed affordances, so done certifies earning without work or wage;3fail/2controls. A4.2 withdrawn pending repair. Repaired a253d58: actual fulfilled candidate only, preparation cannot certify done; bounded repair/exhaust and real HTTP JsonStore restart/replay;6files49pass/build. Wider A4.3 remains open."
     },
     "A4.3": {
       "status": "unmet",
@@ -2118,6 +2120,39 @@
         }
       ],
       "note": "Net0, full multi-world/background/real-provider/human conditions remain open."
+    },
+    {
+      "batch": "open-goal-completion-withdrawal",
+      "type": "evidence_correction",
+      "source": "f9f93f0",
+      "transitions": [
+        {
+          "id": "A4.2",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "tests/open-goal-completion-evidence.test.ts"
+          ],
+          "reason": "Prepared route incorrectly certifies original activity completion;3fail/2controls, actual wallet unchanged."
+        }
+      ]
+    },
+    {
+      "batch": "open-goal-completion-repair",
+      "type": "repair",
+      "source": "a253d58",
+      "transitions": [
+        {
+          "id": "A4.2",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "tests/open-goal-completion-evidence.test.ts",
+            "docs/open-goal-completion-evidence.md"
+          ],
+          "reason": "Separate preparation from actual candidate fulfillment; bounded false-done validation, actual wage and zero-extra restart replay;49pass/build."
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -2645,6 +2680,17 @@
         "docs/perception-subjects.md"
       ],
       "summary": "Actual event-time sight receipts retain multi-subject attribution; baseline6fail/4controls, final9files85pass/build, N4.1 withdrawn/restored net0."
+    },
+    {
+      "id": "open-goal-completion",
+      "scope": "original",
+      "condition": "A4.2",
+      "status": "repaired",
+      "source": "f9f93f0",
+      "evidence": [
+        "tests/open-goal-completion-evidence.test.ts"
+      ],
+      "summary": "Remote activity preparation sent as completed affordance lets done certify work with no work/resource effect."
     }
   ]
 }
