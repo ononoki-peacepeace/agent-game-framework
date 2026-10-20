@@ -1029,7 +1029,6 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
             delete next.ai.threads.narrator;
             const degraded=narrationFallback(next,turn.action,current,compoundSteps);
             next.last_turn={...degraded,speaker:null,dialogue:null,choices:[],context_actions:[]};
-            notices.push('本次行动已完成并保存；场景描写暂时采用已验证的结算结果。');
           }else{
           // An unclassified narration failure may still be a transient provider error.
           // Only a structured contract validation failure is deterministic here.
@@ -1051,7 +1050,6 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
         degradeNarration(failureReason(error));
         delete next.ai.threads.narrator;
         next.last_turn = { ...narrationFallback(next, turn.action,current,compoundSteps), speaker: null, dialogue: null, choices: [], context_actions: [] };
-        notices.push('本次行动已完成并保存；这一刻的场景描写暂时没有生成。');
         }
       }
       if(narrationPresentation&&next.last_turn)next.last_turn.presentation=narrationPresentation;
@@ -1165,7 +1163,8 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       this.pendingTurns.delete(req.request_id);await this.storage.clearPending?.(req.request_id).catch(error=>observe('warn','resolution.pending_cleanup_failed',{module:'turn',request_id:req.request_id,metadata:{reason:errorText(error)}}));
       trace.info('save.commit', { revision: next.state_revision, metadata: { step_request_id:req.request_id,revision_before: current.state_revision, revision_after: next.state_revision, validation: 'accepted', action: turn.action.type, source: turn.action.source, ...diff } });
       commit.end(diff);
-      return { ...publicView(next), notices };
+      const view=publicView(next);
+      return { ...view, notices:[...new Set([...view.notices,...notices])] };
       });
       });
     },owner));

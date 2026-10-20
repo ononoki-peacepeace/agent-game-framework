@@ -6,6 +6,7 @@ import {advanceWorldSegment} from '../core/runtime.js';
 import { lifecycleActions } from './lifecycle.js';
 import { genderValues } from '../shared/gender.js';
 import { AGE_MAX, identityAge } from '../shared/age.js';
+import {interruptedHoldFact} from '../core/completion-evidence.js';
 
 export const coreModule: Module = {
   id: 'core', version: '0.1.0',
@@ -67,6 +68,7 @@ export const coreModule: Module = {
         if(segment.interrupted)break;
       }
       c.facts.push(`在当前位置持续进行「${activity}」，实际经过 ${elapsed} 分钟${elapsed<requested?'，因需要处理的事情而暂停':'。'}`);
+      if(elapsed<requested)c.facts.unshift(interruptedHoldFact(elapsed));
     } },
     CHECK: { ui: { label: '检定', visibility: 'internal' }, parameters: z.strictObject({}), execute(c) {
       const spec=prepareCheck(c.save,c.action.id,{type:'SIMPLE_CHECK',domain:'general',band:'normal',stakes:'单次通用检定'});

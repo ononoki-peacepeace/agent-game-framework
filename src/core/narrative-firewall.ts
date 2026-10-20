@@ -446,6 +446,8 @@ export function canonicalResolutionNarrative(receipt:Receipt,hidden:boolean,perc
       `你留在原处继续「${fact[1]}」，${fact[3]==='。'?`这段活动持续了${receipt.time_cost}分钟。`:`过了${receipt.time_cost}分钟便停了下来。`}`;
     // Long Core facts can be truncated; elapsed time alone never proves the
     // named activity or a larger goal was completed.
+    if(interruptedActivity(receipt))return receipt.time_cost>0?
+      `你留在原处，过了${receipt.time_cost}分钟便停了下来。`:'你停了下来，这段活动尚未开始。';
     return receipt.time_cost>0?`你留在原处，过了${receipt.time_cost}分钟。`:'你停了下来。';
   }
   const itemNarrative=itemActionNarrative(receipt,hidden);if(itemNarrative)return itemNarrative;
