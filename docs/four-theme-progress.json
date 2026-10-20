@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "6164f04",
+  "assessed_source": "8b5d2df",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -516,9 +516,11 @@
         "tests/future-cancel-window.test.ts",
         "docs/future-cancel-window.md",
         "tests/future-execute-window.test.ts",
-        "docs/future-execute-window.md"
+        "docs/future-execute-window.md",
+        "tests/future-control-condition.test.ts",
+        "docs/future-control-condition.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 8e2a0f6: between-step handoff failures retain settled prefix/receipt and skipped guards do not pause read-only alternatives;3fail/1control,7distinctfiles57pass/build. Full fixed matrix remains open. 885d1e7: explicit date/time-window cancellation now preserves other commitments and rejects invented any-time narrowing. Initial3fail/2controls, expanded4fail/2controls, final6files57pass/build; full mixed/dynamic-intent matrix remains open. c3ac8fb: future execution retains explicit source date/window, filters due intentions before actual TALK;2fail/1control plus3original-input failures, final5files57pass/build; actual disk/new-service one-afternoon-only and no-extra replay. Full mixed/dynamic-intent matrix open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 8e2a0f6: between-step handoff failures retain settled prefix/receipt and skipped guards do not pause read-only alternatives;3fail/1control,7distinctfiles57pass/build. Full fixed matrix remains open. 885d1e7: explicit date/time-window cancellation now preserves other commitments and rejects invented any-time narrowing. Initial3fail/2controls, expanded4fail/2controls, final6files57pass/build; full mixed/dynamic-intent matrix remains open. c3ac8fb: future execution retains explicit source date/window, filters due intentions before actual TALK;2fail/1control plus3original-input failures, final5files57pass/build; actual disk/new-service one-afternoon-only and no-extra replay. Full mixed/dynamic-intent matrix open. 8b5d2df repairs conditional cancel/execute fast-path erasure: corrected baseline4fail/2controls;6files88pass/build,actual HTTP+disk parent replay zero generation. Controlled offline route/planning,not broad Semantic acceptance. Full mixed/dynamic-intent matrix remains open."
     },
     "A7.4": {
       "status": "unverified",
@@ -2399,6 +2401,22 @@
           "reason": "New notification credit bounded by actual interval after relayer Core costs;5files48pass/build;withdraw/restore net0."
         }
       ]
+    },
+    {
+      "batch": "future-control-condition",
+      "type": "repair",
+      "source": "8b5d2df",
+      "transitions": [],
+      "observations": [
+        {
+          "id": "A7.3",
+          "result": "Explicit conditional future control no longer bypasses condition; full mixed/dynamic-intent matrix stays open",
+          "evidence": [
+            "tests/future-control-condition.test.ts",
+            "docs/future-control-condition.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -3043,6 +3061,18 @@
         "docs/npc-notification-credit.md"
       ],
       "summary": "New invitation cannot inherit relayer bank before current interval; lawful25min chains/disk new-time travel/zero-time resettlement pass."
+    },
+    {
+      "id": "future-control-condition",
+      "scope": "original",
+      "condition": "A7.3",
+      "status": "repaired",
+      "source": "8b5d2df",
+      "evidence": [
+        "tests/future-control-condition.test.ts",
+        "docs/future-control-condition.md"
+      ],
+      "summary": "Fast future cancellation/execution erased original condition; guarded typed planning preserves false/unknown/true outcomes,actual HTTP parent restart replay pass."
     }
   ]
 }
