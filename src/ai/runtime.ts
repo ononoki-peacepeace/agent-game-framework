@@ -671,12 +671,22 @@ export class AIRuntime {
       !receipt.effects.includes('evidence')&&!receipt.canonical_facts.some(fact=>fact.startsWith('发现已存在的证据：'))&&
       (here?.description?.length??0)<130&&!view.entities.some(entity=>entity.id!==view.player_id&&
         entity.components.location?.location_id===hereId));
-    const budget=receipt?.physical_outcome?'long':quietPerception?'short':narrativeBudget({action_type:action.type,fact_count:facts.length,location_transitions:transitions,player_words_length:words.length,action_count:compoundReceipts?.length??Math.max(1,transitions),elapsed_minutes:elapsed,npc_interactions:npcInteractions,observable_changes:facts.length,narrative_mode:mode});
+    const budget=(receipt?.physical_outcome||compoundReceipts?.some(step=>step.physical_outcome))?'long':quietPerception?'short':narrativeBudget({action_type:action.type,fact_count:facts.length,location_transitions:transitions,player_words_length:words.length,action_count:compoundReceipts?.length??Math.max(1,transitions),elapsed_minutes:elapsed,npc_interactions:npcInteractions,observable_changes:facts.length,narrative_mode:mode});
     const maxChars=narrativeCharacterLimit(budget,Math.min(outputBudget.narrator,this.adapter.providerInfo?.().maxOutputTokens??outputBudget.narrator),mode);
     const perceptionCheck=receipt?save.resolution_history?.find(entry=>entry.check_id===receipt.check_id):null;
     const perceptionFacts=(perceptionCheck?.spec as {domain?:string}|undefined)?.domain==='perception'?
       receipt?.canonical_facts.filter(fact=>(receipt.repetition?fact.includes('发现已存在的证据：'):fact.startsWith('发现已存在的证据：'))||
         fact.includes('这次检查范围内没有发现'))??[]:[];
+    const physicalReceipts=(compoundReceipts??(receipt?[receipt]:[])).filter(step=>step.physical_outcome);
+    const significantIncidents=physicalReceipts.map(physicalReceipt=>({request_id:physicalReceipt.request_id,outcome:physicalReceipt.physical_outcome,repetition:physicalReceipt.repetition??null,
+        attempts:(save.resolution_receipts??[]).filter(r=>physicalReceipt.repetition?.attempt_ids.includes(r.request_id)).map(r=>({outcome:r.physical_outcome,at:r.at,time_cost:r.time_cost})),
+        stage_results:save.resolution_history?.find(entry=>entry.check_id===physicalReceipt.check_id)?.stage_results??[],
+        // Who could actually see this is recorded at settlement. Naming it per witness
+        // keeps a blind reaction from being written as an eyewitness account.
+        reactions:(physicalReceipt.physical_outcome!.witness_ids??[]).map(id=>({id,
+          sight_blocked:(physicalReceipt.physical_outcome?.sight_blocked_ids??[]).includes(id),
+          decision:save.npc_agent_state?.[id]?.last_decisions.filter(item=>item.event_ref===`reaction:${physicalReceipt.request_id}`).at(-1)??null})),
+        instruction:'这是突发的强制身体事件，克制风格仍应体现事件的分量。依实际接触、伤害和在场者决定组织动作中断、戒备、抵抗、声音与空间压力；人物反应随性格和所闻不同，不统一尖叫或恢复平常口吻，不为凑字数描写血腥。不得改写判定、抹去伤害、直接揭露心理或自行替任何人完成离场/反击；只有 reaction 与权威状态支持的行为才可确认为已发生。没有成立接触时不要补写挣脱，接触成立但伤害未成立时也不能改成从未碰到。仅有HP扣减不确认具体受伤部位、淤青、红肿、骨折或永久损伤；缺少对应权威事实时用动作、呼吸、声音和自主反应表现冲击，不补造这些身体状态，也不把已知道具自行写成掉落或损坏。reactions 中 sight_blocked 为 true 的人物在结算时没有视觉信息：不得让他看见、目睹或看清这次动作的经过，也不能让他的台词声称看清了，但他可以凭触觉、疼痛、声音、气味和既有认知作出反应。'}));
     const { parsed } = await this.call('narrator', narrativeResultSchema, save.definition.prompt_profile, {
       dialogue_continuity_policy:dialogueContinuityPolicy,
       performance_continuity_policy:performanceContinuityPolicy,
@@ -686,15 +696,8 @@ export class AIRuntime {
           .map(entity=>({id:entity.id,name:entity.components.identity?.name})),
         instruction:'这里的当前位置高于旧段落和玩家话中的预设。目送某人离开、声称只剩两人，只是玩家表达，不证明那人已经完成 MOVE。没有相应位置结算，不得写人物跨门、离开、脚步远去或已不在场；历史中相冲突的旁白不能继续当作事实。'},
       presence_claim_policy:'旁白对人物当前在场或离场作事实断言时，在 presence_claims 填 entity_id 与该人物已结算的 location_id，程序将核对权威位置；没有断言时填空数组。这只是事实引用，不会移动人物。转述人物的疑问、计划或可能说谎的台词不应被当成权威位置声明。',
-      ...(receipt?.physical_outcome?{significant_incident:{outcome:receipt.physical_outcome,repetition:receipt.repetition??null,
-        attempts:(save.resolution_receipts??[]).filter(r=>receipt.repetition?.attempt_ids.includes(r.request_id)).map(r=>({outcome:r.physical_outcome,at:r.at,time_cost:r.time_cost})),
-        stage_results:save.resolution_history?.find(entry=>entry.check_id===receipt.check_id)?.stage_results??[],
-        // Who could actually see this is recorded at settlement. Naming it per witness
-        // keeps a blind reaction from being written as an eyewitness account.
-        reactions:(receipt.physical_outcome.witness_ids??[]).map(id=>({id,
-          sight_blocked:(receipt.physical_outcome?.sight_blocked_ids??[]).includes(id),
-          decision:save.npc_agent_state?.[id]?.last_decisions.filter(item=>item.event_ref===`reaction:${receipt.request_id}`).at(-1)??null})),
-        instruction:'这是突发的强制身体事件，克制风格仍应体现事件的分量。依实际接触、伤害和在场者决定组织动作中断、戒备、抵抗、声音与空间压力；人物反应随性格和所闻不同，不统一尖叫或恢复平常口吻，不为凑字数描写血腥。不得改写判定、抹去伤害、直接揭露心理或自行替任何人完成离场/反击；只有 reaction 与权威状态支持的行为才可确认为已发生。没有成立接触时不要补写挣脱，接触成立但伤害未成立时也不能改成从未碰到。仅有HP扣减不确认具体受伤部位、淤青、红肿、骨折或永久损伤；缺少对应权威事实时用动作、呼吸、声音和自主反应表现冲击，不补造这些身体状态，也不把已知道具自行写成掉落或损坏。reactions 中 sight_blocked 为 true 的人物在结算时没有视觉信息：不得让他看见、目睹或看清这次动作的经过，也不能让他的台词声称看清了，但他可以凭触觉、疼痛、声音、气味和既有认知作出反应。'}}:{}),
+      ...(significantIncidents.length?{significant_incident:significantIncidents.at(-1),
+        ...(compoundReceipts?{significant_incidents:significantIncidents}:{})}:{}),
       ...(perceptionFacts.length?{perception_result:{canonical_facts:perceptionFacts,
         instruction:'玩家刚完成一次权威调查。正文必须自然交代玩家实际查看了什么以及这些事实所支持的新发现或本次范围内无新发现；NPC 可以随后回应，但不能只让 NPC 追问玩家有无发现。仅凭这些已结算事实写结果，不补造线索、人物或隐藏真相。'}}:{}),
       narrative_budget:{level:budget,max_narrative_characters:maxChars,approximate_target_characters:budget==='short'?Math.floor(maxChars*.45):Math.floor(maxChars*.62),guidance:(quietPerception?'本次是资料稀疏且没有新发现的观察。用已登记的环境和这次查看的实际结果自然收束，篇幅从事实量出发；不要为了凑描写补造声音、痕迹、摆设、人物或其不存在。':budget==='short'?'简单观察或一句回应，保持简短。':budget==='medium'?'交代行动过程、环境反馈和可见反应。':'跨场景或多步变化，请铺陈实际经过、时间感、环境反馈和已知人物的外显反应。')+`根据本次已发生的可观察变化，正文可写约 ${budget==='short'?Math.floor(maxChars*.45):Math.floor(maxChars*.62)} 字，最多 ${maxChars} 字，留足 JSON 完整结束的空间；不是字数下限，不得为篇幅制造事件、秘密或替玩家行动。即使这轮只有时间或一次普通活动发生，也优先写可感知的当下场景，不要把 receipt 的动作与时钟改写成一条结算日志；事实稀疏时允许自然简短。`},

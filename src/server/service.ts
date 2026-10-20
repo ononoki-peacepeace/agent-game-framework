@@ -1,4 +1,4 @@
-import {CandidateValidationError,generationRepair,schemaIssues,type GenerationRepair} from '../ai/failures.js';
+import {CandidateValidationError,generationRepair,generationBudget,schemaIssues,type GenerationRepair} from '../ai/failures.js';
 import {failureReason,ProviderError,NarratorSchemaError} from '../ai/failures.js';
 import {sparseStep} from '../routine/scheduler.js';
 import {updateInteraction} from '../core/interaction.js';
@@ -91,7 +91,8 @@ function narrationFallback(save: SavePackage, action: Parameters<typeof applyPat
       .filter((entry):entry is NonNullable<typeof entry>=>Boolean(entry));
     if(steps&&steps.length>1){
       const narrative=canonicalCompoundNarrative(save,hidden,steps);
-      const speech=receipt.physical_outcome?physicalNarrativeFallback(save,receipt,hidden,related).scene_beats.filter(beat=>beat.kind==='speech'):[];
+      const speech=steps.filter(step=>step.physical_outcome).flatMap(step=>
+        physicalNarrativeFallback(save,step,hidden,related).scene_beats.filter(beat=>beat.kind==='speech'));
       return {narrative,scene_beats:speech.length?[
         ...(narrative.match(/[\s\S]{1,1200}/g)??[]).map(text=>({kind:'narration' as const,text})),...speech]:[]};
     }
@@ -724,8 +725,28 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
           ...(narrationPresentation?.reasons??[]),reason.slice(0,500)||'narration_unavailable'])].slice(0,8)};
       };
       if(!compileOnly){
-        const reactions=await settlePhysicalNpcReactions(this,next,req.request_id);
-        next=reactions.save;turn.facts.push(...reactions.visibleFacts);
+        // Local compound Core steps settle atomically first. Reactions belong to
+        // their physical child, after the batch, with the same total call budget.
+        // Never react again to the aggregate's inherited final-step outcome.
+        const reactionIds=compoundSteps?compoundSteps.map((_,index)=>compoundStepId(req.request_id,index)):[req.request_id];
+        const reactionsDone=Boolean(next.resolution_receipts?.find(entry=>entry.request_id===req.request_id)
+          ?.result_entities?.physical_reaction_batch_complete?.length);
+        const reactionBudget=generationBudget(2);
+        for(const reactionId of reactionsDone?[]:reactionIds){
+          const reactions=await settlePhysicalNpcReactions(this,next,reactionId,reactionBudget);
+          next=reactions.save;turn.facts.push(...reactions.visibleFacts);
+          if(compoundSteps&&reactions.visibleFacts.length){
+            const aggregate=next.resolution_receipts!.find(entry=>entry.request_id===req.request_id)!;
+            aggregate.canonical_facts=[...aggregate.canonical_facts,...reactions.visibleFacts].slice(0,12).map(fact=>fact.slice(0,500));
+          }
+        }
+        const reactionReceipt=next.resolution_receipts?.find(entry=>entry.request_id===req.request_id);
+        if(reactionReceipt&&!reactionsDone&&reactionIds.some(id=>next.resolution_receipts?.some(entry=>entry.request_id===id&&entry.physical_outcome))){
+          reactionReceipt.result_entities??={};
+          // Seal the whole bounded stage, including budget-skipped children, in
+          // the pending candidate. A save retry must not grant a fresh budget.
+          reactionReceipt.result_entities.physical_reaction_batch_complete=[reactionReceipt.actor_id];
+        }
         const autonomous=await trace.measure('npc_agent.background_batch',()=>
           settleAutonomousNpcTurn(this,next,current.runtime.time,req.request_id,signal));
         next=autonomous.save;
@@ -840,9 +861,9 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
             }
             if(receipt)try{
               const here=next.entities.find(entity=>entity.id===next.player_state.entity_id)?.components.location?.location_id;
-              if(receipt.physical_outcome)for(const npcId of receipt.physical_outcome.witness_ids){
+              for(const physical of (compoundReceipts??[receipt]).filter(step=>step?.physical_outcome))for(const npcId of physical!.physical_outcome!.witness_ids){
                 const said=next.npc_agent_state?.[npcId]?.last_decisions.findLast(decision=>
-                  decision.event_ref===`reaction:${req.request_id}`)?.speech;
+                  decision.event_ref===`reaction:${physical!.request_id}`)?.speech;
                 if(said&&!result.scene_beats?.some(beat=>beat.kind==='speech'&&beat.speaker_id===npcId)&&
                   !(result.speaker===npcId&&result.dialogue?.trim()))
                   throw new GameError(`本轮已发生的人物发言缺少对应台词（speaker_id=${npcId}）；请在完整正文和有序对白中呈现已有回应，不能只写开口或说完。`,503);

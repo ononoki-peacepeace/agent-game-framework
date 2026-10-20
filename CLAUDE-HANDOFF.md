@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Compound reaction ownership — 2026-10-20
+
+Parent `c0d642f`; source checkpoint containing this section binds local compound reactions to physical children after atomic Core settlement, sharing the original two-generation budget including repair. Aggregate is not reacted to twice; Narrator and fallback use actual child decisions/sight. Pending parent actor-ID completion marker seals budget-skipped children across save retries. No schema change; optional shared helper budget and additive compound incident projection must travel with service. Baseline6fail; intermediate pending2fail/5controls repaired; final12files79pass plus authorized HTTP1file2pass, complete isolated build passed. Sandbox HTTP EACCES and initial invalid UUID marker runs retained. See docs/compound-reaction-ownership.md. N3.3/N8.2 remain open;60%=96/160,+0. Full1957pass remains9917459. Original dirt preserved. Next: inspect normal Narrator omission/temporal expression against child decisions and continue fixed open matrices; no whole-project completion claim.
+
 ## Repetition narrative scope follow-up — 2026-10-20
 
 Parent `a549439`; source checkpoint containing this section fixes an introduced8ae218b regression: raw repeated attempts were checked against the entire truthful failed-prefix paragraph. Repetition aggregates now own their raw attempt scope; independent physical children and factual injury/sight guards remain. Corrected baseline1fail/1control, final11files104pass, isolated build in local SESSION. Initial invalid module fixture and first9file81pass command with nonexistent optional filename are retained separately. See docs/repeated-physical-narrative-scope.md. Explicit N4.2 withdrawal/restoration net0;60%=96/160 unchanged. Latest full1957pass remains9917459. Next: keep source checkpoints and inspect reaction ownership separately, then remaining fixed matrices. Original dirt and all safety boundaries preserved.

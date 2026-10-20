@@ -560,7 +560,7 @@ function socialObligationActive(save:SavePackage,state:NpcAgentState){
     (task.kind!=='attend'||now+30>=minuteOf(save,task.activity_at)));
 }
 /** At most the victim and one present witness decide how to react. Outcomes are never delegated to narration. */
-export async function settlePhysicalNpcReactions(service:GameService,input:SavePackage,requestId:string){
+export async function settlePhysicalNpcReactions(service:GameService,input:SavePackage,requestId:string,reactionBudget:GenerationBudget=generationBudget(2)){
   const source=input.resolution_receipts?.find(receipt=>receipt.request_id===requestId&&receipt.physical_outcome);
   if(!source?.physical_outcome)return {save:input,visibleFacts:[] as string[]};
   const save=structuredClone(input);
@@ -568,7 +568,6 @@ export async function settlePhysicalNpcReactions(service:GameService,input:SaveP
   const outcome=receipt.physical_outcome!,visibleFacts:string[]=[];
   const targets=[outcome.target_id,...outcome.witness_ids.filter(id=>id!==outcome.target_id)].slice(0,2);
   receipt.result_entities??={};let attempted=receipt.result_entities.physical_reactions_attempted??=[];
-  const reactionBudget=generationBudget(2);
   for(const id of targets){
     if(reactionBudget.remaining<=0)break;
     if(attempted.includes(id))continue;

@@ -42,8 +42,18 @@ it.each(cases)('retains ordered speech and physical steps after $reason (physica
  expect(after.state_revision).toBe(before.state_revision+1);
  const html=renderToStaticMarkup(createElement(SceneStory,{view:f.service.project(after),override:null,onSelectEntity:()=>{}}));
  expect(html).toContain('开了口');expect(html).toContain('伤害');
- if(finalPhysical){expect(html).toContain('先停一下。');expect(after.last_turn!.scene_beats?.some(beat=>beat.kind==='speech')).toBe(true);}
+ expect(html).toContain('先停一下。');expect(after.last_turn!.scene_beats?.some(beat=>beat.kind==='speech')).toBe(true);
+ const physical=after.resolution_receipts!.slice(-3,-1).find(r=>r.physical_outcome)!;
+ expect(after.npc_agent_state?.npc_lin.last_decisions.filter(d=>d.event_ref===`reaction:${physical.request_id}`)).toHaveLength(1);
+ expect(after.npc_agent_state?.npc_lin.last_decisions.some(d=>d.event_ref===`reaction:${request.request_id}`)).toBe(false);
  const count=narrate.mock.calls.length;
  await run();expect(await f.store.read()).toEqual(after);expect(narrate).toHaveBeenCalledTimes(count);
  expect(count).toBe(reason==='fact_conflict'?3:1);
+ const args=narrate.mock.calls[0];narrate.mockRestore();
+ await f.ai.narrate(...args);
+ const prompt=f.calls.findLast(call=>call.role==='narrator')!.prompt;
+ const context=JSON.parse(prompt.slice(prompt.indexOf('{')));
+ expect(context.significant_incidents).toHaveLength(1);
+ expect(context.significant_incident.request_id).toBe(physical.request_id);
+ expect(context.significant_incident.reactions.find((r:any)=>r.id==='npc_lin').decision.speech).toBe('先停一下。');
 });
