@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "d688404",
+  "assessed_source": "c6169aa",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -2781,6 +2781,50 @@
           "evidence": [
             "tests/conditional-trade-plan.test.ts",
             "docs/conditional-trade-plan.md",
+            "tests/multi-world-language-corpus.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "generic-activity-actual-foreground-boundary",
+      "type": "repair",
+      "source": "c6169aa",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "A7.3",
+          "result": "Pure generic deterministic activity now stops at actual authored foreground/event boundary;zero/partial/full typed receipts,blocked dependent steps,grounded fallback and real replay verified. Broad condition remains open.",
+          "evidence": [
+            "tests/generic-activity-interruption.test.ts",
+            "docs/generic-activity-interruption.md",
+            "tests/multi-world-language-corpus.test.ts"
+          ]
+        },
+        {
+          "id": "N3.3",
+          "result": "Pure generic deterministic activity now stops at actual authored foreground/event boundary;zero/partial/full typed receipts,blocked dependent steps,grounded fallback and real replay verified. Broad condition remains open.",
+          "evidence": [
+            "tests/generic-activity-interruption.test.ts",
+            "docs/generic-activity-interruption.md",
+            "tests/multi-world-language-corpus.test.ts"
+          ]
+        },
+        {
+          "id": "N8.2",
+          "result": "Pure generic deterministic activity now stops at actual authored foreground/event boundary;zero/partial/full typed receipts,blocked dependent steps,grounded fallback and real replay verified. Broad condition remains open.",
+          "evidence": [
+            "tests/generic-activity-interruption.test.ts",
+            "docs/generic-activity-interruption.md",
+            "tests/multi-world-language-corpus.test.ts"
+          ]
+        },
+        {
+          "id": "A9.3",
+          "result": "Pure generic deterministic activity now stops at actual authored foreground/event boundary;zero/partial/full typed receipts,blocked dependent steps,grounded fallback and real replay verified. Broad condition remains open.",
+          "evidence": [
+            "tests/generic-activity-interruption.test.ts",
+            "docs/generic-activity-interruption.md",
             "tests/multi-world-language-corpus.test.ts"
           ]
         }
