@@ -54,7 +54,7 @@ Do not reuse the historical 46% as a current estimate. The first reproducible co
 | W6 | Body/resources and transient perception continuity | Partial | body/capability tests; multi-world long-duration breadth open |
 | W7 | Memory, NPC interactions and long-term relationship causality | Partial | integrated experience/social tests; broader society unaccepted |
 | W8 | Background incidents, macro arcs and player absence | Partial | 48-hour simulation: 39 actions, 12 resolved incidents, no offscreen leaks; variety remains |
-| W9 | Explicit policy/data decisions for legacy-world social authoring | Unfinished | no automatic production-save authoring or migration authorized |
+| W9 | Explicit policy/data decisions for legacy-world social authoring | Partial | 9544101: read-only policy gap inventory and prospective compatible authoring/migration strategy documented in legacy-social-policy-strategy.md; formal-world policy choice, migration implementation/fault matrix and formal authorization remain open |
 | W10 | Multi-world extended-duration and future multiplayer acceptance | Unfinished | no multiplayer/multi-process society acceptance |
 
 ## ④ Narrator and experience

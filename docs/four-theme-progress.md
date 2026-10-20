@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：b4c018f。整体 **58.13%**（93/160 个固定条件满足）。未满足 30，待验证 37。
+计分版本 v1；评估源代码：9544101。整体 **59.38%**（95/160 个固定条件满足）。未满足 28，待验证 37。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -8,9 +8,9 @@
 |---|---:|---:|---:|---|---:|
 | ① 可靠性 | 29 | 6 | 5 | 4/6/0 | 72.5% |
 | ② 自然语言行动 | 22 | 7 | 11 | 3/5/2 | 55.0% |
-| ③ 自主持续世界 | 22 | 9 | 9 | 3/5/2 | 55.0% |
+| ③ 自主持续世界 | 24 | 7 | 9 | 3/6/1 | 60.0% |
 | ④ Narrator 与体验 | 20 | 8 | 12 | 2/6/2 | 50.0% |
-| 合计 | 93 | 30 | 37 | 12/22/6 | 58.13% |
+| 合计 | 95 | 28 | 37 | 12/23/5 | 59.38% |
 
 旧台账的12/21/7是工作包人工分类，保留作历史。这里的完成/部分/未完成由4个条件满足数推导，不能与旧分类混用。旧46%为退役估计；首次建立口径不是产品进展，不计算相对46%的提升。
 
@@ -29,6 +29,7 @@
 | npc-objective-projection | repair | W5.3: 修复受阻计划与所属长期目标的上下文错位；7个直接用例、相邻91项通过；完整条件保持开放 | +0.000 pp |
 | grounded-degraded-prose | repair | N8.1: unmet → met; N8.3: unverified → met | +1.250 pp |
 | compound-degraded-prose | repair | N3.3: Settled compound speech/physical order retained across refusal, timeout and fact-conflict; general failed/unexecuted goal presentation remains open；完整条件保持开放; N8.2: Concrete inherited-last-step omission repaired; broad naturalness and incomplete-goal prose remain open；完整条件保持开放 | +0.000 pp |
+| legacy-social-policy-strategy | repair | W9.1: unmet → met; W9.2: unmet → met | +1.250 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -286,8 +287,8 @@
 
 | 条件 | 具体通过条件 | 状态 | 依据 |
 |---|---|---|---|
-| W9.1 | 明确旧世界社交政策与作者数据缺口 | 未满足 | [claude-takeover-integration.md](../docs/claude-takeover-integration.md) |
-| W9.2 | 制定可审查的兼容数据策略及禁止默认虚构原则 | 未满足 | [claude-takeover-integration.md](../docs/claude-takeover-integration.md) |
+| W9.1 | 明确旧世界社交政策与作者数据缺口 | 满足 | [legacy-social-policy-strategy.md](../docs/legacy-social-policy-strategy.md), [npc-relations.ts](../src/agent/npc-relations.ts), [authoring.ts](../src/ai/authoring.ts) |
+| W9.2 | 制定可审查的兼容数据策略及禁止默认虚构原则 | 满足 | [legacy-social-policy-strategy.md](../docs/legacy-social-policy-strategy.md), [npc-relations.ts](../src/agent/npc-relations.ts), [authoring.ts](../src/ai/authoring.ts) |
 | W9.3 | 离线副本验证政策缺失、启用与迁移的行为 | 待验证 | [claude-takeover-integration.md](../docs/claude-takeover-integration.md) |
 | W9.4 | 经明确授权后执行所需正式数据变更或确认无需迁移 | 待验证 | [claude-takeover-integration.md](../docs/claude-takeover-integration.md) |
 

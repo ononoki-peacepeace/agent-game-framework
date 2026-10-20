@@ -2,6 +2,8 @@
 
 ## Legacy social policy assessment — 2026-10-20
 
+Design checkpoint `9544101`; fixed ledger now59.375%=95/160 (28unmet/37unverified), macro12/23/5. Only W9.1/W9.2 changed to met (+1.25pp) for their explicit inventory/design deliverables; this is not migration success or a formal-world policy decision. Complete-suite shard verification is still pending and earns no score yet.
+
 Product source stays `b4c018f`; reviewed design is docs/legacy-social-policy-strategy.md. Read-only inspection confirms compiled town and formal world both have two relationship dimensions but no explicit event_deltas; formal world has13 character entities. Existing absence means no automatic receipt deltas, not inferred semantics. Proposed author-selected, prospective migration preserves numeric relationships and existing facts; prior receipts need reviewed no-backfill bookkeeping and request identity/fault evidence before any use. No migration implementation or formal policy decision is claimed. W9.1/W9.2 evidence is now concrete; W9.3/W9.4 remain unverified. Source manifest remains unchanged while four-shard190-file offline verification runs (first48files484pass; later shards pending). Original QA bytes are backed up for restoration. No formal save/3100/paid/deploy changes.
 
 ## Compound degraded prose continuation — 2026-10-20

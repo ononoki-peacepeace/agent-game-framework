@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "b4c018f",
+  "assessed_source": "9544101",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -803,18 +803,22 @@
       "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
     },
     "W9.1": {
-      "status": "unmet",
+      "status": "met",
       "evidence": [
-        "docs/claude-takeover-integration.md"
+        "docs/legacy-social-policy-strategy.md",
+        "src/agent/npc-relations.ts",
+        "src/ai/authoring.ts"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Read-only policy inventory identifies explicit old-world author-data gaps and existing absence semantics. Reviewed design9544101, product sourceb4c018f; no formal migration or author policy choice claimed."
     },
     "W9.2": {
-      "status": "unmet",
+      "status": "met",
       "evidence": [
-        "docs/claude-takeover-integration.md"
+        "docs/legacy-social-policy-strategy.md",
+        "src/agent/npc-relations.ts",
+        "src/ai/authoring.ts"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Reviewable prospective compatibility strategy forbids inferred defaults and retroactive effects, preserves existing facts, and specifies offline/identity/authorization gates without claiming implementation. Reviewed design9544101, product sourceb4c018f; no formal migration or author policy choice claimed."
     },
     "W9.3": {
       "status": "unverified",
@@ -1307,6 +1311,55 @@
           "evidence": [
             "tests/compound-degraded-prose.test.ts",
             "docs/compound-degraded-prose.md"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "legacy-social-policy-strategy",
+      "type": "repair",
+      "source": "9544101",
+      "transitions": [
+        {
+          "id": "W9.1",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "docs/legacy-social-policy-strategy.md",
+            "src/agent/npc-relations.ts",
+            "src/ai/authoring.ts"
+          ],
+          "reason": "Read-only policy inventory identifies explicit old-world author-data gaps and existing absence semantics."
+        },
+        {
+          "id": "W9.2",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "docs/legacy-social-policy-strategy.md",
+            "src/agent/npc-relations.ts",
+            "src/ai/authoring.ts"
+          ],
+          "reason": "Reviewable prospective compatibility strategy forbids inferred defaults and retroactive effects, preserves existing facts, and specifies offline/identity/authorization gates without claiming implementation."
+        }
+      ],
+      "condition_checks": [
+        {
+          "id": "W9.3",
+          "result": "Implementation and full offline migration/fault matrix absent; remains unverified",
+          "evidence": [
+            "docs/legacy-social-policy-strategy.md",
+            "src/agent/npc-relations.ts",
+            "src/ai/authoring.ts"
+          ]
+        },
+        {
+          "id": "W9.4",
+          "result": "No formal-world policy choice or human authorization; remains unverified",
+          "evidence": [
+            "docs/legacy-social-policy-strategy.md",
+            "src/agent/npc-relations.ts",
+            "src/ai/authoring.ts"
           ]
         }
       ]
