@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Explicit injury-denial subject — 2026-10-20
+
+Parent `759e9fb`; source checkpoint containing this section fixes lawful “player/Qiao unhurt” prose being treated as denial of Lin's settled injury. Only a uniquely explicit immediate character/player subject scopes it away; pronouns, joint names, duplicate identities, absent scene and actual harmed targets stay conservative. Actual multiple-target Core controls pass. Baseline3fail/5controls, final11files108pass; isolated build in local SESSION. No schema/settlement change. See docs/physical-denial-subject.md. N4.2 explicit withdrawal/restoration net0; N4.3/N4.4 remain open,60%=96/160. Next: pin fresh current-source full offline manifest, preserve any process failures and original QA bytes; continue fixed remaining gaps. Original dirt/safety preserved.
+
 ## Settled reaction utterance integrity — 2026-10-20
 
 Parent `0e7537f`; source checkpoint containing this section prevents Narrator substituting another line by the same NPC for an already settled reaction. Both beats and legacy dialogue must retain the actual words, repair remains bounded and fallback uses saved speech. Runtime prompt/service must travel together. Baseline2fail/8controls; expanded10files71pass before prompt addition, final2files21pass including prompt policy, build in local SESSION. Counts overlap. One preliminary command named a nonexistent optional file; actual6files52pass, not7. N4.1 explicit withdrawal/restoration net0; N3.3/N8.2 remain open,60%=96/160 unchanged. See docs/physical-reaction-speech-integrity.md. Next: reproduce legitimate other-subject physical denials before any firewall change. Full-suite boundary remains9917459, original dirt and safety boundaries preserved.

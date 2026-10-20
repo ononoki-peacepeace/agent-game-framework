@@ -161,7 +161,7 @@ export function validateResolvedNarrative(receipt:Receipt,result:Narrative,hidde
         if(!scopedMiss)throw new NarrativePatternError('contact_denial',match.index,matchedSnippet(prose,match.index,match[0].length),'叙事否认了已经结算的身体接触');
       }
       if(physical.harmed)for(const match of prose.matchAll(/毫发无伤|没有受伤|并未受伤/g))
-        if(!scopedPhysicalDenial(step,prose.slice(0,match.index),'injury'))
+        if(!otherInjuryDenialSubject(scene,step,prose.slice(0,match.index))&&!scopedPhysicalDenial(step,prose.slice(0,match.index),'injury'))
           throw new NarrativePatternError('injury_denial',match.index,matchedSnippet(prose,match.index,match[0].length),'叙事否认了已经结算的伤害');
     }
   }
@@ -231,6 +231,18 @@ export function validatePerceptionNarrative(save:SavePackage,receipt:Receipt,res
     const issues=visualClaimIssues(compact,vision);
     if(issues.length)reject(sentence,issues[0]);
   }
+}
+
+/** Only a uniquely named grammatical subject can scope a denial away from the
+ * harmed target. Mere mentions, joint subjects and pronouns remain conservative. */
+function otherInjuryDenialSubject(save:SavePackage|undefined,receipt:Receipt,prefix:string){
+  if(!save)return false;
+  const clause=(prefix.split(/[。！？；，,\n]/).at(-1)??'').replace(/\s/g,'');
+  const subjects=save.entities.filter(entity=>entity.components.character&&
+    [String(entity.components.identity?.name??'').replace(/\s/g,''),
+      ...(entity.id===save.player_state.entity_id?['你','玩家']:[])].some(name=>
+      name&&clause.startsWith(name)&&/^(?:自己|本人)?(?:仍然|依然|依旧|仍|却|还|也|完全|始终|一直)*$/.test(clause.slice(name.length))));
+  return subjects.length===1&&subjects[0].id!==receipt.physical_outcome?.target_id;
 }
 
 /** Partial failure may be described at its real position, but never as a global denial. */
