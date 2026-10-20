@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "53eaaa6",
+  "assessed_source": "5f29a42",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -547,9 +547,11 @@
     "A8.3": {
       "status": "unmet",
       "evidence": [
-        "tests/low-stakes-open-goal.test.ts"
+        "tests/low-stakes-open-goal.test.ts",
+        "tests/sealed-item-movement.test.ts",
+        "docs/sealed-item-movement.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 5f29a42 repairs sealed ancestry for source/destination movement/transfer and Freeform prerequisites;baseline8fail/3controls,expanded destination/Freeform counterexamples retained,7files99pass/build,actual disk no-write refusals. Full condition remains open."
     },
     "A8.4": {
       "status": "unverified",
@@ -1120,9 +1122,11 @@
         "tests/local-scene-materialization.test.ts",
         "tests/narrative-firewall-observability.test.ts",
         "tests/contained-evidence-access.test.ts",
-        "docs/contained-evidence-access.md"
+        "docs/contained-evidence-access.md",
+        "tests/sealed-item-movement.test.ts",
+        "docs/sealed-item-movement.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 53eaaa6 repairs sealed-container clue access;full container/environment/temporary-item/transfer/consumption matrix still open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 53eaaa6 repairs sealed-container clue access;full container/environment/temporary-item/transfer/consumption matrix still open. 5f29a42 repairs sealed ancestry for source/destination movement/transfer and Freeform prerequisites;baseline8fail/3controls,expanded destination/Freeform counterexamples retained,7files99pass/build,actual disk no-write refusals. Full condition remains open."
     },
     "N6.4": {
       "status": "unverified",
@@ -2480,6 +2484,30 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "sealed-item-movement",
+      "type": "repair",
+      "source": "5f29a42",
+      "transitions": [],
+      "observations": [
+        {
+          "id": "A8.3",
+          "result": "Sealed movement/transfer prerequisites repaired;full terrain/item/consumption matrix open",
+          "evidence": [
+            "tests/sealed-item-movement.test.ts",
+            "docs/sealed-item-movement.md"
+          ]
+        },
+        {
+          "id": "N6.3",
+          "result": "Sealed movement/transfer prerequisites repaired;full terrain/item/consumption matrix open",
+          "evidence": [
+            "tests/sealed-item-movement.test.ts",
+            "docs/sealed-item-movement.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -3148,6 +3176,18 @@
         "docs/contained-evidence-access.md"
       ],
       "summary": "Sealed scene/owned ancestors now bound evidence discovery and fallback content;lawful open/exterior/prior-knowledge cases remain."
+    },
+    {
+      "id": "sealed-item-movement",
+      "scope": "original",
+      "condition": "N6.3",
+      "status": "repaired",
+      "source": "5f29a42",
+      "evidence": [
+        "tests/sealed-item-movement.test.ts",
+        "docs/sealed-item-movement.md"
+      ],
+      "summary": "Registered extraction/transfer and owned/concealed destinations bypassed seals;shared ancestry now bounds mutation and Freeform prerequisites,world/time/disk refusals preserved."
     }
   ]
 }
