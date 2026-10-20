@@ -68,43 +68,64 @@ function bindTargetEntity(view:PublicView,entityId:string){
   return {role,mention:String(entity.components.identity?.name??entity.id),entity_id:entity.id,status:'bound' as const};
 }
 
+/** A named discussion subject is not necessarily the addressee. This guard only
+ * proves direct single-clause recipient frames; Semantic owns broader role alignment. */
+function sourcePronounBeforeName(text:string,name:string){
+  const intent=normalized(text),index=intent.indexOf(normalized(name));
+  return index>=0&&[...intent.matchAll(/(?:询问|问|告诉|告知|通知|对|向|跟|与|和)(?:他|她|对方)/g)].some(match=>match.index! < index);
+}
+function sourceNamesRecipient(text:string,name:string){
+  if(hasMultipleClauses(text))return false;
+  const intent=normalized(text),key=normalized(name),index=intent.indexOf(key);
+  if(index<0)return false;
+  // A preceding pronoun can already occupy the addressee slot (“向他询问林舟…”).
+  // A later query verb does not make the named subject a new recipient.
+  if(sourcePronounBeforeName(text,name))return false;
+  const before=intent.slice(0,index),after=intent.slice(index+key.length);
+  return /(?:询问|问|告诉|告知|通知)$/.test(before)||
+    /(?:对|向|跟|与|和)$/.test(before)&&/^(?:说|询问|问|表示|解释|道谢|交谈|交流|聊天|讨论)/.test(after);
+}
 function talkPerson(view:PublicView,goal:AtomicGoal,source:GoalSource){
   // A stage-owned recipient is not the set of every person mentioned in the
   // original compound request (e.g. asking A about B). Bind once, validate later.
-  const suggested=goal.referent?.trim();
-  if(suggested){
-    const person=bind(view,'person',suggested);
-    // A non-person referent (a held item, a place, or an unknown label) must not
-    // short-circuit pronoun/target resolution; it falls through to those rules.
-    if(person.status==='bound'||person.status==='ambiguous')return person;
-  }
   const player=view.entities.find(entity=>entity.id===view.player_id);
   const here=player?.components.location?.location_id;
   const people=view.entities.filter(entity=>entity.id!==view.player_id&&entity.components.character);
+  const focus=people.find(entity=>entity.id===view.interaction_context?.target_entity_id&&
+    entity.components.location?.location_id===here);
+  const pronoun=source.text.match(/他|她|它|对方/);
+  const bindPronoun=()=>{
+    if(focus?.components.identity?.name)return bind(view,'person',String(focus.components.identity.name));
+    const present=people.filter(entity=>entity.components.location?.location_id===here);
+    if(present.length===1&&present[0].components.identity?.name)return bind(view,'person',String(present[0].components.identity.name));
+    return {role:'person',mention:pronoun?.[0]??'对方',entity_id:null,status:present.length>1?'ambiguous':'unresolved'} as const;
+  };
   const explicit=people.filter(entity=>{
     const name=String(entity.components.identity?.name??'');
     return name.length>=2&&source.text.includes(name);
   });
+  const suggested=goal.referent?.trim(),person=suggested?bind(view,'person',suggested):null;
+  // Only a source-owned addressee takes priority here. Preserve the existing
+  // referent path when a named person is a subject or belongs to another clause.
+  if(explicit.length===1){
+    const name=String(explicit[0].components.identity?.name);
+    if(sourcePronounBeforeName(source.text,name))return bindPronoun();
+    if(person&&!sourceNamesRecipient(source.text,name)&&(person.status==='bound'||person.status==='ambiguous'))return person;
+    return bind(view,'person',name);
+  }
   // In a compound request the stage may name one of several authorized people.
   // Use that stage's own name before treating the whole sentence as ambiguous;
   // an invented name that exists only in a model paraphrase grants no authority.
   if(explicit.length>1){
+    if(person?.status==='bound'&&explicit.some(entity=>entity.id===person.entity_id))return person;
     const staged=explicit.filter(entity=>goal.normalized_goal.includes(String(entity.components.identity?.name??'')));
     if(staged.length===1)return bind(view,'person',String(staged[0].components.identity?.name));
   }
   if(explicit.length>1)return {role:'person',mention:source.text.slice(0,120),entity_id:null,status:'ambiguous'} as const;
-  if(explicit.length===1)return bind(view,'person',String(explicit[0].components.identity?.name));
-  const focus=people.find(entity=>entity.id===view.interaction_context?.target_entity_id&&
-    entity.components.location?.location_id===here);
-  const pronoun=source.text.match(/他|她|它|对方/);
-  if(pronoun){
-    if(focus?.components.identity?.name)return bind(view,'person',String(focus.components.identity.name));
-    const present=people.filter(entity=>entity.components.location?.location_id===here);
-    if(present.length===1&&present[0].components.identity?.name)
-      return bind(view,'person',String(present[0].components.identity.name));
-    return {role:'person',mention:pronoun[0],entity_id:null,
-      status:present.length>1?'ambiguous':'unresolved'} as const;
-  }
+  if(pronoun)return bindPronoun();
+  // Only use model-supplied referents after source names and existing pronoun
+  // context have had their say; an unresolved non-person label still falls through.
+  if(person&&(person.status==='bound'||person.status==='ambiguous'))return person;
   const planned=people.filter(entity=>{
     const name=String(entity.components.identity?.name??'');
     return name.length>=2&&goal.normalized_goal.includes(name);

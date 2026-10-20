@@ -1,6 +1,6 @@
 # Four-theme acceptance ledger — 2026-10-20
 
-This mutable ledger groups the handoff requirements into 40 work packages. It does not replace or edit frozen acceptance v1–v22. A **completed** row means the stated bounded implementation has offline developer evidence (C/D), not that the whole theme has passed real-provider, production or human acceptance. **Partial** means working implementation and evidence exist but material requirements remain. **Unfinished** means the stated acceptance has not been established; it does not imply that every related source file is absent. Packages differ in size, so counts are evidence for engineering estimates, not an equal-weight completion formula.
+This mutable ledger groups the handoff requirements into 40 work packages. It does not replace or edit frozen acceptance v1–v23. A **completed** row means the stated bounded implementation has offline developer evidence (C/D), not that the whole theme has passed real-provider, production or human acceptance. **Partial** means working implementation and evidence exist but material requirements remain. **Unfinished** means the stated acceptance has not been established; it does not imply that every related source file is absent. Packages differ in size, so counts are evidence for engineering estimates, not an equal-weight completion formula.
 
 | Theme | Completed | Partial | Unfinished | Existing development estimate |
 |---|---:|---:|---:|---:|
@@ -35,8 +35,8 @@ The estimate remains unchanged. Shared final gates—latest complete offline sna
 | A2 | Repeated physical attempts retain Core outcomes with one aggregate social consequence | Completed | npc-relationship-repetition; separate real events remain independent |
 | A3 | Declared result references and explicit dependency ordering in bounded plans | Completed | goal-contract batches and game-outcome-continuation |
 | A4 | General intent understanding and original-goal completion | Partial | semantic/alignment/completion tests; broad real-language acceptance open |
-| A5 | NPC/item/place/scene-object binding across worlds | Partial | binding/admission/environment tests; wide-world coverage open |
-| A6 | Pronouns and contextual references | Partial | recent referents and stage context work; arbitrary sentence-level coreference open |
+| A5 | NPC/item/place/scene-object binding across worlds | Partial | source-owned speech recipients now precede a wrong Planner referent; actual TALK/dependency tests pass; wide-world coverage open |
+| A6 | Pronouns and contextual references | Partial | conversation focus/real ambiguity and named-topic roles protected against Planner guesses; 144-test contract/Semantic/scene regression passes; arbitrary sentence-level coreference open |
 | A7 | Composite/conditional goals and partial completion | Partial | dependency/conditional tests; broad mixed clauses and dynamic intent open |
 | A8 | Freeform physical interaction and dynamic body/distance/environment prerequisites | Partial | physical/environment capability tests; open interaction breadth remains |
 | A9 | Broad multi-world natural-language acceptance corpus | Unfinished | no complete representative corpus acceptance |

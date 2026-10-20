@@ -1,5 +1,11 @@
 # Claude Code starting handoff
 
+## Source recipient continuation — 2026-10-20
+
+Parent source `7f94529` follows reviewed guidance checkpoint `37b2741`. The current checkpoint fixes Planner speech referents overriding directly source-owned recipients or actual pronoun context. Existing multi-person stage roles remain; genuine pronoun ambiguity still requires binding. Role review additionally protects named discussion subjects (“向他询问林舟”) against being selected as addressees, while direct “询问林舟他…” retains Lin. All intermediate failures are preserved. Actual Core TALK and completed-plan replay tests preserve the authorized recipient. No public schema/interface change. Baseline4 failed/6 controls passed; final adjacent9 files/144 tests passed. Latest strict tsc result and exact commit are in the takeover SESSION. Arbitrary cross-sentence coreference and real-model audience-role quality remain unfinished.
+
+Prior media source: expanded14 files/134 passed; Core/Narrator adjacent10 files/67 passed; strict tsc25.88s passed. Earlier full guidance build passed and predates media/source-binding changes. No current complete-suite claim. Additive frozenv23; overall46%, bounded offline completed/partial/unfinished4/6/0,3/5/2,3/5/2,2/5/3. Next: durable global/session deleted-identity recovery; broader conditional/pronoun intent, NPC long-term goals/social variety, natural Narrator quality. No production/3100/paid provider/push/Claude modifications.
+
 ## Media/canonical continuation — 2026-10-20
 
 Parent reviewed source `37b2741` (guidance batch:116 tests and full build passed). The checkpoint containing this section coordinates short canonical edits, idle migrations and final world replacements with the existing media queue; media reads normalize privately to avoid recursive locking. Long turns still permit media during model work. Their parent intent now records the actual committed receipt predecessor when media advances revision during narration. No Save schema or protocol changes; no RNG/time/action replay.
