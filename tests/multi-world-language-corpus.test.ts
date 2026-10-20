@@ -194,6 +194,6 @@ describe('fixed multi-world natural-language corpus v1 (controlled offline candi
     expect(after.last_turn!.narrative).toContain('已接受的值班会面');expect(after.last_turn!.narrative).not.toMatch(/10分钟|十分钟|完成/);
    }
   }
-  if(c.boundary==='restart_replay'||(c.world==='trade'&&c.boundary==='partial_failure'))expect(await f.replay()).toEqual(result);
+  if(c.boundary==='restart_replay'||c.boundary==='condition_true'||(c.world==='trade'&&c.boundary==='partial_failure'))expect(await f.replay()).toEqual(result);
  },20000);
 });

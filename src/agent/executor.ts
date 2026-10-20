@@ -18,7 +18,7 @@ import {relationshipCondition} from '../shared/relationship.js';
 import {dueAssessment,futureConditionGuards,futureConditionsHold} from './future.js';
 import {recentReferent} from '../core/recent-referent.js';
 import {sceneAnchor} from '../core/interaction.js';
-import {executeOpenWorldGoal,runContractPlan,canExecuteContractPlan,discoverContractCandidates} from './affordances.js';
+import {executeOpenWorldGoal,runContractPlan,canExecuteContractPlan,discoverContractCandidates,executeContractStep} from './affordances.js';
 import {compileGoalContract,hasMultipleClauses,recoverablePlanAdmission} from './goal-contract.js';
 import {scenePartner,sceneMessage,orderedSceneBeats,sceneSpeechSeconds,planOpenGoalStep,MAX_OPEN_GOAL_STEPS,sceneFailureInfo,sceneRepairFeedback,
   SceneInteractionError,recordSoftContacts,recordSocialCommitments,recordNpcActivityPlans,type SceneRepair,type runSceneInteraction} from './scene-interaction.js';
@@ -293,6 +293,22 @@ export async function handleChoiceInput(service:GameService,body:PlanRequest,off
   throw new GameError('旧选项目前不可执行，世界状态没有改变。',409);
  return handleAgentInput(service,body);
 }
+/** Conditional trade retains the existing branch evaluator. Only the intentionally
+ * deferred post-arrival purchase binding may bypass the up-front admission veto. */
+function conditionalTradeContract(plan:AgentPlan){
+ if(!plan.contract||plan.local_compound||!plan.goals.some(goal=>goal.type==='CONDITIONAL_INTENT')||
+   plan.goals.some(goal=>goal.temporal_scope.scope!=='now'||goal.type!=='CONDITIONAL_INTENT'&&
+    (goal.type!=='WORLD_ACTION'||!['location_at','purchase'].includes(goal.contract?.completion.kind??'')||
+     ['needs_binding','capability_gap'].includes(goal.contract?.availability??'runtime_gap'))))return false;
+ const ancestors=(goal:AtomicGoal,seen=new Set<string>()):AtomicGoal[]=>goal.depends_on.flatMap(id=>{
+  if(seen.has(id))return [];seen.add(id);const parent=plan.goals.find(item=>item.goal_id===id);
+  return parent?[parent,...ancestors(parent,seen)]:[];
+ });
+ const purchases=plan.goals.filter(goal=>goal.contract?.completion.kind==='purchase');
+ return purchases.length>0&&purchases.every(goal=>ancestors(goal).some(parent=>
+  parent.contract?.completion.kind==='location_at'&&parent.contract.availability==='ready'));
+}
+
 export async function executePlan(service:GameService,body:PlanRequest,plan:AgentPlan,startRoutine?:(body:any)=>Promise<any>,repetition?:import('../system/goals.js').GoalSpec['repetition'],repeatedPerception=false,physicalIntent?:import('../system/goals.js').GoalSpec['physical_intent'],semanticAction?:import('../system/goals.js').GoalSpec['play_action']):Promise<AgentResult>{
  assertConditionalOwnership(plan.goals);
  let save=await service.current();
@@ -342,8 +358,10 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
   }
   return continueActiveGoal(service,save,plan,{},Boolean(body.end_conversation),undefined,body.original_input??body.input);
  }
+ const conditionalTrade=conditionalTradeContract(plan);
  const unavailable=plan.goals.find(goal=>goal.side_effect_level==='world'&&goal.operation_hint&&goal.operation_hint!=='other'&&
-   ['capability_gap','needs_binding','runtime_gap'].includes(goal.contract?.availability??'runtime_gap'));
+   ['capability_gap','needs_binding','runtime_gap'].includes(goal.contract?.availability??'runtime_gap')&&
+   !(conditionalTrade&&goal.contract?.completion.kind==='purchase'&&goal.contract.availability==='runtime_gap'));
  if(unavailable){
   const reason=unavailable.contract?.availability==='capability_gap'?'当前世界没有注册完成这项行动所需的能力。':
     unavailable.contract?.availability==='needs_binding'?'目标对象尚未唯一确认，世界状态没有改变。':
@@ -454,6 +472,23 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
    }else if(goal.type==='CONTINUE_ROUTINE'){
     assert(startRoutine,'此执行入口未配置后台生活任务');assert(!plan.execution_order.slice(plan.execution_order.indexOf(id)+1).some(other=>plan.goals.find(g=>g.goal_id===other)!.side_effect_level!=='none'),'后台生活任务之后不能继续执行写入目标');
     const job=await startRoutine({...body,request_id:childId(body.request_id,id),expected_revision:save.state_revision,action:{type:'CONTINUE_ROUTINE',parameters:{}}});message='已提交后台生活请求；任务状态：'+job.status;
+   }else if(conditionalTrade&&goal.type==='WORLD_ACTION'){
+    assert(!goal.branch||!await service.handoffBlocker(),'当前前台事项尚未处理，条件行动不能抢占');
+    // Rebind against the actual arrived scene, preserving the original source's
+    // quantity/intent authority. Conditions and dependencies were checked above.
+    const rebound=compileGoalContract(view,plan,{kind:'manual',text:plan.contract!.original_intent});
+    const currentGoal=rebound.goals.find(item=>item.goal_id===id)!;
+    stepStage='contract_step';
+    const result=await executeContractStep(service,save,currentGoal,childId(body.request_id,id),
+      undefined,undefined,plan.contract!.original_intent,false,plan.plan_id);
+    save=result.candidate;goal.contract=currentGoal.contract;goal.target_entities=currentGoal.target_entities;
+    if(result.status!=='completed'){
+     goal.status=result.status==='waiting_for_player'?'unresolved':'blocked';goal.result={summary:result.reason};
+     stepOutcome=result.outcome??gameOutcome('unavailable','contract_step',save.state_revision,changes);
+     calls.push({tool_id:goal.type,ok:false});break;
+    }
+    message=save.narrative_history?.find(entry=>entry.request_id===result.evidence_request_id)?.narrative??result.reason;
+    changes.push('world_action:'+id);
    }else {
     assert(!goal.branch||!await service.handoffBlocker(),'当前前台事项尚未处理，条件行动不能抢占');
     const choiceSpeech=Boolean(body.choice_offer_id&&goal.type==='WORLD_SPEECH');
