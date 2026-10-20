@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "prepared_from": "aabe55b",
+  "scope": "Fixed offline settlement/persistence scenarios supporting W10.1. They do not replace frozen acceptance criteria or establish full W4-W8/N7, model or human acceptance.",
+  "hours": 72,
+  "checkpoint_minutes": 60,
+  "restart_after_hours": [12, 36, 60],
+  "worlds": [
+    {"id":"trade","structure":"Finite stock and wallets, actual player commute and three daily purchases, three NPCs with timed work/travel/rest plans.","daily_action":"BUY one bread after reaching the market","final":"Player credit76, bread3, shop stock7; each NPC completes its three six-step day plans and retains its long goal."},
+    {"id":"relations","structure":"Commerce disabled; three NPCs have authored contact semantics, cyclic speech and sourced heard memories. Player starts away, then joins the public scene.","daily_action":"Day1 MOVE to square; days2/3 TALK to Lin","final":"Each NPC pair has familiarity6 from six actual bilateral contact receipts, all nine plans complete; no private fact appears in public projection."},
+    {"id":"continuity","structure":"Authored calendar and recurring one-hour local wage rule, three commuting NPC plans, three timed offscreen incidents and one intentionally unresolved incident.","daily_action":"START_ROUTINE for the same authored one-hour work block, max_minutes60","final":"Exactly three wages of2; three incidents resolve and one remains unresolved, no offscreen exposure delivered to the player."}
+  ],
+  "boundaries": [
+    "Before time advances, a missing MOVE destination and a TALK listener in another scene must refuse without changing canonical entities, clock or resolution receipts.",
+    "All ordinary Narrator calls fail with a controlled offline refusal; grounded fallback may describe only settled effects, never replay an action.",
+    "After each daily non-WAIT action and at each12-hour checkpoint, repeat the exact request and require identical response, unchanged current.json bytes and zero additional generation.",
+    "At hours12/36/60, recreate JsonStore, AIRuntime and GameService, compare complete authority, and repeat the previous request before continuing."
+  ],
+  "failure_standards": [
+    "Schema-invalid save or clock delta differing from the exact paid checkpoint interval.",
+    "Duplicate receipt ID, changed previously seen receipt, or NPC work adding world time twice.",
+    "Plan cursor regression, completed-prefix reexecution, unexplained loss of an active long goal or premature completion before its not_before.",
+    "Wallet, stock, inventory, relationship or body changes without their declared authoritative settlement.",
+    "Missing/refused prerequisites causing world effects, private facts leaking, or unresolved background stages reported as resolved.",
+    "Restart/replay producing a changed response, extra generation, changed save bytes, repeated time/resources or lost plan state."
+  ]
+}
