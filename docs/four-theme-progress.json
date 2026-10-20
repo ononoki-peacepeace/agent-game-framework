@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "a84616d",
+  "assessed_source": "6f4a300",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -709,9 +709,11 @@
       "evidence": [
         "tests/npc-physical-plan-continuity.test.ts",
         "tests/routine.test.ts",
-        "docs/routine-partial-interruption.md"
+        "docs/routine-partial-interruption.md",
+        "tests/routine-local-elapsed.test.ts",
+        "docs/routine-local-elapsed.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. a84616d: interrupted AI routine interval retains actual Core time/event/foreground, discards unearned full rewards and completed prose/history endpoint, and does not complete schedule block. Corrected2fail/5controls + block1fail; final6distinctfiles70pass/build, real disk/service replay. Whole travel/local/long-duration adaptive matrix remains open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. a84616d: interrupted AI routine interval retains actual Core time/event/foreground, discards unearned full rewards and completed prose/history endpoint, and does not complete schedule block. Corrected2fail/5controls + block1fail; final6distinctfiles70pass/build, real disk/service replay. Whole travel/local/long-duration adaptive matrix remains open. 6f4a300: local block credit adds actual Core elapsed, not requested duration after interruption; work/sleep2fail/2controls, actual disk prefix90 and explicit test acknowledgement to120/+8 once;5files58pass/build. Full matrix still open."
     },
     "W4.4": {
       "status": "unverified",
@@ -2206,6 +2208,22 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "routine-local-elapsed",
+      "type": "repair",
+      "source": "6f4a300",
+      "transitions": [],
+      "observations": [
+        {
+          "id": "W4.3",
+          "result": "Local actual interrupted time credit repaired with disk prefix controls; full condition remains open",
+          "evidence": [
+            "tests/routine-local-elapsed.test.ts",
+            "docs/routine-local-elapsed.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -2767,6 +2785,18 @@
         "docs/routine-partial-interruption.md"
       ],
       "summary": "Core-truncated AI routine claimed full wage/time/history/completion; controller and scheduler now retain actual interval and pause."
+    },
+    {
+      "id": "routine-local-elapsed",
+      "scope": "original",
+      "condition": "W4.3",
+      "status": "repaired",
+      "source": "6f4a300",
+      "evidence": [
+        "tests/routine-local-elapsed.test.ts",
+        "docs/routine-local-elapsed.md"
+      ],
+      "summary": "Interrupted local WAIT counted requested120/480 instead of actual60 in block_progress; now actual canonical clock delta."
     }
   ]
 }
