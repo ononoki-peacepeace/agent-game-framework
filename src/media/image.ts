@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 export type ImageUsage = 'avatar' | 'fullbody' | 'scene' | 'other';
@@ -54,8 +54,9 @@ export class ImageAssetRuntime {
     const asset_id = `avatar_${digest.slice(0, 32)}`, extension = extensionFor(generated.mime_type);
     const directory = join(this.assetDirectory, 'avatars'), path = join(directory, `${asset_id}.${extension}`);
     await mkdir(directory, { recursive: true });
-    await writeFile(path, bytes, { flag: 'wx' }).catch(error => {
+    await writeFile(path, bytes, { flag: 'wx' }).catch(async error => {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+      if(!(await readFile(path)).equals(bytes))throw new Error('已存在的图片资产内容校验失败，图片尚未绑定；请保留文件并检查存储。');
     });
     return { asset_id, mime_type: generated.mime_type, provider: generated.provider || this.provider.id, model: generated.model ?? null, metadata: generated.metadata ?? {} };
   }
