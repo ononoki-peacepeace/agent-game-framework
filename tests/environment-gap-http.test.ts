@@ -1,10 +1,10 @@
 import {afterEach,describe,expect,it} from 'vitest';
-import {once} from 'node:events';
 import {randomUUID} from 'node:crypto';
 import {mkdtemp,rm,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import type {Server} from 'node:http';
+import {createServer,type Server} from 'node:http';
+import {listenFetchable} from './fixtures/listen-fetchable.js';
 import {AIRuntime} from '../src/ai/runtime.js';
 import {GameService} from '../src/server/service.js';
 import {createApp} from '../src/server/app.js';
@@ -77,8 +77,8 @@ async function setup(overrides:Partial<EnvironmentAssessment>={},hint='environme
   }});
   const store=new JsonStore(path),service=new GameService(store,ai,world);await service.newGame();
   const open=async(svc=service)=>{
-    const server=createApp(svc,undefined,undefined,join(path,'assets')).listen(0,'127.0.0.1');resource.servers.push(server);
-    await once(server,'listening');const base=`http://127.0.0.1:${(server.address() as any).port}`;
+    const server=await listenFetchable(()=>createServer(createApp(svc,undefined,undefined,join(path,'assets'))));resource.servers.push(server);
+    const base=`http://127.0.0.1:${(server.address() as any).port}`;
     const {token}=await (await fetch(base+'/api/session')).json() as any;
     return async(route:string,body:unknown)=>{const r=await fetch(base+route,{method:'POST',headers:{'Content-Type':'application/json','X-Game-Token':token},body:JSON.stringify(body)});
       return {status:r.status,data:await r.json() as any};};
