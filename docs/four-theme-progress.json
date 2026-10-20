@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "7bb13f2",
+  "assessed_source": "a84616d",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -707,9 +707,11 @@
     "W4.3": {
       "status": "unmet",
       "evidence": [
-        "tests/npc-physical-plan-continuity.test.ts"
+        "tests/npc-physical-plan-continuity.test.ts",
+        "tests/routine.test.ts",
+        "docs/routine-partial-interruption.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. a84616d: interrupted AI routine interval retains actual Core time/event/foreground, discards unearned full rewards and completed prose/history endpoint, and does not complete schedule block. Corrected2fail/5controls + block1fail; final6distinctfiles70pass/build, real disk/service replay. Whole travel/local/long-duration adaptive matrix remains open."
     },
     "W4.4": {
       "status": "unverified",
@@ -2188,6 +2190,22 @@
           "reason": "Core elapsed duration gates full activity effects and completion; truthful stop on actual interruption;115pass/build."
         }
       ]
+    },
+    {
+      "batch": "routine-partial-interruption",
+      "type": "repair",
+      "source": "a84616d",
+      "transitions": [],
+      "observations": [
+        {
+          "id": "W4.3",
+          "result": "Actual AI interval interruption reward/time/history/completed-block repaired; broader travel/local adaptive matrix stays open",
+          "evidence": [
+            "tests/routine.test.ts",
+            "docs/routine-partial-interruption.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -2737,6 +2755,18 @@
         "tests/declared-activity-interruption.test.ts"
       ],
       "summary": "Full activity effects applied before Core WAIT truncates at player appointment; partial execution certifies original goal."
+    },
+    {
+      "id": "routine-partial-interruption",
+      "scope": "original",
+      "condition": "W4.3",
+      "status": "repaired",
+      "source": "a84616d",
+      "evidence": [
+        "tests/routine.test.ts",
+        "docs/routine-partial-interruption.md"
+      ],
+      "summary": "Core-truncated AI routine claimed full wage/time/history/completion; controller and scheduler now retain actual interval and pause."
     }
   ]
 }
