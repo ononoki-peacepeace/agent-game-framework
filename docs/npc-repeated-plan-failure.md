@@ -1,0 +1,7 @@
+# Repeated plan failure retains successful prefix evidence
+
+Product source `70a4575`, ledger `169b77e`. This batch adds missing bounded evidence; it does not change product code. Two fixed cases first complete an actual INSPECT, then repeatedly face either a Core-closed destination or an absent TALK listener. Each makes three new WAIT requests with full JSON reload between them, then lets the NPC owner explicitly choose a new local method while preserving the same long goal.
+
+Both baseline cases passed. Each repetition retains exactly one INSPECT receipt, cursor 1, that prefix's original receipt ID, its specific blocker and zero accumulated blocked credit. Owner revision abandons only the old method and settles one HOLD; another WAIT/reload never repeats the prefix or replacement. The prior plan's cursor/receipt evidence and the long goal remain unchanged. No inaccessible destination, absent speech or product/resources are invented.
+
+The adjacent ten-file regression and complete isolated build results are recorded in local SESSION. This matrix provides deterministic developer evidence for two actual repeated-failure forms; it is not arbitrary adaptive judgment, broad world-policy coverage, 72-hour continuity, independent review or real-model acceptance. W5.3/W5.4 remain open; **60.00%, 96/160, +0**. The complete199-file/1992-test run belongs to `29e6a5f`, before later context and test additions. Original worktree dirt and all formal-data/service/Provider boundaries are preserved.

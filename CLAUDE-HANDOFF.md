@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Repeated-failure successful prefix evidence — 2026-10-20
+
+Parent `169b77e`, product stays `70a4575`; checkpoint containing this section adds two actual Core prefix/repeated-block/revision cases, no product change. Initial2pass; three new WAIT/reloads each retain one INSPECT receipt/cursor1/zero blocked credit; owner revision preserves long goal and adds exactly one HOLD without replay. Destination-closed and listener-absent causes remain distinct. Adjacent10file regression and build in SESSION. See docs/npc-repeated-plan-failure.md. W5.3/W5.4 remain open,60%=96/160,+0; full1992pass remains29e6a5f before latest changes. Next: fixed-condition coverage audit across remaining reliability/NL/NPC/Narrator work, no generic completion claim. Original dirt/safety preserved.
+
 ## Viable ongoing plan stays visible — 2026-10-20
 
 Parent `afb6982`; source checkpoint containing this section prioritizes ongoing executable methods after recovery plans but before abstract intentions, retaining their long-goal ownership inside12item limits. Real relationship/TALK or witnessed new fact can now inform owner revision before failure; owner may also keep original method. Baseline8fail; final10files93pass, complete isolated build in SESSION. No schema/Core/time/budget change. See docs/npc-active-plan-revision.md. W5.3/W5.4 still open,60%=96/160,+0. Latest full1992pass remains29e6a5f before context edits. Next: repeated actual failure/partial cursor retention and remaining fixed matrices. Original dirt/safety preserved.
