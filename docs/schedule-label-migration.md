@@ -1,0 +1,11 @@
+# Migration preserves an existing authored schedule label
+
+Parent `4c3f840`, product `c872222`. Accepted-commitment migration used the task ID as its display fallback even when schedule metadata already contained an authored label. With no linked title (including blank titles and status-only records), reading/migrating a valid older schedule replaced that known label with an internal identifier. This propagated to actual WAIT handoff and fallback prose.
+
+Baseline: 3 failures and 2 legal controls. The one-line repair uses the existing schedule label as the fallback to cleanLabel, retaining the ID only when no authored label exists. A usable linked title still wins, and accepted/cancelled/completed status normalization remains unchanged. No task outcome, date, time, resource, schema or authority-source change.
+
+`tests/schedule-label-migration.test.ts` includes those 5 cases plus actual JsonStore migration, repeated read with stable bytes, zero-time interrupted WAIT fallback, and new-service original-request replay without generation or extra effects. Pure migration assertions preserve entities/runtime/revision and remain idempotent. The actual handoff now uses the prior authored label even when the schedule has no linked opportunity record.
+
+Final regression: 5 files, with exact test count/build result in the checkpoint handoff and SESSION. An earlier command named a nonexistent optional calendar test; its report covers only the actual 4 files/27 tests. The final run explicitly includes `p0a-calendar-configuration-recovery.test.ts`. Initial build found only a new test fixture's Record<string,unknown> incompatible with JSON components; narrowed optional string fields fix that typing without runtime changes. All reports/build failures remain under `.codex-checkpoints/framework-reliability-handoff/takeover-2026-10-20/schedule-label-migration-*`.
+
+This adds evidence to open W4.3 schedule consistency, without closing its full matrix or increasing the score: 60% (96/160), net zero. Complete 215-file/2149-pass snapshot remains the earlier `6f4a300` coverage, with its original native failure preserved. Formal save, frozen definitions, original dirt, production service and paid-provider boundaries remain preserved.

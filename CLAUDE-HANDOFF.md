@@ -1,5 +1,10 @@
 # Claude Code starting handoff
 
+## Accepted schedule migration labels — 2026-10-21
+
+Parent4c3f840; source checkpoint containing this section preserves existing authored schedule label when linked record lacks a usable title; actual linked title/status still win, ID-only label stays ID. Baseline3fail/2controls; final5files31pass/build. Actual JsonStore migration/read idempotence/zero-time WAIT fallback and new-service request replay covered. Initial test-fixture JSON typing build failure and optional nonexistent calendar filename retained; final explicit calendar file counted. See docs/schedule-label-migration.md. W4.3 remains open;60%=96/160,+0. Full215files2149pass stays6f4a300. Next: reproduce route-blocked routine job classification (world prerequisite vs technical failure), then other fixed matrices. Original dirt/safety preserved.
+
+
 ## WAIT fallback actual handoff — 2026-10-21
 
 Parentf08fd70; source checkpoint containing this section makes zero-time WAIT degradation say only stopped, retains actual positive minutes and saved foreground reason. Baseline4fail/1control; initial repair exposed missing original task title in fixture, corrected original-source baseline still4fail/1control. Final6files50pass/build. Actual Core0/1min, one receipt, refusal/content-filter/degraded/replay and ordinaryWAIT controls pass. No Core/schema/extra retry/NPC invention. See docs/wait-interruption-fallback.md. N8.3 explicit withdrawal/restoration net0 to60%=96/160; N8.2 open. Full215files2149pass stays6f4a300. Next: reproduce metadata-only accepted schedule label migration (ID replacing authored label) separately, then fixed four-theme matrices. Original dirt/safety preserved.

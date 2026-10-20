@@ -169,7 +169,7 @@ function normaliseAcceptedCommitments(save:SavePackage){
   const wording=String(entry.time_cost??'').trim();
   task.duration_label=/半天|小时|分钟|天/.test(wording)?wording.slice(0,60):windowDurationLabel[window];
 
-  task.label=cleanLabel(entry,task.id);
+  task.label=cleanLabel(entry,task.label||task.id);
   if(status&&acceptedStatuses.has(status)){task.status='accepted';task.resolved=false;}
   else if(status&&finishedStatuses.has(status)){task.status=status==='cancelled'?'cancelled':'completed';task.resolved=true;}
  }
