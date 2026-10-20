@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：16a5ff7。整体 **60.63%**（97/160 个固定条件满足）。未满足 28，待验证 35。
+计分版本 v1；评估源代码：fa53def。整体 **60.63%**（97/160 个固定条件满足）。未满足 28，待验证 35。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -105,6 +105,7 @@
 | post-corpus-complete-offline-snapshot | repair | R5.4: Refreshed already-met versioned full offline evidence:235files2340pass,547unchanged hashes,exact coverage once;20fresh process exit0;historical native failures retained.；完整条件保持开放 | +0.000 pp |
 | conditional-activity-interruption | repair | A7.3: Conditional HOLD/Freeform actual0/partial/full intervals preserve unfinished activity,skip dependents,retain earlier settled story and real replay.15focused;8files113pass/build;prior2fetchfail report retained. Full condition open.；完整条件保持开放; N3.3: Conditional HOLD/Freeform actual0/partial/full intervals preserve unfinished activity,skip dependents,retain earlier settled story and real replay.15focused;8files113pass/build;prior2fetchfail report retained. Full condition open.；完整条件保持开放 | +0.000 pp |
 | long-hold-interruption | repair | A7.3: Short Core HOLD interruption fact survives long-label truncation;actual0/1minute goals unfinished/dependents skipped,grounded prose;first/replay notice consistency repaired. Baseline4fail2controls,expanded2noticefail retained;final8files94pass/build,2actual disk/service exact-response replays. Full matrix open.；完整条件保持开放; N3.3: Short Core HOLD interruption fact survives long-label truncation;actual0/1minute goals unfinished/dependents skipped,grounded prose;first/replay notice consistency repaired. Baseline4fail2controls,expanded2noticefail retained;final8files94pass/build,2actual disk/service exact-response replays. Full matrix open.；完整条件保持开放; N8.2: Short Core HOLD interruption fact survives long-label truncation;actual0/1minute goals unfinished/dependents skipped,grounded prose;first/replay notice consistency repaired. Baseline4fail2controls,expanded2noticefail retained;final8files94pass/build,2actual disk/service exact-response replays. Full matrix open.；完整条件保持开放 | +0.000 pp |
+| conditional-wait-interruption | repair | A7.3: Core explicit WAIT actual interruption fact keeps conditional duration incomplete and dependent skipped,actual-time grounded prose;baseline2fail2controls,final8files87pass/build,2actual HTTP/disk/service exact-response replays. Existing handoff already prevented real dependent TALK;full matrix open.；完整条件保持开放; N3.3: Core explicit WAIT actual interruption fact keeps conditional duration incomplete and dependent skipped,actual-time grounded prose;baseline2fail2controls,final8files87pass/build,2actual HTTP/disk/service exact-response replays. Existing handoff already prevented real dependent TALK;full matrix open.；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "16a5ff7",
+  "assessed_source": "fa53def",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -2898,6 +2898,30 @@
           "evidence": [
             "tests/long-hold-interruption.test.ts",
             "docs/long-hold-interruption.md"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "conditional-wait-interruption",
+      "type": "repair",
+      "source": "fa53def",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "A7.3",
+          "result": "Core explicit WAIT actual interruption fact keeps conditional duration incomplete and dependent skipped,actual-time grounded prose;baseline2fail2controls,final8files87pass/build,2actual HTTP/disk/service exact-response replays. Existing handoff already prevented real dependent TALK;full matrix open.",
+          "evidence": [
+            "tests/conditional-wait-interruption.test.ts",
+            "docs/conditional-wait-interruption.md"
+          ]
+        },
+        {
+          "id": "N3.3",
+          "result": "Core explicit WAIT actual interruption fact keeps conditional duration incomplete and dependent skipped,actual-time grounded prose;baseline2fail2controls,final8files87pass/build,2actual HTTP/disk/service exact-response replays. Existing handoff already prevented real dependent TALK;full matrix open.",
+          "evidence": [
+            "tests/conditional-wait-interruption.test.ts",
+            "docs/conditional-wait-interruption.md"
           ]
         }
       ]
