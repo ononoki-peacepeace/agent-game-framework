@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "b21b28d",
+  "assessed_source": "57e804a",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -2730,6 +2730,32 @@
             "docs/multi-world-language-corpus.v1.json",
             "tests/multi-world-language-corpus.test.ts",
             "docs/multi-world-language-corpus.md"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "generic-activity-degraded-prose",
+      "type": "repair",
+      "source": "57e804a",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "N8.2",
+          "result": "Exact Core activity interval prose and ordered children repaired;6files67pass;fixed corpus23pass2fail retains conditional trade/appointment gaps;full condition open",
+          "evidence": [
+            "tests/generic-activity-fallback.test.ts",
+            "docs/generic-activity-fallback.md",
+            "tests/multi-world-language-corpus.test.ts"
+          ]
+        },
+        {
+          "id": "N3.3",
+          "result": "Exact Core activity interval prose and ordered children repaired;6files67pass;fixed corpus23pass2fail retains conditional trade/appointment gaps;full condition open",
+          "evidence": [
+            "tests/generic-activity-fallback.test.ts",
+            "docs/generic-activity-fallback.md",
+            "tests/multi-world-language-corpus.test.ts"
           ]
         }
       ]

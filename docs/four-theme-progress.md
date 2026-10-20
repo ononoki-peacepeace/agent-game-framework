@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：b21b28d。整体 **60.63%**（97/160 个固定条件满足）。未满足 28，待验证 35。
+计分版本 v1；评估源代码：57e804a。整体 **60.63%**（97/160 个固定条件满足）。未满足 28，待验证 35。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -99,6 +99,7 @@
 | legacy-policy-offline-activation | repair | W9.3: unverified → met | +0.625 pp |
 | hold-activity-degraded-prose | repair | N8.2: HOLD actual0/partial/full intervals and handoff prose repaired;full naturalness/failed-unexecuted matrix remains open；完整条件保持开放; N3.3: HOLD actual0/partial/full intervals and handoff prose repaired;full naturalness/failed-unexecuted matrix remains open；完整条件保持开放 | +0.000 pp |
 | fixed-multi-world-corpus-first-execution | evidence_correction | A9.3: All24 fixed inputs executed with controlled offline candidates:21pass/4fail including corpus-integrity case;three product gaps retained;whole broad corpus/independent acceptance stays open；完整条件保持开放 | +0.000 pp |
+| generic-activity-degraded-prose | repair | N8.2: Exact Core activity interval prose and ordered children repaired;6files67pass;fixed corpus23pass2fail retains conditional trade/appointment gaps;full condition open；完整条件保持开放; N3.3: Exact Core activity interval prose and ordered children repaired;6files67pass;fixed corpus23pass2fail retains conditional trade/appointment gaps;full condition open；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
