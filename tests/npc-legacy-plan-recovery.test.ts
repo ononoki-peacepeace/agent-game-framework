@@ -51,7 +51,9 @@ it.each(['conditional','arrived','different-origin','ended'] as const)('does not
  if(mode==='arrived')save.entities.find(e=>e.id==='npc_lin')!.components.location={location_id:'market'};
  if(mode==='different-origin')save.entities.find(e=>e.id==='npc_lin')!.components.location={location_id:'station'};
  if(mode==='ended')save.npc_agent_state!.npc_lin.goals.at(-1)!.status='abandoned';
- expect(buildNpcAgentContext(validateSave(save),'npc_lin',{kind:'world_event',description:'核对本人安排'}).plan_recovery).toEqual([]);
+ const recovery=buildNpcAgentContext(validateSave(save),'npc_lin',{kind:'world_event',description:'核对本人安排'}).plan_recovery;
+ if(mode==='conditional')expect(recovery).toMatchObject([{blocked_reason:'condition_pending'}]);
+ else expect(recovery).toEqual([]);
 });
 it.each([false,true])('uses the same known-route boundary as the legacy executor (known=%s)',known=>{
  const save=fixture(false);save.definition.map!.locations.find(p=>p.id==='market')!.known_by_default=false;

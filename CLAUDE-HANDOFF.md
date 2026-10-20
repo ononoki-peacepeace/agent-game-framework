@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Conditional plan owner context — 2026-10-20
+
+Parent `c331d46`; source checkpoint containing this section keeps modern/legacy conditional plans and long goals in the bounded recovery context with original condition diagnostic. No automatic confirmation: owner may keep waiting or explicitly replace method; Core still refuses unresolved plans. Baseline4fail; final9files80pass plus final6case condition file (overlap), complete isolated build in SESSION. See docs/npc-conditional-plan-context.md. No schema/Core/budget change. W5.3/W5.4 remain open;60%=96/160,+0. Full1992pass remains29e6a5f. Next: continue new fact/relationship/repeated-failure adjustment matrices, then broad reliability/NL/Narrator gaps. Original dirt/safety preserved.
+
 ## Legacy blocked-route context — 2026-10-20
 
 Parent `208e5a8`; source checkpoint containing this section prioritizes valid legacy route-blocked travel plans with their owned goals in bounded recovery context. Current map/public-known-route prerequisites only, no fictional failed receipt, schema/Core/time/call-budget change. Corrected lawful baseline2fail/1control; final9files78pass and complete isolated build in SESSION. Actual owner replacement settles one HOLD, long goal persists; conditional/arrival/changed-origin/ended/known-route controls pass. See docs/npc-legacy-plan-recovery.md. Earlier speculative dual-plan time fixtures were invalid under existing Save invariant; allocation edit reversed, failures retained and progress claim corrected. W5.3 remains open,60%=96/160,+0. Full1992pass remains29e6a5f before this edit. Next: adaptive-plan condition/location/relationship facts and remaining fixed matrices. Original dirt/safety preserved.

@@ -102,7 +102,8 @@ export function buildNpcAgentContext(save:SavePackage,npcId:string,event:NpcAgen
     return !routePath(map.routes.filter(route=>publicIds.has(route.from)&&publicIds.has(route.to)&&
       route.conditions.every(condition=>save.gm_state.flags[condition.flag]===condition.equals)),locationId,activity.destination_id)?.length;
   };
-  const recoveryPlans=activePlans.filter(plan=>(plan.execution&&
+  const pendingCondition=(plan:NpcAgentState['plans'][number])=>plan.execution?.condition??plan.activity?.condition;
+  const recoveryPlans=activePlans.filter(plan=>Boolean(pendingCondition(plan))||(plan.execution&&
     ['core_rejected','route_unavailable','listener_not_present'].includes(plan.execution.blocked_reason??''))||legacyRouteBlocked(plan)).slice(0,2);
   const recoveryIds=new Set(recoveryPlans.map(plan=>plan.id));
   const projectedPlans=[...recoveryPlans,...activePlans.filter(plan=>!recoveryIds.has(plan.id))].slice(0,12);
@@ -152,9 +153,9 @@ export function buildNpcAgentContext(save:SavePackage,npcId:string,event:NpcAgen
     plan_recovery:recoveryPlans.map(plan=>({plan_id:plan.id,goal_id:plan.goal_id,intention:plan.intention,
         failed_step:plan.execution?plan.execution.steps[plan.execution.cursor]??null:{type:'MOVE' as const,
           target_id:plan.activity!.destination_id,description:plan.intention,duration_minutes:null,speech:null},cursor:plan.execution?.cursor??0,
-        last_receipt_id:plan.execution?.last_receipt_id??null,blocked_reason:plan.execution?.blocked_reason??'route_unavailable',
-        diagnostic:plan.execution?.failure_diagnostic??(plan.activity?'当前地点到旧式计划目的地没有符合权威地图条件的公开可达路线':null),
-        instruction:'原计划已完成的步骤有权威凭据，不得重做；若当前世界允许修正，明确放弃旧计划并用新 ID 提出可执行替代步骤。'})),
+        last_receipt_id:plan.execution?.last_receipt_id??null,blocked_reason:pendingCondition(plan)?'condition_pending':plan.execution?.blocked_reason??'route_unavailable',
+        diagnostic:pendingCondition(plan)?`尚待本人核对的前提：${pendingCondition(plan)}`:plan.execution?.failure_diagnostic??(plan.activity?'当前地点到旧式计划目的地没有符合权威地图条件的公开可达路线':null),
+        instruction:'原计划已完成的步骤有权威凭据，不得重做；待确认的条件不会因时间经过自动成立，须本人依据已知事实判断。若当前世界允许修正，明确放弃旧计划并用新 ID 提出可执行替代步骤。'})),
     objective_ids:{goals:state.goals.map(goal=>goal.id),plans:state.plans.map(plan=>plan.id)},
     private_facts:state.private_facts.slice(-20),
     relationships:npc.components.relationships?.entries??{},
