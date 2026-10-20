@@ -1,0 +1,9 @@
+# A remote routine activity requires a usable route
+
+Parent `4754b83`, product `6f4a300`. The scheduler's path finder returned an empty path when no route passed world conditions/knowledge filtering. The caller interprets an empty path as already local, so it could execute declared work at station while the player stayed at square, paying wages without arrival.
+
+The corrected baseline is 2 failures and 1 legal same-location control. The first unknown-location fixture was invalid: map validation reseeded default-known places. Its failed initial/fix reports remain retained. The fixture now explicitly marks other places unknown and only declares outward routes; restoring the original product branch before rerunning established the corrected baseline. The closed-route counterexample independently reproduced throughout.
+
+The one-line repair removes the empty-route shortcut. A genuinely same-location activity still returns its legal empty path before route filtering. A remote destination with no path now uses the existing unreachable-route stop. No route, travel, location, payment, Core rule or public interface is invented or changed. Tests cover closed and undiscovered routes, legal local sleep, and two actual GameService/JsonStore refusal cases preserving time, wages, position, original current.json bytes and the same state after a new service, with zero generation.
+
+Final targeted regression/build evidence is recorded in the source checkpoint handoff and SESSION. Raw baseline/final reports are under `.codex-checkpoints/framework-reliability-handoff/takeover-2026-10-20/routine-unreachable-*`; the read-only preflight and source hash were recorded before modification. W4.3 remains open, net zero score at 60% (96/160). Latest complete audited 215-file/2149-pass coverage belongs to preceding `6f4a300`, not this later source change. Formal save, frozen definitions, original dirt and production/paid-provider boundaries remain preserved.

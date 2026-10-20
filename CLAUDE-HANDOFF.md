@@ -1,5 +1,10 @@
 # Claude Code starting handoff
 
+## Remote routine usable route prerequisite — 2026-10-21
+
+Parent4754b83; source checkpoint containing this section removes the zero-usable-route shortcut that let remote work execute without arrival. Corrected baseline2fail/1local control; original unknown fixture was default-known after validation, retained and corrected before original-source rerun. Final targeted count/build in SESSION; actual GameService/JsonStore refusals leave time/wage/position and file bytes unchanged across restart, zero generation. No schema/Core/public interface change. See docs/routine-unreachable-location.md. W4.3 remains open;60%=96/160,+0. Full215files2149pass stays preceding6f4a300 with native-failed initial attempt preserved. Next: broader natural-language/Narrator fixed matrices and explicit world-blocked feedback. Original dirt/safety preserved.
+
+
 ## Post-routine complete offline coverage — 2026-10-21
 
 Product6f4a300/ledger52c96ad:215files2149/2149pass,524pinned hashes unchanged, exact final coverage once, identical-source full build passed. Initial16shard attempt failed natively0xC0000409 at10 (preserved);15passed shard reports +14fresh individual-file reports provide29-process audited coverage. Do not claim initial attempt all-pass or native cause fixed. Original QA/27frozen/formal SHA match. See docs/post-routine-offline-snapshot.md. R5.4 existing evidence refresh only;60%=96/160,+0. No source WIP/active tests. Next: reproduce remote routine zero-route hypothesis from ignored routine-unreachable-preflight.json, then four-theme matrices. Original dirt/safety preserved.

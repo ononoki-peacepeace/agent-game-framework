@@ -16,7 +16,6 @@ function wait(s:SavePackage,minutes:number,rng:RNG){if(!minutes)return s;const o
 function pathTo(s:SavePackage,target:string){
  const start=String(s.entities.find(e=>e.id===s.player_state.entity_id)!.components.location.location_id);if(start===target)return [];
  const routes=[...(s.definition.map?.routes??[]),...s.map_state.dynamic_routes].filter(r=>r.conditions.every(c=>s.gm_state.flags[c.flag]===c.equals)&&s.map_state.known_location_ids.includes(r.to));
- if(!routes.length)return [];
  const queue=[{id:start,path:[] as typeof routes,cost:0}],visited=new Set<string>();
  while(queue.length){queue.sort((a,b)=>a.cost-b.cost);const n=queue.shift()!;if(n.id===target)return n.path;if(visited.has(n.id))continue;visited.add(n.id);for(const r of routes.filter(r=>r.from===n.id))queue.push({id:r.to,path:[...n.path,r],cost:n.cost+r.travel_minutes});}
  throw Error('日程目的地没有可通行的已知路线，请手动处理');
