@@ -274,7 +274,7 @@ export function executeFreeform(current: SavePackage, input: string, raw: unknow
     const hash=createHash('sha256').update(`${requestId}:attempt:${index}`).digest('hex');
     const child=`${hash.slice(0,8)}-${hash.slice(8,12)}-4${hash.slice(13,16)}-a${hash.slice(17,20)}-${hash.slice(20,32)}`;
     const seconds=Math.min(interval,requested-elapsed);
-    try{last=executeFreeformAttempt(candidate,input,{...proposal,repetition:null},child,rng,perceptionAuthorized,seconds,binding);}
+    try{last=executeFreeformAttempt(candidate,input,{...proposal,repetition:null},child,rng,perceptionAuthorized,seconds,binding,undefined,false);}
     catch(error){if(last&&error instanceof WorldBlockedError){stopped='interrupted';break;}throw error;}
     candidate=last.save;elapsed+=seconds;ids.push(child);
     const receipt=candidate.resolution_receipts!.find(entry=>entry.request_id===child)!;receipts.push(receipt);
@@ -315,9 +315,12 @@ export function executeFreeform(current: SavePackage, input: string, raw: unknow
       margin:candidate.resolution_history?.find(record=>record.check_id===receipt.check_id)?.stage_results?.at(-1)?.margin??0})),
     hidden:aggregateCheck.visibility==='hidden'}].slice(-200);
   last.action.id=requestId;last.action.time_cost=totalMinutes;last.facts=aggregate.canonical_facts;
+  // The attempts are one authorized request. Fold contact/harm first, then apply
+  // one bounded social consequence rather than multiplying it by the roll count.
+  last.save=settleRelationshipOutcomes(candidate,last.action,last.registry);
   return last;
 }
-function executeFreeformAttempt(current: SavePackage, input: string, raw: unknown, requestId: string,rng:RNG,perceptionAuthorized:boolean,seconds?:number,binding?:{target_ids:readonly string[];physical_intent?:GoalSpec['physical_intent']},localAssessment?:EnvironmentAssessment) {
+function executeFreeformAttempt(current: SavePackage, input: string, raw: unknown, requestId: string,rng:RNG,perceptionAuthorized:boolean,seconds?:number,binding?:{target_ids:readonly string[];physical_intent?:GoalSpec['physical_intent']},localAssessment?:EnvironmentAssessment,settleRelations=true) {
   const proposal = parseFreeformProposal(raw,input), view = publicView(current);
   if(proposal.blocker?.type==='PREREQUISITE_FAILURE')throw new WorldBlockedError('prerequisite',proposal.blocker.reason);
   if(proposal.blocker)throw new GameError(proposal.blocker.type==='USER_AMBIGUITY'?proposal.blocker.reason:
@@ -688,6 +691,6 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
     at:structuredClone(turn.save.runtime.time),commit_status:'pending' as const,
   }].slice(-200);
   turn.save.last_turn = { narrative:turn.facts.join(' '), speaker: null, dialogue: null, choices: [], context_actions: [] };
-  turn.save=settleRelationshipOutcomes(turn.save,turn.action,turn.registry);
+  if(settleRelations)turn.save=settleRelationshipOutcomes(turn.save,turn.action,turn.registry);
   return turn;
 }

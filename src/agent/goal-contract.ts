@@ -85,6 +85,13 @@ function talkPerson(view:PublicView,goal:AtomicGoal,source:GoalSource){
     const name=String(entity.components.identity?.name??'');
     return name.length>=2&&source.text.includes(name);
   });
+  // In a compound request the stage may name one of several authorized people.
+  // Use that stage's own name before treating the whole sentence as ambiguous;
+  // an invented name that exists only in a model paraphrase grants no authority.
+  if(explicit.length>1){
+    const staged=explicit.filter(entity=>goal.normalized_goal.includes(String(entity.components.identity?.name??'')));
+    if(staged.length===1)return bind(view,'person',String(staged[0].components.identity?.name));
+  }
   if(explicit.length>1)return {role:'person',mention:source.text.slice(0,120),entity_id:null,status:'ambiguous'} as const;
   if(explicit.length===1)return bind(view,'person',String(explicit[0].components.identity?.name));
   const focus=people.find(entity=>entity.id===view.interaction_context?.target_entity_id&&
