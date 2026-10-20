@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：fa53def。整体 **60.63%**（97/160 个固定条件满足）。未满足 28，待验证 35。
+计分版本 v1；评估源代码：396d1be。整体 **60.63%**（97/160 个固定条件满足）。未满足 28，待验证 35。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -107,6 +107,7 @@
 | long-hold-interruption | repair | A7.3: Short Core HOLD interruption fact survives long-label truncation;actual0/1minute goals unfinished/dependents skipped,grounded prose;first/replay notice consistency repaired. Baseline4fail2controls,expanded2noticefail retained;final8files94pass/build,2actual disk/service exact-response replays. Full matrix open.；完整条件保持开放; N3.3: Short Core HOLD interruption fact survives long-label truncation;actual0/1minute goals unfinished/dependents skipped,grounded prose;first/replay notice consistency repaired. Baseline4fail2controls,expanded2noticefail retained;final8files94pass/build,2actual disk/service exact-response replays. Full matrix open.；完整条件保持开放; N8.2: Short Core HOLD interruption fact survives long-label truncation;actual0/1minute goals unfinished/dependents skipped,grounded prose;first/replay notice consistency repaired. Baseline4fail2controls,expanded2noticefail retained;final8files94pass/build,2actual disk/service exact-response replays. Full matrix open.；完整条件保持开放 | +0.000 pp |
 | conditional-wait-interruption | repair | A7.3: Core explicit WAIT actual interruption fact keeps conditional duration incomplete and dependent skipped,actual-time grounded prose;baseline2fail2controls,final8files87pass/build,2actual HTTP/disk/service exact-response replays. Existing handoff already prevented real dependent TALK;full matrix open.；完整条件保持开放; N3.3: Core explicit WAIT actual interruption fact keeps conditional duration incomplete and dependent skipped,actual-time grounded prose;baseline2fail2controls,final8files87pass/build,2actual HTTP/disk/service exact-response replays. Existing handoff already prevented real dependent TALK;full matrix open.；完整条件保持开放 | +0.000 pp |
 | post-wait-complete-offline-snapshot | repair | R5.4: Refresh already-met full offline evidence:238files2371pass/zero skip,550unchanged hashes,exact coverage once;20fresh isolated process exit0,build61704 passed. Historical failures and separate real R9.3 two-service preflight failure retained.；完整条件保持开放 | +0.000 pp |
+| migration-two-service | repair | R9.3: Same-process same-path JsonStore migration guarded against other instances canonical/media/same-revision writes;full-image compare,entry snapshots,3conflict safe stop/fault recovery. Formal2fail6controls,queued8pass1fail retained;final7files57pass/build. Cross-process half of full condition remains open.；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -186,7 +187,7 @@
 |---|---|---|---|
 | R9.1 | 空闲 current/view 迁移在现有锁内重读后写 | 满足 | [p0a-migration-read-races.test.ts](../tests/p0a-migration-read-races.test.ts) |
 | R9.2 | 父请求准备失败不先迁移，媒体交叉不覆盖新凭据 | 满足 | [p0a-migration-read-races.test.ts](../tests/p0a-migration-read-races.test.ts) |
-| R9.3 | 多个服务实例或进程读迁移竞争不覆盖新提交 | 未满足 | [p0a-migration-read-races.test.ts](../tests/p0a-migration-read-races.test.ts) |
+| R9.3 | 多个服务实例或进程读迁移竞争不覆盖新提交 | 未满足 | [p0a-migration-read-races.test.ts](../tests/p0a-migration-read-races.test.ts), [migration-two-service.test.ts](../tests/migration-two-service.test.ts), [migration-two-service.md](../docs/migration-two-service.md) |
 | R9.4 | 进程强杀及外部替换时迁移结果和错误分类可验证 | 待验证 | [p0a-migration-read-races.test.ts](../tests/p0a-migration-read-races.test.ts) |
 
 ## R10 World/global/session behavior-guidance cross-store removal/replay acceptance

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "fa53def",
+  "assessed_source": "396d1be",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -274,9 +274,11 @@
     "R9.3": {
       "status": "unmet",
       "evidence": [
-        "tests/p0a-migration-read-races.test.ts"
+        "tests/p0a-migration-read-races.test.ts",
+        "tests/migration-two-service.test.ts",
+        "docs/migration-two-service.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 396d1be: same-process same-path JsonStore migration full-image compare/current-write coordination prevents canonical/media/same-revision loss;formal2fail6controls,final7files57pass/build,queued-snapshot failure retained/repaired. Independent processes,external writers,aliases and OS boundaries remain open."
     },
     "R9.4": {
       "status": "unverified",
@@ -2937,6 +2939,22 @@
           "result": "Refresh already-met full offline evidence:238files2371pass/zero skip,550unchanged hashes,exact coverage once;20fresh isolated process exit0,build61704 passed. Historical failures and separate real R9.3 two-service preflight failure retained.",
           "evidence": [
             "docs/post-wait-offline-snapshot.md"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "migration-two-service",
+      "type": "repair",
+      "source": "396d1be",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R9.3",
+          "result": "Same-process same-path JsonStore migration guarded against other instances canonical/media/same-revision writes;full-image compare,entry snapshots,3conflict safe stop/fault recovery. Formal2fail6controls,queued8pass1fail retained;final7files57pass/build. Cross-process half of full condition remains open.",
+          "evidence": [
+            "tests/migration-two-service.test.ts",
+            "docs/migration-two-service.md"
           ]
         }
       ]
