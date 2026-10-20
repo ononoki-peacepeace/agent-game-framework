@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "3929878",
+  "assessed_source": "e61e7fd",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -934,11 +934,13 @@
       "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
     },
     "W10.1": {
-      "status": "unmet",
+      "status": "met",
       "evidence": [
-        "docs/four-theme-acceptance-status.md"
+        "docs/fixed-world72-evidence.md",
+        "docs/fixed-world72-scenarios.v1.json",
+        "tests/fixed-world72.test.ts"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Checkpointe61e7fd, unchanged product19c8108: fixed trade/map, authored three-NPC relations and calendar/routine/background structures,72h each, declared hourly invariants/daily12h replay/12-36-60h disk recreation and failure standards.3integrationcases pass/zero skip;216h total,9fresh storage/runtime/service recreations,193actualNPCreceipts,zero real provider calls.556pinned inputs/27frozen/formalSHA/originalQA audit pass;build91914 exit0. Invalid initial fixtures and deliberately stopped incomplete run retained. Establishes W10.1 artifacts and baseline only; full adaptive/body/perception/causal/prose/multiplayer acceptance remains open."
     },
     "W10.2": {
       "status": "unmet",
@@ -3300,6 +3302,75 @@
             "docs/fetchable-loopback-fixture.md",
             "tests/fetchable-listener.test.ts",
             "tests/environment-gap-http.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "fixed-three-structure72h-scenarios",
+      "type": "repair",
+      "source": "e61e7fd",
+      "transitions": [
+        {
+          "id": "W10.1",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "docs/fixed-world72-evidence.md",
+            "docs/fixed-world72-scenarios.v1.json",
+            "tests/fixed-world72.test.ts"
+          ],
+          "reason": "Runnable fixed three-structure72h scenarios and explicit failure standards now exist, verified through actual offline service/storage/restart/replay; only this artifact condition closes."
+        }
+      ],
+      "condition_checks": [
+        {
+          "id": "W10.3",
+          "result": "Sequential storage/runtime/service recreation is covered; shared multiplayer authority/competition/reconnection and independent acceptance are not established.",
+          "evidence": [
+            "docs/fixed-world72-evidence.md"
+          ]
+        },
+        {
+          "id": "W4.4",
+          "result": "Fixed72h baseline exists; the original complete adaptive/body/perception/social/causal/prose matrix is not replaced by these cases.",
+          "evidence": [
+            "docs/fixed-world72-evidence.md"
+          ]
+        },
+        {
+          "id": "W5.4",
+          "result": "Fixed72h baseline exists; the original complete adaptive/body/perception/social/causal/prose matrix is not replaced by these cases.",
+          "evidence": [
+            "docs/fixed-world72-evidence.md"
+          ]
+        },
+        {
+          "id": "W6.4",
+          "result": "Fixed72h baseline exists; the original complete adaptive/body/perception/social/causal/prose matrix is not replaced by these cases.",
+          "evidence": [
+            "docs/fixed-world72-evidence.md"
+          ]
+        },
+        {
+          "id": "W7.4",
+          "result": "Fixed72h baseline exists; the original complete adaptive/body/perception/social/causal/prose matrix is not replaced by these cases.",
+          "evidence": [
+            "docs/fixed-world72-evidence.md"
+          ]
+        },
+        {
+          "id": "W8.4",
+          "result": "Fixed72h baseline exists; the original complete adaptive/body/perception/social/causal/prose matrix is not replaced by these cases.",
+          "evidence": [
+            "docs/fixed-world72-evidence.md"
+          ]
+        },
+        {
+          "id": "N7.4",
+          "result": "Fixed72h baseline exists; the original complete adaptive/body/perception/social/causal/prose matrix is not replaced by these cases.",
+          "evidence": [
+            "docs/fixed-world72-evidence.md"
           ]
         }
       ]
