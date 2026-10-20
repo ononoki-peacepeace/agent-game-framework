@@ -1,5 +1,10 @@
 # Claude Code starting handoff
 
+## Unreadable recovery/finalizer state — 2026-10-20
+
+Parent `638dfe1`; source checkpoint containing this section makes staged-plan recovery/final read failures return uncertain engine outcomes with known prefix evidence and no stale view. A successfully recovered snapshot remains available if final refresh fails; unreadable recovery stops even later independent actions. Initial2fail; final8files61pass/build in SESSION. Expanded60/61 was a fixture topological-order error, corrected and retained, not a product failure. No new world/model retry or public interface. See docs/plan-unreadable-state.md. R5.3 still open;60%=96/160,+0; full1992pass remains29e6a5f. Next: other nested error exits and fixed Narrator/NL matrices; original dirt/safety preserved.
+
+
 ## Between-step handoff failure boundary — 2026-10-20
 
 Parent `6348a5d`; source checkpoint containing this section moves handoff inspection after dependency/branch authorization and inside the step failure boundary. Baseline3fail/1control; final7distinctfiles57pass. Real memory/disk read faults preserve WAIT receipt/story; explicit refreshed-revision continuation after service rebuild only executes remainder. Actual player decision remains game pause. One nonexistent optional filename excluded from counts. Complete isolated build in SESSION. See docs/plan-handoff-failure.md. R5.3/A7.3 still open;60%=96/160,+0; full1992pass remains29e6a5f before latest changes. Persistent storage/finalizer exits and other fixed matrices remain. Original dirt/safety preserved.

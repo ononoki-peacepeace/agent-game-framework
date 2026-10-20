@@ -361,7 +361,7 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
     plan_id:body.request_id,plan,view:service.project(save)});
  }
  const initialTime=save.runtime.time.day*save.definition.ruleset.minutes_per_day+save.runtime.time.minute;
- const initialSave=save;
+ const initialSave=save;let stateReadable=true;
  plan.plan_id=body.request_id;plan.status='running';let clarification:string|null=null,awarenessStatus:AgentResult['awareness_status'];let stepOutcome:AgentResult['outcome']|null=null;const ui:UIAction[]=[],changes:string[]=[],calls:AgentResult['tool_calls']=[],futures:FutureIntent[]=[];
  for(const id of plan.execution_order){const goal=plan.goals.find(g=>g.goal_id===id)!;
   const compoundWorldGoals=plan.goals.filter(goal=>goal.side_effect_level==='world');
@@ -469,13 +469,27 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
   }catch(error){const detail=(error as Error).message;service.logger.warn('agent.goal.failed',{module:'agent',metadata:{detail,goal:goal.goal_id,reason:failureReason(error)}});
    if(error instanceof WorldBlockedError){goal.status='blocked';goal.result={summary:error.message};stepOutcome=gameOutcome('blocked_by_world','plan_step',save.state_revision,changes);
      calls.push({tool_id:goal.type,ok:false});break;}
-   stepOutcome=executionFailure(error,stepStage,await service.current(),save);goal.status='failed';goal.result={summary:failureReason(error)!=='unknown'?
+   let refreshed:SavePackage|undefined;
+   try{refreshed=await service.current();}catch{
+    stateReadable=false;service.logger.warn('agent.plan.refresh_unavailable',{module:'agent',metadata:{stage:stepStage}});
+   }
+   stepOutcome=refreshed?executionFailure(error,stepStage,refreshed,save):engineOutcome(
+    failureReason(error)!=='unknown'?'provider_failure':'transaction_failure',stepStage,
+    save.state_revision,false,changes,committedSince(initialSave,save));
+   if(refreshed)save=refreshed;
+   goal.status='failed';goal.result={summary:!stateReadable?
+    '当前世界状态暂时无法读取，不能确认这一步的提交情况；请先恢复状态读取。':failureReason(error)!=='unknown'?
     '这次行动的模型响应未完整生成，当前目标尚未完成。请稍后从当前状态重试。':
     /未注册|parameters|schema|Invalid|FREEFORM_ACTION|relationship_delta|ConditionNode|条件必须由独立条件节点|框架校验|状态校验|canonical delta|contract/i.test(detail)?
-      '这次行动没有正常完成，世界状态没有改变，可以安全重试。':displayText(detail,publicView(save).entities,publicView(save).locations)};calls.push({tool_id:goal.type,ok:false});if(goal.side_effect_level==='world'||clarification||plan.local_compound)break;}
+      '这次行动没有正常完成，世界状态没有改变，可以安全重试。':displayText(detail,publicView(save).entities,publicView(save).locations)};calls.push({tool_id:goal.type,ok:false});if(!stateReadable||goal.side_effect_level==='world'||clarification||plan.local_compound)break;}
  }
  for(const goal of plan.goals)if(goal.status==='pending')goal.status='skipped';
- save=await service.current();const delta=save.runtime.time.day*save.definition.ruleset.minutes_per_day+save.runtime.time.minute-initialTime;
+ try{save=await service.current();stateReadable=true;}catch{
+  stateReadable=false;service.logger.warn('agent.plan.refresh_unavailable',{module:'agent',metadata:{stage:'plan_finalize'}});
+  stepOutcome=stepOutcome?.type==='engine_failure'?{...stepOutcome,state_certain:false}:engineOutcome(
+   'transaction_failure','plan_finalize',save.state_revision,false,changes,committedSince(initialSave,save));
+ }
+ const delta=save.runtime.time.day*save.definition.ruleset.minutes_per_day+save.runtime.time.minute-initialTime;
  plan.status=plan.goals.some(g=>g.status==='failed'||g.status==='unresolved'||g.status==='blocked')?(plan.local_compound?'blocked':'partial'):'completed';
  const results=plan.goals.map(g=>({goal_id:g.goal_id,summary:g.result?.summary??'',related_entity:g.target_entities[0]??null,status:g.status}));
  const summaries=[...new Set(results.filter(r=>r.status!=='skipped').map(r=>r.summary).filter(Boolean))];
@@ -509,7 +523,8 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
    presentation:finalOutcome.type==='engine_failure'?'failure':committedNarrative?'story':'assistant',clarification,
    ...(committedNarrative?{story:committedNarrative}:{}),
    ...(awarenessStatus?{awareness_status:awarenessStatus}:{}),plan_id:plan.plan_id,plan,results,future_intents:futures,
-   ui_actions:storyOnly?[]:oneNavigation(ui),canonical_changes:changes,tool_calls:calls,time_advanced:delta,view:publicView(save)});
+   ui_actions:storyOnly?[]:oneNavigation(ui),canonical_changes:changes,tool_calls:calls,time_advanced:delta,
+   ...(stateReadable?{view:publicView(save)}:{})});
 }
 const requests=new WeakMap<GameService,Map<string,{input:string;result:Promise<AgentResult>}>>();
 export async function handleAgentInput(service:GameService,body:PlanRequest,startRoutine?:(body:any)=>Promise<any>,
