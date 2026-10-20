@@ -98,6 +98,7 @@
 | sealed-equipment-access | repair | A8.3: EQUIP sealed source/nested access repaired with player/NPC/exterior controls;full dynamic item/multi-world matrix remains open；完整条件保持开放; N6.3: EQUIP sealed source/nested access repaired with player/NPC/exterior controls;full dynamic item/multi-world matrix remains open；完整条件保持开放 | +0.000 pp |
 | legacy-policy-offline-activation | repair | W9.3: unverified → met | +0.625 pp |
 | hold-activity-degraded-prose | repair | N8.2: HOLD actual0/partial/full intervals and handoff prose repaired;full naturalness/failed-unexecuted matrix remains open；完整条件保持开放; N3.3: HOLD actual0/partial/full intervals and handoff prose repaired;full naturalness/failed-unexecuted matrix remains open；完整条件保持开放 | +0.000 pp |
+| fixed-multi-world-corpus-first-execution | evidence_correction | A9.3: All24 fixed inputs executed with controlled offline candidates:21pass/4fail including corpus-integrity case;three product gaps retained;whole broad corpus/independent acceptance stays open；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -265,10 +266,10 @@
 
 | 条件 | 具体通过条件 | 状态 | 依据 |
 |---|---|---|---|
-| A9.1 | 建立固定且代表性的多世界自然语言验收集及明确期望 | 未满足 | [four-theme-acceptance-status.md](../docs/four-theme-acceptance-status.md) |
-| A9.2 | 覆盖意图、绑定、条件、前提、部分完成与恢复的组合 | 未满足 | [four-theme-acceptance-status.md](../docs/four-theme-acceptance-status.md) |
-| A9.3 | 在当前源代码上运行完整离线语料并保留逐项结果 | 待验证 | [four-theme-acceptance-status.md](../docs/four-theme-acceptance-status.md) |
-| A9.4 | 独立复核遗漏与失败，不能只用历史或挑选样例宣布通过 | 待验证 | [four-theme-acceptance-status.md](../docs/four-theme-acceptance-status.md) |
+| A9.1 | 建立固定且代表性的多世界自然语言验收集及明确期望 | 未满足 | [four-theme-acceptance-status.md](../docs/four-theme-acceptance-status.md), [multi-world-language-corpus.md](../docs/multi-world-language-corpus.md) |
+| A9.2 | 覆盖意图、绑定、条件、前提、部分完成与恢复的组合 | 未满足 | [four-theme-acceptance-status.md](../docs/four-theme-acceptance-status.md), [multi-world-language-corpus.md](../docs/multi-world-language-corpus.md) |
+| A9.3 | 在当前源代码上运行完整离线语料并保留逐项结果 | 待验证 | [four-theme-acceptance-status.md](../docs/four-theme-acceptance-status.md), [multi-world-language-corpus.md](../docs/multi-world-language-corpus.md) |
+| A9.4 | 独立复核遗漏与失败，不能只用历史或挑选样例宣布通过 | 待验证 | [four-theme-acceptance-status.md](../docs/four-theme-acceptance-status.md), [multi-world-language-corpus.md](../docs/multi-world-language-corpus.md) |
 
 ## A10 Current-source real-provider open-action acceptance
 

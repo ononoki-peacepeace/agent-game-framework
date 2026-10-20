@@ -1,3 +1,7 @@
+## Fixed multi-world language corpus first execution — 2026-10-21
+
+Parent7dc3590/productb21b28d. Added24 fixed original inputs across commerce,authored conversation relations,and active NPC/calendar/background continuity. Real HTTP+JsonStore,controlled offline candidates. Corrected baseline21pass/4fail (25 assertions):T07 conditional trade admission,L01/L05 generic activity prose,L08 Freeform appointment overrun. Sandbox24fetch failures and earlier fixture failures retained. Full isolated build/session81616 passed after test JSON typing repairs;two prior typing build failures retained. Added focused generic activity regressions:corrected6fail on existing product (initial invalid compound fixture also retained). No product fix or acceptance closure yet;60.625%=97/160,+0. See docs/multi-world-language-corpus.md. Next:grounded generic activity prose,then conditional trade and appointment boundaries;all original dirt/production/frozen/3100/paid/Claude preserved.
+
 # Claude Code starting handoff
 
 ## Interrupted HOLD degraded prose — 2026-10-21

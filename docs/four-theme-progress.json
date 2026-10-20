@@ -572,28 +572,32 @@
     "A9.1": {
       "status": "unmet",
       "evidence": [
-        "docs/four-theme-acceptance-status.md"
+        "docs/four-theme-acceptance-status.md",
+        "docs/multi-world-language-corpus.md"
       ],
       "basis": "Known remaining implementation or acceptance gap in the existing ledger."
     },
     "A9.2": {
       "status": "unmet",
       "evidence": [
-        "docs/four-theme-acceptance-status.md"
+        "docs/four-theme-acceptance-status.md",
+        "docs/multi-world-language-corpus.md"
       ],
       "basis": "Known remaining implementation or acceptance gap in the existing ledger."
     },
     "A9.3": {
       "status": "unverified",
       "evidence": [
-        "docs/four-theme-acceptance-status.md"
+        "docs/four-theme-acceptance-status.md",
+        "docs/multi-world-language-corpus.md"
       ],
       "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
     },
     "A9.4": {
       "status": "unverified",
       "evidence": [
-        "docs/four-theme-acceptance-status.md"
+        "docs/four-theme-acceptance-status.md",
+        "docs/multi-world-language-corpus.md"
       ],
       "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
     },
@@ -2709,6 +2713,23 @@
           "evidence": [
             "tests/hold-activity-fallback.test.ts",
             "docs/hold-activity-fallback.md"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "fixed-multi-world-corpus-first-execution",
+      "type": "evidence_correction",
+      "source": "b21b28d",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "A9.3",
+          "result": "All24 fixed inputs executed with controlled offline candidates:21pass/4fail including corpus-integrity case;three product gaps retained;whole broad corpus/independent acceptance stays open",
+          "evidence": [
+            "docs/multi-world-language-corpus.v1.json",
+            "tests/multi-world-language-corpus.test.ts",
+            "docs/multi-world-language-corpus.md"
           ]
         }
       ]

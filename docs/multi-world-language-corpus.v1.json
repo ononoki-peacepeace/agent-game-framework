@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "scope": "Offline controlled Semantic/Planner candidates through the real HTTP input gate. This is not real-model language understanding or independent/human acceptance.",
+  "worlds": {
+    "trade": "Town map with real travel costs, finite shop inventory and wallet; no background events.",
+    "relations": "Town conversational public space; commerce disabled; explicit contact familiarity policy; named/topic roles and absent listeners.",
+    "continuity": "Sparse calendar/routine world; scene-authorized NPC departure to market and authored timed background incident with location-bound exposure. Player remains at square."
+  },
+  "cases": [
+    {"id":"T01","world":"trade","boundary":"normal","input":"先去街角商店，再买一份面包","expect":"One MOVE then one BUY; market, one bread, exact price/stock delta."},
+    {"id":"T02","world":"trade","boundary":"ambiguity","input":"先去街角商店，再买点东西","expect":"MOVE may settle; no BUY or arbitrary product selection; incomplete goal visible."},
+    {"id":"T03","world":"trade","boundary":"world_refusal","input":"先去街角商店，再买一份面包","setup":"zero funds","expect":"MOVE retained, no BUY/money/inventory effect; unpaid purchase remains incomplete."},
+    {"id":"T04","world":"trade","boundary":"technical_failure","input":"先去街角商店，再买一份面包","setup":"semantic transport failure","expect":"Technical failure before execution; no world mutation; no world-refusal camouflage."},
+    {"id":"T05","world":"trade","boundary":"restart_replay","input":"先去街角商店，再买一份面包","expect":"Successful result exactly replays after HTTP/service/JsonStore recreation, zero generation and unchanged bytes."},
+    {"id":"T06","world":"trade","boundary":"condition_false","input":"如果林舟在这里，就去街角商店买一份面包","setup":"Lin absent","expect":"False original presence condition prevents both MOVE and BUY."},
+    {"id":"T07","world":"trade","boundary":"condition_true","input":"如果林舟在这里，就去街角商店买一份面包","setup":"Lin present","expect":"Condition authorizes MOVE then BUY with matching Core receipts."},
+    {"id":"T08","world":"trade","boundary":"partial_failure","input":"先去街角商店，再买一份面包","setup":"BUY technical failure after MOVE","expect":"MOVE retained exactly once; no BUY/money/stock delta; technical partial completion exposed and replayable."},
+    {"id":"R01","world":"relations","boundary":"normal","input":"向林舟提起乔宁，问问今晚的安排","expect":"Only Lin receives one TALK; topic Qiao is not substituted; authored contact increment only for actual participants."},
+    {"id":"R02","world":"relations","boundary":"ambiguity","input":"向林舟问好","setup":"two people named Lin","expect":"No arbitrary listener or TALK; ambiguity remains unresolved."},
+    {"id":"R03","world":"relations","boundary":"world_refusal","input":"向林舟问好","setup":"Lin absent","expect":"No remote TALK/contact increment; no movement invented."},
+    {"id":"R04","world":"relations","boundary":"technical_failure","input":"向林舟提起乔宁，问问今晚的安排","setup":"semantic transport failure","expect":"Technical failure with unchanged world, relationships and receipts."},
+    {"id":"R05","world":"relations","boundary":"restart_replay","input":"向林舟提起乔宁，问问今晚的安排","expect":"Exact persisted response; no extra TALK/contact increment or generation after recreation."},
+    {"id":"R06","world":"relations","boundary":"condition_false","input":"如果我和林舟比较熟，就向他问好","setup":"familiarity zero","expect":"No TALK or relationship increment; failed condition is not completion of speech."},
+    {"id":"R07","world":"relations","boundary":"condition_true","input":"如果我和林舟比较熟，就向他问好","setup":"familiarity sixty","expect":"Only Lin receives one TALK and one contact increment."},
+    {"id":"R08","world":"relations","boundary":"partial_failure","input":"先向林舟问好，再向乔宁问好","setup":"Qiao absent","expect":"Lin TALK/contact retained; no Qiao TALK/contact; unfinished second step visible."},
+    {"id":"L01","world":"continuity","boundary":"normal","input":"留在广场整理值班记录十分钟","expect":"Actual HOLD ten minutes; NPC departure settles via Core independently; timed incident resolves without leaking remote notice into prose."},
+    {"id":"L02","world":"continuity","boundary":"ambiguity","input":"去那里整理值班记录","expect":"No guessed destination/time advance; NPC plan and incident do not advance."},
+    {"id":"L03","world":"continuity","boundary":"world_refusal","input":"去河岸车站值班","setup":"no usable route","expect":"No MOVE or time advance, no wage/incident completion; world prerequisite refusal."},
+    {"id":"L04","world":"continuity","boundary":"technical_failure","input":"留在广场整理值班记录十分钟","setup":"semantic transport failure","expect":"No HOLD, NPC travel, background progression or clock mutation."},
+    {"id":"L05","world":"continuity","boundary":"restart_replay","input":"留在广场整理值班记录十分钟","expect":"Same HOLD/NPC/incident result and exact response after recreation; zero generation or bytes changed."},
+    {"id":"L06","world":"continuity","boundary":"condition_false","input":"如果乔宁在这里，就留在广场整理值班记录十分钟","setup":"Qiao absent","expect":"No player activity or offscreen progression when condition false."},
+    {"id":"L07","world":"continuity","boundary":"condition_true","input":"如果乔宁在这里，就留在广场整理值班记录十分钟","setup":"Qiao present","expect":"One actual ten-minute HOLD; independent NPC plan/background progression retained."},
+    {"id":"L08","world":"continuity","boundary":"partial_failure","input":"留在广场整理值班记录十分钟","setup":"accepted appointment due in one minute","expect":"HOLD only one minute; no ten-minute completion; existing appointment exposed and remote incident outcome not invented."}
+  ]
+}
