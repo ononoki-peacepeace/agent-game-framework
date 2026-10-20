@@ -91,8 +91,19 @@ export function buildNpcAgentContext(save:SavePackage,npcId:string,event:NpcAgen
   const activeGoals=state.goals.filter(goal=>goal.status==='active');
   const activeGoalIds=new Set(activeGoals.map(goal=>goal.id));
   const activePlans=state.plans.filter(plan=>plan.status==='active'&&activeGoalIds.has(plan.goal_id));
-  const recoveryPlans=activePlans.filter(plan=>plan.execution&&
-    ['core_rejected','route_unavailable','listener_not_present'].includes(plan.execution.blocked_reason??'')).slice(0,2);
+  const legacyRouteBlocked=(plan:NpcAgentState['plans'][number])=>{
+    const activity=plan.activity;
+    if(!activity||activity.condition||locationId!==activity.origin_location_id||locationId===activity.destination_id)return false;
+    // Match the legacy executor's public-route boundary. This describes the
+    // current map prerequisite; it does not invent a past failed Core receipt.
+    const publicIds=new Set(map.locations.filter(place=>place.known_by_default!==false).map(place=>place.id));
+    for(const id of save.map_state.known_location_ids)publicIds.add(id);
+    publicIds.add(locationId);
+    return !routePath(map.routes.filter(route=>publicIds.has(route.from)&&publicIds.has(route.to)&&
+      route.conditions.every(condition=>save.gm_state.flags[condition.flag]===condition.equals)),locationId,activity.destination_id)?.length;
+  };
+  const recoveryPlans=activePlans.filter(plan=>(plan.execution&&
+    ['core_rejected','route_unavailable','listener_not_present'].includes(plan.execution.blocked_reason??''))||legacyRouteBlocked(plan)).slice(0,2);
   const recoveryIds=new Set(recoveryPlans.map(plan=>plan.id));
   const projectedPlans=[...recoveryPlans,...activePlans.filter(plan=>!recoveryIds.has(plan.id))].slice(0,12);
   const ownedGoalIds=new Set(projectedPlans.map(plan=>plan.goal_id));
@@ -139,9 +150,10 @@ export function buildNpcAgentContext(save:SavePackage,npcId:string,event:NpcAgen
     active_goals:projectedGoals,
     active_plans:projectedPlans,
     plan_recovery:recoveryPlans.map(plan=>({plan_id:plan.id,goal_id:plan.goal_id,intention:plan.intention,
-        failed_step:plan.execution!.steps[plan.execution!.cursor]??null,cursor:plan.execution!.cursor,
-        last_receipt_id:plan.execution!.last_receipt_id??null,blocked_reason:plan.execution!.blocked_reason,
-        diagnostic:plan.execution!.failure_diagnostic??null,
+        failed_step:plan.execution?plan.execution.steps[plan.execution.cursor]??null:{type:'MOVE' as const,
+          target_id:plan.activity!.destination_id,description:plan.intention,duration_minutes:null,speech:null},cursor:plan.execution?.cursor??0,
+        last_receipt_id:plan.execution?.last_receipt_id??null,blocked_reason:plan.execution?.blocked_reason??'route_unavailable',
+        diagnostic:plan.execution?.failure_diagnostic??(plan.activity?'当前地点到旧式计划目的地没有符合权威地图条件的公开可达路线':null),
         instruction:'原计划已完成的步骤有权威凭据，不得重做；若当前世界允许修正，明确放弃旧计划并用新 ID 提出可执行替代步骤。'})),
     objective_ids:{goals:state.goals.map(goal=>goal.id),plans:state.plans.map(plan=>plan.id)},
     private_facts:state.private_facts.slice(-20),

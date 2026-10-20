@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Legacy blocked-route context — 2026-10-20
+
+Parent `208e5a8`; source checkpoint containing this section prioritizes valid legacy route-blocked travel plans with their owned goals in bounded recovery context. Current map/public-known-route prerequisites only, no fictional failed receipt, schema/Core/time/call-budget change. Corrected lawful baseline2fail/1control; final9files78pass and complete isolated build in SESSION. Actual owner replacement settles one HOLD, long goal persists; conditional/arrival/changed-origin/ended/known-route controls pass. See docs/npc-legacy-plan-recovery.md. Earlier speculative dual-plan time fixtures were invalid under existing Save invariant; allocation edit reversed, failures retained and progress claim corrected. W5.3 remains open,60%=96/160,+0. Full1992pass remains29e6a5f before this edit. Next: adaptive-plan condition/location/relationship facts and remaining fixed matrices. Original dirt/safety preserved.
+
 ## Compound reaction disk-pending verification — 2026-10-20
 
 Parent `13be36f`, product remains `29e6a5f`; checkpoint containing this section adds two real JsonStore/new-service recovery cases, no product fix. Witness/repair exhausts budget, final world write fails, persisted seal resumes without extra calls or Core execution, pending clears, replay stays identical. Initial9cases pass; adjacent5files49pass + actual pending file5pass =6distinctfiles54pass. One command named nonexistent optional pending-repair file; counts corrected. Initial build found two test-spy implicit-any parameters, now typed; final build in SESSION. See docs/compound-reaction-disk-recovery.md. R6.3 remains open,60%=96/160,+0. Full1992pass belongs to preceding pinned hashes before these two new cases. Next: remaining fixed reliability/NL/NPC/Narrator matrices; preserve original dirt/safety.
