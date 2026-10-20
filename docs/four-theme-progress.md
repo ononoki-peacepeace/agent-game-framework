@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：0acbb70。整体 **56.88%**（91/160 个固定条件满足）。未满足 31，待验证 38。
+计分版本 v1；评估源代码：21cdca6。整体 **56.88%**（91/160 个固定条件满足）。未满足 31，待验证 38。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -23,6 +23,7 @@
 | baseline-v1 | accounting_baseline | 0（只建立基线） | +0.000 pp |
 | guidance-durable-identity | repair | R10.3: unmet → met | +0.625 pp |
 | conditional-owner | repair | A7.3: 修复条件归属及执行前校验；19个直接用例、相邻140项通过；完整条件保持开放 | +0.000 pp |
+| future-condition-authority | repair | A7.3: 修复未来条件对象与外层条件持久化；11个直接用例、相邻165项通过；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 

@@ -37,7 +37,7 @@ Do not reuse the historical 46% as a current estimate. The first reproducible co
 | A4 | General intent understanding and original-goal completion | Partial | semantic/alignment/completion tests; broad real-language acceptance open |
 | A5 | NPC/item/place/scene-object binding across worlds | Partial | source-owned speech recipients now precede a wrong Planner referent; actual TALK/dependency tests pass; wide-world coverage open |
 | A6 | Pronouns and contextual references | Partial | conversation focus/real ambiguity and named-topic roles protected against Planner guesses; 144-test contract/Semantic/scene regression passes; arbitrary sentence-level coreference open |
-| A7 | Composite/conditional goals and partial completion | Partial | dependency/conditional tests; broad mixed clauses and dynamic intent open |
+| A7 | Composite/conditional goals and partial completion | Partial | 0acbb70 checks branch ownership before effects; 21cdca6 retains deferred outer guards and checks original condition entities, including legacy saves; broad mixed clauses, dynamic intent and full corpus remain open |
 | A8 | Freeform physical interaction and dynamic body/distance/environment prerequisites | Partial | physical/environment capability tests; open interaction breadth remains |
 | A9 | Broad multi-world natural-language acceptance corpus | Unfinished | no complete representative corpus acceptance |
 | A10 | Current-source real-provider open-action acceptance | Unfinished | requires explicit paid-call authorization; old model evidence is historical |

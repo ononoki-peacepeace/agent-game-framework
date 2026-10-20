@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "0acbb70",
+  "assessed_source": "21cdca6",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -1189,6 +1189,23 @@
         }
       ],
       "note": "Original-scope finding resolved; deferred guards and broad mixed/dynamic intent remain open. Score delta0."
+    },
+    {
+      "batch": "future-condition-authority",
+      "type": "repair",
+      "source": "21cdca6",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "A7.3",
+          "result": "修复未来条件对象与外层条件持久化；11个直接用例、相邻165项通过",
+          "evidence": [
+            "tests/future-condition-authority.test.ts",
+            "docs/future-condition-authority.md"
+          ]
+        }
+      ],
+      "note": "Two original-scope findings resolved; broad mixed/dynamic intent and full corpus remain open. Score delta0."
     }
   ],
   "new_risks": [],
@@ -1371,22 +1388,25 @@
       "id": "future-outer-guards",
       "scope": "original",
       "condition": "A7.3",
-      "status": "open",
+      "status": "resolved",
       "evidence": [
-        "src/agent/executor.ts",
-        "src/agent/plan-schema.ts"
+        "tests/future-condition-authority.test.ts",
+        "docs/future-condition-authority.md"
       ],
-      "summary": "Static follow-up: FutureIntent stores only its direct condition; outer guards are not retained. Needs runtime reproduction and fix."
+      "summary": "Original branch guards now persist through nested/intermediate dependencies and disk restart.",
+      "source": "21cdca6"
     },
     {
       "id": "future-condition-entity",
       "scope": "original",
       "condition": "A7.3",
-      "status": "open",
+      "status": "resolved",
       "evidence": [
-        "src/agent/executor.ts"
+        "tests/future-condition-authority.test.ts",
+        "docs/future-condition-authority.md"
       ],
-      "summary": "Static follow-up: due condition currently checked against action recipient instead of condition.entity_id. Needs runtime reproduction and fix."
+      "summary": "Due validation now checks the condition entity instead of action recipient; legacy records remain supported.",
+      "source": "21cdca6"
     }
   ]
 }
