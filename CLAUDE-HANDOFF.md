@@ -1,5 +1,13 @@
 # Claude Code starting handoff
 
+## NPC objective projection continuation — 2026-10-20
+
+From `3f4d083`, the checkpoint containing this section keeps bounded NPC context actionable: up to2 recoverable plans enter the existing12-plan view first, their active owned goals enter the12-goal view, remaining goal slots favor existing priorities. Ended goals cannot appear as active work; reserved IDs remain intact. No wider private context, Save schema or retry budget. Context reads do not mutate state.
+
+Baseline5 tests/4 failed/1 control passed; first7 files/73 passed; final10 files/91 passed, including7 direct projection cases and actual owner replacement/HOLD once. Strict TypeScript24.86s/exit0. Long-world regression is bounded existing evidence, not full72-hour/multi-world acceptance. Original W5.3 finding resolved, whole condition stays open; total56.875%,91/31/38,macro12/21/7 unchanged. Source/evidence hashes and exact final commit are in SESSION.
+
+Next: Narrator degraded prose across scene types, then broader mixed/dynamic intent and NPC long-term variety; current full offline snapshot still pending. Preserve production/3100/Provider/Claude/QA/audit boundaries.
+
 ## Deferred condition authority continuation — 2026-10-20
 
 From `5642c28`, the checkpoint containing this section fixes the two original A7.3 follow-ups. FutureIntent has additive optional `condition_guards`; registration preserves inherited/nested branch constraints and due execution checks each condition's own public entity, including legacy single-condition records. False/unknown conditions stop before model/Core work; ELSE retains expected=false. Legacy fields are also checked and cannot be overridden by new guards. Existing commit/replay/target checks remain.

@@ -1,0 +1,9 @@
+# Bounded NPC objectives stay actionable
+
+The previous context independently took the first12 active goals and first12 active plans, while recovery could expose a blocked plan beyond that prefix. The NPC could see its plan without seeing the owned goal, then have its valid replacement rejected as outside its own context. A recovery entry could likewise refer to a plan absent from the allowed management list.
+
+Context selection now puts the existing two recoverable plans into the bounded active-plan view first and includes the owned active goals for every selected plan. Remaining goal slots favor existing higher priorities. Plans whose goals have ended are not projected as active work; their IDs remain reserved, so this cannot revive an ended objective or reuse its identity. The projection does not mutate the save or disclose another character's objectives. Limits remain12 goals,12 plans and2 recovery entries; no model calls or retries were added.
+
+The initial5 tests had4 failures and1 control pass. Final affected10 files/91 passed, including7 direct projection cases, actual owner replanning and a single authoritative HOLD receipt. Tests also cover ended objectives, priority, capacity, privacy, long-world and existing immediate/physical plan continuity. Strict TypeScript24.86s/exit0 passed. Raw failed and passing reports are retained in the takeover checkpoint.
+
+This fixes one original W5.3 finding, not long-term-world acceptance. There is no proof of fairness among arbitrarily many blocked objectives, richer life behavior, every resource/relationship-triggered revision, or three-world72-hour acceptance. W5.3 remains open and receives no whole-condition score. Source change is confined to the existing NPC context builder; Save schema and service boundaries are unchanged. No Claude unmerged interface is assumed.

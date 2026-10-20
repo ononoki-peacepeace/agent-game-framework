@@ -86,6 +86,18 @@ export function buildNpcAgentContext(save:SavePackage,npcId:string,event:NpcAgen
       memory.participant_ids.includes(speech.speaker_id)).map(speech=>({speaker_id:speech.speaker_id,utterance:speech.utterance.slice(0,500)}))??[],
   }));
   const evidence_ids=[...state.knowledge.map(item=>item.id),...state.private_facts.map(item=>item.id),...state.memories.map(item=>item.event_ref)];
+  // Keep the bounded recovery view actionable: its plans and their owned goals
+  // must appear together, even when older abstract objectives filled the prefix.
+  const activeGoals=state.goals.filter(goal=>goal.status==='active');
+  const activeGoalIds=new Set(activeGoals.map(goal=>goal.id));
+  const activePlans=state.plans.filter(plan=>plan.status==='active'&&activeGoalIds.has(plan.goal_id));
+  const recoveryPlans=activePlans.filter(plan=>plan.execution&&
+    ['core_rejected','route_unavailable','listener_not_present'].includes(plan.execution.blocked_reason??'')).slice(0,2);
+  const recoveryIds=new Set(recoveryPlans.map(plan=>plan.id));
+  const projectedPlans=[...recoveryPlans,...activePlans.filter(plan=>!recoveryIds.has(plan.id))].slice(0,12);
+  const ownedGoalIds=new Set(projectedPlans.map(plan=>plan.goal_id));
+  const projectedGoals=[...activeGoals.filter(goal=>ownedGoalIds.has(goal.id)),
+    ...activeGoals.filter(goal=>!ownedGoalIds.has(goal.id)).sort((a,b)=>b.priority-a.priority)].slice(0,12);
   const context={
     npc_id:npcId,revision:save.state_revision,time:structuredClone(save.runtime.time),minutes_per_day:save.definition.ruleset.minutes_per_day,
     profile:{id:npcId,name:String(npc.components.identity?.name??''),age:identityAge(npc.components.identity,save),
@@ -122,11 +134,9 @@ export function buildNpcAgentContext(save:SavePackage,npcId:string,event:NpcAgen
     historical_presence:selected.historical_presence,
     own_recent_settled_actions:recentSettledActions(save,npcId),
     witnessed_relevant_exchanges:selected.witnessed_exchanges,
-    active_goals:state.goals.filter(goal=>goal.status==='active').slice(0,12),
-    active_plans:state.plans.filter(plan=>plan.status==='active').slice(0,12),
-    plan_recovery:state.plans.filter(plan=>plan.status==='active'&&plan.execution&&
-      ['core_rejected','route_unavailable','listener_not_present'].includes(plan.execution.blocked_reason??''))
-      .slice(0,2).map(plan=>({plan_id:plan.id,goal_id:plan.goal_id,intention:plan.intention,
+    active_goals:projectedGoals,
+    active_plans:projectedPlans,
+    plan_recovery:recoveryPlans.map(plan=>({plan_id:plan.id,goal_id:plan.goal_id,intention:plan.intention,
         failed_step:plan.execution!.steps[plan.execution!.cursor]??null,cursor:plan.execution!.cursor,
         last_receipt_id:plan.execution!.last_receipt_id??null,blocked_reason:plan.execution!.blocked_reason,
         diagnostic:plan.execution!.failure_diagnostic??null,
