@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：29e6a5f。整体 **60.00%**（96/160 个固定条件满足）。未满足 28，待验证 36。
+计分版本 v1；评估源代码：100dcf3。整体 **60.00%**（96/160 个固定条件满足）。未满足 28，待验证 36。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -48,6 +48,7 @@
 | injury-denial-subject-counterexample | evidence_correction | N4.2: met → unmet | -0.625 pp |
 | injury-denial-subject-repair | repair | N4.2: unmet → met | +0.625 pp |
 | post-reaction-complete-offline-snapshot | repair | R5.4: Fresh199files1992pass on502pinned hashes, exact coverage once; refresh existing met only, historical native crash retained；完整条件保持开放 | +0.000 pp |
+| compound-reaction-disk-recovery-verification | repair | R6.3: New JsonStore/service resumes disk pending seal without extra reaction calls/Core;9case matrix and adjacent6distinctfiles54pass/build; no product change or full-matrix closure；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -100,7 +101,7 @@
 |---|---|---|---|
 | R6.1 | 持久请求和后台任务可识别中断且保留进度 | 满足 | [request-restart-recovery.test.ts](../tests/request-restart-recovery.test.ts) |
 | R6.2 | 未证实提交的 prepared 工作保守停止且不自动重复 | 满足 | [request-restart-recovery.test.ts](../tests/request-restart-recovery.test.ts) |
-| R6.3 | 可恢复的异步工作重启后继续未提交部分并准确结算 | 未满足 | [request-restart-recovery.test.ts](../tests/request-restart-recovery.test.ts) |
+| R6.3 | 可恢复的异步工作重启后继续未提交部分并准确结算 | 未满足 | [request-restart-recovery.test.ts](../tests/request-restart-recovery.test.ts), [compound-reaction-budget.test.ts](../tests/compound-reaction-budget.test.ts), [compound-reaction-disk-recovery.md](../docs/compound-reaction-disk-recovery.md) |
 | R6.4 | 进程强杀覆盖关键准备、提交、终结窗口且查询结果一致 | 待验证 | [request-restart-recovery.test.ts](../tests/request-restart-recovery.test.ts) |
 
 ## R7 Extension development/install and external workspace effects

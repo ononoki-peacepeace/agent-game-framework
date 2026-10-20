@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "29e6a5f",
+  "assessed_source": "100dcf3",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -168,9 +168,11 @@
     "R6.3": {
       "status": "unmet",
       "evidence": [
-        "tests/request-restart-recovery.test.ts"
+        "tests/request-restart-recovery.test.ts",
+        "tests/compound-reaction-budget.test.ts",
+        "docs/compound-reaction-disk-recovery.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 100dcf3: compound reaction seal verified through actual JsonStore/new service after save failure;6distinctfiles54pass/build. Broader pending/background/async matrix remains open."
     },
     "R6.4": {
       "status": "unverified",
@@ -1761,6 +1763,22 @@
           "evidence": [
             "docs/post-reaction-offline-snapshot.md",
             "scripts/agent-workspace.mjs"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "compound-reaction-disk-recovery-verification",
+      "type": "repair",
+      "source": "100dcf3",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R6.3",
+          "result": "New JsonStore/service resumes disk pending seal without extra reaction calls/Core;9case matrix and adjacent6distinctfiles54pass/build; no product change or full-matrix closure",
+          "evidence": [
+            "tests/compound-reaction-budget.test.ts",
+            "docs/compound-reaction-disk-recovery.md"
           ]
         }
       ]
