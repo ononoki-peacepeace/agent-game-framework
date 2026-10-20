@@ -1,4 +1,4 @@
-import {expect,it} from 'vitest';
+import {expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
 import {demo} from './helpers.js';
 import {newSave,validateSave} from '../src/core/state.js';
@@ -6,6 +6,7 @@ import {emptyNpcAgentState} from '../src/agent/npc-state.js';
 import {buildNpcAgentContext,decideNpc,applyNpcDecision,type NpcDecision} from '../src/agent/npc-agent.js';
 import {executeAction} from '../src/core/runtime.js';
 import type {GameService} from '../src/server/service.js';
+import * as runtime from '../src/core/runtime.js';
 
 function fixture(blocked=true){
  const world=structuredClone(demo);world.events=[];
@@ -61,4 +62,49 @@ it.each([false,true])('uses the same known-route boundary as the legacy executor
  if(known)save.map_state.known_location_ids.push('market');
  const context=buildNpcAgentContext(validateSave(save),'npc_lin',{kind:'world_event',description:'核对本人路线'});
  expect(context.plan_recovery.some(p=>p.plan_id==='legacy_travel')).toBe(!known);
+});
+it('retains the real Core rejection diagnostic when a legacy route exists but its destination is closed',()=>{
+ const before=fixture(false),market=before.definition.map!.locations.find(p=>p.id==='market')!;
+ market.lifecycle={status:'closed',visibility:'public',origin:'existing_detail',creation_reason:'隔离关闭目的地',source_ref:'fixture',recorded_at:before.runtime.time};
+ const after=executeAction(validateSave(before),{type:'WAIT',parameters:{minutes:12}},randomUUID()).save;
+ const plan=after.npc_agent_state!.npc_lin.plans.at(-1)!;
+ expect(plan.last_failed_request_id).toBeTruthy();
+ const loaded=validateSave(JSON.parse(JSON.stringify(after))),context=buildNpcAgentContext(loaded,'npc_lin',{kind:'world_event',description:'本人出行未能完成'});
+ expect(context.plan_recovery).toMatchObject([{plan_id:'legacy_travel',blocked_reason:'core_rejected',diagnostic:expect.any(String)}]);
+ expect(context.plan_recovery[0].diagnostic).toMatch(/关闭|封闭|进入/);
+ expect(context.plan_recovery[0].last_receipt_id).toBeNull();
+ expect(loaded.resolution_receipts?.filter(r=>r.actor_id==='npc_lin')??[]).toHaveLength(0);
+ loaded.definition.map!.locations.find(p=>p.id==='market')!.lifecycle!.status='active';
+ const one=executeAction(loaded,{type:'WAIT',parameters:{minutes:1}},randomUUID()).save;
+ expect(one.entities.find(e=>e.id==='npc_lin')!.components.location?.location_id).toBe('square');
+ const done=executeAction(one,{type:'WAIT',parameters:{minutes:5}},randomUUID()).save;
+ const completed=done.npc_agent_state!.npc_lin.plans.find(p=>p.id==='legacy_travel')!;
+ expect(completed.status).toBe('completed');expect(completed.last_failed_request_id).toBeUndefined();
+ expect(completed.activity).not.toHaveProperty('blocked_reason');expect(completed.activity).not.toHaveProperty('failure_diagnostic');
+ expect(done.resolution_receipts?.filter(r=>r.actor_id==='npc_lin').map(r=>r.semantic_action)).toEqual(['MOVE']);
+ expect(done.npc_agent_state!.npc_lin.goals.find(g=>g.id==='goal_12')!.status).toBe('active');
+});
+it('keeps old failed legacy activities manageable without inventing their missing failure diagnosis',()=>{
+ const before=fixture(false);before.npc_agent_state!.npc_lin.plans.at(-1)!.last_failed_request_id='old-failed-request';
+ const context=buildNpcAgentContext(validateSave(before),'npc_lin',{kind:'world_event',description:'读取旧计划'});
+ expect(context.plan_recovery).toMatchObject([{plan_id:'legacy_travel',blocked_reason:'previous_attempt_failed',last_receipt_id:null}]);
+ expect(context.plan_recovery[0].diagnostic).toContain('未保存');
+});
+it('keeps a legacy technical failure distinct from a real Core refusal',()=>{
+ const before=fixture(false),original=runtime.executeAction;
+ const spy=vi.spyOn(runtime,'executeAction').mockImplementation((...args)=>{
+  if(args[7]==='npc_lin')throw Error('offline injected legacy execution fault');
+  return original(...args);
+ });
+ try{
+  const after=executeAction(before,{type:'WAIT',parameters:{minutes:12}},randomUUID()).save;
+  const context=buildNpcAgentContext(validateSave(JSON.parse(JSON.stringify(after))),'npc_lin',{kind:'world_event',description:'核对上次异常'});
+  expect(context.plan_recovery).toMatchObject([{plan_id:'legacy_travel',blocked_reason:'system_error',diagnostic:'offline injected legacy execution fault',last_receipt_id:null}]);
+  expect(after.resolution_receipts?.filter(r=>r.actor_id==='npc_lin')??[]).toHaveLength(0);
+ }finally{spy.mockRestore();}
+});
+it('does not assign the legacy missing-cause message to modern plans',()=>{
+ const save=fixture(false),plan=save.npc_agent_state!.npc_lin.plans.at(-1)!;delete plan.activity;
+ plan.execution={steps:[{type:'HOLD',target_id:null,description:'原地准备',duration_minutes:8,speech:null}],cursor:0,not_before:null,condition:null,last_accounted_at:{...save.runtime.time},time_credit_minutes:0,last_request_id:null,blocked_reason:'core_rejected'};
+ expect(buildNpcAgentContext(validateSave(save),'npc_lin',{kind:'world_event',description:'核对现代计划'}).plan_recovery[0].diagnostic).toBeNull();
 });

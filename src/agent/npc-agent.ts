@@ -104,7 +104,8 @@ export function buildNpcAgentContext(save:SavePackage,npcId:string,event:NpcAgen
   };
   const pendingCondition=(plan:NpcAgentState['plans'][number])=>plan.execution?.condition??plan.activity?.condition;
   const recoveryPlans=activePlans.filter(plan=>Boolean(pendingCondition(plan))||(plan.execution&&
-    ['core_rejected','route_unavailable','listener_not_present'].includes(plan.execution.blocked_reason??''))||legacyRouteBlocked(plan)).slice(0,2);
+    ['core_rejected','route_unavailable','listener_not_present'].includes(plan.execution.blocked_reason??''))||
+    Boolean(plan.activity&&plan.last_failed_request_id)||legacyRouteBlocked(plan)).slice(0,2);
   const recoveryIds=new Set(recoveryPlans.map(plan=>plan.id));
   const projectedPlans=[...recoveryPlans,...activePlans.filter(plan=>!recoveryIds.has(plan.id))].slice(0,12);
   const ownedGoalIds=new Set(projectedPlans.map(plan=>plan.goal_id));
@@ -153,8 +154,10 @@ export function buildNpcAgentContext(save:SavePackage,npcId:string,event:NpcAgen
     plan_recovery:recoveryPlans.map(plan=>({plan_id:plan.id,goal_id:plan.goal_id,intention:plan.intention,
         failed_step:plan.execution?plan.execution.steps[plan.execution.cursor]??null:{type:'MOVE' as const,
           target_id:plan.activity!.destination_id,description:plan.intention,duration_minutes:null,speech:null},cursor:plan.execution?.cursor??0,
-        last_receipt_id:plan.execution?.last_receipt_id??null,blocked_reason:pendingCondition(plan)?'condition_pending':plan.execution?.blocked_reason??'route_unavailable',
-        diagnostic:pendingCondition(plan)?`尚待本人核对的前提：${pendingCondition(plan)}`:plan.execution?.failure_diagnostic??(plan.activity?'当前地点到旧式计划目的地没有符合权威地图条件的公开可达路线':null),
+        last_receipt_id:plan.execution?.last_receipt_id??null,blocked_reason:pendingCondition(plan)?'condition_pending':plan.execution?.blocked_reason??
+          (legacyRouteBlocked(plan)?'route_unavailable':plan.activity?.blocked_reason??'previous_attempt_failed'),
+        diagnostic:pendingCondition(plan)?`尚待本人核对的前提：${pendingCondition(plan)}`:plan.execution?.failure_diagnostic??
+          (plan.activity?(legacyRouteBlocked(plan)?'当前地点到旧式计划目的地没有符合权威地图条件的公开可达路线':plan.activity.failure_diagnostic??'旧式计划上次尝试未能完成，未保存具体原因；请依据本人当前可知事实核对，不推定已经结算行动'):null),
         instruction:'原计划已完成的步骤有权威凭据，不得重做；待确认的条件不会因时间经过自动成立，须本人依据已知事实判断。若当前世界允许修正，明确放弃旧计划并用新 ID 提出可执行替代步骤。'})),
     objective_ids:{goals:state.goals.map(goal=>goal.id),plans:state.plans.map(plan=>plan.id)},
     private_facts:state.private_facts.slice(-20),
@@ -928,6 +931,7 @@ function settleLegacyNpcActivityPlans(input:SavePackage,beforeTime:SavePackage['
         if(!receipt||receipt.time_cost>currentActivity.time_credit_minutes)throw Error('短期行动缺少有效 MOVE 凭据');
         save=result.save;receipt.commit_status='committed';
         const updated=save.npc_agent_state![npcId].plans.find(item=>item.id===plan.id)!;
+        delete updated.last_failed_request_id;delete updated.activity!.blocked_reason;delete updated.activity!.failure_diagnostic;
         updated.activity!.time_credit_minutes-=receipt.time_cost;
         updated.activity!.origin_location_id=next.to;
         if(next.to===activity.destination_id){updated.status='completed';
@@ -940,7 +944,10 @@ function settleLegacyNpcActivityPlans(input:SavePackage,beforeTime:SavePackage['
         observe('info','npc_agent.activity_action',{module:'agent',request_id:requestId,revision:save.state_revision,
           metadata:{npc_id:npcId,plan_id:plan.id,receipt_id:actionId,from:currentHere,to:next.to,time_cost:receipt.time_cost}});
         if(updated.status==='completed')break;
-      }catch(error){skipped++;currentActivity.time_credit_minutes=0;currentPlan.last_failed_request_id=requestId.split(':window:')[0];observe('warn','npc_agent.activity_skipped',{module:'agent',request_id:requestId,
+      }catch(error){skipped++;currentActivity.time_credit_minutes=0;currentPlan.last_failed_request_id=requestId.split(':window:')[0];
+        currentActivity.blocked_reason=error instanceof GameError||error instanceof WorldBlockedError?'core_rejected':'system_error';
+        currentActivity.failure_diagnostic=(error instanceof Error?error.message:String(error)).slice(0,240);
+        observe('warn','npc_agent.activity_skipped',{module:'agent',request_id:requestId,
         revision:save.state_revision,metadata:{npc_id:npcId,plan_id:plan.id,reason:error instanceof Error?error.message:String(error)}});break;}
       }
     }

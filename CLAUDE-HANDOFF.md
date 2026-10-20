@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Legacy failed-attempt diagnosis — 2026-10-20
+
+Parent `fe60e5d`; source checkpoint containing this section adds optional legacy activity `blocked_reason`/`failure_diagnostic`, storing actual Core refusal vs system error. Failure prioritizes plan+goal; old cause missing is explicitly unknown. Successful MOVE clears old failure metadata. Integrate npc-state/executor/context together; old saves remain accepted, no migration/Core outcome/budget change. Baseline2fail/9controls; expanded10files86pass +3schema/HTTP/roundtrip files52pass =13distinctfiles138pass, final13case legacy file adds technical-error control (overlap). Final10files88pass after modern-plan null-diagnostic protection; complete isolated build in SESSION. One missing optional filename corrected by actual schema run; generated QA saved separately and original bytes restored. See docs/npc-legacy-failure-diagnostic.md. W5.3 open,60%=96/160,+0; full1992pass still29e6a5f. Next: actual newfact/relationship/repeated-failure adjustment, other fixed matrices. Original dirt/safety preserved.
+
 ## Conditional plan owner context — 2026-10-20
 
 Parent `c331d46`; source checkpoint containing this section keeps modern/legacy conditional plans and long goals in the bounded recovery context with original condition diagnostic. No automatic confirmation: owner may keep waiting or explicitly replace method; Core still refuses unresolved plans. Baseline4fail; final9files80pass plus final6case condition file (overlap), complete isolated build in SESSION. See docs/npc-conditional-plan-context.md. No schema/Core/budget change. W5.3/W5.4 remain open;60%=96/160,+0. Full1992pass remains29e6a5f. Next: continue new fact/relationship/repeated-failure adjustment matrices, then broad reliability/NL/Narrator gaps. Original dirt/safety preserved.

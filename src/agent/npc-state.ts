@@ -31,7 +31,8 @@ export const npcPlanSchema=z.strictObject({
   // An NPC's own scene decision may supply a bounded executable step. Older plans omit this.
   activity:z.strictObject({kind:z.literal('move'),origin_location_id:ref,destination_id:ref,
     source_request_id:ref,condition:z.string().max(300).nullable(),
-    last_accounted_at:moment,time_credit_minutes:z.number().int().min(0).max(240)}).optional(),
+    last_accounted_at:moment,time_credit_minutes:z.number().int().min(0).max(240),
+    blocked_reason:z.enum(['core_rejected','system_error']).optional(),failure_diagnostic:z.string().max(240).optional()}).optional(),
   execution:z.strictObject({steps:z.array(npcPlanStepSchema).min(1).max(6),cursor:z.number().int().min(0).max(6),
     not_before:moment.nullable(),condition:z.string().max(300).nullable().default(null),last_accounted_at:moment,time_credit_minutes:z.number().int().min(0).max(240),
     last_request_id:ref.nullable(),last_receipt_id:ref.optional(),blocked_reason:z.string().max(300).nullable(),
