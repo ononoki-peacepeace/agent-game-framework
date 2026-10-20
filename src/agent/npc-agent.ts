@@ -562,6 +562,11 @@ function autonomousId(requestId:string,npcId:string,index:number){
 function minuteOf(save:SavePackage,time:SavePackage['runtime']['time']){
   return time.day*save.definition.ruleset.minutes_per_day+time.minute;
 }
+function executableNpcRoute(save:SavePackage,here:string,target:string){
+  const map=currentMap(save),publicIds=new Set(map.locations.filter(place=>place.known_by_default!==false).map(place=>place.id));publicIds.add(here);
+  return routePath(map.routes.filter(edge=>publicIds.has(edge.from)&&publicIds.has(edge.to)&&
+    edge.conditions.every(condition=>save.gm_state.flags[condition.flag]===condition.equals)),here,target);
+}
 function completeNpcPlan(state:NpcAgentState,plan:NpcAgentState['plans'][number]){
   if(!plan.execution||plan.execution.cursor!==plan.execution.steps.length)return;
   plan.status='completed';
@@ -809,16 +814,21 @@ function settleExecutableNpcPlans(input:SavePackage,beforeTime:SavePackage['runt
       reason='actor_unavailable';
     else if(socialObligationActive(save,own(save,npcId)))reason='social_obligation';
     else if(now<since)reason='not_due';
-    if(!reason)execution.time_credit_minutes=Math.min(240,execution.time_credit_minutes+Math.max(0,now-since-reservedMinutes));
+    if(!reason){
+      const pending=execution.steps[execution.cursor],path=pending?.type==='MOVE'?
+        executableNpcRoute(save,String(actor!.components.location.location_id),pending.target_id!):null;
+      // Only a declared current travel edge can raise this plan's storage cap.
+      // Credit still comes solely from newly elapsed, unreserved world time.
+      const creditLimit=Math.max(240,path?.[0]?.travel_minutes??0);
+      execution.time_credit_minutes=Math.min(creditLimit,execution.time_credit_minutes+Math.max(0,now-since-reservedMinutes));
+    }
     while(!reason&&execution.cursor<execution.steps.length&&attempts<limit){
       const step=execution.steps[execution.cursor],here=String(save.entities.find(e=>e.id===npcId)?.components.location?.location_id??'');
       let cost=step.type==='HOLD'?step.duration_minutes!:step.type==='TALK'?save.definition.ruleset.talk_minutes:1;
       let action:z.infer<typeof actionSchema>;
       if(step.type==='MOVE'){
         if(here===step.target_id){execution.cursor++;continue;}
-        const map=currentMap(save),publicIds=new Set(map.locations.filter(p=>p.known_by_default!==false).map(p=>p.id));publicIds.add(here);
-        const path=routePath(map.routes.filter(edge=>publicIds.has(edge.from)&&publicIds.has(edge.to)&&
-          edge.conditions.every(c=>save.gm_state.flags[c.flag]===c.equals)),here,step.target_id!);
+        const path=executableNpcRoute(save,here,step.target_id!);
         if(!path?.length){reason='route_unavailable';break;}
         cost=path.reduce((sum,edge)=>sum+edge.travel_minutes,0);
         // A route longer than the personal credit cap must make real progress

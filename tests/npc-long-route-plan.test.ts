@@ -11,9 +11,9 @@ import {JsonStore} from '../src/storage/json-store.js';
 import {GameService} from '../src/server/service.js';
 import {AIRuntime} from '../src/ai/runtime.js';
 
-function fixture(direct=false){
+function fixture(direct=false,directMinutes=150){
  const world=structuredClone(demo);world.events=[];world.map!.routes=direct?
-  [{from:'square',to:'station',travel_minutes:150,conditions:[]}]:
+  [{from:'square',to:'station',travel_minutes:directMinutes,conditions:[]}]:
   [{from:'square',to:'market',travel_minutes:150,conditions:[]},{from:'market',to:'station',travel_minutes:150,conditions:[]}];
  const save=newSave(world),state=emptyNpcAgentState();
  state.goals=[{id:'long_motive',description:'持续照管自己的异地事务',horizon:'long',status:'active',origin:'self',priority:1}];
@@ -29,6 +29,49 @@ it('makes a real intermediate arrival instead of waiting forever for credit abov
  expect(after.entities.find(e=>e.id==='npc_lin')!.components.location?.location_id).toBe('market');
  expect(plan.status).toBe('active');expect(plan.execution?.cursor).toBe(0);expect(plan.execution?.time_credit_minutes).toBe(0);
  expect(after.resolution_receipts?.filter(r=>r.actor_id==='npc_lin').map(r=>({action:r.semantic_action,time:r.time_cost}))).toEqual([{action:'MOVE',time:150}]);
+});
+it('accumulates only actually elapsed travel time for a single edge above the old cap',()=>{
+ const initial=fixture(true,300),early=advance(initial,240);
+ expect(early.entities.find(e=>e.id==='npc_lin')!.components.location?.location_id).toBe('square');
+ expect(early.npc_agent_state!.npc_lin.plans[0].execution).toMatchObject({cursor:0,time_credit_minutes:240});
+ expect(early.resolution_receipts?.some(r=>r.actor_id==='npc_lin')).toBe(false);
+ const arrived=advance(validateSave(JSON.parse(JSON.stringify(early))),60);
+ expect(arrived.entities.find(e=>e.id==='npc_lin')!.components.location?.location_id).toBe('station');
+ expect(arrived.npc_agent_state!.npc_lin.plans[0].execution).toMatchObject({cursor:1,time_credit_minutes:0});
+ const done=advance(arrived,1);expect(done.npc_agent_state!.npc_lin.plans[0].status).toBe('completed');
+ expect(done.resolution_receipts?.filter(r=>r.actor_id==='npc_lin').map(r=>[r.semantic_action,r.time_cost])).toEqual([['MOVE',300],['HOLD',1]]);
+});
+it('reaches a long single-edge destination at its actual time within one WAIT',()=>{
+ const initial=fixture(true,300),after=advance(initial,301),receipts=after.resolution_receipts!.filter(r=>r.actor_id==='npc_lin');
+ expect(receipts.map(r=>[r.semantic_action,r.time_cost,r.at!.minute-initial.runtime.time.minute])).toEqual([['MOVE',300,300],['HOLD',1,301]]);
+ expect(after.npc_agent_state!.npc_lin.plans[0].status).toBe('completed');
+});
+it('respects a scheduled start before accruing a long-edge travel budget',()=>{
+ const initial=fixture(true,300);initial.npc_agent_state!.npc_lin.plans[0].execution!.not_before={...initial.runtime.time,minute:initial.runtime.time.minute+20};
+ const early=advance(initial,300);expect(early.entities.find(e=>e.id==='npc_lin')!.components.location?.location_id).toBe('square');
+ expect(early.npc_agent_state!.npc_lin.plans[0].execution?.time_credit_minutes).toBe(280);
+ const after=advance(early,21);expect(after.npc_agent_state!.npc_lin.plans[0].status).toBe('completed');
+ expect(after.resolution_receipts?.filter(r=>r.actor_id==='npc_lin').map(r=>[r.semantic_action,r.at!.minute-initial.runtime.time.minute])).toEqual([['MOVE',320],['HOLD',321]]);
+});
+it('bounds declared edge credit by the legal 1440-minute maximum and never charges world time twice',()=>{
+ const initial=fixture(true,1440),after=advance(initial,1441),receipts=after.resolution_receipts!.filter(r=>r.actor_id==='npc_lin');
+ const at=(time:typeof initial.runtime.time)=>time.day*initial.definition.ruleset.minutes_per_day+time.minute;
+ expect(at(after.runtime.time)-at(initial.runtime.time)).toBe(1441);
+ expect(receipts.map(r=>[r.semantic_action,r.time_cost,at(r.at!)-at(initial.runtime.time)])).toEqual([['MOVE',1440,1440],['HOLD',1,1441]]);
+ expect(after.npc_agent_state!.npc_lin.plans[0].status).toBe('completed');
+});
+it('persists more than 240 paid travel minutes through actual disk/service restart',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'agf-long-edge-credit-'));
+ try{
+  const ai=new AIRuntime({name:'no-generation',generate:async()=>{throw Error('Core plans need no model');}}),store=new JsonStore(directory);
+  await store.write(fixture(true,300));const initial=await new GameService(store,ai,demo).current(),partial=advance(initial,270);
+  expect(partial.npc_agent_state!.npc_lin.plans[0].execution?.time_credit_minutes).toBe(270);await store.write(partial);
+  const bytes=await readFile(join(directory,'current.json')),restarted=new GameService(new JsonStore(directory),ai,demo),loaded=await restarted.current();
+  expect(loaded).toEqual(partial);expect(await readFile(join(directory,'current.json'))).toEqual(bytes);
+  const done=advance(loaded,31);expect(done.npc_agent_state!.npc_lin.plans[0].status).toBe('completed');
+  expect(done.resolution_receipts?.filter(r=>r.actor_id==='npc_lin').map(r=>[r.semantic_action,r.time_cost])).toEqual([['MOVE',300],['HOLD',1]]);
+  expect(ai.metrics.requests).toBe(0);
+ }finally{await rm(directory,{recursive:true,force:true});}
 });
 it('finishes a multi-edge journey and its dependent work without losing the long motive or double spending',()=>{
  const initial=fixture();let after=advance(initial,150);after=advance(after,150);after=advance(after,1);
