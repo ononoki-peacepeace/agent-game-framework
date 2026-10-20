@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "dffb82d",
+  "assessed_source": "0acbb70",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -1172,6 +1172,23 @@
         }
       ],
       "note": "Original acceptance scope; +0.625 percentage points. Cross-scope moves and multi-process/OS boundaries remain open; no denominator changes."
+    },
+    {
+      "batch": "conditional-owner",
+      "type": "repair",
+      "source": "0acbb70",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "A7.3",
+          "result": "修复条件归属及执行前校验；19个直接用例、相邻140项通过",
+          "evidence": [
+            "tests/conditional-dependency-authorization.test.ts",
+            "docs/conditional-dependency-authorization.md"
+          ]
+        }
+      ],
+      "note": "Original-scope finding resolved; deferred guards and broad mixed/dynamic intent remain open. Score delta0."
     }
   ],
   "new_risks": [],
@@ -1336,5 +1353,40 @@
     "N10.2": "unverified",
     "N10.3": "unverified",
     "N10.4": "unverified"
-  }
+  },
+  "findings": [
+    {
+      "id": "conditional-owner",
+      "scope": "original",
+      "condition": "A7.3",
+      "status": "resolved",
+      "source": "0acbb70",
+      "evidence": [
+        "tests/conditional-dependency-authorization.test.ts",
+        "docs/conditional-dependency-authorization.md"
+      ],
+      "summary": "Direct branch ownership and legacy snapshot preflight fixed; baseline5/5 failed, final9 files/140 passed; no whole condition closure."
+    },
+    {
+      "id": "future-outer-guards",
+      "scope": "original",
+      "condition": "A7.3",
+      "status": "open",
+      "evidence": [
+        "src/agent/executor.ts",
+        "src/agent/plan-schema.ts"
+      ],
+      "summary": "Static follow-up: FutureIntent stores only its direct condition; outer guards are not retained. Needs runtime reproduction and fix."
+    },
+    {
+      "id": "future-condition-entity",
+      "scope": "original",
+      "condition": "A7.3",
+      "status": "open",
+      "evidence": [
+        "src/agent/executor.ts"
+      ],
+      "summary": "Static follow-up: due condition currently checked against action recipient instead of condition.entity_id. Needs runtime reproduction and fix."
+    }
+  ]
 }
