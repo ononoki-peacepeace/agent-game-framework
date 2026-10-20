@@ -1,3 +1,7 @@
+## Perception authority counterexample — 2026-10-21
+
+Parent f67402f/product19c8108. Eight-case baseline failed: five real service/HTTP cases accepted literal player travel with only one INSPECT/time minute and unchanged entities; exact disk/restarted response replay already passes. Three controls expose wrong probe audit assumption: typed INSPECT never selects its receipt for narration validation, so no audit occurred. Generic positive-audit bypass still needs independent reproduction. Original test bytes/hash collected after baseline, preserved in ignored checkpoint. N4.1 withdrawn only:99/16061.875%(61.88%),27unmet/34unverified;batch-1/-0.625pp. See docs/perception-audit-authority.md. No product edit yet; original dirt preserved. Next: generic path reproduction, minimal typed INSPECT/authority repair, legitimate metaphor/MOVE/negation controls, actual replay and adjacent tests/build. Goal active.
+
 ## Fixed three-structure72h baseline — 2026-10-21
 
 Branch codex/claude-takeover-integration; test/scenario checkpoint e61e7fd, unchanged product19c8108, parent aabe55b. Trade/relations/continuity each72h with3JsonStore/runtime/service restarts and exact replay:3cases pass,216h total,193actualNPCreceipts,zero real API calls; roughly15min runtime.556 pinned input hashes/27frozen/formal SHA/original QA match; build91914 exit0. Initial3invalid-fixture failures and verified-PID interrupted incomplete run retained; neither is counted as product failure or passing evidence. See docs/fixed-world72-evidence.md.
