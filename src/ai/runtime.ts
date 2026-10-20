@@ -29,6 +29,7 @@ import { frameworkCapabilityDomains } from '../core/capability.js';
 import { createRegistry } from '../modules/index.js';
 import { observe, errorText } from '../observability/index.js';
 import { defaultRoleplayConfig, roleplayPolicyFragment } from '../narrative/policy.js';
+import {narratorCharacterCognition,narratorCognitionPolicy} from '../narrative/character-cognition.js';
 import type {RoleplayConfig} from '../narrative/schema.js';
 import {reviewWorldNovelty} from '../world/novelty.js';
 import {WorldCandidateError,normalizeWorldCandidate,worldCandidateIssues,initialNpcRequirement,projectWorldRepair,projectNoveltyRepair,projectSemanticRepair,compiledWorldIssue,publicWorldCreationFailure,type WorldIssue} from './world-initializer-repair.js';
@@ -650,6 +651,7 @@ export class AIRuntime {
     const mode=save.definition.roleplay_config?.narrative_mode??'standard';
     const hereId=view.entities.find(entity=>entity.id===view.player_id)?.components.location?.location_id;
     const here=view.locations.find(location=>location.id===hereId);
+    const narratorCharacters=characterContext(save,action.target_id);
     const latestScene=save.narrative_history?.at(-1);
     const sameScene=latestScene?.location_id===hereId&&!receipt?.movement_route;
     const sceneHistory=(save.narrative_history??[]).slice(-6).map(entry=>({
@@ -683,9 +685,12 @@ export class AIRuntime {
       ...(receipt?.physical_outcome?{significant_incident:{outcome:receipt.physical_outcome,repetition:receipt.repetition??null,
         attempts:(save.resolution_receipts??[]).filter(r=>receipt.repetition?.attempt_ids.includes(r.request_id)).map(r=>({outcome:r.physical_outcome,at:r.at,time_cost:r.time_cost})),
         stage_results:save.resolution_history?.find(entry=>entry.check_id===receipt.check_id)?.stage_results??[],
+        // Who could actually see this is recorded at settlement. Naming it per witness
+        // keeps a blind reaction from being written as an eyewitness account.
         reactions:(receipt.physical_outcome.witness_ids??[]).map(id=>({id,
+          sight_blocked:(receipt.physical_outcome?.sight_blocked_ids??[]).includes(id),
           decision:save.npc_agent_state?.[id]?.last_decisions.filter(item=>item.event_ref===`reaction:${receipt.request_id}`).at(-1)??null})),
-        instruction:'这是突发的强制身体事件，克制风格仍应体现事件的分量。依实际接触、伤害和在场者决定组织动作中断、戒备、抵抗、声音与空间压力；人物反应随性格和所闻不同，不统一尖叫或恢复平常口吻，不为凑字数描写血腥。不得改写判定、抹去伤害、直接揭露心理或自行替任何人完成离场/反击；只有 reaction 与权威状态支持的行为才可确认为已发生。没有成立接触时不要补写挣脱，接触成立但伤害未成立时也不能改成从未碰到。仅有HP扣减不确认具体受伤部位、淤青、红肿、骨折或永久损伤；缺少对应权威事实时用动作、呼吸、声音和自主反应表现冲击，不补造这些身体状态，也不把已知道具自行写成掉落或损坏。'}}:{}),
+        instruction:'这是突发的强制身体事件，克制风格仍应体现事件的分量。依实际接触、伤害和在场者决定组织动作中断、戒备、抵抗、声音与空间压力；人物反应随性格和所闻不同，不统一尖叫或恢复平常口吻，不为凑字数描写血腥。不得改写判定、抹去伤害、直接揭露心理或自行替任何人完成离场/反击；只有 reaction 与权威状态支持的行为才可确认为已发生。没有成立接触时不要补写挣脱，接触成立但伤害未成立时也不能改成从未碰到。仅有HP扣减不确认具体受伤部位、淤青、红肿、骨折或永久损伤；缺少对应权威事实时用动作、呼吸、声音和自主反应表现冲击，不补造这些身体状态，也不把已知道具自行写成掉落或损坏。reactions 中 sight_blocked 为 true 的人物在结算时没有视觉信息：不得让他看见、目睹或看清这次动作的经过，也不能让他的台词声称看清了，但他可以凭触觉、疼痛、声音、气味和既有认知作出反应。'}}:{}),
       ...(perceptionFacts.length?{perception_result:{canonical_facts:perceptionFacts,
         instruction:'玩家刚完成一次权威调查。正文必须自然交代玩家实际查看了什么以及这些事实所支持的新发现或本次范围内无新发现；NPC 可以随后回应，但不能只让 NPC 追问玩家有无发现。仅凭这些已结算事实写结果，不补造线索、人物或隐藏真相。'}}:{}),
       narrative_budget:{level:budget,max_narrative_characters:maxChars,approximate_target_characters:budget==='short'?Math.floor(maxChars*.45):Math.floor(maxChars*.62),guidance:(quietPerception?'本次是资料稀疏且没有新发现的观察。用已登记的环境和这次查看的实际结果自然收束，篇幅从事实量出发；不要为了凑描写补造声音、痕迹、摆设、人物或其不存在。':budget==='short'?'简单观察或一句回应，保持简短。':budget==='medium'?'交代行动过程、环境反馈和可见反应。':'跨场景或多步变化，请铺陈实际经过、时间感、环境反馈和已知人物的外显反应。')+`根据本次已发生的可观察变化，正文可写约 ${budget==='short'?Math.floor(maxChars*.45):Math.floor(maxChars*.62)} 字，最多 ${maxChars} 字，留足 JSON 完整结束的空间；不是字数下限，不得为篇幅制造事件、秘密或替玩家行动。即使这轮只有时间或一次普通活动发生，也优先写可感知的当下场景，不要把 receipt 的动作与时钟改写成一条结算日志；事实稀疏时允许自然简短。`},
@@ -738,7 +743,14 @@ export class AIRuntime {
         ...(compoundReceipts?{compound_steps:compoundReceipts.map(step=>({semantic_action:step.semantic_action,time_cost:step.time_cost,
           actor_id:step.actor_id,target_id:step.target_id,movement_route:step.movement_route??null,effects:step.effects,activity:step.activity??null,canonical_facts:step.canonical_facts}))}:{})},
         mechanical_claim_policy:'activity 只表示角色在 receipt.activity 指定地点、按记录时长进行了普通活动；复合行动也可引用 compound_steps 中对应的 activity。必须引用对应的“进行了活动” canonical_facts，不能表示完成具体页数、任务或其他持久变化。progress 只表示有 progress_changes 支持的持久进度，不能用 activity 代替。正文中的成功失败、物品、伤害、金钱、位置、秘密发现与随机结果，也只能改写 resolution_receipt 明确许可的事实；每条此类声明必须在 mechanical_claims 中给出对应 canonical_facts 的 fact_index。不得将普通观察扩写为额外的玩家操作；没有相应 action/receipt 时，不得声称玩家推开、敲击、拿取、移动或使用了别的对象。无法引用时只写动作尝试和感官环境，不要自行决定结果。'}:{}),
-      character_context:{...characterContext(save,action.target_id),recent_turns:sceneHistory}, relationship_dimensions: save.definition.ruleset.relationship_dimensions,
+      character_context:{...narratorCharacters,recent_turns:sceneHistory,
+        // The firewall rejects narration that contradicts a character's own sight and
+        // cognition, so the generator is told them rather than guessing.
+        character_cognition:narratorCharacterCognition(save,
+          [...narratorCharacters.characters.map(entry=>entry.id),
+            ...(receipt?.physical_outcome?.witness_ids??[])]),
+        cognition_policy:narratorCognitionPolicy},
+      relationship_dimensions: save.definition.ruleset.relationship_dimensions,
       scene_context: {
         authoritative_recent_actions:recentSettledActions(save),
         action_history_policy:'按 sequence 从旧到新读取；最近同类行动优先，不能混用较早的方向或对象。attempted_action 只是已尝试的目标，真实移动须有 movement_route 或 position 效果；旧旁白不是移动证据。',
@@ -793,7 +805,10 @@ export class AIRuntime {
         dialogue_continuity_policy:dialogueContinuityPolicy,
         performance_continuity_policy:performanceContinuityPolicy,
         instruction:continuityGuidance+' '+narratorGoalFocusPolicy+' 只改写表达，禁止重复上一轮内容。不得增加、撤销或改变给定事实、数值、关系结果或行动。patches 必须为空。',
-        style_directives:behaviorFragment(save,'narrator'),fixed_outcome:{facts,first},character_context:characterContext(save,targetId),health,
+        style_directives:behaviorFragment(save,'narrator'),fixed_outcome:{facts,first},health,
+        character_context:(context=>({...context,
+          character_cognition:narratorCharacterCognition(save,context.characters.map(entry=>entry.id)),
+          cognition_policy:narratorCognitionPolicy}))(characterContext(save,targetId)),
       },undefined,undefined,undefined,'narrator',false,false);
       assertNotRefusal(parsed);
       observe('info','narrative.regenerated',{module:'ai',metadata:{...narrativeHealth(save,parsed,facts),attempt:1}});
