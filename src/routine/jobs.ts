@@ -11,7 +11,7 @@ import {withoutInputRecovery,withInputRecovery,originalRecoveryInput,committedIn
 import {withoutRequestBudget} from '../ai/request-budget.js';
 import {writeAtomicJson} from '../storage/atomic-json.js';
 import {ProviderError} from '../ai/failures.js';
-import {engineOutcome,gameOutcome,type FrameworkOutcome} from '../agent/outcome.js';
+import {engineOutcome,gameOutcome,WorldBlockedError,type FrameworkOutcome} from '../agent/outcome.js';
 const runSchema=z.strictObject({request_id:z.string().uuid(),game_id:z.string().uuid(),expected_revision:z.number().int().min(0),action:z.unknown(),max_days:z.number().int().min(1).max(7).optional()});
 
 export type RoutineJobStatus='queued'|'running'|'paused'|'interrupted'|'failed'|'completed'|'cancelled';
@@ -84,6 +84,7 @@ export class RoutineJobs {
  assert(absoluteTime(save)>before,'调度器没有取得进展，已停止以避免重复结算');await new Promise<void>(resolve=>setImmediate(resolve));}
  if(job.status==='running'){job.status=job.steps>=200?'interrupted':'completed';job.message=job.steps>=200?'已到安全事件数量上限，可检查后继续。':'本批普通生活已完成。';}
  }catch(e){if(signal.aborted && signal.reason instanceof Error && signal.reason.message==='USER_CANCELLED'){job.status='cancelled';job.message='已安全暂停；已提交的生活保留，未提交的段没有修改存档。';}
+else if(e instanceof WorldBlockedError){job.status='interrupted';job.message=e.message;}
 else{job.status='failed';job.message=readableFailure(e);failureCode=e instanceof ProviderError?'provider_failure':e instanceof GameError?'state_failure':'unexpected_internal_failure';}}
  finally{sync();job.phase='idle';try{
  const authoritative=await this.service.storage.read('current','request_recovery').catch(()=>null);

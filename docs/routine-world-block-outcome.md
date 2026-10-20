@@ -1,0 +1,9 @@
+# Routine jobs distinguish canonical route refusal from technical failure
+
+Parent `5026c8a`, product `8af0d86`. A real routine with all travel routes closed stopped without work effects, but the job catch treated its generic route-unavailable Error as an unexpected internal failure. Baseline: 1 failure, 2 technical-failure controls. R5.1 was explicitly withdrawn before repair.
+
+The scheduler now throws the existing structured WorldBlockedError with route_unavailable. RoutineJobs catches only that explicit class as an interrupted game result and retains its canonical reason. It still treats unknown programming errors and ProviderError timeout as technical failures with their prior codes. No error-message matching, retry, world effect or new outcome schema is introduced; scheduler and jobs changes must be integrated together.
+
+Tests use the actual closed-route scheduler/job path, compare unchanged time/wallet/location, assert released routine lease, and retain separate programmer/provider controls. A real JsonStore plus durable job log case reaches terminal interruption, creates a new service/jobs manager, and queries/replays the original job request with identical terminal result, unchanged world bytes, no generation and no lease. This is terminal-state replay evidence, not automatic continuation of an unfinished segment.
+
+Final regression/build counts are in the checkpoint handoff and SESSION; raw baseline/reports are under `.codex-checkpoints/framework-reliability-handoff/takeover-2026-10-20/routine-world-block-*`. R5.1 withdrawal/restoration net zero to 60% (96/160). R5.3's full nested-exit matrix and R6's background recovery/process-kill gates remain open. Complete 215-file/2149-pass snapshot remains earlier `6f4a300`, with initial native failure preserved. Formal save, frozen definitions, original dirt, production service and paid-provider boundaries remain preserved.

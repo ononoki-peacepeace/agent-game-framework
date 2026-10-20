@@ -1,5 +1,10 @@
 # Claude Code starting handoff
 
+## Routine world-blocked outcome — 2026-10-21
+
+Parent5026c8a; source checkpoint containing this section emits existing structured route_unavailable WorldBlockedError and classifies only this class as interrupted game job. Unknown programmer/provider errors remain technical. Baseline1fail/2controls; final5files40pass/build. Actual route path/no work effects/lease release and JsonStore+job log terminal restart/original job replay pass, bytes unchanged/zero generation. Integrate scheduler+jobs together, no schema/Core/retry change. See docs/routine-world-block-outcome.md. R5.1 explicit withdrawal/restoration net0 to60%=96/160; R5.3/R6 full matrices open. Full215files2149pass remains6f4a300. Next: evaluate fixed W4.3 sleep/work/rest/travel/interrupt resource matrix coverage, continue remaining themes. Original dirt/safety preserved.
+
+
 ## Accepted schedule migration labels — 2026-10-21
 
 Parent4c3f840; source checkpoint containing this section preserves existing authored schedule label when linked record lacks a usable title; actual linked title/status still win, ID-only label stays ID. Baseline3fail/2controls; final5files31pass/build. Actual JsonStore migration/read idempotence/zero-time WAIT fallback and new-service request replay covered. Initial test-fixture JSON typing build failure and optional nonexistent calendar filename retained; final explicit calendar file counted. See docs/schedule-label-migration.md. W4.3 remains open;60%=96/160,+0. Full215files2149pass stays6f4a300. Next: reproduce route-blocked routine job classification (world prerequisite vs technical failure), then other fixed matrices. Original dirt/safety preserved.

@@ -10,6 +10,7 @@ import {observe} from '../observability/index.js';
 import {drainBackgroundDisplay} from '../background/runtime.js';
 import {proposeValidatedBackground} from '../background/generation.js';
 import {secureRng,type RNG} from '../core/dice.js';
+import {WorldBlockedError} from '../agent/outcome.js';
 export const routineOf=(s:SavePackage)=>s.entities.find(e=>e.id===s.player_state.entity_id)!.components.routine;
 function pause(s:SavePackage,reason:string){const r=routineOf(s);r.active=false;r.interrupted=true;r.status='interrupted';r.last_interrupt=reason;s.last_turn={narrative:reason,speaker:null,dialogue:null,choices:[],context_actions:[]};return validateSave(s);}
 function wait(s:SavePackage,minutes:number,rng:RNG){if(!minutes)return s;const original=s.definition.ruleset.max_wait_minutes;s.definition.ruleset.max_wait_minutes=Math.max(original,minutes);const next=executeAction(s,{type:'WAIT',parameters:{minutes}},'local-routine','player',rng,undefined,false).save;next.definition.ruleset.max_wait_minutes=original;return next;}
@@ -18,7 +19,7 @@ function pathTo(s:SavePackage,target:string){
  const routes=[...(s.definition.map?.routes??[]),...s.map_state.dynamic_routes].filter(r=>r.conditions.every(c=>s.gm_state.flags[c.flag]===c.equals)&&s.map_state.known_location_ids.includes(r.to));
  const queue=[{id:start,path:[] as typeof routes,cost:0}],visited=new Set<string>();
  while(queue.length){queue.sort((a,b)=>a.cost-b.cost);const n=queue.shift()!;if(n.id===target)return n.path;if(visited.has(n.id))continue;visited.add(n.id);for(const r of routes.filter(r=>r.from===n.id))queue.push({id:r.to,path:[...n.path,r],cost:n.cost+r.travel_minutes});}
- throw Error('日程目的地没有可通行的已知路线，请手动处理');
+ throw new WorldBlockedError('route_unavailable','日程目的地没有可通行的已知路线，请手动处理');
 }
 // Accepted commitments are hard schedule constraints covering a window (morning / half-day / exact minutes…).
 export interface TaskWindow {task:ScheduledTask;start:number;end:number}
