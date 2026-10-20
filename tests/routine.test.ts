@@ -7,6 +7,10 @@ import type {AIRequest} from '../src/ai/contracts.js';
 import type {RoutineResult} from '../src/ai/routine.js';
 import {createApp} from '../src/server/app.js';
 import {demo,MemoryStore} from './helpers.js';
+import {mkdtemp,readFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {JsonStore} from '../src/storage/json-store.js';
 const eventPlan={version:1,blocks:[{id:'first',weekdays:[1,2,3,4,5,6,7],start_minute:540,activity_id:'event_test',candidate_ids:[]},{id:'second',weekdays:[1,2,3,4,5,6,7],start_minute:660,activity_id:'event_test',candidate_ids:[]}],interrupt_policy:['重要事件暂停'],clarification:null};
 function eventWorld(){return {...structuredClone(demo),calendar:{version:1 as const,anchor_day:1,anchor_month:1,anchor_date:1,anchor_weekday:1,month_lengths:[31,28,31,30,31,30,31,31,30,31,30,31],source:'test authored calendar'},routine_rules:{version:1 as const,activities:[{id:'event_test',label:'资料整理开放事件',kind:'event' as const,duration:120,location_id:null,mode:'ai' as const,effects:[],source:'测试用已确认事件'}]}};}
 function result(req:AIRequest):RoutineResult {
@@ -64,6 +68,56 @@ it('interrupt at current time returns control without rewards or time loss',asyn
 it('world interrupt hooks pause at a segment boundary',async()=>{
  const {service,store}=await setup();const save=await service.current();save.definition.events.push({id:'invitation',hook:'on_time_advance',location_id:null,probability:1,once:true,public_text:'有人带来需要决定的邀请',set_flag:null,interrupt_automation:true});await store.write(save);
  const out=await service.turn(await request(service));const r=out.entities.find(e=>e.id===out.player_id)!.components.routine;expect(r.active).toBe(false);expect(r.last_interrupt).toContain('邀请');
+});
+it.each([0,1,60])('upcoming routine task at %i minutes safely stops before the planned segment',async due=>{
+ const {service,store}=await setup(),before=await service.current(),length=before.definition.ruleset.minutes_per_day;
+ before.routine_meta={version:1,calendar_issue:null,migration_ids:[],scheduled_tasks:[{id:'routine_task',label:'需要回应的约定',at:before.runtime.time.day*length+before.runtime.time.minute+due,window:'exact',status:'accepted',source:'test explicit appointment',resolved:false}]};
+ await store.write(before);const req=await request(service);await service.turn(req);const after=await service.current();
+ const credit=(s:typeof before)=>Number((s.entities.find(e=>e.id==='player')!.components.wallet.balances as Record<string,number>).credit);
+ expect(credit(after)).toBe(credit(before));
+ expect((after.runtime.time.day-before.runtime.time.day)*length+after.runtime.time.minute-before.runtime.time.minute).toBe(0);
+ const routine=after.entities.find(e=>e.id==='player')!.components.routine as {elapsed_minutes:number;active:boolean;interrupted:boolean;history:{end:typeof before.runtime.time;patches:unknown[]}[]};
+ expect(routine.elapsed_minutes).toBe(0);expect(routine.active).toBe(false);expect(routine.interrupted).toBe(true);
+ expect(routine.history??[]).toEqual([]);
+ expect(after.last_turn?.narrative).not.toContain('领取事先约定的报酬');
+ await service.turn(req);expect(await service.current()).toEqual(after);
+});
+it('partial routine interrupted by a world hook discards unearned summary and rewards',async()=>{
+ const {service,store}=await setup(),before=await service.current();
+ before.definition.events.push({id:'partial_routine_hook',hook:'on_time_advance',location_id:null,probability:1,once:true,public_text:'有人带来需要决定的邀请',set_flag:null,interrupt_automation:true});await store.write(before);
+ await service.turn(await request(service));const after=await service.current(),r=after.entities.find(e=>e.id==='player')!.components.routine as {elapsed_minutes:number;history:{end:typeof before.runtime.time;patches:unknown[]}[]};
+ expect(after.runtime.time.minute-before.runtime.time.minute).toBe(60);expect(r.elapsed_minutes).toBe(60);
+ expect(r.history.at(-1)?.end).toEqual(after.runtime.time);expect(r.history.at(-1)?.patches).toEqual([]);
+ expect(after.last_turn?.narrative).not.toContain('领取事先约定的报酬');expect(after.event_state.fired).toContain('partial_routine_hook');
+ expect(after.entities.find(e=>e.id==='player')!.components.routine.completed_blocks??[]).not.toContain('1:first');
+});
+it('partial routine world interruption retains actual wallet instead of full proposed wage',async()=>{
+ const {service,store}=await setup(),before=await service.current();
+ before.definition.events.push({id:'partial_wage_hook',hook:'on_time_advance',location_id:null,probability:1,once:true,public_text:'有人带来需要决定的邀请',set_flag:null,interrupt_automation:true});await store.write(before);
+ await service.turn(await request(service));const after=await service.current();
+ const credit=(s:typeof before)=>Number((s.entities.find(e=>e.id==='player')!.components.wallet.balances as Record<string,number>).credit);
+ expect(credit(after)).toBe(credit(before));
+});
+it.each([null,120])('full routine boundary preserves settled work and rewards: %s',async due=>{
+ const {service,store}=await setup(),before=await service.current();
+ if(due!==null){before.routine_meta={version:1,calendar_issue:null,migration_ids:[],scheduled_tasks:[{id:'end_routine_task',label:'工作结束后的约定',at:before.runtime.time.day*before.definition.ruleset.minutes_per_day+before.runtime.time.minute+due,window:'exact',status:'accepted',source:'test exact end appointment',resolved:false}]};await store.write(before);}
+ await service.turn(await request(service));const after=await service.current();
+ const credit=(s:typeof before)=>Number((s.entities.find(e=>e.id==='player')!.components.wallet.balances as Record<string,number>).credit);
+ expect(credit(after)-credit(before)).toBe(8);expect(after.entities.find(e=>e.id==='player')!.components.routine.elapsed_minutes).toBe(120);
+ expect(after.last_turn?.narrative).toContain('领取事先约定的报酬');
+});
+it('partial routine interrupt survives real JsonStore restart and original request replay',async()=>{
+ const f=await setup(),before=await f.service.current(),directory=await mkdtemp(join(tmpdir(),'agf-routine-partial-'));
+ before.definition.events.push({id:'disk_partial_hook',hook:'on_time_advance',location_id:null,probability:1,once:true,public_text:'有人带来需要决定的邀请',set_flag:null,interrupt_automation:true});
+ try{
+  const store=new JsonStore(directory);await store.write(before);const first=new GameService(store,f.service.ai,before.definition),req=await request(first);
+  await first.turn(req);const after=(await store.read())!,bytes=await readFile(join(directory,'current.json'));
+  const credit=(s:typeof before)=>Number((s.entities.find(e=>e.id==='player')!.components.wallet.balances as Record<string,number>).credit);
+  expect(credit(after)).toBe(credit(before));expect(after.entities.find(e=>e.id==='player')!.components.routine.elapsed_minutes).toBe(60);
+  const ai=new AIRuntime({name:'offline-no-generation',generate:async()=>{throw Error('Replay must not generate');}});
+  const restarted=new GameService(new JsonStore(directory),ai,before.definition);await restarted.turn(req);
+  expect(await restarted.current()).toEqual(after);expect(await readFile(join(directory,'current.json'))).toEqual(bytes);expect(ai.metrics.requests).toBe(0);
+ }finally{await rm(directory,{recursive:true,force:true});}
 });
 it('formal dice are generated by program and delivered to the second GM call',async()=>{
  const {service,calls}=await setup((r,req)=>{const data=JSON.parse(req.prompt.split('\n\n').at(-1)!);return data.random_results.length?r:{...r,activities:[],patches:[],checks:[{id:'work_check',expression:'1d20',reason:'已约定的普通工作质量检定'}]};});

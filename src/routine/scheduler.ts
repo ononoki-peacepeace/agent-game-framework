@@ -77,7 +77,8 @@ export async function sparseStep(input:SavePackage,ai:AIRuntime,horizon:number,s
    const candidates=s.entities.filter(e=>e.id!==s.player_state.entity_id&&e.components.character&&(!allowed.size||allowed.has(e.id))&&e.components.location?.location_id===actorLocation).map(e=>e.id);
    if(slot.rule.kind==='social'&&!candidates.length)return pause(s,'当前没有可参加这次社交的人物，请调整时间或地点。');
    s=await settleRoutine(s,ai,slot.end-now,(candidate,max,random,planned,repair,recoverySignal)=>ai.sparseEvent(candidate,max,slot.rule.id,signal&&recoverySignal?AbortSignal.any([signal,recoverySignal]):signal??recoverySignal,random,planned,slot.rule.kind==='social'?candidates:undefined,repair));signal?.throwIfAborted();
-   routineOf(s).completed_blocks=[...completed,slot.key].slice(-300);return s;
+   if(absoluteTime(s)>=slot.end)routineOf(s).completed_blocks=[...completed,slot.key].slice(-300);
+   return s;
  }
  const end=Math.min(slot.end,limit);const duration=end-now;s=wait(s,duration,rng);
  const progress=r.block_progress as {key:string;minutes:number}|undefined;const accrued=(progress?.key===slot.key?progress.minutes:0)+duration;routineOf(s).block_progress={key:slot.key,minutes:accrued};

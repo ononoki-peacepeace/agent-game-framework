@@ -106,7 +106,6 @@ export async function settleRoutine(candidate: SavePackage, ai: AIRuntime, maxMi
     }
   }
   if(!interruptedTravel) {
-    applyLifePatches(next,result);
     const remaining=minutes-travelMinutes;
     if(remaining) {
       const originalLimit=next.definition.ruleset.max_wait_minutes;
@@ -114,6 +113,15 @@ export async function settleRoutine(candidate: SavePackage, ai: AIRuntime, maxMi
       next=executeAction(next,{type:'WAIT',parameters:{minutes:remaining}},'routine-segment','ai',undefined,undefined,false).save;
       next.definition.ruleset.max_wait_minutes=originalLimit;
     }
+    const actualMinutes=(next.runtime.time.day-start.day)*dayLength+next.runtime.time.minute-start.minute;
+    if(actualMinutes<minutes){
+      minutes=actualMinutes;
+      const routine=next.entities.find(e=>e.id===next.player_state.entity_id)!.components.routine;
+      const reason=next.foreground?.reason||String(routine.last_interrupt||'发生了需要你处理的事情');
+      result={...result,segment:{start,end:structuredClone(next.runtime.time),summary:'生活安排在完成前暂停。'},
+        activities:[{kind:'world_event',summary:reason,participants:[next.player_state.entity_id]}],patches:[],
+        interrupt:true,interrupt_reason:reason,next_arrangement:null};
+    }else applyLifePatches(next,result);
   }
   const r=next.entities.find(e=>e.id===next.player_state.entity_id)!.components.routine;
   const hookReason=r.interrupted ? String(r.last_interrupt) : null;

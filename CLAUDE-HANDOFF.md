@@ -1,5 +1,10 @@
 # Claude Code starting handoff
 
+## Routine actual partial settlement — 2026-10-21
+
+Parent12b2b72; source checkpoint containing this section withholds unearned AI routine effects, records actual end/elapsed and truthful pause, and prevents premature completed_blocks. Corrected baseline2fail/5controls plus completed-block1fail; original4fail/2controls included3invalid appointment expectations (scheduler already preempts), preserved. Final4files45pass + explicit sparse/lifecycle2files25pass =6distinctfiles70pass/build. Actual event and JsonStore/service replay covered. Integrate routine-controller+scheduler together; no schema/Core or invented proportional reward. See docs/routine-partial-interruption.md. W4.3 remains open;60%=96/160,+0. Full212files2118pass stays f9f93f0. Next: actual local scheduler accrued time/foreground interruption and remaining fixed matrices. Original dirt/safety preserved.
+
+
 ## Declared activity interruption — 2026-10-21
 
 Parent218559d; source checkpoint containing this section defers full declared effects until Core reports the entire activity duration, and stops open goals at partial activity handoff. Baseline5fail/2controls; final8files115pass/build. Scheduled0/1/60, sleep, exact-end/full-duration, actual event and JsonStore/new-service replay covered. No invented proportional reward, Core/schema/public service change; integrate service+affordances together. See docs/declared-activity-interruption.md. A4.2 explicit withdrawal/restoration net0 to60%=96/160; A4.3 open. Full212files2118pass stays f9f93f0. Next: reproduce broader routine/foreground interruption boundaries and continue four themes. Original dirt/safety preserved.
