@@ -1,0 +1,13 @@
+# Complete post-corpus offline snapshot
+
+Product `c6169aa`, starting ledger/HEAD `dbad465`: all **235 fixed test files / 2340 assertions passed**, zero failures or skips. Twenty fresh isolated processes all exited 0. Every current test file occurs exactly once in the selected reports, with no missing/duplicate coverage. This is the first complete snapshot containing generic activity prose, conditional trade and ordinary activity foreground boundaries, as well as the earlier sealed-equipment and legacy-policy repairs.
+
+The manifest pins 547 source/config/content/test/acceptance hashes, including the 24-input corpus. All hashes matched before each shard and at final audit. The current-source complete isolated build passed (`current-build-final.log`, session 99242); the preceding final product build also passed (session 65857). `node scripts/agent-workspace.mjs codex test ...` and the build wrapper selected isolated directories, offline fixtures and temporary OS-assigned HTTP ports.
+
+Final audit confirmed 27 frozen acceptance hashes, the original QA file bytes and formal-save SHA256 `94109AA75B66ED021619A3A7CC9C2795A714D36B2DADFA109B1C8CEB67455DE9`. No production service start/restart, deployment, paid provider, authentication edit, push or Claude checkout modification occurred. The existing dirty QA files and untracked notes remain preserved.
+
+Ignored evidence in the takeover checkpoint directory: `post-corpus-offline-manifest.json`, `post-corpus-offline-summary.json`, twenty `post-corpus-offline-shardN.{json,log}` reports and `-status.json` records, original/generated synthetic QA copies, `run-post-corpus-offline.mjs` and `audit-post-corpus-offline.mjs`. The runner preserved generated QA evidence before restoring the original QA byte snapshots. No recovery reports were needed in this run.
+
+All earlier failures remain: historical native exits `0xC0000409`, initial sandbox fetch failures, incorrect fixture/type expectations and corrected product counterexamples. This run does not establish the cause of the historical native crash or OS/disk-crash safety. Controlled model candidates do not establish real-provider language quality, independent/human review or production acceptance.
+
+R5.4 refreshes its already-met versioned evidence only. Overall stays 97/160, 60.625% (display 60.63%), net zero. The earlier 228-file/2252-assertion snapshot at `80f9084` remains as history and is superseded for latest complete offline evidence by this snapshot. Next: reproduce conditional legacy execution's handling of partial activity receipts, then continue the remaining fixed four-theme matrices.

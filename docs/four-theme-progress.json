@@ -160,7 +160,8 @@
         "docs/post-subject-offline-snapshot.md",
         "docs/post-routine-offline-snapshot.md",
         "docs/post-control-offline-snapshot.md",
-        "docs/post-item-offline-snapshot.md"
+        "docs/post-item-offline-snapshot.md",
+        "docs/post-corpus-offline-snapshot.md"
       ],
       "basis": "Product9917459/ledger6be22bb fixed195-file494-hash complete offline snapshot1957/1957pass, exact coverage once, build pass; original shard5 native0xC0000409 retained, exact halves passed. Native stability and later source edits need new evidence. Fresh source29e6a5f/ledgerc351367:199files1992/1992pass,502pinned hashes unchanged, exact coverage once,16shards; isolated build passed. Old native crash retained. Fresh product1bad19e/ledger5c083d8 full snapshot207files2064/2064pass,515pinned hashes unchanged, exact coverage once,16shards exit0. Identical-product complete isolated build passed. Historical native crash retained; no later-source or process-stability claim. Fresh productf9f93f0/ledger264dcf4 full snapshot212files2118/2118pass,521pinned hashes unchanged, exact coverage once,16shards exit0; identical-product complete isolated build passed. Earlier native/network/assertion failures retained; no later-source or universal stability claim. Product6f4a300/ledger52c96ad: pinned215files2149pass on524unchanged hashes, exact selected coverage once. Initial16shards had native0xC0000409 at10, preserved;15passed shards plus14fresh single-file passes form29-process audited coverage. Identical-source build passed; no native root-cause fix claim. Current product8b5d2df/ledgerff24471:222files2192/2192pass,20fresh processes all exit0,zero skip,531pinned hashes unchanged,exact coverage once; same-product full isolated build passed. Old native failure retained/cause unresolved. Product80f9084/evidence starting362b3cb:228files2252/2252pass,zero skip,538unchanged hashes,exact selected coverage once. Initial20process attempt had native0xC0000409 at19/no report,retained;19passed original reports+11fresh single-file reports form30passing-report coverage(31total attempts). Identical-product complete isolated build/session68456 passed. Original QA/27frozen/formal SHA match;native cause unresolved."
     },
@@ -2826,6 +2827,21 @@
             "tests/generic-activity-interruption.test.ts",
             "docs/generic-activity-interruption.md",
             "tests/multi-world-language-corpus.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "post-corpus-complete-offline-snapshot",
+      "type": "repair",
+      "source": "c6169aa",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R5.4",
+          "result": "Refreshed already-met versioned full offline evidence:235files2340pass,547unchanged hashes,exact coverage once;20fresh process exit0;historical native failures retained.",
+          "evidence": [
+            "docs/post-corpus-offline-snapshot.md"
           ]
         }
       ]
