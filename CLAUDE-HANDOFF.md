@@ -1,5 +1,10 @@
 # Claude Code starting handoff
 
+## Post-commit failure step summary — 2026-10-21
+
+Parent `6c6876e`; source checkpoint containing this section prevents a failed-step summary denying changed world state or recommending blind retry after recovery sees a newer revision. Initial2actual-WAIT cases failed; final6files27pass/build in SESSION. Structured receipt/story stays, explicit refreshed-revision/same-child replay adds no minute/receipt/model call. No Core/interface/retry change. See docs/plan-committed-failure-summary.md. R5.3 open;60%=96/160,+0. Full207files2064pass belongs preceding1bad19e; this later edit has targeted evidence. Next: fixed conditional/dynamic-intent/partial-result matrix and all other themes; original dirt/safety preserved.
+
+
 ## Complete current offline snapshot — 2026-10-21
 
 Product `1bad19e` / ledger `5c083d8`:207files2064/2064pass across16fresh isolated shards, exact current file coverage once,515pinned hashes unchanged. Identical-product complete isolated build passed. Original QA restored after every shard; generated copies retained,27frozen hashes and formal-save SHA match. Old0xC0000409 and all earlier failures retained; no root-cause/process-stability claim. See docs/post-context-offline-snapshot.md and ignored post-context-offline-summary.json. R5.4 refresh only;60%=96/160,+0. No active tests/build or source WIP. Next: fixed conditional/dynamic-intent/partial-result and other four-theme matrices; no whole-goal completion. Original dirt/safety preserved.

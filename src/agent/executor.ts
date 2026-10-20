@@ -478,7 +478,9 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
     save.state_revision,false,changes,committedSince(initialSave,save));
    if(refreshed)save=refreshed;
    goal.status='failed';goal.result={summary:!stateReadable?
-    '当前世界状态暂时无法读取，不能确认这一步的提交情况；请先恢复状态读取。':failureReason(error)!=='unknown'?
+    '当前世界状态暂时无法读取，不能确认这一步的提交情况；请先恢复状态读取。':
+    stepOutcome.type==='engine_failure'&&!stepOutcome.state_certain?
+    '世界状态已更新，但这一步的后续处理未能可靠完成；请先核对当前状态与已提交记录，再决定下一步。':failureReason(error)!=='unknown'?
     '这次行动的模型响应未完整生成，当前目标尚未完成。请稍后从当前状态重试。':
     /未注册|parameters|schema|Invalid|FREEFORM_ACTION|relationship_delta|ConditionNode|条件必须由独立条件节点|框架校验|状态校验|canonical delta|contract/i.test(detail)?
       '这次行动没有正常完成，世界状态没有改变，可以安全重试。':displayText(detail,publicView(save).entities,publicView(save).locations)};calls.push({tool_id:goal.type,ok:false});if(!stateReadable||goal.side_effect_level==='world'||clarification||plan.local_compound)break;}

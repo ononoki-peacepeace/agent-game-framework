@@ -1,0 +1,7 @@
+# Post-commit step failure does not deny saved state
+
+Parent `6c6876e`, latest complete snapshot product `1bad19e`. Two fixed scenarios and source/test hashes were saved before baseline reproduction. Both failed: after a real WAIT commit, a contract response-processing error produced “世界状态没有改变，可以安全重试”, while a provider error recommended retry without acknowledging the updated state. Structured outcomes already retained the receipt/story, so these step summaries contradicted the known result.
+
+When recovery reads an updated world revision, the failed-step summary now states that world state changed and asks the player to inspect current state/submitted records before deciding what follows. It does not assume a concurrent write belonged to this step or change settlement, retry policy, failure classification, receipts, plan statuses or interfaces. Unreadable-state messaging remains distinct. Both actual WAIT cases preserve one receipt/minute and the original story; an explicitly refreshed-revision replay with the same child identity performs no additional model/world action.
+
+Final six-file/27-test regression and complete isolated build are recorded in SESSION. R5.3 remains unmet, **60.00%,96/160,+0**. The complete207-file/2064-test snapshot belongs to preceding product `1bad19e`; this later wording/test change has targeted evidence only. Original dirt, frozen criteria, formal save and service/Provider boundaries are preserved.
