@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Compound physical child firewall — 2026-10-20
+
+Parent `77e1965`; source checkpoint containing this section keeps concrete-injury/denial/event-time-sight checks when a later TALK becomes the aggregate type. Reads actual physical child receipts, does not create reactions/results. Corrected baseline2fail/2controls; first malformed physical-state fixture excluded. Final8files79pass and isolated build in local SESSION; service cases reject3candidates then degrade once and replay without new effects. See docs/compound-physical-firewall.md. N4.1 counterexample requires explicit withdrawal then repair restoration in ledger, net0; N4.3 stays open,60%=96/160 unchanged. Full195files1957pass remains9917459, prior to this edit. Next: separate audit of reaction ownership for earlier physical compound steps; broad temporal/subject scope remains open. Original QA/audit/untracked handoff dirt preserved; no formal save/3100/paid/deploy/push/Claude edits.
+
 ## Current complete offline snapshot — 2026-10-20
 
 Product source `9917459`, ledger `6be22bb`: fresh195files1957/1957pass, all494pinned source/config hashes unchanged, exact file coverage once. Original shard5 native0xC0000409/noJSON retained; exact halves5a/5b passed. Native crash cause unknown; test coverage success is not process-stability acceptance. Complete isolated build passed; QA originals restored byte-for-byte,27frozen hashes match,formal-save hash unchanged. See docs/current-offline-snapshot.md and ignored current-offline-summary.json. R5.4 evidence refresh only;60%=96met/28unmet/36unverified unchanged. No source WIP; original historical dirt preserved. Next: reproduce compound physical-first/TALK-last firewall injury/perception checks against actual child receipts; inspect reaction ownership separately, never fabricate reactions. No3100/paid/deploy/push/Claude changes.

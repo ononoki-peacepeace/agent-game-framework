@@ -135,25 +135,31 @@ export function validateResolvedNarrative(receipt:Receipt,result:Narrative,hidde
       body=body.split(open+beat.utterance+close).join('');
   }
   const prose=[body,...(result.scene_beats??[]).filter(beat=>beat.kind==='narration').map(beat=>beat.text)].join('\n');
-  if(scene)validatePerceptionNarrative(scene,receipt,result);
-  if(receipt.physical_outcome){
+  // The aggregate inherits its final child type; earlier physical results still
+  // constrain injuries and event-time perception when the last child is TALK.
+  const physicalReceipts=(compoundReceipts??[receipt]).filter(step=>step.physical_outcome);
+  if(!physicalReceipts.length&&receipt.physical_outcome)physicalReceipts.push(receipt);
+  if(scene)for(const step of physicalReceipts)validatePerceptionNarrative(scene,step,result);
+  if(physicalReceipts.length){
     // Abstract HP damage does not establish a particular visible wound or its
     // severity. Ordinary motion, pain and emotion remain expressive prose.
     const bodilyDetail=/(?:淤红|瘀青|淤青|红肿|肿胀|骨折|脱臼|失明|断肢|烧伤|烫伤)/g;
     for(const match of prose.matchAll(bodilyDetail)){
       if(/(?:没有|并未|尚未|未曾|不曾)$/.test(prose.slice(Math.max(0,match.index-4),match.index)))continue;
-      const supported=receipt.canonical_facts.some(fact=>!/[说问喊答]：“/.test(fact)&&fact.includes(match[0]));
+      const supported=physicalReceipts.some(step=>step.canonical_facts.some(fact=>!/[说问喊答]：“/.test(fact)&&fact.includes(match[0])));
       if(!supported)throw new NarrativePatternError('injury_detail',match.index,matchedSnippet(prose,match.index,match[0].length),
         '具体伤势表现没有对应的权威事实；抽象伤害不确认部位、伤型或永久后果');
     }
-    const physical=receipt.physical_outcome;
-    if(physical.contact)for(const match of prose.matchAll(/伸手落空|没有碰到|未能接触|没碰到/g)){
-      const scopedMiss=scopedPhysicalDenial(receipt,prose.slice(0,match.index),'contact');
-      if(!scopedMiss)throw new NarrativePatternError('contact_denial',match.index,matchedSnippet(prose,match.index,match[0].length),'叙事否认了已经结算的身体接触');
+    for(const step of physicalReceipts){
+      const physical=step.physical_outcome!;
+      if(physical.contact)for(const match of prose.matchAll(/伸手落空|没有碰到|未能接触|没碰到/g)){
+        const scopedMiss=scopedPhysicalDenial(step,prose.slice(0,match.index),'contact');
+        if(!scopedMiss)throw new NarrativePatternError('contact_denial',match.index,matchedSnippet(prose,match.index,match[0].length),'叙事否认了已经结算的身体接触');
+      }
+      if(physical.harmed)for(const match of prose.matchAll(/毫发无伤|没有受伤|并未受伤/g))
+        if(!scopedPhysicalDenial(step,prose.slice(0,match.index),'injury'))
+          throw new NarrativePatternError('injury_denial',match.index,matchedSnippet(prose,match.index,match[0].length),'叙事否认了已经结算的伤害');
     }
-    if(physical.harmed)for(const match of prose.matchAll(/毫发无伤|没有受伤|并未受伤/g))
-      if(!scopedPhysicalDenial(receipt,prose.slice(0,match.index),'injury'))
-        throw new NarrativePatternError('injury_denial',match.index,matchedSnippet(prose,match.index,match[0].length),'叙事否认了已经结算的伤害');
   }
   // A report of *not* finding anything is not a claim that new evidence was discovered.
   const positiveClaims=prose.replace(/(?:没有|未|没能|未能)(?:发现|找到|看出)[^。；，\n]{0,60}(?:线索|证据|暗门|秘密|机关|真相|痕迹)/g,'');
