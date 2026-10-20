@@ -10,6 +10,7 @@ import {JsonStore} from '../src/storage/json-store.js';
 import {GameService} from '../src/server/service.js';
 import {createApp} from '../src/server/app.js';
 import {newSave} from '../src/core/state.js';
+import * as atomic from '../src/storage/atomic-json.js';
 
 afterEach(()=>vi.restoreAllMocks());
 async function replaceRaw(directory:string,body:string){
@@ -37,6 +38,23 @@ it.each((['current','view'] as const).flatMap(method=>(['canonical','same_revisi
   else expect(after.routine_meta).toBeDefined();
   expect(f.ai.metrics.requests).toBe(0);
  }finally{release();await reading?.catch(()=>undefined);await rm(directory,{recursive:true,force:true});}
+});
+it.each((['current','view'] as const).flatMap(method=>(['before','after'] as const).map(boundary=>({method,boundary}))))(
+ 'preserves a complete image after $method migration persistence error $boundary replacement without retrying a world action',async({method,boundary})=>{
+ const f=await sparseSetup(),legacy=await f.service.current();delete legacy.routine_meta;
+ const directory=await mkdtemp(join(tmpdir(),'agf-migration-replace-fault-'));
+ try{
+  const store=new JsonStore(directory);await store.write(legacy);const service=new GameService(store,f.ai,legacy.definition),replace=atomic.replaceWithBoundedRetry;
+  const fault=vi.spyOn(atomic,'replaceWithBoundedRetry').mockImplementationOnce(async(...args)=>{
+   if(boundary==='after')await replace(...args);throw Object.assign(Error('isolated migration replacement fault'),{code:'EIO'});
+  });
+  await expect(service[method]()).rejects.toThrow('isolated migration replacement fault');
+  const after=(await new JsonStore(directory).read())!,stripped=structuredClone(after);delete stripped.routine_meta;
+  expect(stripped).toEqual(legacy);expect(Boolean(after.routine_meta)).toBe(boundary==='after');expect(fault).toHaveBeenCalledTimes(1);
+  fault.mockRestore();await service[method]();const normalized=(await store.read())!;
+  expect(normalized).toMatchObject(legacy);expect(normalized.routine_meta).toBeDefined();expect(normalized.runtime).toEqual(legacy.runtime);
+  expect(normalized.state_revision).toBe(legacy.state_revision);expect(f.ai.metrics.requests).toBe(0);
+ }finally{await rm(directory,{recursive:true,force:true});}
 });
 it.each(['state','input'] as const)('classifies externally corrupted saved JSON as server failure on %s without a replay',async route=>{
  const f=await sparseSetup(),initial=await f.service.current(),directory=await mkdtemp(join(tmpdir(),'agf-corrupt-save-http-'));

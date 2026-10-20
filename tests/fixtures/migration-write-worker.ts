@@ -22,7 +22,22 @@ const ai=new AIRuntime(new MockAIAdapter()),service=new GameService(store,ai,ini
 // An unresolved Promise alone does not keep a child process alive.
 process.on('message',async()=>{
  try{
-  if(mode==='atomic_before'||mode==='atomic_after'){
+  if(mode==='prepare_before'){
+   const read=store.read.bind(store);
+   store.read=async(...args)=>{
+    const save=await read(...args);
+    if(args[1]==='service_current'||args[1]==='service_view'){
+     process.send!({kind:'boundary'});await new Promise<never>(()=>{});
+    }
+    return save;
+   };
+   if(method==='view')await service.view();else await service.current();
+  }else if(mode==='prepare_after'){
+   store.writeMigration=async(_expected,prepared)=>{
+    process.send!({kind:'boundary',prepared});await new Promise<never>(()=>{});return false;
+   };
+   if(method==='view')await service.view();else await service.current();
+  }else if(mode==='atomic_before'||mode==='atomic_after'){
    const rename=fsPromises.rename;
    fsPromises.rename=async(...args)=>{
     const target=resolve(String(args[1]))===resolve(join(directory,'current.json'));
