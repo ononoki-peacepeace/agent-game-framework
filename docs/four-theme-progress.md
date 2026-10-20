@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：7647121。整体 **60.63%**（97/160 个固定条件满足）。未满足 28，待验证 35。
+计分版本 v1；评估源代码：8affb2f。整体 **60.63%**（97/160 个固定条件满足）。未满足 28，待验证 35。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：30 已修复，14 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：30 已修复，15 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -113,6 +113,7 @@
 | npc-long-edge-credit | repair | W4.3: Typed current declared travel edge can store actual paid credit through1440-minute map limit;no accrual before schedule/conditions or duplicated world time. Numeric reader dependency documented;legacy cap unchanged. Baseline2fail7controls;final8files80pass/build,actual270credit disk/service restart. Full matrices open.；完整条件保持开放; W5.3: Typed current declared travel edge can store actual paid credit through1440-minute map limit;no accrual before schedule/conditions or duplicated world time. Numeric reader dependency documented;legacy cap unchanged. Baseline2fail7controls;final8files80pass/build,actual270credit disk/service restart. Full matrices open.；完整条件保持开放 | +0.000 pp |
 | npc-legacy-long-edge-credit | repair | W4.3: Legacy current known firstedge paid-credit limit through1440 matches actual time;prior knowledge boundary,guards and Core settlement retained. Numeric reader dependency documented;baseline3fail13controls,final9files93pass/build,actual270credit disk/service restart/oneMOVE. Full matrices/process migration remain open.；完整条件保持开放; W5.3: Legacy current known firstedge paid-credit limit through1440 matches actual time;prior knowledge boundary,guards and Core settlement retained. Numeric reader dependency documented;baseline3fail13controls,final9files93pass/build,actual270credit disk/service restart/oneMOVE. Full matrices/process migration remain open.；完整条件保持开放 | +0.000 pp |
 | post-long-route-complete-offline-snapshot | repair | R5.4: Refresh already-met complete offline evidence:241files2403pass,553pinned hashes,exact coverage once,20processes exit0/build; separate independent-process migration failure retained.；完整条件保持开放 | +0.000 pp |
+| migration-process-write-guard | repair | R9.3: Repair independent-process migration overwrite with bounded crash-releasing cooperative write guard;baseline2fail8controls,final9files84pass/build. Full interleaving matrix remains open.；完整条件保持开放; R9.4: Strict SIGKILL/timeout/corruptguard/requestreplay evidence only;full preparation/external replacement matrix remains open;all failures retained.；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -192,8 +193,8 @@
 |---|---|---|---|
 | R9.1 | 空闲 current/view 迁移在现有锁内重读后写 | 满足 | [p0a-migration-read-races.test.ts](../tests/p0a-migration-read-races.test.ts) |
 | R9.2 | 父请求准备失败不先迁移，媒体交叉不覆盖新凭据 | 满足 | [p0a-migration-read-races.test.ts](../tests/p0a-migration-read-races.test.ts) |
-| R9.3 | 多个服务实例或进程读迁移竞争不覆盖新提交 | 未满足 | [p0a-migration-read-races.test.ts](../tests/p0a-migration-read-races.test.ts), [migration-two-service.test.ts](../tests/migration-two-service.test.ts), [migration-two-service.md](../docs/migration-two-service.md) |
-| R9.4 | 进程强杀及外部替换时迁移结果和错误分类可验证 | 待验证 | [p0a-migration-read-races.test.ts](../tests/p0a-migration-read-races.test.ts) |
+| R9.3 | 多个服务实例或进程读迁移竞争不覆盖新提交 | 未满足 | [p0a-migration-read-races.test.ts](../tests/p0a-migration-read-races.test.ts), [migration-two-service.test.ts](../tests/migration-two-service.test.ts), [migration-two-service.md](../docs/migration-two-service.md), [migration-two-process.test.ts](../tests/migration-two-process.test.ts), [current-write-guard.test.ts](../tests/current-write-guard.test.ts), [migration-process-write-guard.md](../docs/migration-process-write-guard.md) |
+| R9.4 | 进程强杀及外部替换时迁移结果和错误分类可验证 | 待验证 | [p0a-migration-read-races.test.ts](../tests/p0a-migration-read-races.test.ts), [migration-two-process.test.ts](../tests/migration-two-process.test.ts), [current-write-guard.test.ts](../tests/current-write-guard.test.ts), [migration-process-write-guard.md](../docs/migration-process-write-guard.md) |
 
 ## R10 World/global/session behavior-guidance cross-store removal/replay acceptance
 

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "7647121",
+  "assessed_source": "8affb2f",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -279,16 +279,22 @@
       "evidence": [
         "tests/p0a-migration-read-races.test.ts",
         "tests/migration-two-service.test.ts",
-        "docs/migration-two-service.md"
+        "docs/migration-two-service.md",
+        "tests/migration-two-process.test.ts",
+        "tests/current-write-guard.test.ts",
+        "docs/migration-process-write-guard.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 396d1be: same-process same-path JsonStore migration full-image compare/current-write coordination prevents canonical/media/same-revision loss;formal2fail6controls,final7files57pass/build,queued-snapshot failure retained/repaired. Independent processes,external writers,aliases and OS boundaries remain open."
+      "basis": "Product8affb2f guards cooperating JsonStore current writes across processes with crash-releasing SQLite transaction;full expected-image compare remains within lock. Baseline2fail8controls,final9files84pass/build67225. Same-revision and remaining actual canonical/media interleavings still need matrix evidence before full closure. Runtime Node>=22.13,validatedWindows24.15 only;older unguarded/raw writers/general stale canonical CAS excluded."
     },
     "R9.4": {
       "status": "unverified",
       "evidence": [
-        "tests/p0a-migration-read-races.test.ts"
+        "tests/p0a-migration-read-races.test.ts",
+        "tests/migration-two-process.test.ts",
+        "tests/current-write-guard.test.ts",
+        "docs/migration-process-write-guard.md"
       ],
-      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+      "basis": "Product8affb2f: actual strict live-child SIGKILL before/after migration persistence for current/view,timeout thenkill/retry,corrupt coordination safe stop and postkill request replay pass. Fixture autoexit and sandboxHTTP failures retained;full preparation/replace/external replacement/OS error matrix remains unverified."
     },
     "R10.1": {
       "status": "met",
@@ -3064,6 +3070,32 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "migration-process-write-guard",
+      "type": "repair",
+      "source": "8affb2f",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R9.3",
+          "result": "Repair independent-process migration overwrite with bounded crash-releasing cooperative write guard;baseline2fail8controls,final9files84pass/build. Full interleaving matrix remains open.",
+          "evidence": [
+            "tests/migration-two-process.test.ts",
+            "tests/current-write-guard.test.ts",
+            "docs/migration-process-write-guard.md"
+          ]
+        },
+        {
+          "id": "R9.4",
+          "result": "Strict SIGKILL/timeout/corruptguard/requestreplay evidence only;full preparation/external replacement matrix remains open;all failures retained.",
+          "evidence": [
+            "tests/migration-two-process.test.ts",
+            "tests/current-write-guard.test.ts",
+            "docs/migration-process-write-guard.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -3756,6 +3788,19 @@
         "docs/sealed-item-damage.md"
       ],
       "summary": "Registered and shared item damage bypassed sealed ancestors;existing ancestry guard now rejects before RNG/mutation,accessible actual damage remains."
+    },
+    {
+      "id": "migration-process-overwrite",
+      "scope": "original",
+      "condition": "R9.3",
+      "status": "repaired",
+      "source": "8affb2f",
+      "evidence": [
+        "tests/migration-two-process.test.ts",
+        "tests/current-write-guard.test.ts",
+        "docs/migration-process-write-guard.md"
+      ],
+      "summary": "A child committed higher revision after parent migration comparison and before replace,parent overwrote it. Guard covers comparison+current persistence;baseline2fail8controls,final84pass/build,full condition still open."
     }
   ]
 }
