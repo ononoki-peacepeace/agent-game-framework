@@ -1,5 +1,10 @@
 # Claude Code starting handoff
 
+## Post-routine complete offline coverage — 2026-10-21
+
+Product6f4a300/ledger52c96ad:215files2149/2149pass,524pinned hashes unchanged, exact final coverage once, identical-source full build passed. Initial16shard attempt failed natively0xC0000409 at10 (preserved);15passed shard reports +14fresh individual-file reports provide29-process audited coverage. Do not claim initial attempt all-pass or native cause fixed. Original QA/27frozen/formal SHA match. See docs/post-routine-offline-snapshot.md. R5.4 existing evidence refresh only;60%=96/160,+0. No source WIP/active tests. Next: reproduce remote routine zero-route hypothesis from ignored routine-unreachable-preflight.json, then four-theme matrices. Original dirt/safety preserved.
+
+
 ## Local routine actual time credit — 2026-10-21
 
 Parent1fab9a9; source checkpoint containing this section adds actual Core clock delta to local block progress, preventing interrupted work/sleep from receiving requested120/480 when only60 elapsed. Baseline2fail/2controls; final regression/build in SESSION. Added prefix30+interrupt60+disk/service read retains90/no wage; test-side explicit acknowledgement then final30 yields120, one completed block and exactly+8 without generation. No schema/Core/payment/resumption policy change. See docs/routine-local-elapsed.md. W4.3 stays open;60%=96/160,+0. Full212files2118pass remains f9f93f0. Next: pin current source and refresh complete offline snapshot before further product edits, then continue fixed four-theme matrices. Original dirt/safety preserved.
