@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Latest complete offline verification — 2026-10-20
+
+Source `486bd2f`, documentation parent `3a57d3d`: fresh complete190files1927/1927pass across5 sequential partitions. No missing/duplicate files, all488 pinned source/config hashes unchanged. Original failed1926/1927 run and0xC0000409 attempt preserved. Original QA bytes restored; all27 frozen hashes match; formal-save hash unchanged. Complete isolated strict/client/server build passed. R5.4 now eligible; every-exit R5.3 and formal/real-model gates remain open. See docs/current-offline-snapshot.md and ignored repaired-offline-summary.json. Next: reproduce multi-person source recipient versus named topic in goal-contract before making a bounded repair. No source WIP; original historical QA/audit dirt remains.
+
 ## Complete offline snapshot and migration log repair — 2026-10-20
 
 Frozen source `6ae2581` / product `b4c018f`:190 files,1927 tests,1926pass1fail, no missing/duplicate files, all488 source hashes unchanged. Original shard2 crashed0xC0000409 without report; replacements2a/2b passed on identical source. Only failure is real migration logging twice; single-file rerun reproduces. Snapshot and original crashes remain failed evidence, not green. QA originals restored byte-for-byte. See docs/current-offline-snapshot.md.
