@@ -59,7 +59,7 @@ function firstRoute(view:PublicView,from:string,to:string){
  * Reaching a remote affordance takes as many steps as the route needs; only the step that actually performed
  * the candidate counts as fulfilled, so a single relocation never consumes the action it was travelling to.
  */
-async function performAffordance(service:GameService,view:PublicView,save:SavePackage,selected:WorldAffordance,objective:string,requestId:string):Promise<{summary:string;fulfilled:boolean}|null>{
+async function performAffordance(service:GameService,view:PublicView,save:SavePackage,selected:WorldAffordance,objective:string,requestId:string):Promise<{summary:string;fulfilled:boolean;interrupted?:boolean}|null>{
   const player=view.entities.find(entity=>entity.id===view.player_id)!,here=String(player.components.location?.location_id??'');
   if(selected.location_id&&selected.location_id!==here){
     const path=firstRoute(view,here,selected.location_id);
@@ -69,6 +69,9 @@ async function performAffordance(service:GameService,view:PublicView,save:SavePa
   }
   if(selected.kind==='activity'){
     await service.performDeclaredActivity({activity_id:selected.id.slice('activity:'.length),game_id:save.game_id,expected_revision:save.state_revision,request_id:requestId});
+    const after=await service.current(),rule=save.definition.routine_rules?.activities.find(activity=>`activity:${activity.id}`===selected.id);
+    const elapsed=(after.runtime.time.day-save.runtime.time.day)*save.definition.ruleset.minutes_per_day+after.runtime.time.minute-save.runtime.time.minute;
+    if(!rule||elapsed<rule.duration)return {summary:`${selected.label}尚未完成；当前活动已暂停，需要先处理眼前事项。`,fulfilled:false,interrupted:true};
     return {summary:`已开始推进「${objective}」：完成了${selected.label}。`,fulfilled:true};
   }
   if(selected.kind==='talk'&&selected.target_id){
@@ -120,6 +123,7 @@ export async function executeOpenWorldGoal(service:GameService,save:SavePackage,
     // A verified outcome is the only thing that lets the walk continue instead of looping on a no-op.
     if(current.state_revision<=revisionBefore)return {ok:false,message:`${outcome.summary} 这一步没有改变世界状态，因此停在这里。`,view:service.project(current)};
     steps.push({candidate:selected.id,summary:outcome.summary,fulfilled:outcome.fulfilled});
+    if(outcome.interrupted)return {ok:false,message:summarise(),view:service.project(current)};
   }
   return {ok:false,message:`${summarise()} 已达到本轮推进步数上限；「${objective}」尚无完成证据。`,view:service.project(current)};
 }

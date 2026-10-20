@@ -1374,12 +1374,16 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       const effects=rule.effects.filter(effect=>effect.op!=='condition_delta'||Boolean(player.components.condition));
       const proposal={patches:effects} as import('../ai/routine.js').RoutineResult;
       applyLifePatches(structuredClone(current),proposal);
-      let next=structuredClone(current);applyLifePatches(next,proposal);
+      let next=structuredClone(current);
       const original=next.definition.ruleset.max_wait_minutes;next.definition.ruleset.max_wait_minutes=Math.max(original,rule.duration);
-      next=executeAction(next,{type:'WAIT',parameters:{minutes:rule.duration}},input.request_id,'player',undefined,undefined,false).save;
+      const turn=executeAction(next,{type:'WAIT',parameters:{minutes:rule.duration}},input.request_id,'player',undefined,undefined,false);
+      next=turn.save;
+      const completed=turn.action.time_cost===rule.duration;
+      // Declared effects belong to the full activity, not to a WAIT truncated at a player handoff.
+      if(completed)applyLifePatches(next,proposal);
       next.definition.ruleset.max_wait_minutes=original;next.state_revision=current.state_revision+1;
       next.runtime.receipts=[...next.runtime.receipts,{id:input.request_id,fingerprint,revision:next.state_revision}].slice(-100);
-      next.last_turn={narrative:rule.label+' completed.',speaker:null,dialogue:null,choices:[],context_actions:[]};
+      next.last_turn={narrative:completed?rule.label+' completed.':`${rule.label}进行了${turn.action.time_cost}分钟后暂停，活动尚未完成。`,speaker:null,dialogue:null,choices:[],context_actions:[]};
       await prepareRequestCommit(input.game_id,input.request_id,fingerprint,current.state_revision);
       await this.storage.write(validateSave(next));return this.project(next);
     }));

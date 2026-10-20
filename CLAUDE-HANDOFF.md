@@ -1,5 +1,10 @@
 # Claude Code starting handoff
 
+## Declared activity interruption — 2026-10-21
+
+Parent218559d; source checkpoint containing this section defers full declared effects until Core reports the entire activity duration, and stops open goals at partial activity handoff. Baseline5fail/2controls; final8files115pass/build. Scheduled0/1/60, sleep, exact-end/full-duration, actual event and JsonStore/new-service replay covered. No invented proportional reward, Core/schema/public service change; integrate service+affordances together. See docs/declared-activity-interruption.md. A4.2 explicit withdrawal/restoration net0 to60%=96/160; A4.3 open. Full212files2118pass stays f9f93f0. Next: reproduce broader routine/foreground interruption boundaries and continue four themes. Original dirt/safety preserved.
+
+
 ## Open-goal preparation completion — 2026-10-21
 
 Parent a954b27; source checkpoint containing this section distinguishes candidate preparation from actual completion and rejects premature done through existing bounded validation. Baseline3fail/2controls; final6files49pass/build. Actual HTTP/JsonStore restart and original-request replay preserve work +8/2revisions or exhausted partial +0/1revision without generation. No Core/schema/budget change. See docs/open-goal-completion-evidence.md. A4.2 explicitly withdrawn and restored in following ledger commit, net0 to60%=96/160. A4.3 stays open; full212files2118pass remains f9f93f0. Next: reproduce remaining authority/recovery boundaries (including declared activity settlement) and continue four themes. Original dirt, frozen criteria, formal save and3100 preserved.
