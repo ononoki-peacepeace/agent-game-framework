@@ -70,6 +70,7 @@ export function putItemInSceneContainer(save:SavePackage,itemId:string,container
 /** Shared mutation after an authorized Core/freeform check. Never creates an item or a truth. */
 export function setItemCondition(save:SavePackage,itemId:string,condition:'damaged'|'destroyed',requestId:string){
   const item=save.entities.find(entity=>entity.id===itemId);assert(item?.components.item,'物品不存在');
+  worldAssert(unsealedContainerAncestors(save,item),'unavailable','物品仍在密封或不可接触的容器内，当前不能损坏');
   assert(item.components.item.condition!=='destroyed','损毁物品不能恢复为完好或受损状态');
   item.components.item.condition=condition;
   if(condition==='destroyed'){
@@ -122,6 +123,7 @@ export const inventoryModule: Module = {
         const owned=Number((actor.components.inventory?.items as Record<string,number>|undefined)?.[item?.id??'']??0)>0;
         assert(item?.components.item&&!item.components.item.stackable,'请选择一件已登记的非堆叠物品');
         assert(owned||item.components.location?.location_id===actor.components.location?.location_id,'物品不在可接触范围');
+        worldAssert(unsealedContainerAncestors(c.save,item),'unavailable','物品仍在密封或不可接触的容器内，当前不能损坏');
         assert(item.components.item.condition!=='destroyed','该物品已经损毁');
         const check=prepareCheck(c.save,c.action.id,{type:'SIMPLE_CHECK',domain:'physique',band:'normal',stakes:'尝试改变已存在物品的物理状态'},actor.id);
         const result=resolveCheck(c.save,check,c.rng);c.advance(1);

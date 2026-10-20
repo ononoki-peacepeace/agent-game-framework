@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Sealed item damage prerequisites — 2026-10-21
+
+Parentc3dff1a; this source checkpoint adds existing ancestry guard before registered DAMAGE_ITEM RNG and shared item-condition mutation. Baseline4fail/2accessiblecontrols; final6files111pass/zero skip and isolated build/session98266 passed. Actual scene/held disk/service repeated refusal preserves time/items/evidence/bytes,zero generation;registration refusal also zero RNG. Accessible Core damage/evidence destruction controls pass. No schema/commit/retry interfaces changed. See docs/sealed-item-damage.md. A8.3/N6.3 remain open,60%=96/160,+0. Complete222files2192pass stays8b5d2df/evidence9acea32. Next: reproduce tracked-item trade lifecycle and sealed/equipped/container sale prerequisites;do not assume damage/movement tests establish trading. Original dirt/safety preserved.
+
 ## Sealed item movement prerequisites — 2026-10-21
 
 Parent398bb37; this source checkpoint shares evidence ancestry via core/item-access and guards inventory source/destination plus generic item_accessible prerequisites,including Freeform's inline transfer. Initial6fail/3controls,expanded8fail/3controls;later scene-destination15pass/1fail and original-language transfer17pass/1fail preserved. Final7files99pass/zero skip and isolated build passed(session84209). Actual disk/service refusal preserves bytes/time/receipts and zero generation;not HTTP. Integrate new helper+inventory+prerequisites+truth together;no save/receipt/commit/budget changes. See docs/sealed-item-movement.md. A8.3/N6.3 full matrices remain open;60%=96/160,+0. Complete222files2192pass remains8b5d2df/evidence9acea32. Next: reproduce registered DAMAGE_ITEM and consumption/trade access boundaries separately;do not claim movement tests establish those paths. Original dirt/safety preserved.
