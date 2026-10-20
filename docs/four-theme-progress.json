@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "8affb2f",
+  "assessed_source": "e2d7d80",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -282,9 +282,10 @@
         "docs/migration-two-service.md",
         "tests/migration-two-process.test.ts",
         "tests/current-write-guard.test.ts",
-        "docs/migration-process-write-guard.md"
+        "docs/migration-process-write-guard.md",
+        "docs/migration-interleaving-matrix.md"
       ],
-      "basis": "Product8affb2f guards cooperating JsonStore current writes across processes with crash-releasing SQLite transaction;full expected-image compare remains within lock. Baseline2fail8controls,final9files84pass/build67225. Same-revision and remaining actual canonical/media interleavings still need matrix evidence before full closure. Runtime Node>=22.13,validatedWindows24.15 only;older unguarded/raw writers/general stale canonical CAS excluded."
+      "basis": "Product8affb2f guards cooperating JsonStore current writes across processes with crash-releasing SQLite transaction;full expected-image compare remains within lock. Baseline2fail8controls,final9files84pass/build67225. Same-revision and remaining actual canonical/media interleavings still need matrix evidence before full closure. Runtime Node>=22.13,validatedWindows24.15 only;older unguarded/raw writers/general stale canonical CAS excluded. Testcheckpoint e2d7d80: all current/view before/after compare canonical/media/same-revision/higher-image interleavings pass,3files30assertions;actual receipt/asset preservation,19process cases includingstrictkill/timeout. Product unchanged. Full current-source snapshot and fresh final build pending;condition stays unmet until audit."
     },
     "R9.4": {
       "status": "unverified",
@@ -3093,6 +3094,22 @@
             "tests/migration-two-process.test.ts",
             "tests/current-write-guard.test.ts",
             "docs/migration-process-write-guard.md"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "migration-interleaving-matrix",
+      "type": "repair",
+      "source": "e2d7d80",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R9.3",
+          "result": "Completed bounded cooperative current/view write interleavings,3files30pass;initial26pass4wrongIPCfail retained/fixed in tests only. Current fullsnapshot/finalbuild pending;no score yet.",
+          "evidence": [
+            "docs/migration-interleaving-matrix.md",
+            "tests/migration-two-process.test.ts"
           ]
         }
       ]
