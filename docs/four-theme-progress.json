@@ -162,9 +162,10 @@
         "docs/post-control-offline-snapshot.md",
         "docs/post-item-offline-snapshot.md",
         "docs/post-corpus-offline-snapshot.md",
-        "docs/post-long-route-offline-snapshot.md"
+        "docs/post-long-route-offline-snapshot.md",
+        "docs/post-process-offline-snapshot.md"
       ],
-      "basis": "Product9917459/ledger6be22bb fixed195-file494-hash complete offline snapshot1957/1957pass, exact coverage once, build pass; original shard5 native0xC0000409 retained, exact halves passed. Native stability and later source edits need new evidence. Fresh source29e6a5f/ledgerc351367:199files1992/1992pass,502pinned hashes unchanged, exact coverage once,16shards; isolated build passed. Old native crash retained. Fresh product1bad19e/ledger5c083d8 full snapshot207files2064/2064pass,515pinned hashes unchanged, exact coverage once,16shards exit0. Identical-product complete isolated build passed. Historical native crash retained; no later-source or process-stability claim. Fresh productf9f93f0/ledger264dcf4 full snapshot212files2118/2118pass,521pinned hashes unchanged, exact coverage once,16shards exit0; identical-product complete isolated build passed. Earlier native/network/assertion failures retained; no later-source or universal stability claim. Product6f4a300/ledger52c96ad: pinned215files2149pass on524unchanged hashes, exact selected coverage once. Initial16shards had native0xC0000409 at10, preserved;15passed shards plus14fresh single-file passes form29-process audited coverage. Identical-source build passed; no native root-cause fix claim. Current product8b5d2df/ledgerff24471:222files2192/2192pass,20fresh processes all exit0,zero skip,531pinned hashes unchanged,exact coverage once; same-product full isolated build passed. Old native failure retained/cause unresolved. Product80f9084/evidence starting362b3cb:228files2252/2252pass,zero skip,538unchanged hashes,exact selected coverage once. Initial20process attempt had native0xC0000409 at19/no report,retained;19passed original reports+11fresh single-file reports form30passing-report coverage(31total attempts). Identical-product complete isolated build/session68456 passed. Original QA/27frozen/formal SHA match;native cause unresolved. Product7647121: complete241files2403pass/zero skip,553unchanged hashes,exact coverage once,20fresh processes exit0/build88392; independent-process migration failure retained outside passing inventory."
+      "basis": "Product9917459/ledger6be22bb fixed195-file494-hash complete offline snapshot1957/1957pass, exact coverage once, build pass; original shard5 native0xC0000409 retained, exact halves passed. Native stability and later source edits need new evidence. Fresh source29e6a5f/ledgerc351367:199files1992/1992pass,502pinned hashes unchanged, exact coverage once,16shards; isolated build passed. Old native crash retained. Fresh product1bad19e/ledger5c083d8 full snapshot207files2064/2064pass,515pinned hashes unchanged, exact coverage once,16shards exit0. Identical-product complete isolated build passed. Historical native crash retained; no later-source or process-stability claim. Fresh productf9f93f0/ledger264dcf4 full snapshot212files2118/2118pass,521pinned hashes unchanged, exact coverage once,16shards exit0; identical-product complete isolated build passed. Earlier native/network/assertion failures retained; no later-source or universal stability claim. Product6f4a300/ledger52c96ad: pinned215files2149pass on524unchanged hashes, exact selected coverage once. Initial16shards had native0xC0000409 at10, preserved;15passed shards plus14fresh single-file passes form29-process audited coverage. Identical-source build passed; no native root-cause fix claim. Current product8b5d2df/ledgerff24471:222files2192/2192pass,20fresh processes all exit0,zero skip,531pinned hashes unchanged,exact coverage once; same-product full isolated build passed. Old native failure retained/cause unresolved. Product80f9084/evidence starting362b3cb:228files2252/2252pass,zero skip,538unchanged hashes,exact selected coverage once. Initial20process attempt had native0xC0000409 at19/no report,retained;19passed original reports+11fresh single-file reports form30passing-report coverage(31total attempts). Identical-product complete isolated build/session68456 passed. Original QA/27frozen/formal SHA match;native cause unresolved. Product7647121: complete241files2403pass/zero skip,553unchanged hashes,exact coverage once,20fresh processes exit0/build88392; independent-process migration failure retained outside passing inventory. Sourcee2d7d80/product8affb2f:243files2424pass/zero skip,557hashes unchanged/exactinventoryonce/20processexit0/build15279;separate scene-count counterexamples retained."
     },
     "R6.1": {
       "status": "met",
@@ -275,7 +276,7 @@
       "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
     },
     "R9.3": {
-      "status": "unmet",
+      "status": "met",
       "evidence": [
         "tests/p0a-migration-read-races.test.ts",
         "tests/migration-two-service.test.ts",
@@ -283,9 +284,10 @@
         "tests/migration-two-process.test.ts",
         "tests/current-write-guard.test.ts",
         "docs/migration-process-write-guard.md",
-        "docs/migration-interleaving-matrix.md"
+        "docs/migration-interleaving-matrix.md",
+        "docs/post-process-offline-snapshot.md"
       ],
-      "basis": "Product8affb2f guards cooperating JsonStore current writes across processes with crash-releasing SQLite transaction;full expected-image compare remains within lock. Baseline2fail8controls,final9files84pass/build67225. Same-revision and remaining actual canonical/media interleavings still need matrix evidence before full closure. Runtime Node>=22.13,validatedWindows24.15 only;older unguarded/raw writers/general stale canonical CAS excluded. Testcheckpoint e2d7d80: all current/view before/after compare canonical/media/same-revision/higher-image interleavings pass,3files30assertions;actual receipt/asset preservation,19process cases includingstrictkill/timeout. Product unchanged. Full current-source snapshot and fresh final build pending;condition stays unmet until audit."
+      "basis": "Sourcee2d7d80/product8affb2f: frozen protocol two-service/independent-process current/view canonical/media before/after comparison retain flags,assets,revisions and receipt identity. Same-revision/higher-image controls also pass. Expanded3files30pass,adjacent9files84pass,complete243file pinned snapshot/build15279 now audited. Cooperating JsonStore only;olderunguarded/rawexternalwriters/general stale canonical transactions excluded;R9.4 external/preparation/OSmatrix remains separate andopen."
     },
     "R9.4": {
       "status": "unverified",
@@ -3141,6 +3143,41 @@
         }
       ],
       "condition_checks": []
+    },
+    {
+      "batch": "post-process-complete-offline-snapshot",
+      "type": "repair",
+      "source": "e2d7d80",
+      "transitions": [
+        {
+          "id": "R9.3",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "docs/post-process-offline-snapshot.md",
+            "docs/migration-interleaving-matrix.md",
+            "tests/migration-two-process.test.ts",
+            "tests/migration-two-service.test.ts"
+          ],
+          "reason": "Frozen cooperative two-service/independent-process current/view canonical/media interleavings and complete pinned offline snapshot/build pass;historical failures retained."
+        }
+      ],
+      "condition_checks": [
+        {
+          "id": "R5.4",
+          "result": "Refreshed complete243files2424pass/zero skip,557unchanged hashes,exact inventoryonce,20processexit0/build;separate scene count counterexamples retain N4.1/2 withdrawal.",
+          "evidence": [
+            "docs/post-process-offline-snapshot.md"
+          ]
+        },
+        {
+          "id": "R9.4",
+          "result": "Strictkill/timeout cases pass but full external replacement/preparation/OS fault matrix unverified.",
+          "evidence": [
+            "docs/post-process-offline-snapshot.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
