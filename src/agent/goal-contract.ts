@@ -85,6 +85,19 @@ function sourceNamesRecipient(text:string,name:string){
   return /(?:询问|问|告诉|告知|通知)$/.test(before)||
     /(?:对|向|跟|与|和)$/.test(before)&&/^(?:说|询问|问|表示|解释|道谢|交谈|交流|聊天|讨论)/.test(after);
 }
+/** Only an explicit one-clause address frame can override every model hint. */
+function sourceNamedListener(view:PublicView,text:string){
+  if(hasMultipleClauses(text)||/[，,；;。！？!?：:「」“”]/.test(text.trim().replace(/[。！？!?]+$/,'')))return null;
+  const intent=normalized(text),named=view.entities.filter(entity=>entity.id!==view.player_id&&entity.components.character&&
+    String(entity.components.identity?.name??'').length>=2&&text.includes(String(entity.components.identity?.name)))
+    .sort((a,b)=>intent.indexOf(normalized(String(a.components.identity?.name)))-intent.indexOf(normalized(String(b.components.identity?.name))));
+  if(!named.length)return null;
+  const name=String(named[0].components.identity?.name),index=intent.indexOf(normalized(name));
+  const prefix=intent.slice(0,index),after=intent.slice(index+normalized(name).length);
+  if(!/^(?:、|和|与|以及|及|或|还是)/.test(after)&&/(?:对|向|跟|与|和|告诉|告知|通知)$/.test(prefix)&&sourceNamesRecipient(text,name))
+    return bind(view,'person',name);
+  return null;
+}
 function talkPerson(view:PublicView,goal:AtomicGoal,source:GoalSource){
   // A stage-owned recipient is not the set of every person mentioned in the
   // original compound request (e.g. asking A about B). Bind once, validate later.
@@ -117,6 +130,8 @@ function talkPerson(view:PublicView,goal:AtomicGoal,source:GoalSource){
   // Use that stage's own name before treating the whole sentence as ambiguous;
   // an invented name that exists only in a model paraphrase grants no authority.
   if(explicit.length>1){
+    const sourceListener=sourceNamedListener(view,source.text);
+    if(sourceListener)return sourceListener;
     if(person?.status==='bound'&&explicit.some(entity=>entity.id===person.entity_id))return person;
     const staged=explicit.filter(entity=>goal.normalized_goal.includes(String(entity.components.identity?.name??'')));
     if(staged.length===1)return bind(view,'person',String(staged[0].components.identity?.name));
@@ -256,8 +271,9 @@ function stepContract(view:PublicView,goal:AtomicGoal,source:GoalSource):StepCon
     required_capabilities.push('core.transaction');
     completion={kind:'interaction_performed',target_id:site?.entity_id??null};
   }else if(hint==='talk'||goal.type==='WORLD_SPEECH'){
-    const audience=goal.speech_recipients?.length?[]:talkAudience(view,goal)??[];
-    const listeners:StepContract['bindings']=goal.speech_recipients?.length?
+    const sourceListener=goal.result_ref?null:sourceNamedListener(view,source.text);
+    const audience=sourceListener||goal.speech_recipients?.length?[]:talkAudience(view,goal)??[];
+    const listeners:StepContract['bindings']=sourceListener?[sourceListener]:goal.speech_recipients?.length?
       goal.speech_recipients.map(name=>bind(view,'person',name)):
       audience.map(entity=>({role:'person',mention:String(entity.components.identity?.name??entity.id),entity_id:entity.id,status:'bound'}));
     const ids=listeners.flatMap(binding=>binding.entity_id?[binding.entity_id]:[]);
@@ -305,9 +321,10 @@ function stepContract(view:PublicView,goal:AtomicGoal,source:GoalSource):StepCon
     availability='runtime_gap';
   }
   else availability='runtime_gap';
-  // Upstream entity references are authoritative for people, items, scene
-  // objects and locations alike.  Planner omissions must not erase them.
+  // Preserve upstream items/places/objects, while speech person roles come
+  // from the listener binding above; a topic/reference is not another listener.
   for(const targetId of goal.target_entities){
+    if(completion.kind==='conversation_attempted'&&view.entities.some(entity=>entity.id===targetId&&entity.components.character))continue;
     const targetBinding=bindTargetEntity(view,targetId);
     if(targetBinding&&!bindings.some(binding=>binding.entity_id===targetId))bindings.push(targetBinding);
   }

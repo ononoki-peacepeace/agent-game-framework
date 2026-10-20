@@ -3,7 +3,7 @@ import {describe,expect,it,vi} from 'vitest';
 import {sparseSetup} from './sparse-fixture.js';
 import {compileGoalContract} from '../src/agent/goal-contract.js';
 import {canExecuteContractPlan,runContractPlan} from '../src/agent/affordances.js';
-import {createAgentPlan} from '../src/agent/planner.js';
+import {createAgentPlan,validatePlan} from '../src/agent/planner.js';
 import {executeFreeform} from '../src/core/freeform.js';
 import {evaluateWorldPrerequisites} from '../src/core/prerequisites.js';
 import {recentSettledActions} from '../src/ai/action-context.js';
@@ -187,7 +187,16 @@ describe('QA22–25 everyday actions and independent world',()=>{
     const view=f.service.project(save),plan=compileGoalContract(view,await createAgentPlan(f.ai,view,'询问近况'),{kind:'manual',text:'询问近况'});
     expect(plan.goals[0].contract?.completion).not.toHaveProperty('audience_ids');
   });
-  it.each(['向林舟询问乔宁的近况','向林舟或乔宁说今天辛苦了','告诉林舟、乔宁或另一人今天辛苦了',
+  it('binds the explicit source addressee without turning a named topic into a group',async()=>{
+    const f=await sparseSetup(),save=await f.service.current(),text='向林舟询问乔宁的近况';
+    const plan=compileGoalContract(f.service.project(save),validatePlan({goals:[{goal_id:'say',type:'WORLD_SPEECH',normalized_goal:text,
+      operation_hint:'talk',referent:null,depends_on:[],target_entities:[],condition:null,branch:null,
+      temporal_scope:{scope:'now',day_offset:0,window:'any'}}]}),{kind:'manual',text});
+    expect(plan.goals[0].contract?.completion).toEqual({kind:'conversation_attempted',person_id:'npc_lin'});
+    expect(plan.goals[0].contract?.bindings.filter(b=>b.role==='person').map(b=>b.entity_id)).toEqual(['npc_lin']);
+    expect(canExecuteContractPlan(plan)).toBe(true);
+  });
+  it.each(['向林舟或乔宁说今天辛苦了','告诉林舟、乔宁或另一人今天辛苦了',
     '向林舟、乔宁和未登记的人说今天辛苦了'])('does not invent a group for %s',async text=>{
     const f=await sparseSetup(),save=await f.service.current();
     vi.spyOn(f.ai,'planGoals').mockResolvedValue({goals:[{goal_id:'say',type:'WORLD_SPEECH',normalized_goal:text,

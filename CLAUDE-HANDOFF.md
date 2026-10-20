@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Source recipient / named topic continuation — 2026-10-20
+
+Parent `e39a4d4`; source checkpoint containing this section fixes explicit single-clause source listener losing to a named topic/Planner referent, then returning through target_entities or typed/group hints. Existing name ambiguity, staged compound roles, actual source groups and non-person bindings retained; no schema/Core interface change. Baseline4fail; first64/69, expanded hint3fail and alternative-list defect retained; final14files203pass and complete isolated build passed. One existing QA case now asserts exact source-authorized listener rather than unnecessary stop; genuine alternatives remain blocked. Intermediate3 HTTP fetch failures have no established cause, final paths passed. See docs/source-recipient-topic-authority.md. No whole A5.3/A6.3 credit; score60%=96met/28unmet/36unverified. Full1927pass snapshot remains at486bd2f, prior to these contract edits. Original QA/audit dirt preserved, no production/3100/paid/deploy/push/Claude changes.
+
 ## Latest complete offline verification — 2026-10-20
 
 Fixed ledger now60.0%=96/160 (28unmet/36unverified), macro12/23/5. Only R5.4 newly met (+0.625pp) for the current-source full offline snapshot. Documentation evidence checkpoint `74b14a1`, product source `486bd2f`. Goal remains active; this is a stable batch, not overall completion.
