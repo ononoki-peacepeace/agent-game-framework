@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "9917459",
+  "assessed_source": "8ae218b",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -961,9 +961,11 @@
     "N4.1": {
       "status": "met",
       "evidence": [
-        "tests/narrative-firewall-observability.test.ts"
+        "tests/narrative-firewall-observability.test.ts",
+        "tests/compound-physical-firewall.test.ts",
+        "docs/compound-physical-firewall.md"
       ],
-      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+      "basis": "Existing factual/presence/perception tests plus compound physical-child counterexample repair; explicit met withdrawal/restoration recorded, final8files79pass/build at 8ae218b; wider N4.3/N4.4 remain open."
     },
     "N4.2": {
       "status": "met",
@@ -1524,6 +1526,50 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "compound-physical-firewall-counterexample",
+      "type": "evidence_correction",
+      "source": "77e1965",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "tests/compound-physical-firewall.test.ts",
+            "docs/compound-physical-firewall.md"
+          ],
+          "reason": "Corrected actual-Core baseline2fail/2controls: physical-first/TALK-last aggregate bypassed unsupported injury and event-time vision checks. Existing condition evidence withdrawn for that counterexample."
+        }
+      ]
+    },
+    {
+      "batch": "compound-physical-firewall-repair",
+      "type": "repair",
+      "source": "8ae218b",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "tests/compound-physical-firewall.test.ts",
+            "docs/compound-physical-firewall.md"
+          ],
+          "reason": "Actual physical children now retain facts/sight validation; final8files79pass includes real service3candidate rejection, grounded fallback and replay, build passed. Restores previously met condition with net0 credit."
+        }
+      ],
+      "condition_checks": [
+        {
+          "id": "N4.3",
+          "result": "Legal abstract-harm/sight-neutral controls retained; arbitrary temporal/subject and wider expression corpus remain open",
+          "evidence": [
+            "tests/compound-physical-firewall.test.ts",
+            "docs/compound-physical-firewall.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -1846,6 +1892,18 @@
         "docs/partial-plan-visible-status.md"
       ],
       "summary": "Valid WAIT plus later world/provider stop reproduced; final10files113pass/build passed. No whole-condition credit."
+    },
+    {
+      "id": "compound-physical-child-firewall",
+      "scope": "original",
+      "condition": "N4.1",
+      "status": "resolved",
+      "source": "8ae218b",
+      "evidence": [
+        "tests/compound-physical-firewall.test.ts",
+        "docs/compound-physical-firewall.md"
+      ],
+      "summary": "Inherited TALK type skipped injury/sight checks. Corrected2fail/2controls, final8files79pass/build. Explicit N4.1 withdrawal and restoration; net0."
     }
   ]
 }
