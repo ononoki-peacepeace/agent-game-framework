@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Legacy activity / long objective continuation — 2026-10-20
+
+Parent `32462b1`; source checkpoint containing this section corrects both legacy travel arrival paths completing long goals automatically. Only a short goal with no remaining active owned plan is auto-completed; long motives stay active. Baseline2fail/2controls; final6files56pass, isolated build result in local SESSION. No schema/settlement/time-budget change. See docs/npc-legacy-long-goal.md. W5.3 stays open; score60%=96/160 unchanged. Original dirty QA/audit and four untracked handoff files preserved. Next: reproduce ended-goal legacy/executable plan execution against lawful persisted snapshots; broader W5 long-duration and Narrator incomplete-goal matrices remain open. No production/3100/paid/deploy/push/Claude edits.
+
 ## NPC owner resource continuation — 2026-10-20
 
 Parent `5021e30`; source checkpoint containing this section adds own_wallet and own_possessions.quantity to the existing NPC allowlist plus unknown/zero/Core-only resource policy in AIRuntime. No public Save schema, Core action or settlement change; ship the two source files together. Baseline5fail; final8files62pass and complete isolated strict/client/server build passed. Controlled resource-aware replacement preserves the long goal, executes HOLD once and cannot mint money; no real-model quality claim. See docs/npc-own-resource-context.md. W5.3 stays open, overall60%=96met/28unmet/36unverified. Original QA/audit/untracked handoff files preserved; no formal save/3100/paid/deploy/push/Claude edits. Full1927pass remains at486bd2f. Next: audit lawful blocked-plan review selection across different NPCs and resource/relationship changes, reproduce before repair.

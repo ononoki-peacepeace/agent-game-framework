@@ -1,0 +1,7 @@
+# Legacy travel completion preserves ongoing objectives
+
+At `32462b1`, both legacy activity arrival paths completed their owning goal unconditionally: reaching the destination through a Core MOVE, and observing the NPC already at its destination. A valid long-term objective such as continuing daily market duties therefore ended after just reaching the market. The executable-step plan path already preserved long goals.
+
+Two long-goal regressions failed before repair, while two short-arrival controls passed. The two legacy paths now match the existing objective completion rule: finish the travel plan, and automatically finish only a short goal with no other active owned plans. No goal descriptions are interpreted, and a long goal still requires its owner's explicit update. No Save schema, Core movement, time budget, migration or model call changes.
+
+[npc-legacy-long-goal.test.ts](../tests/npc-legacy-long-goal.test.ts) covers actual arrival and already-present cases, long-goal retention across serialization/reload and later time, no duplicate MOVE, ordinary short-goal completion, and another active abstract plan keeping its short goal alive. Final six files / 56 tests passed. Complete isolated build is recorded in the local checkpoint log. Existing 1927-test full snapshot is at `486bd2f`; this later source has focused evidence. W5.3 remains open, overall 60.00% (96/160 met, 28 unmet, 36 unverified), with no score increase for a bounded repair.

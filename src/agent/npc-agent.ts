@@ -883,7 +883,8 @@ function settleLegacyNpcActivityPlans(input:SavePackage,beforeTime:SavePackage['
       const here=actor?.components.location?.location_id;
       if(!here||Number(actor?.components.condition?.hp??100)<=0||save.background_state?.npc_status[npcId]?.unavailable){skipped++;continue;}
       if(here===activity.destination_id){plan.status='completed';
-        const goal=state.goals.find(goal=>goal.id===plan.goal_id);if(goal)goal.status='completed';continue;}
+        const goal=state.goals.find(goal=>goal.id===plan.goal_id);
+        if(goal?.horizon==='short'&&!state.plans.some(p=>p.goal_id===goal.id&&p.status==='active'))goal.status='completed';continue;}
       // A separate authoritative move or an active social obligation can supersede this local plan.
       if(here!==activity.origin_location_id||socialObligationActive(save,state)){
         skipped++;if(here!==activity.origin_location_id)plan.status='abandoned';continue;
@@ -913,7 +914,7 @@ function settleLegacyNpcActivityPlans(input:SavePackage,beforeTime:SavePackage['
         updated.activity!.origin_location_id=next.to;
         if(next.to===activity.destination_id){updated.status='completed';
           const goal=save.npc_agent_state![npcId].goals.find(item=>item.id===updated.goal_id);
-          if(goal)goal.status='completed';}
+          if(goal?.horizon==='short'&&!save.npc_agent_state![npcId].plans.some(p=>p.goal_id===goal.id&&p.status==='active'))goal.status='completed';}
         const playerHere=save.entities.find(entity=>entity.id===save.player_state.entity_id)?.components.location?.location_id;
         if(playerHere===currentHere||playerHere===next.to)
           visibleFacts.push(`${String(actor.components.identity?.name??'附近的人')}沿实际路线离开了这里。`);
