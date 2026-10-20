@@ -53,10 +53,7 @@ export async function routeContext(service:GameService,input:string,source:Sourc
   const fixed=(destination:ContextRoute['destination']):ContextRoute=>({destination,confidence:1,clarification:null,speech_target_id:null,world_input:null,resolved_input:null,end_conversation:false});
   const persistWorldPending=async(value:typeof save.pending_world_clarification)=>{
     if(source!=='world_input')return;
-    const latest=await service.storage.read();
-    if(!latest||latest.game_id!==save.game_id||latest.state_revision!==save.state_revision)return;
-    if(value)latest.pending_world_clarification=value;else delete latest.pending_world_clarification;
-    await service.storage.write(latest);
+    await service.updateWorldClarification(save.game_id,save.state_revision,value);
   };
   if(stored&&!fresh&&source==='world_input')await persistWorldPending(undefined);
   if(interaction&&stored&&source==='world_input')await persistWorldPending(undefined);

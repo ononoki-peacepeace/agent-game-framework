@@ -1,0 +1,11 @@
+# Read-time whole-save write safety
+
+`current()` and `view()` may normalize older saves. Previously, each persisted the snapshot it originally read, without taking the canonical mutation lock. A delayed read could therefore overwrite a newer action/configuration and its receipt. A first mutation on a legacy save could also persist normalization before its parent request intent was successfully journaled.
+
+Both readers now share `normalizeCurrentRead`. While a canonical mutation or routine lease is active, normalization stays in the private returned snapshot; the owning mutation commits it together with its prepared transaction. When idle, migration persistence takes the existing canonical lock and re-reads the current save before deciding whether to write. It preserves the existing structural migration/revision semantics and releases the lock after persistence errors. No new world turn is created.
+
+World-input clarification metadata had a separate read/revision-check/write sequence outside this lock. Its second read could become stale before the write and lose a competing canonical receipt. `updateWorldClarification` now performs that sequence under the same existing lock and validates the complete Save. A busy canonical operation yields the existing conflict instead of interleaving a whole-save metadata write. Stale game/revision contexts do not persist. Context routing and the additive service method must be integrated together.
+
+Before-fix evidence: `migration-read-race-baseline.json` has four product failures and two passing persistence-recovery controls; `clarification-race-baseline.json` has two product failures, including actual loss of a newer canonical flag/receipt. Reports remain in the existing ignored takeover checkpoint directory. The migration fix passed 107 adjacent tests and complete strict TypeScript checking (24.88 seconds). Later combined regression is recorded in the handoff rather than inferred from those earlier passes.
+
+This establishes only the tested single-service canonical boundaries. It does not establish locking across multiple service instances/processes, the separate media/external-store write queues, OS crashes or complete migration acceptance. The four-theme ledger therefore marks read-time migration as partial.

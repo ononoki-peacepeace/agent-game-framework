@@ -282,9 +282,21 @@ export class GameService {
   async current() {
     await this.ensureGlobalGuidance();
     const raw = await this.storage.read('current','service_current'); assert(raw, '请先开始新游戏或导入存档');
-    const upgraded = this.ensureBaseFeatures(raw);
-    if (upgraded.changed) await this.storage.write(upgraded.save);
-    return upgraded.save;
+    return this.normalizeCurrentRead(raw,'service_current');
+  }
+  private async normalizeCurrentRead(raw:SavePackage,source:'service_current'|'service_view'){
+    const upgraded=this.ensureBaseFeatures(raw);
+    // The owning mutation will persist this normalization with its prepared
+    // transaction. Concurrent projections must never write a stale world image.
+    if(!upgraded.changed||this.busy||this.routineLease)return upgraded.save;
+    return this.exclusive(async()=>{
+      // A world transaction may have committed while the original read awaited
+      // I/O. Re-read under the mutation lock before deciding what to persist.
+      const latest=await this.storage.read('current',source);assert(latest,'请先开始新游戏或导入存档');
+      const normalized=this.ensureBaseFeatures(latest);
+      if(normalized.changed)await this.storage.write(normalized.save);
+      return normalized.save;
+    });
   }
   private async ensureGlobalGuidance(){
     if(this.globalGuidanceLoaded)return;
@@ -331,9 +343,17 @@ export class GameService {
   async view() {
     const raw = await this.storage.read('current','service_view');
     if (!raw) return null;
-    const upgraded = this.ensureBaseFeatures(raw);
-    if (upgraded.changed) await this.storage.write(upgraded.save);
-    return this.project(upgraded.save);
+    return this.project(await this.normalizeCurrentRead(raw,'service_view'));
+  }
+  /** Clarification is request metadata, but its whole-save write still needs the canonical mutation lock. */
+  async updateWorldClarification(gameId:string,revision:number,value:SavePackage['pending_world_clarification']){
+    return this.exclusive(async()=>{
+      const latest=await this.storage.read('current','semantic_context');
+      if(!latest||latest.game_id!==gameId||latest.state_revision!==revision)return false;
+      assert(!value||value.created_revision===revision,'澄清上下文版本不一致');
+      if(value)latest.pending_world_clarification=value;else delete latest.pending_world_clarification;
+      await this.storage.write(validateSave(latest));return true;
+    });
   }
   async newGame(description?: string, promptText?: string, promptProfile?: unknown, provenance?: WorldCreationProvenance, roleplayConfig?:RoleplayConfig) {
     return withRequestBudget(()=>this.exclusive(async () => {

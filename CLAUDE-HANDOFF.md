@@ -1,5 +1,17 @@
 # Claude Code starting handoff
 
+## Official-account continuation — 2026-10-20
+
+Branch `codex/claude-takeover-integration`; reviewed source checkpoint `0c11b7b` commits atomic multi-scope style configuration, original-input receipt recovery, operation-preserving contextual moves and bounded build diagnostics. This is a continuation of the existing integration, not another Claude takeover. Claude's dirty worktree remains untouched.
+
+Same-toolchain TypeScript comparison (Node24.15.0/TS5.9.3, identical config/dependency hashes): a838b11 baseline25.82s/peakRSS1.112GiB, current25.73s/1.139GiB. Full isolated build47.60s passed, simultaneous treeRSS1.235GiB; two compiler stages are sequential. Historical9GB/5s claims are not established by retained comparable measurements. Original179-file manifest1744/1745 passed; failed self-extension build lacked compiler output. After diagnostic-loss fix, real local self-extension and developer-task regression4 files/63 passed. Do not retroactively call the original suite green.
+
+Atomic style regression 11 files/82 passed; all original 11 test names pass (one prefix baseline fixture needed router-recognizable wording). Subsequent single-service migration lock regression 10 files/107 passed and strict tsc 24.88s passed; a later combined read/clarification regression 11 files/131 passed, followed by complete strict tsc 24.82s/exit0. The monitored full build precedes these lock changes. New `updateWorldClarification` and context-router call site must travel together; `normalizeCurrentRead` changes no public Save schema. Style APIs remain compatible; optional request identity and internal original-text identity are documented in docs/behavior-configuration-recovery.md.
+
+Latest read-write safety source is the checkpoint containing this handoff section. No latest complete full-suite claim. Details, raw failures, source manifests, performance samples and next steps remain in `.codex-checkpoints/framework-reliability-handoff/takeover-2026-10-20/SESSION.md`. Remaining priorities: global/session/world guidance persistence boundaries, media versus canonical queues, broader natural-language pronouns/conditional goals, NPC long goals/social variety and natural Narrator acceptance. No paid calls/deployment/push/3100 start. ProductionSHA256 remains94109AA75B66ED021619A3A7CC9C2795A714D36B2DADFA109B1C8CEB67455DE9. Frozenv1-v19 preserved; new additivev20 records read-write requirements.
+
+Overall estimate46%. Bounded offline acceptance packages completed/partial/unfinished: reliability4/5/1, actions3/5/2, world3/5/2, Narrator2/5/3; total12/20/8. Counts are not equal-weight percentage arithmetic or real-provider/human acceptance. Full traceable ledger: docs/four-theme-acceptance-status.md.
+
 ## Latest: unified takeover
 
 Latest continuation: `cae904a` adds identified narrative-preference receipts and parent prepare, forwarded by System, plus parent prepare for Undo/history. Focused 8 files/95 tests and complete build passed. `7c0ffd3` full suite was 1726/1728 (two old identity comparisons now explicitly verify authored familiarity=1); the next full process crashed with 0xC0000409 and no report. No full-green claim. Subsequent stage-owned speech binding and aggregate repeated-action relationship fixes pass 6 files/65 tests (overlap with earlier69). Final verification will use bounded shards. Exact source state, failures, reports and next steps: `.codex-checkpoints/framework-reliability-handoff/takeover-2026-10-20/SESSION.md`. Overall estimate46%; all four themes remain active.

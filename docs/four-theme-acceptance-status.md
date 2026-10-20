@@ -4,11 +4,11 @@ This mutable ledger groups the handoff requirements into 40 work packages. It do
 
 | Theme | Completed | Partial | Unfinished | Existing development estimate |
 |---|---:|---:|---:|---:|
-| ① Reliability | 4 | 4 | 2 | ~61% |
+| ① Reliability | 4 | 5 | 1 | ~61% |
 | ② Natural-language actions | 3 | 5 | 2 | ~50% |
 | ③ Autonomous persistent world | 3 | 5 | 2 | ~42% |
 | ④ Narrator and experience | 2 | 5 | 3 | ~31% |
-| Total | 12 | 19 | 9 | ~46% |
+| Total | 12 | 20 | 8 | ~46% |
 
 The estimate remains unchanged. Shared final gates—latest complete offline snapshot, broader multi-world tests, process-kill/multi-process acceptance, authorized real-provider tests, deployment and human QA—remain open. Historical passes do not establish those gates for later edits.
 
@@ -24,7 +24,7 @@ The estimate remains unchanged. Shared final gates—latest complete offline sna
 | R6 | Pending/background jobs and asynchronous restart continuation | Partial | restart/routine tests; interrupted prepared work still conservatively stops |
 | R7 | Extension development/install and external workspace effects | Partial | installation/registration fault tests; remaining workspace/kill boundaries |
 | R8 | Frontend synchronization and all System/media mutation paths | Partial | HTTP/browser evidence; several unidentified/external mutations remain |
-| R9 | Read-time current/view migration race acceptance | Unfinished | current/view still may persist normalized snapshots without a shared transaction boundary |
+| R9 | Read-time current/view migration race acceptance | Partial | stale-read and failed-parent cases fixed under the existing canonical lock; migration 107-test regression passed; media/cross-instance/OS boundaries remain |
 | R10 | World/global/session behavior-guidance cross-store removal/replay acceptance | Unfinished | distinct persistence stores; not covered by R4 |
 
 ## ② Natural-language actions

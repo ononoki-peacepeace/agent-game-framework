@@ -22,7 +22,7 @@ Baseline: reviewed common-base `a838b11`, exported to an isolated directory with
 
 Instantiations increased about 4.2%, consistent with additional implementation/tests; check time was effectively unchanged. This is not evidence of recursive-generic explosion. Both versions take about 26 seconds here. The historical “about 5 seconds” claim has no comparable same-environment measurement in the retained evidence, so this diagnosis cannot identify when or why that earlier duration changed.
 
-Current tsconfig parsing selects 456 roots: 207 source, 182 test/fixture, 66 script files and Vite config. No root comes from `.agent-runtime`, node_modules, dist, checkpoints or the benchmark export. Normal imported library/declaration files account for the larger compiler graph. Server config selects 87 source roots and their transitive imports. Git diff shows no dependency/config expansion between the compared snapshots.
+At the measured snapshot, tsconfig parsing selects 456 roots: 207 source, 182 test/fixture, 66 script files and Vite config. No root comes from `.agent-runtime`, node_modules, dist, checkpoints or the benchmark export. Normal imported library/declaration files account for the larger compiler graph. Server config selects 87 source roots and their transitive imports. Git diff shows no dependency/config expansion between the compared snapshots.
 
 ## Full build and process-tree memory
 
