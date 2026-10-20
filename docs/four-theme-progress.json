@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "19c8108",
+  "assessed_source": "8bf6d9e",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -297,9 +297,10 @@
         "tests/current-write-guard.test.ts",
         "docs/migration-process-write-guard.md",
         "docs/migration-external-image.md",
-        "tests/migration-external-image.test.ts"
+        "tests/migration-external-image.test.ts",
+        "docs/migration-preparation-matrix.md"
       ],
-      "basis": "Product8affb2f: actual strict live-child SIGKILL before/after migration persistence for current/view,timeout thenkill/retry,corrupt coordination safe stop and postkill request replay pass. Fixture autoexit and sandboxHTTP failures retained;full preparation/replace/external replacement/OS error matrix remains unverified. Product19c8108:realfsrenamebefore/afterSIGKILL withvalidatedflushedtemp/currentviewoldornewcompleteimage;externalcanonicalreceipt/samerevision/newgame andcorrupt/missingrecoverycontrols. ServerstoredJSONSyntaxErrorHTTP400counterexamples repairedto503,failedinputidentity/exactrestartreplay/noactions. Correctedbaseline2fail6controls,final8files106pass/build39666. Preparationkill andcompleteOS/externalwriter matrixremainunverified."
+      "basis": "Product8affb2f: actual strict live-child SIGKILL before/after migration persistence for current/view,timeout thenkill/retry,corrupt coordination safe stop and postkill request replay pass. Fixture autoexit and sandboxHTTP failures retained;full preparation/replace/external replacement/OS error matrix remains unverified. Product19c8108:realfsrenamebefore/afterSIGKILL withvalidatedflushedtemp/currentviewoldornewcompleteimage;externalcanonicalreceipt/samerevision/newgame andcorrupt/missingrecoverycontrols. ServerstoredJSONSyntaxErrorHTTP400counterexamples repairedto503,failedinputidentity/exactrestartreplay/noactions. Correctedbaseline2fail6controls,final8files106pass/build39666. Preparationkill andcompleteOS/externalwriter matrixremainunverified. Testcheckpoint8bf6d9e/product19c8108 unchanged:27processcases incl12prepare/persist/atomicrenamekillcurrentview,16externalcases incl4EIO/recovery,9sameprocess+2guardfault=54pass/build98796. Boundedfrozenmatrixevidencecomplete,currentfullsnapshot/safetyauditpending;conditionstaysunverified."
     },
     "R10.1": {
       "status": "met",
@@ -3234,6 +3235,23 @@
             "docs/migration-external-image.md",
             "tests/migration-external-image.test.ts",
             "tests/migration-two-process.test.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "migration-preparation-matrix",
+      "type": "repair",
+      "source": "8bf6d9e",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R9.4",
+          "result": "Fullboundedpreparation/replacementkill/externalimage/error/no-replaymatrix54pass/build;currentfullsnapshot/safetyauditpending,no score yet.",
+          "evidence": [
+            "docs/migration-preparation-matrix.md",
+            "tests/migration-two-process.test.ts",
+            "tests/migration-external-image.test.ts"
           ]
         }
       ]
