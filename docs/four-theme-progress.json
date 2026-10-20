@@ -1363,6 +1363,21 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "complete-offline-snapshot-1927",
+      "type": "repair",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R5.4",
+          "result": "All190 fixed files executed,1926/1927pass; migration log failure and original process crash retained. Repair49pass/build passed; no full-condition closure.",
+          "evidence": [
+            "docs/current-offline-snapshot.md",
+            "tests/observability-idle.test.ts"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -1602,6 +1617,17 @@
         "docs/compound-degraded-prose.md"
       ],
       "summary": "Explicit child receipts precede inherited aggregate physical type; ordered prose and UI/witness beats retained. Baseline2fail; final11files109pass, complete build passed. No whole-condition credit."
+    },
+    {
+      "id": "duplicate-idle-migration",
+      "scope": "original",
+      "condition": "R9.3",
+      "status": "resolved",
+      "evidence": [
+        "docs/current-offline-snapshot.md",
+        "tests/observability-idle.test.ts"
+      ],
+      "summary": "Current/read migration ran before and after locked reread, repeating work/logs. Existing assertion reproduced, pure precheck avoids discarded migration; 7files49pass and build passed. Multi-process R9.3 remains open."
     }
   ]
 }
