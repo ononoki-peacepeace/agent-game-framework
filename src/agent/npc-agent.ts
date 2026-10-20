@@ -562,8 +562,9 @@ function autonomousId(requestId:string,npcId:string,index:number){
 function minuteOf(save:SavePackage,time:SavePackage['runtime']['time']){
   return time.day*save.definition.ruleset.minutes_per_day+time.minute;
 }
-function executableNpcRoute(save:SavePackage,here:string,target:string){
+function executableNpcRoute(save:SavePackage,here:string,target:string,includeKnown=false){
   const map=currentMap(save),publicIds=new Set(map.locations.filter(place=>place.known_by_default!==false).map(place=>place.id));publicIds.add(here);
+  if(includeKnown)for(const id of save.map_state.known_location_ids)publicIds.add(id);
   return routePath(map.routes.filter(edge=>publicIds.has(edge.from)&&publicIds.has(edge.to)&&
     edge.conditions.every(condition=>save.gm_state.flags[condition.flag]===condition.equals)),here,target);
 }
@@ -919,13 +920,17 @@ function settleLegacyNpcActivityPlans(input:SavePackage,beforeTime:SavePackage['
       }
       const activity=plan.activity!;
       const delta=Math.max(0,now-minuteOf(save,activity.last_accounted_at));
-      const available=save.entities.find(e=>e.id===npcId)?.components.condition?.hp!==0&&
-        !save.background_state?.npc_status[npcId]?.unavailable&&!socialObligationActive(save,state);
-      if(!activity.condition&&available)activity.time_credit_minutes=Math.min(240,activity.time_credit_minutes+Math.max(0,delta-reservedMinutes));
-      activity.last_accounted_at=structuredClone(save.runtime.time);
-      if(delta<=0||activity.condition||!available||attempts>=limit){skipped++;continue;}
       const actor=save.entities.find(entity=>entity.id===npcId&&entity.components.character);
       const here=actor?.components.location?.location_id;
+      const available=save.entities.find(e=>e.id===npcId)?.components.condition?.hp!==0&&
+        !save.background_state?.npc_status[npcId]?.unavailable&&!socialObligationActive(save,state);
+      if(!activity.condition&&available){
+        const path=here?executableNpcRoute(save,String(here),activity.destination_id,true):null;
+        const creditLimit=Math.max(240,path?.[0]?.travel_minutes??0);
+        activity.time_credit_minutes=Math.min(creditLimit,activity.time_credit_minutes+Math.max(0,delta-reservedMinutes));
+      }
+      activity.last_accounted_at=structuredClone(save.runtime.time);
+      if(delta<=0||activity.condition||!available||attempts>=limit){skipped++;continue;}
       if(!here||Number(actor?.components.condition?.hp??100)<=0||save.background_state?.npc_status[npcId]?.unavailable){skipped++;continue;}
       if(here===activity.destination_id){plan.status='completed';
         const goal=state.goals.find(goal=>goal.id===plan.goal_id);
@@ -938,13 +943,7 @@ function settleLegacyNpcActivityPlans(input:SavePackage,beforeTime:SavePackage['
       const currentPlan=save.npc_agent_state![npcId].plans.find(item=>item.id===plan.id)!;
       const currentActivity=currentPlan.activity!;
       const currentHere=String(save.entities.find(entity=>entity.id===npcId)?.components.location?.location_id??'');
-      const map=currentMap(save),publicIds=new Set(map.locations.filter(location=>
-        location.known_by_default!==false).map(location=>location.id));
-      for(const id of save.map_state.known_location_ids)publicIds.add(id);
-      publicIds.add(currentHere);
-      const path=routePath(map.routes.filter(route=>route.conditions.every(condition=>
-        save.gm_state.flags[condition.flag]===condition.equals)&&publicIds.has(route.from)&&
-        publicIds.has(route.to)),currentHere,currentActivity.destination_id);
+      const path=executableNpcRoute(save,currentHere,currentActivity.destination_id,true);
       const next=path?.[0];
       if(!next||next.travel_minutes>currentActivity.time_credit_minutes){if(!next)currentActivity.time_credit_minutes=0;skipped++;break;}
       const actionId=autonomousId(requestId,npcId,300+attempts);attempts++;

@@ -24,6 +24,46 @@ function fixture(direct=false,directMinutes=150){
  save.npc_agent_state={npc_lin:state};return validateSave(save);
 }
 const advance=(save:ReturnType<typeof fixture>,minutes:number)=>executeAction(save,{type:'WAIT',parameters:{minutes}},randomUUID()).save;
+function legacyFixture(minutes:number){
+ const save=fixture(true,minutes),plan=save.npc_agent_state!.npc_lin.plans[0];delete plan.execution;
+ plan.activity={kind:'move',origin_location_id:'square',destination_id:'station',source_request_id:randomUUID(),condition:null,
+  last_accounted_at:structuredClone(save.runtime.time),time_credit_minutes:0};return validateSave(save);
+}
+it.each([150,300,1440])('completes legacy travel across a declared %s-minute edge using actual elapsed time',minutes=>{
+ const initial=legacyFixture(minutes),after=advance(initial,minutes),plan=after.npc_agent_state!.npc_lin.plans[0];
+ expect(after.entities.find(e=>e.id==='npc_lin')!.components.location?.location_id).toBe('station');
+ expect(plan).toMatchObject({status:'completed',activity:{origin_location_id:'station',time_credit_minutes:0}});
+ expect(after.npc_agent_state!.npc_lin.goals[0].status).toBe('active');
+ expect(after.resolution_receipts?.filter(r=>r.actor_id==='npc_lin').map(r=>[r.semantic_action,r.time_cost])).toEqual([['MOVE',minutes]]);
+});
+it('persists a legacy 270-minute paid balance and settles the remaining edge once after disk restart',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'agf-legacy-long-edge-'));
+ try{
+  const ai=new AIRuntime({name:'no-generation',generate:async()=>{throw Error('Core plans need no model');}}),store=new JsonStore(directory);
+  await store.write(legacyFixture(300));const initial=await new GameService(store,ai,demo).current(),partial=advance(initial,270);
+  expect(partial.npc_agent_state!.npc_lin.plans[0].activity?.time_credit_minutes).toBe(270);
+  expect(partial.entities.find(e=>e.id==='npc_lin')!.components.location?.location_id).toBe('square');await store.write(partial);
+  const bytes=await readFile(join(directory,'current.json')),loaded=await new GameService(new JsonStore(directory),ai,demo).current();
+  expect(loaded).toEqual(partial);expect(await readFile(join(directory,'current.json'))).toEqual(bytes);
+  const after=advance(loaded,30),later=advance(validateSave(JSON.parse(JSON.stringify(after))),10);
+  expect(after.npc_agent_state!.npc_lin.plans[0].status).toBe('completed');
+  expect(later.resolution_receipts?.filter(r=>r.actor_id==='npc_lin').map(r=>[r.semantic_action,r.time_cost])).toEqual([['MOVE',300]]);
+  expect(ai.metrics.requests).toBe(0);
+ }finally{await rm(directory,{recursive:true,force:true});}
+});
+it.each(['condition','unavailable','closed'] as const)('does not convert legacy long travel prerequisite %s into arrival or free credit',mode=>{
+ const initial=legacyFixture(300);
+ if(mode==='condition')initial.npc_agent_state!.npc_lin.plans[0].activity!.condition='本人仍需确认出发';
+ else if(mode==='unavailable')initial.entities.find(e=>e.id==='npc_lin')!.components.condition={hp:0,stamina:50,stress:20};
+ else initial.definition.map!.locations.find(place=>place.id==='station')!.lifecycle={status:'closed',visibility:'public',origin:'existing_detail',
+  creation_reason:'隔离关闭目的地',source_ref:'fixture',recorded_at:initial.runtime.time};
+ const after=advance(validateSave(initial),300),plan=after.npc_agent_state!.npc_lin.plans[0];
+ expect(after.entities.find(e=>e.id==='npc_lin')!.components.location?.location_id).toBe('square');
+ expect(plan.status).toBe('active');expect(plan.activity?.time_credit_minutes).toBe(0);
+ expect(after.resolution_receipts?.filter(r=>r.actor_id==='npc_lin')).toHaveLength(0);
+ expect(after.npc_agent_state!.npc_lin.goals[0].status).toBe('active');
+ if(mode==='closed')expect(plan.activity?.blocked_reason).toBe('core_rejected');
+});
 it('makes a real intermediate arrival instead of waiting forever for credit above its cap',()=>{
  const initial=fixture(),after=advance(initial,150),plan=after.npc_agent_state!.npc_lin.plans[0];
  expect(after.entities.find(e=>e.id==='npc_lin')!.components.location?.location_id).toBe('market');

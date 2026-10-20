@@ -1,0 +1,11 @@
+# Legacy NPC long-edge credit retains the same paid-time semantics
+
+Parent `1434f4e`, product `adac019`: legacy move activities still capped personal time at 240 minutes, so valid 300/1440-minute route edges never completed. Original new baseline: three failures, thirteen current typed/ordinary controls passed. All reports are retained.
+
+Legacy activity now derives its bounded credit limit from its current known route's first edge, at most the existing 1440-minute map limit. Only actual elapsed unreserved time is added; conditions, unavailable actors and social obligations retain their guards. The same route helper supplies both credit calculation and actual next-edge selection. Its legacy mode preserves the prior inclusion of explicitly known locations, while typed execution keeps its original public-location boundary. Movement remains a Core MOVE only after enough real time has accrued; no intermediate place, reaction or reward is invented.
+
+Legacy activity's credit validator now accepts through 1440, alongside the preceding typed execution change. All previous values remain valid. Integrate `npc-agent.ts` and `npc-state.ts` together and rebuild readers before consuming new isolated saves with credit above 240; older strict readers cannot load those new values. No formal save migration or deployment is authorized or performed.
+
+First fix: three files, 33/33 passed. Final isolated regression: **nine files, 93/93 passed, zero skips**; full isolated build passed (session 88392). Nineteen accumulated route cases include legacy 150/300/1440-minute edges, actual disk/service restart at 270 paid minutes, one eventual MOVE, condition/body/closure refusals, typed schedules, intermediate progress and long-motive continuity. Saved bytes are unchanged on restart reads and generation remains zero. Original failures remain under ignored `npc-legacy-long-edge-*`.
+
+No social-task budget, model-call count, HOLD limit, action count or Core/world-time semantics change. W4.3/W5.3 broad matrices remain open, **97/160, 60.625% (60.63%), net zero**. Latest complete snapshot remains `fa53def` / evidence `5ec89d6` (238 files / 2371 assertions); current accumulated edits need a fresh pinned complete snapshot next. The independent-process migration overwrite remains a known open failure.
