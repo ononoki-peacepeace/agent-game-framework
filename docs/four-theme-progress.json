@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "c872222",
+  "assessed_source": "8af0d86",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -714,9 +714,11 @@
         "tests/routine-local-elapsed.test.ts",
         "docs/routine-local-elapsed.md",
         "tests/routine-unreachable-location.test.ts",
-        "docs/routine-unreachable-location.md"
+        "docs/routine-unreachable-location.md",
+        "tests/schedule-label-migration.test.ts",
+        "docs/schedule-label-migration.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. a84616d: interrupted AI routine interval retains actual Core time/event/foreground, discards unearned full rewards and completed prose/history endpoint, and does not complete schedule block. Corrected2fail/5controls + block1fail; final6distinctfiles70pass/build, real disk/service replay. Whole travel/local/long-duration adaptive matrix remains open. 6f4a300: local block credit adds actual Core elapsed, not requested duration after interruption; work/sleep2fail/2controls, actual disk prefix90 and explicit test acknowledgement to120/+8 once;5files58pass/build. Full matrix still open. 6946982: remote activity cannot interpret zero usable routes as already local; corrected2fail/1control, actual GameService/JsonStore refusal preserves bytes/time/wage/location across restart;5files46pass/build. Original default-known fixture mistake retained; full matrix remains open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. a84616d: interrupted AI routine interval retains actual Core time/event/foreground, discards unearned full rewards and completed prose/history endpoint, and does not complete schedule block. Corrected2fail/5controls + block1fail; final6distinctfiles70pass/build, real disk/service replay. Whole travel/local/long-duration adaptive matrix remains open. 6f4a300: local block credit adds actual Core elapsed, not requested duration after interruption; work/sleep2fail/2controls, actual disk prefix90 and explicit test acknowledgement to120/+8 once;5files58pass/build. Full matrix still open. 6946982: remote activity cannot interpret zero usable routes as already local; corrected2fail/1control, actual GameService/JsonStore refusal preserves bytes/time/wage/location across restart;5files46pass/build. Original default-known fixture mistake retained; full matrix remains open. 8af0d86: accepted schedule migration retains authored fallback title when linked title absent/blank, preserving status/actual title authority;3fail/2controls, final5files31pass/build, real disk/WAIT fallback/restart replay. Full matrix remains open."
     },
     "W4.4": {
       "status": "unverified",
@@ -2293,6 +2295,22 @@
           "reason": "Truthful zero/positive elapsed time and actual player handoff in bounded fallback;50pass/build, original failure reports retained."
         }
       ]
+    },
+    {
+      "batch": "schedule-label-migration",
+      "type": "repair",
+      "source": "8af0d86",
+      "transitions": [],
+      "observations": [
+        {
+          "id": "W4.3",
+          "result": "Original accepted schedule label survives structural read migration without inventing a title; full condition remains open",
+          "evidence": [
+            "tests/schedule-label-migration.test.ts",
+            "docs/schedule-label-migration.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
@@ -2889,6 +2907,18 @@
         "tests/wait-interruption-fallback.test.ts"
       ],
       "summary": "Fallback describes waiting despite0elapsed and hides actual player appointment interruption."
+    },
+    {
+      "id": "schedule-label-migration",
+      "scope": "original",
+      "condition": "W4.3",
+      "status": "repaired",
+      "source": "8af0d86",
+      "evidence": [
+        "tests/schedule-label-migration.test.ts",
+        "docs/schedule-label-migration.md"
+      ],
+      "summary": "Structural migration replaced authored schedule labels with internal IDs when linked entry lacked title; existing label now retained."
     }
   ]
 }
