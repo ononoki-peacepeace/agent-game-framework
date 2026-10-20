@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Partial plan result visibility — 2026-10-20
+
+Parent `cb1786d`; source checkpoint containing this section keeps settled story separate from world-stop/unexecuted-goal feedback and retains prior receipt IDs in later engine failures. Client shows explicit incomplete feedback beside its supplied story, including state-refresh race. Executor/client must travel together; no Save/Core interface change. Corrected baseline hidden world stop plus missing engine receipt; malformed location fixtures are not product failures. First81/82, final10files113pass; build in local SESSION. See docs/partial-plan-visible-status.md. N3.3/R5.3 stay open;60%=96/160 unchanged. Original dirty QA/audit and untracked files preserved. Next: pin and rerun complete current-source offline snapshot, then remaining fixed matrices. No formal save/3100/paid/deploy/push/Claude changes.
+
 ## Ended-goal execution guard — 2026-10-20
 
 Parent `1913391`; source checkpoint containing this section prevents both legacy activities and executable steps from acting for an ended owned goal; stale plans become abandoned, goal state stays intact, clock boundaries exclude them. Compatible persisted shape remains accepted. Baseline4fail with real MOVE receipts; final8files67pass and complete isolated strict/client/server build passed. See docs/npc-ended-goal-execution.md. No schema/settlement/interface change, W5.3 stays open; score60%=96/160 unchanged. Original dirty QA/audit and untracked files preserved. Next: incomplete multi-goal story must expose remaining failed/unexecuted stages without inventing results; reproduce before repair. Production/3100/paid/deploy/push/Claude unchanged.

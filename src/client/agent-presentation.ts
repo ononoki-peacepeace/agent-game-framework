@@ -71,6 +71,7 @@ export function agentPresentation(previous:PublicView|null,result:AgentResult,
         !['WORLD_ACTION','WORLD_SPEECH','WORLD_GOAL'].includes(goal.type))
         .map(goal=>result.results?.find(entry=>entry.goal_id===goal.goal_id)?.summary?.trim())
         .filter((value):value is string=>Boolean(value)&&value!==story&&value!==next.last_turn?.narrative);
+      if(story&&remaining.length&&message!==story&&message!==next.last_turn?.narrative?.trim())factualReply.push(message);
       return {storyOverride:story&&!next.last_turn?.scene_beats?.length&&story!==next.last_turn?.narrative?
         {revision:next.revision,text:story}:null,
         agentReply:factualReply.length?{intent:result.intent,message:[...new Set(factualReply)].join('\n')}:null,goalProgress};

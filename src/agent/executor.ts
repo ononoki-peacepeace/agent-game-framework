@@ -480,7 +480,9 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
    !plan.goals.some(goal=>goal.result?.summary===summary&&goal.status==='completed'&&['WORLD_ACTION','WORLD_SPEECH'].includes(goal.type))).join('\n');
  const assistantMessage=incremental+(delta===0&&!readOnlyPlan(plan.goals)?'\n当前世界时间没有推进。':'');
  const conditionFalse=plan.goals.some(goal=>goal.type==='CONDITIONAL_INTENT'&&goal.result?.condition===false);
- const finalOutcome=stepOutcome?.type==='engine_failure'?stepOutcome:gameOutcome(
+ const finalOutcome=stepOutcome?.type==='engine_failure'?engineOutcome(stepOutcome.code,stepOutcome.stage,
+   save.state_revision,stepOutcome.state_certain,[...new Set([...stepOutcome.committed_steps,...changes])],
+   [...new Set([...stepOutcome.receipt_ids,...committedSince(initialSave,save)])]):gameOutcome(
    conditionFalse?'condition_false':stepOutcome?.type==='game'?stepOutcome.kind:
      plan.status==='completed'?'completed':changes.length?'partial_progress':'unresolved_goal',
    'plan_execution',save.state_revision,changes,committedSince(initialSave,save),
@@ -489,8 +491,14 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
    ['WORLD_ACTION','WORLD_SPEECH'].includes(goal.type)).map(goal=>goal.result?.summary?.trim()).filter((text):text is string=>Boolean(text));
  const committedNarrative=committedSince(initialSave,save).length?
    [...new Set(narratedSteps.length?narratedSteps:[save.last_turn?.narrative?.trim()].filter((text):text is string=>Boolean(text)))].join('\n'):'';
- const finalMessage=finalOutcome.type==='engine_failure'?safeEngineMessage:
-   committedNarrative||applyAssistantStyle(save,assistantMessage||gameNarrative(finalOutcome,{completed:changes}));
+ const stopped=plan.goals.filter(goal=>['blocked','unresolved','failed','waiting_for_player'].includes(goal.status))
+   .map(goal=>`“${goal.normalized_goal}”尚未完成${goal.result?.summary?`：${goal.result.summary}`:'。'}`);
+ const skipped=plan.goals.filter(goal=>goal.status==='skipped').map(goal=>goal.normalized_goal);
+ const partialFeedback=[...stopped,skipped.length?`尚未执行：${skipped.join('；')}。`:null].filter(Boolean).join('\n');
+ const finalMessage=finalOutcome.type==='engine_failure'?engineMessage(finalOutcome):
+   committedNarrative&&plan.status==='completed'?committedNarrative:
+   applyAssistantStyle(save,committedNarrative&&partialFeedback?partialFeedback:
+     assistantMessage||gameNarrative(finalOutcome,{completed:changes}));
  return agentResult(plan.goals.length===1?plan.goals[0].type:'MULTI_GOAL',finalMessage,{outcome:finalOutcome,
    ...(finalOutcome.type==='engine_failure'?{recovery:recoveryContext(body.original_input??body.input,finalOutcome,{goal_ids:plan.goals.map(goal=>goal.goal_id),failed_goals:plan.goals.filter(goal=>goal.status==='failed').map(goal=>({goal_id:goal.goal_id,summary:goal.result?.summary??''}))})}:{}),
    presentation:finalOutcome.type==='engine_failure'?'failure':committedNarrative?'story':'assistant',clarification,
