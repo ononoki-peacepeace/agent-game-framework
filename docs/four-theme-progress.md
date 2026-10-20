@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：c6169aa。整体 **60.63%**（97/160 个固定条件满足）。未满足 28，待验证 35。
+计分版本 v1；评估源代码：75e8abb。整体 **60.63%**（97/160 个固定条件满足）。未满足 28，待验证 35。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -103,6 +103,7 @@
 | conditional-trade-after-arrival | repair | A7.3: True/false/unknown guarded MOVE-purchase uses actual post-arrival binding;10focused pass;8files120pass1knownL08fail;fixed25assertion corpus24pass1fail with true-condition HTTP disk replay;full condition open；完整条件保持开放; A9.3: True/false/unknown guarded MOVE-purchase uses actual post-arrival binding;10focused pass;8files120pass1knownL08fail;fixed25assertion corpus24pass1fail with true-condition HTTP disk replay;full condition open；完整条件保持开放 | +0.000 pp |
 | generic-activity-actual-foreground-boundary | repair | A7.3: Pure generic deterministic activity now stops at actual authored foreground/event boundary;zero/partial/full typed receipts,blocked dependent steps,grounded fallback and real replay verified. Broad condition remains open.；完整条件保持开放; N3.3: Pure generic deterministic activity now stops at actual authored foreground/event boundary;zero/partial/full typed receipts,blocked dependent steps,grounded fallback and real replay verified. Broad condition remains open.；完整条件保持开放; N8.2: Pure generic deterministic activity now stops at actual authored foreground/event boundary;zero/partial/full typed receipts,blocked dependent steps,grounded fallback and real replay verified. Broad condition remains open.；完整条件保持开放; A9.3: Pure generic deterministic activity now stops at actual authored foreground/event boundary;zero/partial/full typed receipts,blocked dependent steps,grounded fallback and real replay verified. Broad condition remains open.；完整条件保持开放 | +0.000 pp |
 | post-corpus-complete-offline-snapshot | repair | R5.4: Refreshed already-met versioned full offline evidence:235files2340pass,547unchanged hashes,exact coverage once;20fresh process exit0;historical native failures retained.；完整条件保持开放 | +0.000 pp |
+| conditional-activity-interruption | repair | A7.3: Conditional HOLD/Freeform actual0/partial/full intervals preserve unfinished activity,skip dependents,retain earlier settled story and real replay.15focused;8files113pass/build;prior2fetchfail report retained. Full condition open.；完整条件保持开放; N3.3: Conditional HOLD/Freeform actual0/partial/full intervals preserve unfinished activity,skip dependents,retain earlier settled story and real replay.15focused;8files113pass/build;prior2fetchfail report retained. Full condition open.；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 

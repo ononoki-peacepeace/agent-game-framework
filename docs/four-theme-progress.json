@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "c6169aa",
+  "assessed_source": "75e8abb",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -2842,6 +2842,30 @@
           "result": "Refreshed already-met versioned full offline evidence:235files2340pass,547unchanged hashes,exact coverage once;20fresh process exit0;historical native failures retained.",
           "evidence": [
             "docs/post-corpus-offline-snapshot.md"
+          ]
+        }
+      ]
+    },
+    {
+      "batch": "conditional-activity-interruption",
+      "type": "repair",
+      "source": "75e8abb",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "A7.3",
+          "result": "Conditional HOLD/Freeform actual0/partial/full intervals preserve unfinished activity,skip dependents,retain earlier settled story and real replay.15focused;8files113pass/build;prior2fetchfail report retained. Full condition open.",
+          "evidence": [
+            "tests/conditional-activity-interruption.test.ts",
+            "docs/conditional-activity-interruption.md"
+          ]
+        },
+        {
+          "id": "N3.3",
+          "result": "Conditional HOLD/Freeform actual0/partial/full intervals preserve unfinished activity,skip dependents,retain earlier settled story and real replay.15focused;8files113pass/build;prior2fetchfail report retained. Full condition open.",
+          "evidence": [
+            "tests/conditional-activity-interruption.test.ts",
+            "docs/conditional-activity-interruption.md"
           ]
         }
       ]
