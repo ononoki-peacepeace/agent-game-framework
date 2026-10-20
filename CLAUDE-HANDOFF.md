@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Viable ongoing plan stays visible — 2026-10-20
+
+Parent `afb6982`; source checkpoint containing this section prioritizes ongoing executable methods after recovery plans but before abstract intentions, retaining their long-goal ownership inside12item limits. Real relationship/TALK or witnessed new fact can now inform owner revision before failure; owner may also keep original method. Baseline8fail; final10files93pass, complete isolated build in SESSION. No schema/Core/time/budget change. See docs/npc-active-plan-revision.md. W5.3/W5.4 still open,60%=96/160,+0. Latest full1992pass remains29e6a5f before context edits. Next: repeated actual failure/partial cursor retention and remaining fixed matrices. Original dirt/safety preserved.
+
 ## Legacy failed-attempt diagnosis — 2026-10-20
 
 Parent `fe60e5d`; source checkpoint containing this section adds optional legacy activity `blocked_reason`/`failure_diagnostic`, storing actual Core refusal vs system error. Failure prioritizes plan+goal; old cause missing is explicitly unknown. Successful MOVE clears old failure metadata. Integrate npc-state/executor/context together; old saves remain accepted, no migration/Core outcome/budget change. Baseline2fail/9controls; expanded10files86pass +3schema/HTTP/roundtrip files52pass =13distinctfiles138pass, final13case legacy file adds technical-error control (overlap). Final10files88pass after modern-plan null-diagnostic protection; complete isolated build in SESSION. One missing optional filename corrected by actual schema run; generated QA saved separately and original bytes restored. See docs/npc-legacy-failure-diagnostic.md. W5.3 open,60%=96/160,+0; full1992pass still29e6a5f. Next: actual newfact/relationship/repeated-failure adjustment, other fixed matrices. Original dirt/safety preserved.

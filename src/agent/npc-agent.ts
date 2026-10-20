@@ -107,7 +107,12 @@ export function buildNpcAgentContext(save:SavePackage,npcId:string,event:NpcAgen
     ['core_rejected','route_unavailable','listener_not_present'].includes(plan.execution.blocked_reason??''))||
     Boolean(plan.activity&&plan.last_failed_request_id)||legacyRouteBlocked(plan)).slice(0,2);
   const recoveryIds=new Set(recoveryPlans.map(plan=>plan.id));
-  const projectedPlans=[...recoveryPlans,...activePlans.filter(plan=>!recoveryIds.has(plan.id))].slice(0,12);
+  // The owner must be able to revise a viable ongoing method when new facts or
+  // relationships change, before execution fails. Abstract intentions cannot
+  // crowd the actual executable plan out of its owner's decision boundary.
+  const ongoingPlans=activePlans.filter(plan=>!recoveryIds.has(plan.id)&&(plan.activity||plan.execution));
+  const selectedIds=new Set([...recoveryIds,...ongoingPlans.map(plan=>plan.id)]);
+  const projectedPlans=[...recoveryPlans,...ongoingPlans,...activePlans.filter(plan=>!selectedIds.has(plan.id))].slice(0,12);
   const ownedGoalIds=new Set(projectedPlans.map(plan=>plan.goal_id));
   const projectedGoals=[...activeGoals.filter(goal=>ownedGoalIds.has(goal.id)),
     ...activeGoals.filter(goal=>!ownedGoalIds.has(goal.id)).sort((a,b)=>b.priority-a.priority)].slice(0,12);
