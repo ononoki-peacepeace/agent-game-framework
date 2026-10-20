@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "92b86cd",
+  "assessed_source": "1246a49",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -986,9 +986,11 @@
         "tests/compound-physical-firewall.test.ts",
         "docs/compound-physical-firewall.md",
         "tests/compound-degraded-prose.test.ts",
-        "docs/physical-reaction-speech-integrity.md"
+        "docs/physical-reaction-speech-integrity.md",
+        "tests/scene-presence-negation.test.ts",
+        "docs/scene-presence-negation.md"
       ],
-      "basis": "Existing factual/presence/perception tests plus compound physical-child counterexample repair; explicit met withdrawal/restoration recorded, final8files79pass/build at 8ae218b; wider N4.3/N4.4 remain open. 7ecc07b: actual settled reaction words required in beats/legacy dialogue; explicit withdrawal/restoration, net0."
+      "basis": "Existing factual/presence/perception tests plus compound physical-child counterexample repair; explicit met withdrawal/restoration recorded, final8files79pass/build at 8ae218b; wider N4.3/N4.4 remain open. 7ecc07b: actual settled reaction words required in beats/legacy dialogue; explicit withdrawal/restoration, net0. Counterexample at055367a:5fail/7controls, earlier denied/intended departure globally suppressed later actual departure with no Core move; N4.1 explicitly withdrawn pending repair. 1246a49: occurrence-scoped departure negation, truthful no-receipt degradation marker; initial5fail/7controls, final6files80pass/build. N4.1 withdrawal/restoration net0; broader subject/multi-world scope remains open."
     },
     "N4.2": {
       "status": "met",
@@ -1004,9 +1006,11 @@
     "N4.3": {
       "status": "unmet",
       "evidence": [
-        "tests/narrative-firewall-observability.test.ts"
+        "tests/narrative-firewall-observability.test.ts",
+        "tests/scene-presence-negation.test.ts",
+        "docs/scene-presence-negation.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 1246a49: occurrence-scoped departure negation, truthful no-receipt degradation marker; initial5fail/7controls, final6files80pass/build. N4.1 withdrawal/restoration net0; broader subject/multi-world scope remains open."
     },
     "N4.4": {
       "status": "unverified",
@@ -1891,6 +1895,40 @@
       "source": "92b86cd",
       "transitions": [],
       "note": "Initial2raw-read failures; expanded60/61 fixture frontier-order issue corrected, final8files61pass/build. R5.3 remains unmet; no whole-condition credit."
+    },
+    {
+      "batch": "scene-presence-negation-counterexample",
+      "type": "evidence_correction",
+      "source": "055367a",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "tests/scene-presence-negation.test.ts"
+          ],
+          "reason": "5fail/7controls. Sentence-global negation allowed unreceipted later NPC departure in actual service WAIT prose."
+        }
+      ]
+    },
+    {
+      "batch": "scene-presence-negation-repair",
+      "type": "repair",
+      "source": "1246a49",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "tests/scene-presence-negation.test.ts",
+            "docs/scene-presence-negation.md"
+          ],
+          "reason": "Final6files80pass/build; restored bounded in-scene checks, legal controls and actual service fallback/replay. Explicit prior withdrawal, net0."
+        }
+      ],
+      "note": "Intermediate48/49 and14/16 retained; final17case file covers6invalid/9legal/2service. No whole N4.3/N4.4 credit."
     }
   ],
   "new_risks": [],
@@ -2346,6 +2384,18 @@
         "docs/plan-unreadable-state.md"
       ],
       "summary": "Staged-plan recovery/final read exceptions now preserve only confirmed state and omit stale view. Stops later effects when unreadable; no all-exit or process-kill claim."
+    },
+    {
+      "id": "scene-presence-negation",
+      "scope": "original",
+      "condition": "N4.1",
+      "status": "resolved",
+      "source": "1246a49",
+      "evidence": [
+        "tests/scene-presence-negation.test.ts",
+        "docs/scene-presence-negation.md"
+      ],
+      "summary": "Sentence-global denial hid later unreceipted departure; scoped prefixes and fallback presentation repaired. Explicit withdrawal/restoration net0."
     }
   ]
 }
