@@ -38,7 +38,7 @@ async function killAtBoundary(child:ChildProcess){
  const exited=once(child,'exit');expect(child.kill('SIGKILL')).toBe(true);await exited;
 }
 afterEach(()=>vi.restoreAllMocks());
-it.each((['current','view'] as const).flatMap(method=>(['canonical','media'] as const).map(writer=>({method,writer}))))(
+it.each((['current','view'] as const).flatMap(method=>(['canonical','media','same_revision'] as const).map(writer=>({method,writer}))))(
  'keeps independent-service $writer identity across delayed $method migration',async({method,writer})=>{
  const f=await sparseSetup(),legacy=await f.service.current();delete legacy.routine_meta;
  const directory=await mkdtemp(join(tmpdir(),'agf-process-before-compare-'));let worker:ReturnType<typeof launch>|undefined;
@@ -50,11 +50,14 @@ it.each((['current','view'] as const).flatMap(method=>(['canonical','media'] as 
   const write=store.writeMigration.bind(store);vi.spyOn(store,'writeMigration').mockImplementationOnce(async(...args)=>{arrive();await gate;return write(...args);});
   pending=service[method]();await entered;worker.child.send({kind:'go'});
   const done=await worker.wait('done');expect(done.calls).toBe(0);release();await pending;
-  expect(await new JsonStore(directory).read()).toEqual(done.save);
+  const after=(await new JsonStore(directory).read())!;
+  if(writer==='same_revision'){expect(after).toMatchObject(done.save!);expect(after.routine_meta).toBeDefined();}
+  else expect(after).toEqual(done.save);
   if(writer==='canonical'){
    expect(done.save!.gm_state.flags.other_process_retained).toBe(true);
    expect(done.save!.runtime.receipts).toHaveLength(legacy.runtime.receipts.length+1);
-  }else expect(done.save!.entities.find(e=>e.id==='player')!.components.visual_assets.images).toMatchObject({fullbody:'process_migration_asset'});
+  }else if(writer==='media')expect(done.save!.entities.find(e=>e.id==='player')!.components.visual_assets.images).toMatchObject({fullbody:'process_migration_asset'});
+  else expect(done.save!.gm_state.flags.other_process_retained).toBe(true);
   expect(f.ai.metrics.requests).toBe(0);
  }finally{release();await pending?.catch(()=>undefined);await reap(worker?.child);await rm(directory,{recursive:true,force:true});}
 },30000);
@@ -75,20 +78,26 @@ it.each((['current','view'] as const).flatMap(method=>(['before','after'] as con
   expect(saved.runtime.receipts.filter(r=>r.id===request.request_id)).toHaveLength(1);expect(f.ai.metrics.requests).toBe(0);
  }finally{await reap(worker?.child);await rm(directory,{recursive:true,force:true});}
 },30000);
-it.each(['current','view'] as const)('serializes independent image writer after $method migration comparison',async method=>{
+it.each((['current','view'] as const).flatMap(method=>(['canonical','media','image','same_revision'] as const).map(writer=>({method,writer}))))(
+ 'serializes independent $writer writer after $method migration comparison',async({method,writer})=>{
  const f=await sparseSetup(),legacy=await f.service.current();delete legacy.routine_meta;
  const directory=await mkdtemp(join(tmpdir(),'agf-process-after-compare-'));let worker:ReturnType<typeof launch>|undefined;
  let release=()=>{};let pending:Promise<unknown>|undefined;
  try{
-  const store=new JsonStore(directory);await store.write(legacy);worker=launch(directory,'image');await worker.wait('ready');
+  const store=new JsonStore(directory);await store.write(legacy);worker=launch(directory,writer);await worker.wait('ready');
   const service=new GameService(store,f.ai,legacy.definition),replace=atomic.replaceWithBoundedRetry;
   let arrive!:()=>void;const entered=new Promise<void>(r=>{arrive=r;}),gate=new Promise<void>(r=>{release=r;});
   vi.spyOn(atomic,'replaceWithBoundedRetry').mockImplementationOnce(async(...args)=>{arrive();await gate;return replace(...args);});
-  pending=service[method]();await entered;worker.child.send({kind:'go'});await worker.wait('write_attempt');
+  pending=service[method]();await entered;worker.child.send({kind:'go'});
+  // Owned canonical/media mutations fold normalization into their final write.
+  await worker.wait('write_attempt');
   await new Promise(r=>setTimeout(r,150));const completedWhileOwned=worker.notices.some(n=>n.kind==='done');
   release();await pending;const done=await worker.wait('done');
   expect(await new JsonStore(directory).read()).toEqual(done.save);
-  expect(done.save!.gm_state.flags.other_process_retained).toBe(true);expect(completedWhileOwned).toBe(false);
+  if(writer==='media')expect(done.save!.entities.find(e=>e.id==='player')!.components.visual_assets.images).toMatchObject({fullbody:'process_migration_asset'});
+  else expect(done.save!.gm_state.flags.other_process_retained).toBe(true);
+  if(writer==='canonical')expect(done.save!.runtime.receipts).toHaveLength(legacy.runtime.receipts.length+1);
+  expect(completedWhileOwned).toBe(false);expect(done.calls).toBe(0);expect(f.ai.metrics.requests).toBe(0);
  }finally{release();await pending?.catch(()=>undefined);await reap(worker?.child);await rm(directory,{recursive:true,force:true});}
 },30000);
 it('times out a competing process write without replacing authority and permits retry after SIGKILL',async()=>{

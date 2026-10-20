@@ -29,8 +29,9 @@ process.on('message',async()=>{
   }else if(mode==='canonical')await service.agentTransaction({game_id:initial.game_id,expected_revision:initial.state_revision,request_id:randomUUID()},
    {worker:true},next=>{next.gm_state.flags.other_process_retained=true;});
   else if(mode==='media')await service.setVisualAsset('player','fullbody','process_migration_asset',initial.game_id,initial.state_revision);
-  else if(mode==='image'){
-   const save=(await store.read())!;save.state_revision++;save.gm_state.flags.other_process_retained=true;await store.write(save);
+  else if(mode==='image'||mode==='same_revision'){
+   const save=(await store.read())!;if(mode==='image')save.state_revision++;
+   save.gm_state.flags.other_process_retained=true;await store.write(save);
   }else throw Error('Unknown isolated worker mode '+mode);
   process.send!({kind:'done',save:await store.read(),calls:ai.metrics.requests});process.disconnect();
  }catch(error){console.error(error);process.exitCode=1;process.disconnect();}

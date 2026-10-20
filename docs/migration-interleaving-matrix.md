@@ -1,0 +1,15 @@
+# Expanded current/view migration interleavings
+
+Product `8affb2f`, parent ledger `fd2d1fd`. This batch changes only the independent-process test and fixture. The final isolated matrix passed **three files, 30/30 assertions, zero skips** (`migration-interleaving-matrix-final.json/.log`, session 73236). The previous adjacent nine-file/84-assertion regression and final build remain evidence for the unchanged product source.
+
+| Boundary | current | view | Authority checked |
+|---|---|---|---|
+| Before migration comparison | canonical / media / same revision | canonical / media / same revision | New flag or asset, canonical revision and request receipt; normalization cannot erase a same-revision replacement |
+| After comparison, before replacement | canonical / media / higher-revision image / same-revision image | canonical / media / higher-revision image / same-revision image | Child reaches actual write, remains pending while migration owns replacement, then saves its exact complete image; canonical receipt retained |
+| Before / after migration persistence | SIGKILL at both boundaries | SIGKILL at both boundaries | Old or new complete image, successful later write and once-only post-kill request replay |
+
+Nineteen independent-process cases include those fourteen write interleavings, four strict live-child kills and one five-second timeout/kill/retry. Nine same-process cases and two guard fault/corruption cases complete the thirty. All use temporary JsonStores, offline mocks and zero model requests. The same-revision path preserves all authoritative replacement fields and permits only the read migration's structural metadata.
+
+The initial expanded attempt had **26 passes / four failures**. Its canonical/media tests incorrectly awaited a separate `migration_attempt` while holding the parent lock. Owned canonical/media operations fold normalization into their own final write, so no such event occurs and the guard safely timed out. Only the test boundary changed to the actual `write_attempt`; that failed JSON/log remains retained as `migration-interleaving-matrix.*`. The final report uses a distinct filename. Product code did not change. The expanded fixture compiled in build session 64778; the final boundary correction removes the unnecessary override and changes the awaited IPC name. A fresh final build and complete pinned offline snapshot are the next gate.
+
+This completes the bounded same-process/independent-process cooperative write-interleaving evidence for R9.3. Its condition remains open pending the current-source full snapshot and final audit; no score is awarded here: **97/160, 60.625% (60.63%), net zero**. R9.4 remains unverified because migration preparation/external raw replacement/OS fault coverage is incomplete. Raw writers and older unguarded processes are outside the new lock, as are general stale canonical-vs-canonical transactions. Node >=22.13 is required; actual validation remains Windows Node24.15.0. Formal data, production3100, frozen criteria, original QA and the other checkout remain preserved.
