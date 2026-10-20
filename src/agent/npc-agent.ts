@@ -821,7 +821,11 @@ function settleExecutableNpcPlans(input:SavePackage,beforeTime:SavePackage['runt
           edge.conditions.every(c=>save.gm_state.flags[c.flag]===c.equals)),here,step.target_id!);
         if(!path?.length){reason='route_unavailable';break;}
         cost=path.reduce((sum,edge)=>sum+edge.travel_minutes,0);
-        action={type:'MOVE',target_id:step.target_id!,parameters:{companions:'none'}};
+        // A route longer than the personal credit cap must make real progress
+        // through an affordable edge without completing the destination step.
+        const target=cost>240?path[0].to:step.target_id!;
+        if(cost>240)cost=path[0].travel_minutes;
+        action={type:'MOVE',target_id:target,parameters:{companions:'none'}};
       }else if(step.type==='HOLD')action={type:'HOLD',parameters:{minutes:cost,activity:step.description}};
       else if(step.type==='TALK'){
         if(!save.entities.some(e=>e.id===step.target_id&&e.components.character&&e.components.location?.location_id===here)){
@@ -829,7 +833,7 @@ function settleExecutableNpcPlans(input:SavePackage,beforeTime:SavePackage['runt
         action={type:'TALK',target_id:step.target_id!,parameters:{topic:step.speech!}};
       }else action={type:'INSPECT',...(step.target_id?{target_id:step.target_id}:{}),parameters:{focus:step.description}};
       if(cost>execution.time_credit_minutes){reason='insufficient_time_credit';break;}
-      const actionId=autonomousId(requestId,npcId,500+attempts);attempts++;
+      const stepIndex=execution.cursor,actionId=autonomousId(requestId,npcId,500+attempts);attempts++;
       try{
         const result=executeAction(save,action,actionId,'ai',undefined,undefined,false,npcId,true);
         const receipt=result.save.resolution_receipts?.find(r=>r.request_id===actionId);
@@ -837,7 +841,9 @@ function settleExecutableNpcPlans(input:SavePackage,beforeTime:SavePackage['runt
         save=result.save;receipt.commit_status='committed';actions++;
         plan=own(save,npcId).plans.find(p=>p.id===original.id)!;execution=plan.execution!;
         delete execution.failure_diagnostic;
-        execution.time_credit_minutes-=receipt.time_cost;execution.cursor++;execution.last_receipt_id=receipt.request_id;
+        execution.time_credit_minutes-=receipt.time_cost;
+        if(step.type!=='MOVE'||save.entities.find(e=>e.id===npcId)?.components.location?.location_id===step.target_id)execution.cursor++;
+        execution.last_receipt_id=receipt.request_id;
         if(step.type==='TALK')recordSceneObservation(save,actionId,[{speaker_id:npcId,utterance:step.speech!}],[step.target_id!]);
         const playerHere=save.entities.find(e=>e.id===save.player_state.entity_id)?.components.location?.location_id;
         const destination=save.entities.find(e=>e.id===npcId)?.components.location?.location_id;
@@ -848,7 +854,7 @@ function settleExecutableNpcPlans(input:SavePackage,beforeTime:SavePackage['runt
           if(step.type==='TALK')visibleFacts.push(`${String(actor!.components.identity?.name??npcId)}说：“${step.speech}”`);
         }
         observe('info','npc_agent.planned_action',{module:'agent',request_id:requestId,revision:save.state_revision,
-          metadata:{npc_id:npcId,plan_id:plan.id,step:execution.cursor-1,action_type:step.type,receipt_id:actionId,time_cost:receipt.time_cost}});
+          metadata:{npc_id:npcId,plan_id:plan.id,step:stepIndex,action_type:step.type,receipt_id:actionId,time_cost:receipt.time_cost}});
       }catch(error){reason=error instanceof GameError||error instanceof WorldBlockedError?'core_rejected':'system_error';
         execution.failure_diagnostic=(error instanceof Error?error.message:String(error)).slice(0,240);
         plan.last_failed_request_id=turnId;observe('warn','npc_agent.planned_action_rejected',{module:'agent',request_id:requestId,
@@ -1064,7 +1070,8 @@ export function nextNpcPlanBoundary(save:SavePackage,ctx:ActionContext):number|n
       if(destination){
         const map=currentMap(save),path=routePath(map.routes.filter(route=>route.conditions.every(c=>save.gm_state.flags[c.flag]===c.equals)),here,destination);
         if(!path?.length)continue;
-        cost=activity?path[0].travel_minutes:path.reduce((sum,route)=>sum+route.travel_minutes,0);
+        const total=path.reduce((sum,route)=>sum+route.travel_minutes,0);
+        cost=activity||total>240?path[0].travel_minutes:total;
       }
       const credit=execution?.time_credit_minutes??activity?.time_credit_minutes??0;
       boundaries.push(Math.max(1,cost-credit));

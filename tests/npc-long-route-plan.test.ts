@@ -1,0 +1,75 @@
+import {expect,it} from 'vitest';
+import {randomUUID} from 'node:crypto';
+import {demo} from './helpers.js';
+import {newSave,validateSave} from '../src/core/state.js';
+import {executeAction} from '../src/core/runtime.js';
+import {emptyNpcAgentState} from '../src/agent/npc-state.js';
+import {mkdtemp,readFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {JsonStore} from '../src/storage/json-store.js';
+import {GameService} from '../src/server/service.js';
+import {AIRuntime} from '../src/ai/runtime.js';
+
+function fixture(direct=false){
+ const world=structuredClone(demo);world.events=[];world.map!.routes=direct?
+  [{from:'square',to:'station',travel_minutes:150,conditions:[]}]:
+  [{from:'square',to:'market',travel_minutes:150,conditions:[]},{from:'market',to:'station',travel_minutes:150,conditions:[]}];
+ const save=newSave(world),state=emptyNpcAgentState();
+ state.goals=[{id:'long_motive',description:'持续照管自己的异地事务',horizon:'long',status:'active',origin:'self',priority:1}];
+ state.plans=[{id:'travel_method',goal_id:'long_motive',intention:'先前往车站，再整理本人的行程安排',status:'active',execution:{
+  steps:[{type:'MOVE',target_id:'station',description:'前往车站处理自己的事务',duration_minutes:null,speech:null},
+   {type:'HOLD',target_id:null,description:'整理本人行程安排',duration_minutes:1,speech:null}],
+  cursor:0,not_before:null,condition:null,last_accounted_at:structuredClone(save.runtime.time),time_credit_minutes:0,last_request_id:null,blocked_reason:null}}];
+ save.npc_agent_state={npc_lin:state};return validateSave(save);
+}
+const advance=(save:ReturnType<typeof fixture>,minutes:number)=>executeAction(save,{type:'WAIT',parameters:{minutes}},randomUUID()).save;
+it('makes a real intermediate arrival instead of waiting forever for credit above its cap',()=>{
+ const initial=fixture(),after=advance(initial,150),plan=after.npc_agent_state!.npc_lin.plans[0];
+ expect(after.entities.find(e=>e.id==='npc_lin')!.components.location?.location_id).toBe('market');
+ expect(plan.status).toBe('active');expect(plan.execution?.cursor).toBe(0);expect(plan.execution?.time_credit_minutes).toBe(0);
+ expect(after.resolution_receipts?.filter(r=>r.actor_id==='npc_lin').map(r=>({action:r.semantic_action,time:r.time_cost}))).toEqual([{action:'MOVE',time:150}]);
+});
+it('finishes a multi-edge journey and its dependent work without losing the long motive or double spending',()=>{
+ const initial=fixture();let after=advance(initial,150);after=advance(after,150);after=advance(after,1);
+ expect(after.entities.find(e=>e.id==='npc_lin')!.components.location?.location_id).toBe('station');
+ expect(after.npc_agent_state!.npc_lin.plans[0]).toMatchObject({status:'completed',execution:{cursor:2,time_credit_minutes:0}});
+ expect(after.npc_agent_state!.npc_lin.goals[0].status).toBe('active');
+ expect(after.resolution_receipts?.filter(r=>r.actor_id==='npc_lin').map(r=>[r.semantic_action,r.time_cost])).toEqual([['MOVE',150],['MOVE',150],['HOLD',1]]);
+ const loaded=validateSave(JSON.parse(JSON.stringify(after))),later=advance(loaded,10);
+ expect(later.resolution_receipts?.filter(r=>r.actor_id==='npc_lin')).toEqual(after.resolution_receipts?.filter(r=>r.actor_id==='npc_lin'));
+});
+it('preserves an ordinary direct route and original step cursor',()=>{
+ const after=advance(fixture(true),151);
+ expect(after.npc_agent_state!.npc_lin.plans[0]).toMatchObject({status:'completed',execution:{cursor:2}});
+ expect(after.resolution_receipts?.filter(r=>r.actor_id==='npc_lin').map(r=>[r.semantic_action,r.time_cost])).toEqual([['MOVE',150],['HOLD',1]]);
+});
+it('preserves exact intermediate and destination timing inside one long WAIT',()=>{
+ const initial=fixture(),after=advance(initial,301),receipts=after.resolution_receipts!.filter(r=>r.actor_id==='npc_lin');
+ const at=(time:typeof initial.runtime.time)=>time.day*initial.definition.ruleset.minutes_per_day+time.minute;
+ expect(receipts.map(r=>[r.semantic_action,r.time_cost,at(r.at!)-at(initial.runtime.time)])).toEqual([['MOVE',150,150],['MOVE',150,300],['HOLD',1,301]]);
+ expect(after.npc_agent_state!.npc_lin.plans[0].status).toBe('completed');
+});
+it('keeps partial destination ownership after actual disk/service restart and finishes once',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'agf-long-route-'));
+ try{
+  const ai=new AIRuntime({name:'no-generation',generate:async()=>{throw Error('Core plans need no model');}}),store=new JsonStore(directory);
+  await store.write(fixture());const initial=await new GameService(store,ai,demo).current(),partial=advance(initial,150);await store.write(partial);
+  const bytes=await readFile(join(directory,'current.json')),restarted=new GameService(new JsonStore(directory),ai,demo),loaded=await restarted.current();
+  expect(loaded).toEqual(partial);expect(await readFile(join(directory,'current.json'))).toEqual(bytes);
+  const after=advance(loaded,151);expect(after.npc_agent_state!.npc_lin.plans[0]).toMatchObject({status:'completed',execution:{cursor:2}});
+  expect(after.npc_agent_state!.npc_lin.goals[0].status).toBe('active');
+  expect(after.resolution_receipts?.filter(r=>r.actor_id==='npc_lin').map(r=>[r.semantic_action,r.time_cost])).toEqual([['MOVE',150],['MOVE',150],['HOLD',1]]);
+  expect(ai.metrics.requests).toBe(0);
+ }finally{await rm(directory,{recursive:true,force:true});}
+});
+it.each(['first_edge','remaining_edge'] as const)('retains Core refusal for a closed %s without completing the destination step',mode=>{
+ let save=fixture();if(mode==='remaining_edge')save=advance(save,150);
+ const closed=mode==='first_edge'?'market':'station';save.definition.map!.locations.find(place=>place.id===closed)!.lifecycle={
+  status:'closed',visibility:'public',origin:'existing_detail',creation_reason:'隔离关闭目的地',source_ref:'fixture',recorded_at:save.runtime.time};
+ const after=advance(validateSave(save),150),plan=after.npc_agent_state!.npc_lin.plans[0];
+ expect(after.entities.find(e=>e.id==='npc_lin')!.components.location?.location_id).toBe(mode==='first_edge'?'square':'market');
+ expect(plan).toMatchObject({status:'active',execution:{cursor:0,time_credit_minutes:0,blocked_reason:'core_rejected'}});
+ expect(after.npc_agent_state!.npc_lin.goals[0].status).toBe('active');
+ expect(after.resolution_receipts?.filter(r=>r.actor_id==='npc_lin'&&r.semantic_action==='HOLD')).toHaveLength(0);
+});
