@@ -154,9 +154,10 @@
         "docs/current-offline-snapshot.md",
         "docs/post-reaction-offline-snapshot.md",
         "scripts/agent-workspace.mjs",
-        "docs/post-context-offline-snapshot.md"
+        "docs/post-context-offline-snapshot.md",
+        "docs/post-subject-offline-snapshot.md"
       ],
-      "basis": "Product9917459/ledger6be22bb fixed195-file494-hash complete offline snapshot1957/1957pass, exact coverage once, build pass; original shard5 native0xC0000409 retained, exact halves passed. Native stability and later source edits need new evidence. Fresh source29e6a5f/ledgerc351367:199files1992/1992pass,502pinned hashes unchanged, exact coverage once,16shards; isolated build passed. Old native crash retained. Fresh product1bad19e/ledger5c083d8 full snapshot207files2064/2064pass,515pinned hashes unchanged, exact coverage once,16shards exit0. Identical-product complete isolated build passed. Historical native crash retained; no later-source or process-stability claim."
+      "basis": "Product9917459/ledger6be22bb fixed195-file494-hash complete offline snapshot1957/1957pass, exact coverage once, build pass; original shard5 native0xC0000409 retained, exact halves passed. Native stability and later source edits need new evidence. Fresh source29e6a5f/ledgerc351367:199files1992/1992pass,502pinned hashes unchanged, exact coverage once,16shards; isolated build passed. Old native crash retained. Fresh product1bad19e/ledger5c083d8 full snapshot207files2064/2064pass,515pinned hashes unchanged, exact coverage once,16shards exit0. Identical-product complete isolated build passed. Historical native crash retained; no later-source or process-stability claim. Fresh productf9f93f0/ledger264dcf4 full snapshot212files2118/2118pass,521pinned hashes unchanged, exact coverage once,16shards exit0; identical-product complete isolated build passed. Earlier native/network/assertion failures retained; no later-source or universal stability claim."
     },
     "R6.1": {
       "status": "met",
@@ -2101,6 +2102,22 @@
           "result": "Bounded explicit clauses and joint lists only; broad attribution/quoted/multi-world matrix open"
         }
       ]
+    },
+    {
+      "batch": "post-subject-offline-snapshot",
+      "type": "evidence_correction",
+      "source": "f9f93f0",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R5.4",
+          "evidence": [
+            "docs/post-subject-offline-snapshot.md"
+          ],
+          "result": "Fresh complete212files2118pass,521hashes unchanged, exact coverage once,16shards exit0/build; existing met evidence refreshed"
+        }
+      ],
+      "note": "Net0, full multi-world/background/real-provider/human conditions remain open."
     }
   ],
   "new_risks": [],
