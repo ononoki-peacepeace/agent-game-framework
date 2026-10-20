@@ -12,6 +12,7 @@ import { observe, errorText } from '../observability/index.js';
 import {resolutionKindSchema} from './resolution.js';
 import {evaluateBackgroundTime,evaluateBackgroundLocation} from '../background/runtime.js';
 import {recordNpcActionExperience} from '../agent/npc-experience.js';
+import {expirePhysicalTransients} from './perception-state.js';
 
 /** One bounded world tick: registered module handlers, authored events and schedules share the same clock. */
 export function advanceWorldSegment(c:ActionContext,minutes:number){
@@ -75,6 +76,12 @@ export function executeAction(current: SavePackage, input: unknown, requestId: s
       const from=structuredClone(save.runtime.time),oldDay=from.day;
       save.runtime.time = advanceTime(save.runtime.time, minutes, save.definition.ruleset.minutes_per_day);
       action.time_cost += minutes; ctx.emit({ type: 'on_time_advance', minutes });
+      // Bodily transients have a declared lifetime. Expiring them with the world clock is
+      // what keeps "she closed her eyes" from silently lasting forever (or vanishing early).
+      for(const expired of expirePhysicalTransients(save))
+        observe('info','perception.transient_expired',{module:'core',revision:save.state_revision,
+          metadata:{entity_id:expired.entity_id,kind:expired.transient.kind,value:expired.transient.value,
+            source:expired.transient.source,source_ref:expired.transient.source_ref}});
       for (let d = oldDay; d < save.runtime.time.day; d++) ctx.emit({ type: 'on_day_changed' });
       evaluateBackgroundTime(ctx,from,save.runtime.time);
       let settled=false;

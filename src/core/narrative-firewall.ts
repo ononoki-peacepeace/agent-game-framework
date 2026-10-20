@@ -6,6 +6,7 @@ import {persistentProgressPattern} from './completion-evidence.js';
 import {currentMap} from './map.js';
 import {publicView} from './state.js';
 import {narrativeLanguageIssues} from '../ai/visible-language.js';
+import {visualClaimIssues} from './perception-state.js';
 
 type Receipt=NonNullable<SavePackage['resolution_receipts']>[number];
 type Narrative=z.infer<typeof narrativeResultSchema>;
@@ -81,9 +82,13 @@ export function validateScenePresenceNarrative(save:SavePackage,prose:string,cla
     else if(!/^(?:随后|随即|接着|然后)?(?:她|他)/.test(compact))continue;
     if(!subject)continue;
     const present=subject.components.location?.location_id===here;
-    const departed=[...compact.matchAll(/(?:离开|离去|走出|走了|上去了|跨过门槛|跨出门|退出房间)/g)].some(match=>
-      match[0]!=='离开'||!attentionMovement(compact.slice(0,match.index).split(/[，,；;]/).at(-1)??''))&&
-      !/(?:没有|尚未|还没|不曾|未曾|并未|没能|不愿|不想|不肯|不能|不会|不要|别让|不再|打算|准备|想要|如果|要是).{0,16}(?:离开|离去|走出|走了|上去了|跨过|跨出|退出)/.test(compact);
+    const departed=[...compact.matchAll(/(?:离开|离去|走出|走了|上去了|跨过门槛|跨出门|退出房间)/g)].some(match=>{
+      const token=match[0];
+      if(token==='离开'&&attentionMovement(compact.slice(0,match.index).split(/[，,；;]/).at(-1)??''))return false;
+      // "走了两步/几步" is local stepping, never evidence of leaving the scene.
+      if(token==='走了'&&/^[一二两三四五六七八九十百\d]+步/.test(compact.slice(match.index+token.length)))return false;
+      return !/(?:没有|尚未|还没|不曾|未曾|并未|没能|不愿|不想|不肯|不能|不会|不要|别让|不再|打算|准备|想要|如果|要是).{0,16}(?:离开|离去|走出|走了|上去了|跨过|跨出|退出)/.test(compact);
+    });
     if(present&&departed)throw new GameError('旁白声称在场人物已经离场，但没有权威位置变更',503);
     if(!present&&/(?:站在|坐在|就在|留在)(?:这里|眼前|你身旁|你面前|原地)/.test(compact))
       throw new GameError('旁白把不在当前地点的人物描写为在场',503);
@@ -130,6 +135,7 @@ export function validateResolvedNarrative(receipt:Receipt,result:Narrative,hidde
       body=body.split(open+beat.utterance+close).join('');
   }
   const prose=[body,...(result.scene_beats??[]).filter(beat=>beat.kind==='narration').map(beat=>beat.text)].join('\n');
+  if(scene)validatePerceptionNarrative(scene,receipt,result);
   if(receipt.physical_outcome){
     // Abstract HP damage does not establish a particular visible wound or its
     // severity. Ordinary motion, pain and emotion remain expressive prose.
@@ -175,6 +181,45 @@ export function validateResolvedNarrative(receipt:Receipt,result:Narrative,hidde
     const match=assertedPatternMatch(kind,pattern,text);
     if(match&&!allowed.has(kind as typeof receipt.effects[number]))
       throw new NarrativePatternError(kind,match.index,matchedSnippet(text,match.index,match[0].length));
+  }
+}
+
+/** An entity recorded as sightless at settlement cannot be narrated as having watched
+ * the action. The receipt is the record, not live state: a forced physical event ends a
+ * voluntary eyes-closed state at settlement, so live state is already "open" by now (REV435).
+ * This constrains generated presentation only; it never changes a settled outcome. */
+export function validatePerceptionNarrative(save:SavePackage,receipt:Receipt,result:Narrative){
+  const blind=new Set(receipt.physical_outcome?.sight_blocked_ids??[]);
+  if(!blind.size)return;
+  const vision={blocked:true,reason:'结算时没有视觉信息',transient:null} as const;
+  const reject=(text:string,match:{match:string;index:number})=>{
+    throw new NarrativePatternError('perception',match.index,matchedSnippet(text,match.index,match.match.length),
+      '叙事让一个在结算时没有视觉信息的人物声称看见了动作过程；该人物只能凭触觉、听觉和既有认知反应');
+  };
+  for(const beat of result.scene_beats??[])if(beat.kind==='speech'&&blind.has(beat.speaker_id)){
+    const issues=visualClaimIssues(beat.utterance,vision);
+    if(issues.length)reject(beat.utterance,issues[0]);
+  }
+  if(result.speaker&&blind.has(result.speaker)&&result.dialogue){
+    const issues=visualClaimIssues(result.dialogue,vision);
+    if(issues.length)reject(result.dialogue,issues[0]);
+  }
+  // Narration attributes by the nearest named subject, matching presence validation.
+  const people=save.entities.filter(entity=>entity.components.character);
+  const prose=[result.narrative,...(result.scene_beats??[]).filter(beat=>beat.kind==='narration').map(beat=>beat.text)].join('\n');
+  let subject:typeof people[number]|undefined;
+  for(const sentence of prose.split(/[。！？\n]/)){
+    const compact=sentence.replace(/\s/g,'');
+    const named=people.filter(entity=>{
+      const name=String(entity.components.identity?.name??'');
+      return [name.replace(/\s/g,''),...name.split(/\s+/).filter(part=>part.length>=2)]
+        .some(alias=>alias&&compact.includes(alias));
+    });
+    if(named.length===1)subject=named[0];else if(named.length>1)subject=undefined;
+    else if(!/^(?:随后|随即|接着|然后|这时|同时)?(?:她|他)/.test(compact))continue;
+    if(!subject||!blind.has(subject.id))continue;
+    const issues=visualClaimIssues(compact,vision);
+    if(issues.length)reject(sentence,issues[0]);
   }
 }
 
@@ -262,6 +307,19 @@ export function canonicalPerceptionNarrative(save:SavePackage,receipt:Receipt,hi
     canonicalResolutionNarrative(receipt,hidden,true)].filter(Boolean).join('\n');
 }
 
+/** Multi-step grounded degradation: a compound turn must never collapse into one
+ * generic completion line. Present each settled step's confirmed facts in order,
+ * without inventing any world state beyond the committed receipts. */
+export function canonicalCompoundNarrative(save:SavePackage,hidden:boolean,steps:Receipt[]){
+  const lines=steps.map((step,index)=>{
+    const facts=(step.canonical_facts??[]).filter(fact=>
+      !fact.startsWith('尝试行动：')&&!fact.startsWith('本次行动经过 '));
+    const text=facts.length?facts.join(' '):canonicalResolutionNarrative(step,hidden,isSettledPerception(save,step));
+    return `${index+1}、${text}`;
+  });
+  return lines.join('\n');
+}
+
 export function canonicalResolutionNarrative(receipt:Receipt,hidden:boolean,perception=false){
   if(receipt.environment&&!hidden)return receipt.canonical_facts.join(' ');
   if(receipt.physical_outcome){
@@ -305,10 +363,14 @@ export function physicalNarrativeFallback(save:SavePackage,receipt:Receipt,hidde
     receipt.repetition?`这段尝试持续了${receipt.repetition.elapsed_seconds}秒，随后停下。`:null,departures||null]
     .filter(Boolean).join('\n\n');
   const beats:NonNullable<SavePackage['last_turn']>['scene_beats']=[{kind:'narration',text:prose.slice(0,1200)}];
+  const blind=new Set(physical.sight_blocked_ids??[]);
   for(const id of physical.witness_ids){
     const speech=save.npc_agent_state?.[id]?.last_decisions.findLast(entry=>entry.event_ref===`reaction:${receipt.request_id}`)?.speech;
-    if(speech&&!narrativeLanguageIssues({narrative:'',dialogue:speech},publicView(save)).length)
-      beats.push({kind:'speech',speaker_id:id,utterance:speech.slice(0,1000)});
+    if(!speech||narrativeLanguageIssues({narrative:'',dialogue:speech},publicView(save)).length)continue;
+    // Degradation reuses stored speech, so it must clear the same perception bar as
+    // live narration; speech recorded before this rule existed is still unvalidated.
+    if(blind.has(id)&&visualClaimIssues(speech,{blocked:true,reason:'结算时没有视觉信息',transient:null}).length)continue;
+    beats.push({kind:'speech',speaker_id:id,utterance:speech.slice(0,1000)});
   }
   return {narrative:prose,scene_beats:beats};
 }

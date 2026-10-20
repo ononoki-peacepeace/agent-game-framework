@@ -69,9 +69,18 @@ export class CapabilityRegistry {
   get(id: string) { return this.entries.get(id) ?? null; }
   all() { return [...this.entries.values()]; }
   register(descriptor: CapabilityDescriptor) {
-    const existing=this.entries.get(descriptor.id);
-    if(existing){if(JSON.stringify(existing)!==JSON.stringify(descriptor))throw new Error(`capability ${descriptor.id} 已注册为不同实现`);return existing;}
-    const frozen=Object.freeze({...descriptor});this.entries.set(descriptor.id,frozen);return frozen;
+    return this.registerMany([descriptor])[0]!;
+  }
+  /** Validate the entire package before publishing any runtime entries. */
+  registerMany(descriptors: CapabilityDescriptor[]) {
+    const staged=new Map(this.entries),registered:CapabilityDescriptor[]=[];
+    for(const descriptor of descriptors){
+      const existing=staged.get(descriptor.id);
+      if(existing&&JSON.stringify(existing)!==JSON.stringify(descriptor))throw new Error(`capability ${descriptor.id} 已注册为不同实现`);
+      const entry=existing??Object.freeze({...descriptor});staged.set(descriptor.id,entry);registered.push(entry);
+    }
+    for(const entry of registered)this.entries.set(entry.id,entry);
+    return registered;
   }
   activate(ids: string[]) {
     for (const id of ids) {

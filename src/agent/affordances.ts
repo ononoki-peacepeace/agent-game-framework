@@ -9,6 +9,7 @@ import {createRegistry} from '../modules/index.js';
 import type {ActionInput} from '../shared/contracts.js';
 import {currentTrace} from '../observability/trace.js';
 import {engineOutcome,gameOutcome,WorldBlockedError,type FrameworkOutcome} from './outcome.js';
+import {enumeratedInspectionItems} from '../core/completion-evidence.js';
 
 export interface WorldAffordance {
   id: string;
@@ -317,6 +318,14 @@ export function verifyContractCompletion(before:SavePackage,after:SavePackage,go
       receipt.activity.description===goal.normalized_goal.trim().slice(0,300)&&
       receipt.activity.duration_minutes===receipt.time_cost&&receipt.activity.duration_minutes>0&&
       receipt.activity.location_id===entityLocation(before,before.player_state.entity_id))return true;
+    // An enumerated self-inspection is only complete when the turn produced
+    // per-item findings (the occurred-activity branch above). A single generic
+    // no-discovery perception can never satisfy several named checks at once.
+    const inspectionItems=enumeratedInspectionItems(goal.normalized_goal);
+    if(inspectionItems.length>=2){
+      const results=receipt.inspection_results??[];
+      return receipt.inspection_status==='complete'&&inspectionItems.every(item=>results.some(result=>result.item===item&&(result.result==='found'||result.result==='nothing')));
+    }
     // A failed perception check is still a completed observation attempt. No discovery or
     // persistent effect is claimed; the committed check and its no-result story remain authoritative.
     return ['SIMPLE_CHECK','DETERMINISTIC'].includes(receipt.kind)&&
@@ -545,7 +554,7 @@ export function committedGoalEvidence(save:SavePackage,goal:AtomicGoal):boolean{
 /** Typed goals use the same registered-action runner whether they came from one sentence or a staged plan. */
 export function canExecuteContractPlan(plan:AgentPlan){
  const bound=(goal:AtomicGoal)=>!['capability_gap','needs_binding'].includes(goal.contract?.availability??'runtime_gap');
- const shape=Boolean(plan.contract)&&plan.goals.length>0&&!plan.contract?.unresolved_compound&&
+  const shape=Boolean(plan.contract)&&plan.goals.length>0&&!plan.local_compound&&!plan.contract?.unresolved_compound&&
    !(plan.goals.length===1&&!plan.local_compound&&hasMultipleClauses(plan.contract!.original_intent))&&
    plan.goals.every(goal=>!goal.condition&&!goal.branch&&goal.temporal_scope.scope==='now'&&
     ['location_at','purchase','presence_observed','conversation_attempted','activity_occurred','environment_resolved','item_location','interaction_performed']

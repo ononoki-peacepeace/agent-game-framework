@@ -131,7 +131,8 @@ export type SemanticDecision=z.infer<typeof semanticDecisionSchema>;
 export async function interpretSemanticEntry(service:GameService,view:PublicView,input:string,surface:InputSurface,
   pending?:{input:string;question:string}|null,systemSession?:unknown,
   recovery?:{failure_code:string;failure_stage:string;detail?:string;max_attempts?:1},
-  interaction?:NpcConversationContext):Promise<SemanticDecision|null>{
+  interaction?:NpcConversationContext,
+  onUnavailable?:(failure:{reason:string;stage:string;detail:string})=>void):Promise<SemanticDecision|null>{
   const save=await service.storage.read('current','semantic_context');
   if(!save||save.game_id!==view.game_id)return null;
   const publicHistory=(save.narrative_history??[]).slice(-3).map((entry,index)=>({
@@ -229,6 +230,7 @@ export async function interpretSemanticEntry(service:GameService,view:PublicView
       currentTrace()?.warn('semantic.retry',{module:'agent',metadata:{attempt:attempt+1,failure_code:reason,
         retry_reason:previousRejection.reason,final_status:retryable?'retrying':'terminal'}});
       if(retryable)continue;
+      onUnavailable?.({reason,stage:previousRejection.failure_stage,detail:previousRejection.reason});
       return null;
     }
     // The model can express a coherent high-impact GoalSpec while using the

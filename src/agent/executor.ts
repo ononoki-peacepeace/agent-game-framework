@@ -6,7 +6,7 @@ import {createHash} from 'node:crypto';
 import type {GameService} from '../server/service.js';
 import {publicView} from '../core/state.js';
 import {assert,GameError} from '../core/schema.js';
-import {agentResult,type AgentResult,type UIAction} from './contracts.js';
+import {agentResult,recoveryContext,type AgentResult,type UIAction} from './contracts.js';
 import {createAgentPlan,fastPlan,hasUserCondition,PlanConversionError} from './planner.js';
 import {checkChoiceOffer} from '../core/choice-offer.js';
 import {classifyChoiceExecution} from '../core/choice-availability.js';
@@ -19,7 +19,7 @@ import {dueAssessment} from './future.js';
 import {recentReferent} from '../core/recent-referent.js';
 import {sceneAnchor} from '../core/interaction.js';
 import {executeOpenWorldGoal,runContractPlan,canExecuteContractPlan,discoverContractCandidates} from './affordances.js';
-import {compileGoalContract,hasMultipleClauses} from './goal-contract.js';
+import {compileGoalContract,hasMultipleClauses,recoverablePlanAdmission} from './goal-contract.js';
 import {scenePartner,sceneMessage,orderedSceneBeats,sceneSpeechSeconds,planOpenGoalStep,MAX_OPEN_GOAL_STEPS,sceneFailureInfo,sceneRepairFeedback,
   SceneInteractionError,recordSoftContacts,recordSocialCommitments,recordNpcActivityPlans,type SceneRepair,type runSceneInteraction} from './scene-interaction.js';
 import {z} from 'zod';
@@ -125,7 +125,7 @@ export function oneNavigation(actions:UIAction[]):UIAction[]{
 /** Goals that only read state. A plan made of these can be replayed safely after a revision conflict. */
 const readOnlyGoalTypes=new Set(['WORLD_QUERY','WORLD_LOOKUP','UI_NAVIGATION','LIST_FUTURE']);
 export function readOnlyPlan(goals:{type:string}[]){return goals.length>0&&goals.every(goal=>readOnlyGoalTypes.has(goal.type));}
-export interface PlanRequest {request_id:string;game_id:string;expected_revision:number;input:string;choice_offer_id?:string;end_conversation?:boolean;interaction?:import('../shared/interaction-context.js').NpcConversationContext}
+export interface PlanRequest {request_id:string;game_id:string;expected_revision:number;input:string;original_input?:string;choice_offer_id?:string;end_conversation?:boolean;interaction?:import('../shared/interaction-context.js').NpcConversationContext}
 function activeGoalResult(service:GameService,save:SavePackage,message:string):AgentResult{
  const plan=save.active_goal!.plan,question=save.active_goal!.waiting_question;
  return agentResult(plan.goals.length===1?plan.goals[0].type:'MULTI_GOAL',message,{presentation:plan.status==='waiting_for_player'?'handoff':'story',
@@ -152,7 +152,7 @@ function contractFinalMessage(plan:AgentPlan,reason:string,question:string|null,
 }
 async function continueActiveGoal(service:GameService,save:SavePackage,plan:AgentPlan,
  selection:Record<string,{candidate_id:string;source:'player'|'model'}>={},endConversation=false,
- resumeRequestId?:string):Promise<AgentResult>{
+ resumeRequestId?:string,originalInput?:string):Promise<AgentResult>{
  const start=save.runtime.time.day*save.definition.ruleset.minutes_per_day+save.runtime.time.minute;
  const outcome=await runContractPlan(service,save,plan,selection,true,endConversation,resumeRequestId);
  const end=outcome.save.runtime.time.day*outcome.save.definition.ruleset.minutes_per_day+outcome.save.runtime.time.minute;
@@ -168,7 +168,9 @@ async function continueActiveGoal(service:GameService,save:SavePackage,plan:Agen
  const shown=outcome.outcome.type==='engine_failure'?engineMessage(outcome.outcome):
    outcome.plan.status==='waiting_for_player'?message:outcome.plan.status!=='completed'?outcome.reason:narrated??
    (outcome.plan.status==='completed'?message:outcome.reason);
- return {...activeGoalResult(service,outcome.save,shown),outcome:outcome.outcome,...(narrated?{story:narrated}:{}),
+ return {...activeGoalResult(service,outcome.save,shown),outcome:outcome.outcome,
+   ...(outcome.outcome.type==='engine_failure'?{recovery:recoveryContext(originalInput??plan.contract?.original_intent??'',outcome.outcome,{plan_id:plan.plan_id})}:{}),
+   ...(narrated?{story:narrated}:{}),
    presentation:outcome.outcome.type==='engine_failure'?'failure':outcome.plan.status==='waiting_for_player'?'handoff':
      outcome.plan.status!=='completed'?'assistant':narrated?'story':'assistant',time_advanced:end-start,
    canonical_changes:outcome.plan.goals.filter(goal=>goal.status==='completed').map(goal=>`goal:${goal.goal_id}`),
@@ -258,7 +260,7 @@ async function handleGoalControl(service:GameService,save:SavePackage,body:PlanR
   next.active_goal=prior;
  });
  const current=await service.current(),continued=await continueActiveGoal(service,current,current.active_goal!.plan,
-   {},false,body.request_id);
+   {},false,body.request_id,body.original_input??body.input);
  const after=await service.current(),priorReceipts=new Set(save.runtime.receipts.map(receipt=>receipt.id));
  return {...continued,goal_control:{...control,goal_id:target.plan.plan_id,status:continued.outcome.type==='engine_failure'||continued.plan?.status==='blocked'?'blocked':'resumed',
    revision:continued.view!.revision,receipt_ids:[...new Set([...continued.outcome.receipt_ids,
@@ -329,13 +331,15 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
      (outcome.plan.status==='waiting_for_player'?contractFinalMessage(outcome.plan,outcome.reason,
        outcome.save.active_goal?.waiting_question??outcome.reason,outcome.save.active_goal?.options??[]):
      gameNarrative(outcome.outcome,{completed:outcome.plan.goals.filter(goal=>goal.status==='completed').map(goal=>goal.result?.summary??goal.normalized_goal)}));
-   return agentResult(plan.goals[0].type,shown,{outcome:outcome.outcome,presentation:outcome.outcome.type==='engine_failure'?'failure':
+   return agentResult(plan.goals[0].type,shown,{outcome:outcome.outcome,
+     ...(outcome.outcome.type==='engine_failure'?{recovery:recoveryContext(body.original_input??body.input,outcome.outcome,{goal_ids:plan.goals.map(goal=>goal.goal_id)})}:{}),
+     presentation:outcome.outcome.type==='engine_failure'?'failure':
      outcome.plan.status==='waiting_for_player'?'handoff':story?'story':'assistant',plan_id:plan.plan_id,plan:outcome.plan,
      results:outcome.plan.goals.map(goal=>({goal_id:goal.goal_id,summary:goal.result?.summary??'',
        related_entity:goal.target_entities[0]??null,status:goal.status})),time_advanced:end-start,
      ...(story?{story}:{}),view:service.project(outcome.save)});
   }
-  return continueActiveGoal(service,save,plan,{},Boolean(body.end_conversation));
+  return continueActiveGoal(service,save,plan,{},Boolean(body.end_conversation),undefined,body.original_input??body.input);
  }
  const unavailable=plan.goals.find(goal=>goal.side_effect_level==='world'&&goal.operation_hint&&goal.operation_hint!=='other'&&
    ['capability_gap','needs_binding','runtime_gap'].includes(goal.contract?.availability??'runtime_gap'));
@@ -486,6 +490,7 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
  const finalMessage=finalOutcome.type==='engine_failure'?safeEngineMessage:
    committedNarrative||applyAssistantStyle(save,assistantMessage||gameNarrative(finalOutcome,{completed:changes}));
  return agentResult(plan.goals.length===1?plan.goals[0].type:'MULTI_GOAL',finalMessage,{outcome:finalOutcome,
+   ...(finalOutcome.type==='engine_failure'?{recovery:recoveryContext(body.original_input??body.input,finalOutcome,{goal_ids:plan.goals.map(goal=>goal.goal_id),failed_goals:plan.goals.filter(goal=>goal.status==='failed').map(goal=>({goal_id:goal.goal_id,summary:goal.result?.summary??''}))})}:{}),
    presentation:finalOutcome.type==='engine_failure'?'failure':committedNarrative?'story':'assistant',clarification,
    ...(committedNarrative?{story:committedNarrative}:{}),
    ...(awarenessStatus?{awareness_status:awarenessStatus}:{}),plan_id:plan.plan_id,plan,results,future_intents:futures,
@@ -509,7 +514,7 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
       const selection=pendingChoice(save,body.input);
       if(selection){
         const goal=active.plan.goals.find(entry=>entry.status==='waiting_for_player');
-        if(goal)return continueActiveGoal(service,save,active.plan,{[goal.goal_id]:{candidate_id:selection.candidate_id,source:'player'}});
+        if(goal)return continueActiveGoal(service,save,active.plan,{[goal.goal_id]:{candidate_id:selection.candidate_id,source:'player'}},false,undefined,body.original_input??body.input);
       }
     }
     // An explicit wait is one foreground action. World simulation may tick internally;
@@ -534,7 +539,8 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
     // conversation is active. The GoalSpec, not sentence wording or the scene lane,
     // owns this handoff; the existing Freeform transaction settles time and evidence.
     if(semantic?.kind==='world_action'&&semantic.goal_spec?.play_action==='perceive'&&!semantic.goal_spec.repetition&&
-      !semantic.goal_spec.multi_step&&!semantic.goal_spec.dependencies.length){
+      !semantic.goal_spec.multi_step&&!semantic.goal_spec.dependencies.length&&
+      !hasMultipleClauses(body.input)){
       const result=await service.turn({game_id:body.game_id,expected_revision:body.expected_revision,
         request_id:body.request_id,input:body.input},undefined,undefined,undefined,false,
         undefined,undefined,true,undefined,true);
@@ -578,6 +584,7 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
     // the *new* canonical state and decides again — which may be an ordinary scene interaction.
     const discretionaryRoute=semantic?.kind==='world_action'&&
       (semantic.interaction_lane==='world_transaction'||semantic.open_goal_context?.route_choice===true)&&
+      !hasMultipleClauses(body.input)&&
       semantic.goal_spec?.play_action==='move'&&!semantic.goal_spec.ambiguity&&
       !semantic.open_goal_context?.destination&&
       !semantic.goal_spec.targets.some(target=>target.kind!=='location'||Boolean(target.entity_id))&&
@@ -645,7 +652,8 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
         const receipts=committedSince(save,after);
         const story=receipts.length||storyLines.length?
           [...new Set(storyLines.length?storyLines:[after.last_turn?.narrative?.trim()].filter((line):line is string=>Boolean(line)))].join('\n'):'';
-        return agentResult('WORLD_GOAL',engineMessage(outcome),{outcome,presentation:'failure',
+        return agentResult('WORLD_GOAL',engineMessage(outcome),{outcome,
+          recovery:recoveryContext(body.original_input??body.input,outcome,{completed_steps:trail}),presentation:'failure',
           ...(story?{story}:{}),plan_id:body.request_id,
           canonical_changes:trail.map(entry=>'goal_step:'+entry),view:service.project(after)});
       };
@@ -1079,7 +1087,10 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
       let sceneError:unknown=null;
       let sceneNeedsPlan=false;
       let repair:SceneRepair|undefined;
-      for(let attempt=1;attempt<=2;attempt++){
+      let previousCode:string|null=null;
+      let sceneAttempts=0;
+      for(let attempt=1;attempt<=3;attempt++){
+        sceneAttempts=attempt;
         try{outcome=await agentSkills(save).invoke<{view:typeof view;input:string;partner:{id:string};
           speechMode:'none'|'verbatim'|'intent'|null;repair?:typeof repair;speechOnly?:boolean;audienceIds?:string[]},Awaited<ReturnType<typeof runSceneInteraction>>>(
           'natural_scene',{view,input:body.input,partner,speechMode:semantic?.player_speech_mode??null,repair,speechOnly:deferSceneEffects,
@@ -1103,11 +1114,16 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
             effects:sceneError.proposedEffects,attempt,revision:latest.state_revision}});
           break;
         }
-        const recoverable=safe&&attempt<2&&!['PROVIDER_REFUSAL','PROVIDER_CONTENT_FILTER','SCENE_PROVIDER_FAILURE'].includes(failure.code);
+        // A bounded cross-stage recovery: each attempt may surface a different
+        // repairable category, but repeating the same rejected category is not
+        // retried, so the loop cannot amplify or loop on one invariant failure.
+        const repairable=!['PROVIDER_REFUSAL','PROVIDER_CONTENT_FILTER','SCENE_PROVIDER_FAILURE'].includes(failure.code);
+        const recoverable=safe&&attempt<3&&repairable&&(attempt===1||failure.code!==previousCode);
         currentTrace()?.warn('agent.recovery.decision',{metadata:{attempt,failure_code:failure.code,
           failure_stage:failure.stage,recoverable,strategy:recoverable?'repair_scene':'stop',
           revision:latest.state_revision}});
         if(!recoverable)break;
+        previousCode=failure.code;
         repair=sceneRepairFeedback(sceneError,latest.state_revision);
       }
       if(!outcome&&!sceneNeedsPlan){const latest=await service.current(),failure=sceneFailureInfo(sceneError);
@@ -1125,6 +1141,7 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
           '生成的玩家发言偏离了原意，自动修正未完成；交流尚未提交，后续行动尚未执行。':
           engineMessage(failureOutcome);
         return agentResult('WORLD_ACTION',preciseMessage,{outcome:failureOutcome,
+          recovery:recoveryContext(body.original_input??body.input,failureOutcome,{attempts:sceneAttempts,failed_category:failure.code}),
           presentation:'failure',view:service.project(latest)});}
       if(outcome){
         if(deferSceneEffects){
@@ -1297,6 +1314,7 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
     let proposed:Awaited<ReturnType<typeof createAgentPlan>>|null=null;
     let plan:AgentPlan|null=null;
     let alignment:Awaited<ReturnType<typeof verifyGoalAlignment>>=null;
+    let admissionFailure:ReturnType<typeof recoverablePlanAdmission>=null;
     let recovery:Record<string,unknown>|null=null;
     let previousFailure='';
     let previousConversionFailure='';
@@ -1334,15 +1352,18 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
         :await verifyGoalAlignment(service,body.input,plan,(revisedSemantic??semantic)?.goal_spec?.repetition);}catch(error){
         service.logger.warn('agent.goal_alignment.failed',{module:'agent',metadata:{reason:failureReason(error),attempt}});
       }
-      if(alignment?.verdict==='aligned')break;
-      const failureCode=alignment?.verdict??'alignment_unavailable';
+      admissionFailure=alignment?.verdict==='aligned'&&!canExecuteContractPlan(plan)
+        ?recoverablePlanAdmission(plan):null;
+      if(alignment?.verdict==='aligned'&&!admissionFailure)break;
+      const failureCode=admissionFailure?.code??alignment?.verdict??'alignment_unavailable';
+      const failureStage=admissionFailure?'plan_admission':'goal_alignment';
       const shape=JSON.stringify(plan.goals.map(goal=>({type:goal.type,text:goal.normalized_goal,
         operation:goal.operation_hint??null,depends_on:goal.depends_on})));
       const repeated=previousFailure===failureCode+':'+shape;
       previousFailure=failureCode+':'+shape;
       const recoverable=attempt<3&&!repeated;
       currentTrace()?.warn('agent.recovery.decision',{metadata:{attempt,failure_code:failureCode,
-        failure_stage:'goal_alignment',recoverable,strategy:recoverable?'replan':'stop',
+        failure_stage:failureStage,recoverable,strategy:recoverable?'replan':'stop',
         repeated,revision:save.state_revision}});
       if(!recoverable)break;
       if(attempt===1&&alignment?.semantic_revision&&alignment.semantic_revision!=='none'&&
@@ -1354,11 +1375,15 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
           currentTrace()?.info('semantic.revision.accepted',{metadata:{source:'goal_alignment',revision:save.state_revision}});
         }else break;
       }
-      recovery={original_request:body.input,failure_code:failureCode,failure_stage:'goal_alignment',
+      recovery={original_request:body.input,failure_code:failureCode,failure_stage:failureStage,
+        ...(admissionFailure?{generation_repair:generationRepair(new CandidateValidationError('plan_admission',
+          [admissionFailure.issue],proposed)),
+          failed_contract:admissionFailure.goal.contract,
+          instruction:'前一候选尚未执行。保留原始目标和最终动作；核对操作类型与目标类别。地图 MOVE 只用于已登记地点，同场景物件不得冒充地图目的地。可将本地行动交给现有活动与 Core 校验；不要凭空选择物件实例、权限或结果。'}:{}),
         previous_steps:plan.execution_order.map(id=>{const goal=plan!.goals.find(entry=>entry.goal_id===id)!;
           return {type:goal.type,objective:goal.normalized_goal,operation:goal.operation_hint??null};}),
         completed_steps:[],revision:save.state_revision,
-        instruction:'前一计划未获准执行；保持玩家原始目标，补全真正的最终尝试，不把准备步骤当成完成。'};
+        ...(!admissionFailure?{instruction:'前一计划未获准执行；保持玩家原始目标，补全真正的最终尝试，不把准备步骤当成完成。'}:{})};
     }
     assert(proposed&&plan,'行动方案未能建立');
     if(semantic?.kind==='world_action'&&!proposed.goals.some(goal=>['WORLD_ACTION','WORLD_SPEECH','WORLD_GOAL','CONTINUE_ROUTINE','EXECUTE_FUTURE'].includes(goal.type)))
@@ -1369,6 +1394,10 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
         alignment?.verdict==='incomplete'?'目前只规划出准备步骤，尚未规划你要求的最终尝试；世界没有改变。':
         '目前无法确认计划符合你的请求，世界没有改变。',{presentation:'failure',view});
     }
+    if(admissionFailure){const failure=engineOutcome('schema_failure','plan_admission',save.state_revision,true);
+      return agentResult('WORLD_ACTION',engineMessage(failure),{presentation:'failure',outcome:failure,
+        recovery:recoveryContext(body.original_input??body.input,failure,{failed_contract:admissionFailure.goal.contract,code:admissionFailure.code}),
+        plan_id:body.request_id,plan,view});}
     currentTrace()?.info('agent.goal_compiled',{metadata:{source:'manual',
       goal_kinds:plan.goals.map(goal=>goal.contract?.completion.kind??'unsupported'),
       availability:plan.contract?.execution_availability??null,goal_count:plan.goals.length,

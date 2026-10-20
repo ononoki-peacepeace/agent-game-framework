@@ -6,29 +6,13 @@ import type { Action,SavePackage } from '../core/schema.js';
 import { observe, errorText } from '../observability/index.js';
 import {behaviorPatchSchema,type BehaviorPatch} from '../ai/guidance.js';
 import {z} from 'zod';
-const transientRenameCodes=new Set(['EPERM','EACCES','EBUSY']);
-async function replaceWithBoundedRetry(temp:string,target:string,expected:string){
-  for(let attempt=0;attempt<4;attempt++){
-    try{await rename(temp,target);return;}
-    catch(error){
-      // Windows can briefly deny a replacement while another reader has the save open.
-      // A failed rename has not committed the candidate; never rerun the world action.
-      const code=(error as NodeJS.ErrnoException).code;
-      if(!transientRenameCodes.has(code??''))throw error;
-      const current=await readFile(target,'utf8').catch(readError=>{
-        if((readError as NodeJS.ErrnoException).code==='ENOENT')return null;
-        throw readError;
-      });
-      if(current===expected)return;
-      if(attempt===3)throw error;
-      await new Promise(resolve=>setTimeout(resolve,40*(attempt+1)));
-    }
-  }
-}
+import {inputRecoverySchema} from '../recovery/request-context.js';
+import {replaceWithBoundedRetry,writeAtomicJson} from './atomic-json.js';
 export interface PendingTurn {game_id:string;request_id:string;fingerprint:string;expected_revision:number;candidate:SavePackage;action:Action;facts:string[];generic:boolean}
 const inputRecordSchema=z.strictObject({version:z.literal(1),game_id:z.string().uuid(),request_id:z.string().uuid(),
   fingerprint:z.string().regex(/^[a-f0-9]{64}$/),state:z.enum(['running','completed','failed']),started_at:z.number(),
-  response:z.json().optional(),error:z.string().optional(),http_status:z.number().int().optional(),committed_revision:z.number().int().optional()});
+  response:z.json().optional(),error:z.string().optional(),http_status:z.number().int().optional(),committed_revision:z.number().int().optional(),
+  recovery:inputRecoverySchema.optional()});
 export type StoredInputRecord=z.infer<typeof inputRecordSchema>;
 export type SaveReadSource='unspecified'|'service_current'|'service_view'|'turn_commit_check'|'request_recovery'|'semantic_context';
 export interface SaveStorage { read(slot?: 'current' | 'checkpoint',source?:SaveReadSource): Promise<SavePackage | null>; write(save: SavePackage, slot?: 'current' | 'checkpoint'): Promise<void>;
@@ -62,11 +46,7 @@ export class JsonStore implements SaveStorage {
     // Persist exactly the JSON wire representation (optional response fields may
     // be undefined in memory, but are omitted by Express's JSON serialization).
     const validated=inputRecordSchema.parse(JSON.parse(JSON.stringify(record))),path=this.inputRecordPath(record.game_id,record.request_id);
-    await mkdir(join(this.directory,'input-requests',record.game_id),{recursive:true});
-    const temporary=path+'.'+randomUUID()+'.tmp',body=JSON.stringify(validated);
-    try{const file=await open(temporary,'wx');try{await file.writeFile(body,'utf8');await file.sync();}finally{await file.close();}
-      await replaceWithBoundedRetry(temporary,path,body);
-    }finally{await unlink(temporary).catch(()=>undefined);}
+    await writeAtomicJson(path,validated);
   }
   async readGlobalGuidance(){
     try{return z.array(behaviorPatchSchema).max(100).parse(JSON.parse(await readFile(join(this.directory,'behavior-guidance.json'),'utf8')));}
@@ -124,10 +104,7 @@ export class JsonStore implements SaveStorage {
     catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')return null;throw error;}
   }
   async writePending(turn:PendingTurn){
-    const path=this.pendingPath(turn.request_id),folder=join(this.directory,'pending-resolutions');await mkdir(folder,{recursive:true});
-    const temp=path+'.'+randomUUID()+'.tmp';
-    try{const file=await open(temp,'wx');try{await file.writeFile(JSON.stringify(turn),'utf8');await file.sync();}finally{await file.close();}await rename(temp,path);}
-    finally{await unlink(temp).catch(()=>undefined);}
+    await writeAtomicJson(this.pendingPath(turn.request_id),turn);
   }
   async clearPending(requestId:string){await unlink(this.pendingPath(requestId)).catch(error=>{if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;});}
 }

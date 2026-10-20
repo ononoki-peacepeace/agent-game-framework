@@ -14,6 +14,7 @@ import {contextEnvelope} from './context-envelope.js';
 import {resolveEntities} from '../agent/entities.js';
 import {interpretSemanticEntry,type SemanticDecision} from '../agent/semantic-entry.js';
 import type {NpcConversationContext} from '../shared/interaction-context.js';
+import {ProviderError} from '../ai/failures.js';
 /** A clarification answer belongs to the message right after the question; older entries are forgotten. */
 const pendingTtlMs=10*60*1000;
 
@@ -75,8 +76,10 @@ export async function routeContext(service:GameService,input:string,source:Sourc
   // Fixture/mock providers retain the old local recognizers for offline regression tests only.
   const offline=['mock','fixture'].includes(service.ai.adapter.name);
   if(!offline){
+    const observed:{failure:{reason:string;stage:string;detail:string}|null}={failure:null};
     const semantic=await interpretSemanticEntry(service,view,input,source==='world_input'?'WORLD':'SYSTEM',
-      previous?{input:previous.input,question:previous.question}:null,source==='system_input'?session:null,undefined,interaction);
+      previous?{input:previous.input,question:previous.question}:null,source==='system_input'?session:null,undefined,interaction,
+      failure=>{observed.failure=failure;});
     if(semantic){
       if(semantic.kind==='clarification'){
         const question=sanitizePlayerText(semantic.clarification||'请说明你的意思。','请说明你的意思。');
@@ -89,6 +92,11 @@ export async function routeContext(service:GameService,input:string,source:Sourc
       return {...fixed(semantic.domain==='system'?'SYSTEM_META_INTENT':'WORLD_INTENT'),
         confidence:semantic.confidence,speech_target_id:interaction?.target_id??semantic.speech_target_id,
         resolved_input:previous&&semantic.clarification_resolution==='continue_prior'?`${previous.input}\n补充说明：${input}`:null,semantic};
+    }
+    if(observed.failure){
+      const failure=observed.failure;
+      throw Object.assign(new ProviderError(failure.reason,failure.detail,'语义处理暂时未能完成。'),
+        {failure_stage:failure.stage,failure_engine_code:failure.reason==='semantic_schema_invalid'?'schema_failure':'provider_failure'});
     }
     // The live semantic owner failed. A keyword recognizer may not assume a different
     // operation plane or grant a write; keep the original request available for retry.

@@ -8,7 +8,7 @@ import { createRegistry } from '../modules/index.js';
 import { executeAction, applyPatches } from './runtime.js';
 import {putItemInInventory,putItemInScene,putItemInSceneContainer,setItemCondition,type Inventory} from '../modules/inventory.js';
 import {bindStorageAction} from './action-binding.js';
-import {activityEvidence,progressChanges,requiresPersistentProgress} from './completion-evidence.js';
+import {activityEvidence,enumeratedInspectionItems,inspectionEvidence,progressChanges,requiresPersistentProgress,type InspectionResult} from './completion-evidence.js';
 import {difficultyBandSchema,prepareCheck,resolutionKindSchema,resolveCheck} from './resolution.js';
 import {secureRng,type RNG} from './dice.js';
 import {normalizeProviderCollections} from '../ai/provider-schema.js';
@@ -17,6 +17,8 @@ import {emptyNpcAgentState} from '../agent/npc-state.js';
 import {repetitionSchema} from './schema.js';
 import {createHash} from 'node:crypto';
 import {recentReferent} from './recent-referent.js';
+import {readPhysicalState,releaseTransient,struckWithoutSight,writePhysicalState} from './perception-state.js';
+import {capabilityDomainNames} from './capability.js';
 import type {GoalSpec} from '../system/goals.js';
 import {WorldBlockedError} from '../agent/outcome.js';
 import {environmentQuerySchema,type EnvironmentAssessment} from './environment-schema.js';
@@ -31,6 +33,7 @@ export const freeformSchema = z.strictObject({
   repetition:repetitionSchema.nullish(),
   target_id: id.nullable(),
   facts: providerEmptyArray(z.array(z.string().min(1).max(300)).max(4)),
+  inspection_results: providerEmptyArray(z.array(z.strictObject({item:z.string().min(1).max(120),result:z.enum(['found','nothing','blocked','not_checked']),detail:z.string().max(300)})).max(12)).optional(),
   relationship: z.strictObject({ dimension: id, delta: z.number().int().min(-2).max(2) }).nullable(),
   item_move:z.strictObject({item_id:id,to:z.enum(['held','scene','target']),position_label:z.string().max(80).nullable()}).nullable().optional(),
   item_change:z.strictObject({item_id:id,condition:z.enum(['damaged','destroyed']),source_quote:z.string().min(2).max(1000)}).nullable().optional(),
@@ -80,7 +83,9 @@ export function normalizeFreeformProposal(raw: unknown,input?:string): unknown {
 export function parseFreeformProposal(raw: unknown,input?:string) {
   const normalized = normalizeFreeformProposal(normalizeProviderCollections('freeform',raw),input);
   const parsed = freeformSchema.safeParse(normalized);
-  if (parsed.success && (parsed.data.resolution || parsed.data.blocker)) return parsed.data;
+  if (parsed.success && (parsed.data.resolution || parsed.data.blocker)) {
+    return parsed.data;
+  }
   if(parsed.success)throw new FreeformRepairableError('proposal_contract_invalid','行动提案缺少判定方案。');
   // Internal schema detail stays in the log; the player only sees an actionable sentence.
   observe('warn', 'freeform.proposal.rejected', { module: 'framework', metadata: { issues: parsed.error.issues.slice(0, 4).map(issue => `${issue.path.join('.')}:${issue.code}`) } });
@@ -110,13 +115,17 @@ export function boundLocalDestination(save:SavePackage,input:string){
   const proposed=localDestination(input);
   if(!proposed)return null;
   const here=save.entities.find(e=>e.id===save.player_state.entity_id)?.components.location?.location_id;
-  const anchors=publicView(save).entities.filter(e=>!e.components.character&&e.components.location?.location_id===here&&
-    e.components.identity?.name===proposed);
-  if(anchors.length===1)return String(anchors[0].components.identity.name);
+   // A position beside/in front of an already registered local object remains
+   // anchored to that object. The relational label is not a new world object.
+   const base=proposed.replace(/(?:的)?(?:旁|边|前|附近)$/,'');
+   const names=base&&base!==proposed?[proposed,base]:[proposed];
+   const anchors=publicView(save).entities.filter(e=>!e.components.character&&e.components.location?.location_id===here&&
+     names.includes(String(e.components.identity?.name??'')));
+   if(anchors.length===1)return proposed;
   return save.environment_state?.resolutions.some(record=>record.location_id===here&&
     record.status==='present'&&record.classification==='environment_detail'&&
     (!record.known_by||record.known_by.includes(save.player_state.entity_id))&&
-    [record.name,...record.aliases].includes(proposed))?proposed:null;
+     [record.name,...record.aliases].some(name=>names.includes(name)))?proposed:null;
 }
 /** An unregistered local anchor needs the existing World Gap adjudication. */
 export function localSceneQuery(save:SavePackage,input:string){
@@ -157,9 +166,15 @@ export function assertFreeformGoalEvidence(save:SavePackage,input:string,request
   const actor=save.entities.find(entity=>entity.id===save.player_state.entity_id);
   if(localDestination(input)&&!expectedPosition&&['success','strong_success'].includes(receipt.outcome)&&
     !receipt.effects.includes('position'))
-    throw new GameError('局部移动尚无权威位置或受阻凭据，不能宣称已抵达。',503);
+    throw new FreeformRepairableError('proposal_contract_invalid',
+      '局部移动尚无权威位置或受阻凭据，不能宣称已抵达。',[],
+      [{path:'resolution.local_position',code:'missing_core_evidence',
+        expected:'保留原始局部移动目标；由同场景权威对象或 World Gap 确立位置，并由 Core 产生 position 凭据'}]);
   if(expectedPosition&&(!receipt.effects.includes('position')||actor?.components.scene_position?.label!==expectedPosition))
-    throw new GameError('局部位置尚未结算，本回合尚未提交，可以安全重试。',503);
+    throw new FreeformRepairableError('proposal_contract_invalid',
+      '局部位置尚未结算，本回合尚未提交，可以安全重试。',[],
+      [{path:'resolution.local_position',code:'position_receipt_mismatch',
+        expected:'Core 的 position 效果与玩家 scene_position 必须指向同一权威局部位置'}]);
   if(requiresPersistentProgress(input)){
     if(!receipt.effects.includes('progress')||!receipt.progress_changes?.some(change=>
       change.after>change.before&&save.task_progress?.[change.key]===change.after))
@@ -387,11 +402,12 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
     !(storage&&condition.kind==='entity_exists'&&
       [storage.item_name,storage.container_name].includes(condition.subject_id)&&
       !current.entities.some(entity=>entity.id===condition.subject_id)));
-  const prerequisites=evaluateWorldPrerequisites(current,{target_id:proposal.target_id,
+  const livePrerequisites=(save:SavePackage)=>evaluateWorldPrerequisites(save,{target_id:proposal.target_id,
     scene_description_access:(observing||activityContract.kind!=='mechanical')&&!proposal.item_move&&!storage&&!proposal.item_change&&!proposal.relationship,
     requirements:[...requiredConditions,...(mentionedItem?[{kind:'item_accessible' as const,subject_id:mentionedItem.id}]:[]),
       ...(sourceItem?[{kind:'item_accessible' as const,subject_id:sourceItem.id}]:[]),
       ...(containerItem?[{kind:'item_accessible' as const,subject_id:containerItem.id}]:[])],item_move:proposal.item_move});
+  const prerequisites=livePrerequisites(current);
   if(prerequisites.status!=='EXECUTABLE'&&observing&&requiredConditions.some(condition=>
     ['entity_exists','same_location'].includes(condition.kind)&&!current.entities.some(entity=>entity.id===condition.subject_id)))
     throw new FreeformRepairableError('proposal_contract_invalid','观察对象需来自当前权威地点描述或真实在场实体，不能臆造对象ID。',[],[
@@ -411,9 +427,11 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
   if(physical){
     const diagnostics:{path:string;code:string;expected:string}[]=[];
     const issue=(path:string,expected:string)=>diagnostics.push({path,code:'physical_contract',expected});
-    const domains=current.definition.ruleset.capability_domains;
-    if(domains&&!domains[semantic.domain])issue('resolution.domain',`使用世界已登记的能力领域：${Object.keys(domains).join(',')}`);
-    if(domains&&semantic.opposition_domain&&!domains[semantic.opposition_domain])issue('resolution.opposition_domain','使用世界已登记的对手能力领域，不能用不存在的领域绕过实际能力');
+    // A world that declared no domains used to accept any invented physical domain, which then
+    // resolved against no ability data at all. The framework's generic domains are the floor.
+    const domains=capabilityDomainNames(current);
+    if(!domains.includes(semantic.domain))issue('resolution.domain',`使用本世界可用的能力领域：${domains.join(',')}`);
+    if(semantic.opposition_domain&&!domains.includes(semantic.opposition_domain))issue('resolution.opposition_domain',`使用本世界可用的对手能力领域（${domains.join(',')}），不能用不存在的领域绕过实际能力`);
     if(!target?.components.character)issue('target_id','本次明确提及且真实在场的人物 ID');
     if(!input.includes(physical.source_quote))issue('physical_action.source_quote','当前原始输入中逐字连续出现的授权原文，不得改写或引用历史');
     if(semantic.type!=='OPPOSED_CHECK')issue('resolution.type','OPPOSED_CHECK');
@@ -452,17 +470,27 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
     if(unverifiedEnvironment&&physical.kind==='harm'&&physical.injury_stage_id===physical.contact_stage_id)
       throw new FreeformRepairableError('proposal_contract_invalid','危险属性尚未确认；须将可独立尝试的人物接触与依赖环境的伤害分为不同阶段，不能同时宣告命中与伤害。');
   }
-  const check=prepareCheck(current,requestId,{type:semantic.type,domain:observing?'perception':semantic.domain,opposition_domain:semantic.opposition_domain,band:semantic.band,
+  const checkInput:Parameters<typeof prepareCheck>[2]={type:semantic.type,domain:observing?'perception':semantic.domain,opposition_domain:semantic.opposition_domain,band:semantic.band,
     target_id:proposal.target_id,visibility:observing?'public':semantic.visibility,stakes:semantic.stakes,stages:semantic.stages,discover_facts:observing||semantic.discover_facts,
     physical:Boolean(physical),surprise_attempt:physical?.surprise_attempt,
     ...(unverifiedEnvironment&&physical?.kind==='harm'&&physical.injury_stage_id?{blocked_stages:[{
-      id:physical.injury_stage_id,reason:'环境致伤条件尚无可验证依据；仅结算独立接触尝试，不确认环境伤害。'}]}:{})});
+      id:physical.injury_stage_id,reason:'环境致伤条件尚无可验证依据；仅结算独立接触尝试，不确认环境伤害。'}]}:{})};
+  let check=prepareCheck(current,requestId,checkInput);
   const registry = createRegistry(current.definition.enabled_modules);
   // This action exists only inside this invocation; HTTP action payloads cannot provide outcomes.
   registry.actions.register('FREEFORM_ACTION', { resolution_mode:'self', parameters: z.strictObject({}), execute(c) {
     const carried=seconds===undefined?0:(c.save.runtime.scene_seconds??0)+seconds;
     const minutes=seconds===undefined?proposal.minutes:Math.floor(carried/60);
     if(minutes)c.advance(minutes);
+    if(physical){
+      // Time hooks may execute NPC plans or change bodily conditions. The
+      // candidate is still isolated: abort it before contact RNG if its actual
+      // settlement prerequisites no longer hold, and leak none of its effects.
+      const live=livePrerequisites(c.save);
+      if(live.status!=='EXECUTABLE')throw new WorldBlockedError('prerequisite',
+        `这次行动的时间推进会使前置条件失效（${live.reason??'现场条件变化'}）；本次行动未提交。`);
+      check=prepareCheck(c.save,requestId,checkInput);
+    }
     if(seconds!==undefined)c.save.runtime.scene_seconds=carried%60;
     if(localQuery){
       const present=resolveLocalSceneAnchor(c.save,localQuery,localAssessment,requestId);
@@ -486,6 +514,17 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
   assert(record,'行动判定没有产生程序记录');
   if(localQuery&&!settledDestination)record.outcome='failure';
   const succeeded=record.outcome==='success'||record.outcome==='strong_success';
+  // An enumerated self-inspection names several things to verify. A single
+  // generic perception result does not prove all of them, so the turn must
+  // neither claim an occurred activity nor silently complete the whole list.
+  const items=enumeratedInspectionItems(input);
+  // The model reports specific findings through proposal.facts. A single
+  // generic perception with no findings is not per-item evidence, so the
+  // enumerated list stays unverified rather than being silently completed.
+  const inspection=observing&&items.length>=2?inspectionEvidence(input,proposal.facts??[],proposal.inspection_results as InspectionResult[]|undefined):{items:[],status:null};
+  const unverified=inspection.items.filter(entry=>entry.result==='not_checked'||entry.result==='blocked').map(entry=>entry.item);
+  if(unverified.length)turn.facts.push(`本次观察没有逐项确认：${unverified.join('、')}。`);
+  if(inspection.items.length)turn.facts.push(`逐项检查结果：${inspection.items.map(entry=>`${entry.item}=${entry.result}`).join('；')}。`);
   const durableProgress=progressChanges(current,turn.save);
   if(!physical&&requiresPersistentProgress(input)&&(!succeeded||!durableProgress.length))
     throw new GameError('这次行动尚未完成玩家提出的完整目标，世界状态没有改变，可以安全重试。',503);
@@ -532,7 +571,7 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
   }
   // Perception still completes a real activity even when discovery is empty.
   // The activity contract is independent of whether any new evidence was found.
-  const activity=!physical&&succeeded&&(!proposal.item_move&&!storage||Boolean(storage&&/准备|[，,]/.test(input)))
+  const activity=!physical&&succeeded&&(!inspection.items.length||inspection.status==='complete')&&!unverified.length&&(!proposal.item_move&&!storage||Boolean(storage&&/准备|[，,]/.test(input)))
     ?activityEvidence(turn.save,input,turn.action.time_cost):undefined;
   if(activity){
     const fact=`进行了活动：${activity.description}（${activity.duration_minutes} 分钟）。`;
@@ -580,21 +619,34 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
       physical.harm_level==='serious'?rules.serious_damage:rules.minor_damage):0;
     if(harmed){victim.components.condition??={hp:100,stamina:100,stress:0};
       victim.components.condition.hp=Math.max(0,Number(victim.components.condition.hp)-damage);effects.push('injury');}
-    victim.components.physical_state={awareness:'alert',
-      alert_to_ids:[...new Set([...(victim.components.physical_state?.alert_to_ids as string[]??[]),player.id])].slice(-20),
-      restrained_by:controlEstablished?player.id:victim.components.physical_state?.restrained_by??null};effects.push('state');
     const witnesses=turn.save.entities.filter(entity=>entity.id!==player.id&&entity.components.character&&
       entity.components.location?.location_id===player.components.location?.location_id&&
       Number(entity.components.condition?.hp??100)>0).slice(0,30);
+    // Who actually had sight of this action is decided here, before the event itself
+    // opens anyone's eyes. Without this record an NPC who was blind at settlement
+    // could still claim to have watched it happen (REV435).
+    const sightBlockedIds=witnesses.filter(entity=>struckWithoutSight(entity)).map(entity=>entity.id);
+    const victimState=readPhysicalState(victim);
+    writePhysicalState(victim,{awareness:'alert',
+      alert_to_ids:[...new Set([...victimState.alert_to_ids,player.id])].slice(-20),
+      restrained_by:controlEstablished?player.id:victimState.restrained_by});effects.push('state');
     physicalOutcome={...(authorized?{action_forms:authorized.forms}:{}),kind:physical.kind,target_id:target.id,contact,harmed,damage,control_established:controlEstablished,
-      contact_stage_id:physical.contact_stage_id,injury_stage_id:physical.injury_stage_id,witness_ids:witnesses.map(entity=>entity.id)};
+      contact_stage_id:physical.contact_stage_id,injury_stage_id:physical.injury_stage_id,witness_ids:witnesses.map(entity=>entity.id),
+      ...(sightBlockedIds.length?{sight_blocked_ids:sightBlockedIds}:{})};
     const fact=`身体行动结算：${contact?'接触已成立':'未能建立接触'}；${physical.kind==='restrain'?(controlEstablished?'本次控制已成立；':'本次未能建立持续控制；'):''}${harmed?`伤害已结算，生命值减少 ${damage}`:'没有结算伤害'}。`;
     turn.facts.push(fact);
+    for(const blind of sightBlockedIds){
+      const name=String(turn.save.entities.find(entity=>entity.id===blind)?.components.identity?.name??blind);
+      turn.facts.push(`${name}在本次动作发生时没有视觉信息，没有看见动作过程。`);
+      // A forced physical event in the same scene ends a voluntary eyes-closed state.
+      releaseTransient(turn.save,blind,'eyes',`亲历或在场经历强制身体事件（${requestId}）`);
+    }
     if(unverifiedEnvironment)turn.facts.push('环境致伤条件尚未确认；本次没有结算环境伤害，也不代表该环境已经确认安全。');
     for(const witness of witnesses){
-      witness.components.physical_state={awareness:'alert',
-        alert_to_ids:[...new Set([...(witness.components.physical_state?.alert_to_ids as string[]??[]),player.id])].slice(-20),
-        restrained_by:witness.components.physical_state?.restrained_by??null};
+      const witnessState=readPhysicalState(witness);
+      writePhysicalState(witness,{awareness:'alert',
+        alert_to_ids:[...new Set([...witnessState.alert_to_ids,player.id])].slice(-20),
+        restrained_by:witnessState.restrained_by});
       const mind=turn.save.npc_agent_state?.[witness.id]??emptyNpcAgentState(),eventRef=`physical:${requestId}`;
       if(witness.id===target.id){
         delete mind.travel_intent;
@@ -627,6 +679,7 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
     request_id:requestId,action_id:turn.action.id,actor_id:player.id,target_id:proposal.target_id,semantic_action:input.slice(0,1000),
     kind:semantic.type,prerequisites:prerequisites.checked,check_id:check.check_id,rolls:record.rolls,outcome:record.outcome,
     time_cost:turn.action.time_cost,canonical_facts:turn.facts.slice(0,12).map(fact=>fact.slice(0,500)),effects,
+    ...(inspection.items.length&&inspection.status?{inspection_results:inspection.items,inspection_status:inspection.status}:{}),
     ...(activity?{activity}:{}),
     ...(succeeded&&storage?{storage:{item_id:sourceItem!.id,container_id:containerItem!.id}}:{}),
     ...(durableProgress.length?{progress_changes:durableProgress}:{}),

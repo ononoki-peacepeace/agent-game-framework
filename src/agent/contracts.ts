@@ -16,6 +16,21 @@ export type UIAction =
 
 export interface AgentResult {
   outcome: FrameworkOutcome;
+  /** Bounded recovery facts for a failed or partially committed request. */
+  recovery?: {
+    original_player_input: string;
+    failure_stage: string;
+    failure_code: string;
+    committed_steps: string[];
+    receipt_ids: string[];
+    latest_revision: number | null;
+    state_certain: boolean;
+    request_id?: string;
+    trace_id?: string;
+    candidate_diagnostics?: unknown;
+  };
+  /** Presentation provenance is independent of the committed world outcome. */
+  narration?:NonNullable<PublicView['last_turn']>['presentation'];
   presentation?: 'story' | 'assistant' | 'handoff' | 'failure';
   plan_id?: string;
   plan?: import("./plan-schema.js").AgentPlan;
@@ -36,6 +51,29 @@ export interface AgentResult {
   view?: PublicView | null;
 }
 
+export function recoveryContext(input: string, outcome: FrameworkOutcome, candidateDiagnostics?: unknown): AgentResult['recovery'] {
+  if (outcome.type !== 'engine_failure') return undefined;
+  let diagnostics = candidateDiagnostics;
+  if (diagnostics !== undefined) {
+    try {
+      const encoded = JSON.stringify(diagnostics);
+      if (!encoded || encoded.length > 6000) diagnostics = { omitted: true, reason: 'diagnostics_too_large' };
+    } catch {
+      diagnostics = { omitted: true, reason: 'diagnostics_unserializable' };
+    }
+  }
+  return {
+    original_player_input: input.slice(0, 12000),
+    failure_stage: outcome.stage,
+    failure_code: outcome.code,
+    committed_steps: [...new Set(outcome.committed_steps)].slice(0, 32),
+    receipt_ids: [...new Set(outcome.receipt_ids)].slice(0, 32),
+    latest_revision: outcome.revision,
+    state_certain: outcome.state_certain,
+    ...(diagnostics === undefined ? {} : { candidate_diagnostics: diagnostics }),
+  };
+}
+
 export function agentResult(intent: string, message: string, extra: Partial<AgentResult> = {}): AgentResult {
   const view=extra.view;
   const shown=(value:string)=>view?displayText(value,view.entities,view.locations):value;
@@ -54,5 +92,7 @@ export function agentResult(intent: string, message: string, extra: Partial<Agen
     view_revision:view?.revision??null,receipt_count:outcome.receipt_ids.length}});
   return { intent, ui_actions: [], tool_calls: [], canonical_changes: [], time_advanced: 0, ...extra,
     ...(extra.results?{results:extra.results.map(result=>({...result,summary:shown(result.summary)}))}:{}),
+    ...(view?.last_turn?.presentation&&outcome.receipt_ids.length&&outcome.revision===view.revision?
+      {narration:structuredClone(view.last_turn.presentation)}:{}),
     outcome,presentation,message:shown(message),clarification:extra.clarification??null };
 }

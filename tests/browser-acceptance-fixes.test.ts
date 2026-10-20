@@ -102,7 +102,7 @@ describe('D. System composer lifecycle', () => {
 
 describe('E. revision conflicts: read-only may auto-retry once, mutations never do', () => {
   async function staleServer() {
-    const service = new GameService(new MemoryStore(), new AIRuntime({ name: 'quiet', generate: async request => {
+    const service = new GameService(new MemoryStore(), new AIRuntime({ name: 'fixture', generate: async request => {
       if(request.role==='narrator')return {data:{narrative:'你等了五分钟。',speaker:null,dialogue:null,choices:[],context_actions:[],patches:[]}};
       throw Error('no other AI expected');
     } }), fresh().definition);
@@ -140,6 +140,8 @@ describe('E. revision conflicts: read-only may auto-retry once, mutations never 
       const body = await retried.json() as { message: string; time_advanced: number };
       expect(body.time_advanced).toBe(0);
       expect(body.message).not.toContain('状态已更新');
+      const locationId=env.created.entities.find((entity:{id:string})=>entity.id===env.created.player_id).components.location.location_id;
+      expect(body.message).toContain(env.created.locations.find((location:{id:string})=>location.id===locationId).name);
     } finally { await env.close(); }
   });
   it('world actions and management calls stay manual', async () => {

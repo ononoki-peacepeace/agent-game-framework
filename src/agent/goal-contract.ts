@@ -2,11 +2,24 @@ import type {PublicView} from '../shared/contracts.js';
 import {agentPlanSnapshotSchema,type AgentPlan,type AtomicGoal,type PlanContract,type StepContract} from './plan-schema.js';
 import {currentTrace} from '../observability/trace.js';
 import type {GoalSpec} from '../system/goals.js';
+import {localDurationIntent} from '../core/freeform.js';
 
 export interface GoalSource {kind:'manual'|'choice';text:string;offerId?:string|null;semanticGoal?:GoalSpec|null}
 /** Syntax only selects the semantic planner; it never invents an action or evidence. */
 export const hasMultipleClauses=(text:string)=>/[，,；;]\s*(?:再|然后|接着|顺便|同时|以及)/.test(text)||
-  /(?:^|[，,；;])\s*先.{1,100}?(?:再|然后|接着)(?=\S)/.test(text);
+  /(?:^|[，,；;])\s*先.{1,100}?(?:再|然后|接着)(?=\S)/.test(text)||
+  hasLocalMotionThenClause(text);
+/** A comma-separated action after local motion still needs its own evidence,
+ * even when the text has no explicit "then" connective. */
+function hasLocalMotionThenClause(text:string){
+  // A timed stay/rest is one bounded Core activity even if the sentence opens
+  // with taking a posture near a fixture. Explicit connectors remain separate.
+  if(localDurationIntent(text))return false;
+  const clauses=text.split(/[，,；;]/).map(part=>part.trim()).filter(Boolean);
+  return clauses.some((clause,index)=>index<clauses.length-1&&
+    /(?:走到|回到|来到|走向|移到|移动到|去到)/.test(clause)&&
+    clauses.slice(index+1).some(part=>/\S/.test(part)));
+}
 export const hasInteractionDependentClause=(view:PublicView,text:string)=>/[，,；;]/.test(text)&&
   view.entities.some(entity=>Boolean(entity.components.interactable)&&
     typeof entity.components.identity?.name==='string'&&text.includes(entity.components.identity.name));
@@ -43,6 +56,16 @@ function bind(view:PublicView,role:'destination'|'person'|'interactable',mention
   const matches=exact.length?exact:titled.length?titled:key.length>=2?candidates.filter(candidate=>candidate.names.some(name=>normalized(name).includes(key))):[];
   return {role,mention,entity_id:matches.length===1?matches[0].id:null,
     status:matches.length===1?'bound':matches.length>1?'ambiguous':'unresolved'} as const;
+}
+
+/** Preserve a semantic target across planning for every public entity kind. */
+function bindTargetEntity(view:PublicView,entityId:string){
+  const location=view.locations.find(place=>place.id===entityId);
+  if(location)return {role:'destination' as const,mention:location.name,entity_id:location.id,status:'bound' as const};
+  const entity=view.entities.find(candidate=>candidate.id===entityId);
+  if(!entity)return null;
+  const role=entity.components.character?'person' as const:entity.components.item?'item' as const:'interactable' as const;
+  return {role,mention:String(entity.components.identity?.name??entity.id),entity_id:entity.id,status:'bound' as const};
 }
 
 function talkPerson(view:PublicView,goal:AtomicGoal,source:GoalSource){
@@ -244,7 +267,23 @@ function stepContract(view:PublicView,goal:AtomicGoal,source:GoalSource):StepCon
     }else availability=goal.item_destination==='container'?'runtime_gap':'needs_binding';
   }else if(hint==='environment_query')completion={kind:'environment_resolved'};
   else if(hint==='activity'||hint==='observe')completion={kind:'activity_occurred'};
+  else if(goal.target_entities.length===1){
+    // An upstream-identified person still owns the goal even when the planner
+    // did not attach a hint. Preserve the binding so downstream never treats it
+    // as a missing target; execution and prerequisites remain authoritative.
+    const person=view.entities.find(entity=>entity.id===goal.target_entities[0]&&entity.components.character);
+    if(person)bindings.push({role:'person',mention:String(person.components.identity?.name??person.id),
+      entity_id:person.id,status:'bound'});
+    availability='runtime_gap';
+  }
   else availability='runtime_gap';
+  // Upstream entity references are authoritative for people, items, scene
+  // objects and locations alike.  Planner omissions must not erase them.
+  for(const targetId of goal.target_entities){
+    const targetBinding=bindTargetEntity(view,targetId);
+    if(targetBinding&&!bindings.some(binding=>binding.entity_id===targetId))bindings.push(targetBinding);
+  }
+  if(goal.target_entities.some(id=>bindTargetEntity(view,id))&&bindings.some(binding=>binding.status!=='bound'))availability='needs_binding';
   if(required_capabilities.some(capability=>!view.capabilities.includes(capability)))availability='capability_gap';
   else if(availability==='ready'&&completion.kind!=='environment_resolved'&&bindings.some(binding=>binding.status!=='bound'))availability='needs_binding';
   return {bindings,required_capabilities,completion,availability,evidence_refs:[]};
@@ -266,6 +305,17 @@ export function compileGoalContract(view:PublicView,plan:AgentPlan,source:GoalSo
     });
   }
   for(const goal of compiled.goals){
+    // The semantic owner may already have bound a real person. A planner that
+    // omitted the id must not make the goal look unbound downstream.
+    if(source.semanticGoal?.targets.length&&!goal.target_entities.length){
+      const upstream=[...new Set(source.semanticGoal.targets.flatMap(target=>target.entity_id?[target.entity_id]:[]))]
+        .filter(id=>view.entities.some(entity=>entity.id===id)||view.locations.some(location=>location.id===id));
+      if(upstream.length)goal.target_entities=upstream.slice(0,12);
+    }
+    // A validated same-scene compound is settled by Core as local freeform
+    // steps. Its walk is not a map transition even if the planner used MOVE.
+    if(compiled.local_compound&&goal.type==='WORLD_ACTION'&&goal.operation_hint==='move')
+      goal.operation_hint='activity';
     goal.contract=stepContract(view,goal,source);
     if(goal===speechGoals[0]&&speechGoals.length===1&&recipients.length){
       const mismatch=recipients.some((target,index)=>target.entity_id&&
@@ -277,8 +327,11 @@ export function compileGoalContract(view:PublicView,plan:AgentPlan,source:GoalSo
       goal.contract.bindings=goal.contract.bindings.filter(binding=>binding.role!=='person');
     }
     // Semantic hints may come from the model; only the program's unique public binding is authoritative.
-    if(goal.operation_hint)goal.target_entities=goal.contract.bindings.filter(binding=>
-      binding.role==='person'&&binding.status==='bound'&&binding.entity_id).map(binding=>binding.entity_id!);
+    if(goal.operation_hint){
+      const boundIds=goal.contract.bindings.filter(binding=>binding.status==='bound'&&binding.entity_id).map(binding=>binding.entity_id!);
+      const preserved=goal.target_entities.filter(id=>boundIds.includes(id));
+      goal.target_entities=[...new Set([...preserved,...(preserved.length?[]:boundIds)])].slice(0,12);
+    }
   }
   const availability=compiled.goals.map(goal=>goal.contract!.availability);
   let executionAvailability:PlanContract['execution_availability']=availability.includes('capability_gap')?'capability_gap':
@@ -296,6 +349,29 @@ export function compileGoalContract(view:PublicView,plan:AgentPlan,source:GoalSo
     ...(unresolvedInteraction?{unresolved_compound:true}:{}),
     source_revision:view.revision,last_observed_revision:view.revision,execution_availability:executionAvailability};
   return agentPlanSnapshotSchema.parse(compiled) as AgentPlan;
+}
+
+/** A rejected generated plan can be repaired before any world write. Capability gaps
+ * remain terminal here: a different label cannot create a missing capability. */
+export function recoverablePlanAdmission(plan:AgentPlan){
+  const unfinishedCompound=plan.goals.length===1&&!plan.local_compound&&
+    (hasMultipleClauses(plan.contract?.original_intent??'')||Boolean(plan.contract?.unresolved_compound))&&
+    plan.goals[0].side_effect_level==='world'&&plan.contract?.execution_availability==='runtime_gap';
+  const goal=unfinishedCompound?plan.goals[0]:plan.goals.find(entry=>entry.side_effect_level==='world'&&entry.operation_hint&&
+    entry.operation_hint!=='other'&&(entry.contract?.availability==='needs_binding'||
+      entry.contract?.availability==='runtime_gap'&&entry.contract.completion.kind==='unsupported'));
+  if(!goal)return null;
+  const binding=goal.contract?.bindings.find(entry=>entry.status!=='bound');
+  const availability=goal.contract?.availability;
+  return {goal,code:availability==='needs_binding'?'plan_binding_invalid':unfinishedCompound?'plan_compound_incomplete':'plan_contract_unexecutable',
+    issue:{path:`goals.${goal.goal_id}.${binding?'referent':'operation_hint'}`,
+      code:binding&&availability==='needs_binding'?'unresolved_binding':unfinishedCompound?'missing_compound_step':'unexecutable_contract',
+      expected:binding?.role==='destination'?'已登记地图地点，或改用能验证同场景行动的契约':
+        unfinishedCompound?'分别保留原始请求中的行动及依赖步骤；同场景行动可使用现有局部复合候选':
+          '与原始玩家目标和公开世界状态一致的可执行步骤契约',
+      message:binding?`目标“${binding.mention}”作为 ${binding.role} 的绑定状态为 ${binding.status}；不得编造 ID 或把普通场景物件当作地图地点。`:
+        unfinishedCompound?'原始请求含多个行动，单一步骤没有分别证明它们已经完成。':
+          `步骤的执行可用性为 ${availability}，完成要求为 ${goal.contract?.completion.kind??'unsupported'}。`}};
 }
 
 export function sameGoalShape(plan:AgentPlan){return {mode:plan.contract?.execution_mode,

@@ -48,7 +48,22 @@ export function localCompoundSteps(view:PublicView,text:string,plan:AgentPlan):s
  if(resolveEntities(view,text).matches.some(entity=>entity.id!==view.player_id&&Boolean(entity.components.character)))return null;
  if(view.locations.some(location=>location.id!==playerLocation&&text.includes(location.name)))return null;
  const single=plan.goals.length===1&&plan.goals[0].type==='WORLD_ACTION';
- const explicit=single?text.split(/[，,；;]\s*(?:再|然后|接着)/).map(step=>step.trim()).filter(Boolean):[];
+ // A model-labelled map MOVE for the whole compound is an admission failure;
+ // do not silently rehabilitate that candidate as local microsteps.
+ if(single&&plan.goals[0].operation_hint==='move'&&hasMultipleClauses(text))return null;
+  // A timed in-place activity is one Core settlement. Splitting its opening
+  // posture from the full duration would duplicate receipts and time accounting.
+  if(single&&plan.goals[0].operation_hint==='activity'&&localDurationIntent(text,{day:view.time.day,minute:view.time.minute},view.minutes_per_day))return null;
+ const clauses=text.split(/[，,；;]/).map(step=>step.trim()).filter(Boolean);
+ const explicit:string[]=[];
+ if(single&&hasMultipleClauses(text))for(const clause of clauses){
+   const part=clause.replace(/^(?:再|然后|接着)\s*/,'');
+   const startsAction=Boolean(localDestination(part)||isActivePerception(part)||
+     /(?:起身|站起|坐下|躺下|休息|整理|收拾|伸个|拿起|放下)/.test(part));
+   if(explicit.length&&(!startsAction||/^(?:以及|并且|而且|同时)/.test(part)))
+     explicit[explicit.length-1]+='，'+clause;
+   else explicit.push(part);
+ }
  const base=explicit.length>=2?explicit:plan.execution_order.map(id=>plan.goals.find(goal=>goal.goal_id===id)!.normalized_goal.trim());
  const source=text.replace(/[\s，,。；;！!？?]/g,'');
  if(explicit.length<2&&!base.every(step=>source.includes(step.replace(/[\s，,。；;！!？?]/g,''))))return null;
@@ -75,7 +90,7 @@ export function localCompoundSteps(view:PublicView,text:string,plan:AgentPlan):s
 export function fastPlan(view:PublicView,text:string):AgentPlan|null {
  const goals:GoalInput[]=[],targets=resolveEntities(view,text),target=targets.confident?targets.matches[0]:null;
  const add=(type:GoalInput['type'],goal:string,extra:Partial<GoalInput>={})=>{const g:GoalInput={goal_id:'g'+(goals.length+1),type,normalized_goal:goal,depends_on:[],condition:null,branch:null,temporal_scope:{scope:'now',day_offset:0,window:'any'},target_entities:target?[target.id]:[],...extra};goals.push(g);return g;};
- if(isActivePerception(text)&&!hasUserCondition(text)){
+ if(isActivePerception(text)&&!hasUserCondition(text)&&!hasMultipleClauses(text)){
    // A named person's presence is a typed observation goal. Defer its meaning
    // to the semantic planner instead of forcing the generic look-around path.
    if(targets.matches.some(entity=>entity.components.character&&entity.id!==view.player_id)&&

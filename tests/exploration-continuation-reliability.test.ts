@@ -3,12 +3,12 @@ import {describe,expect,it,vi} from 'vitest';
 import {sparseSetup} from './sparse-fixture.js';
 import {handleAgentInput} from '../src/agent/executor.js';
 import {interpretSemanticEntry} from '../src/agent/semantic-entry.js';
-import {actionBindingContext} from '../src/ai/action-context.js';
+import {actionBindingContext,authoritativeItemContext} from '../src/ai/action-context.js';
 import {AIRuntime} from '../src/ai/runtime.js';
 import {ProviderError} from '../src/ai/failures.js';
 import {applyLocationSearch,commitProposedLocation} from '../src/core/location-lifecycle.js';
 import {executeFreeform,localDestination} from '../src/core/freeform.js';
-import {validateSave} from '../src/core/state.js';
+import {publicView,validateSave} from '../src/core/state.js';
 import {currentMap} from '../src/core/map.js';
 
 const proposal={narrative:'检查当前地点',minutes:5,target_id:null,facts:[],relationship:null,
@@ -150,5 +150,17 @@ describe('QA15–21 continuation and exploration reliability',()=>{
     expect(requests.length).toBeLessThanOrEqual(2);
     expect(requests.every(prompt=>prompt.includes('返回岔口，再探索右侧未确认区域。'))).toBe(true);
     expect((await f.service.current()).state_revision).toBe(save.state_revision);
+  });
+  it('exposes only authoritative held and visible item state to model binding',async()=>{
+    const f=await sparseSetup(),save=await f.service.current();
+    const player=save.entities.find(entity=>entity.id===save.player_state.entity_id)!;
+    const item=save.entities.find(entity=>entity.id==='notebook')!;
+    item.components.location=structuredClone(player.components.location);
+    const inventory=(player.components.inventory??={items:{}}) as {items:Record<string,number>;placements?:Record<string,string|null>};
+    inventory.items[item.id]=1;inventory.placements??={};inventory.placements[item.id]=null;
+    const view=publicView(save),items=authoritativeItemContext(view),context=actionBindingContext(view,'使用笔记本');
+    expect(items).toEqual(expect.arrayContaining([expect.objectContaining({item_id:'notebook',name:'笔记本',quantity:1,placement:'held'})]));
+    expect(context.authoritative_inventory).toEqual(expect.arrayContaining([expect.objectContaining({item_id:'notebook',placement:'held'})]));
+    expect(context.visible_scene_items).not.toEqual(expect.arrayContaining([expect.objectContaining({item_id:'notebook',placement:'held'})]));
   });
 });

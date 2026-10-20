@@ -13,6 +13,7 @@ import {taskGroups} from '../src/client/task-visibility.js';
 import type {AIRequest} from '../src/ai/contracts.js';
 import {developmentProjection} from '../src/system/development-status.js';
 import type {CodingAgentExecutor} from '../src/development/coding-agent.js';
+import * as atomic from '../src/storage/atomic-json.js';
 const plan={normalized_requirements:['提供一个自有开关并展示当前值'],complexity:'LOW',clarification:null,milestones:[{id:'switch',title:'开关功能与界面',kind:'ui',acceptance:['点击切换且状态保留']}],capability_gaps:[]};
 const gap={required_capability:'input.subscription',why_needed:'用户目标需要连续输入',affected_modules:['extension host'],current_limitation:'仅支持离散动作',proposed_generic_capability:'可取消且限频的输入订阅',risk:'事件泄漏和并发事务'};
 function spec(id:string):ExtensionSpec{return {extension_id:id,name:'状态开关',description:'切换本功能自身状态',template:'declarative',allow_betting:false,max_stake:0,healing_item_id:null,fields:[{key:'enabled',type:'flag',initial:false}],declarative_actions:[{id:'toggle',label:'切换',op:'toggle',field:'enabled'}],surfaces:[{id:'switch_panel',kind:'panel',title:'状态开关',visibility:'always'}]};}
@@ -26,6 +27,38 @@ async function setup(override?:(r:AIRequest)=>unknown|Promise<unknown>,coreExecu
 }
 const start=async(f:Awaited<ReturnType<typeof setup>>,request='增加一个我可以切换的状态开关')=>f.tasks.start({request,request_id:randomUUID()});
 const tx=async(f:Awaited<ReturnType<typeof setup>>)=>{const s=await f.service.current();return {game_id:s.game_id,expected_revision:s.state_revision,request_id:randomUUID()};};
+it('replaying an installed update request cannot revise the task or rebuild its candidate twice',async()=>{
+ const f=await setup(),task=await start(f),ready=await f.tasks.wait(task.id);
+ await f.tasks.install(task.id,{...await tx(f),confirmed:true,candidate_version:ready.current_version});
+ const input={request_id:randomUUID(),request:'修改展示标题',extension_id:task.extension_id};
+ await f.tasks.start(input);const revised=await f.tasks.wait(task.id),calls=f.calls.length;
+ expect((await f.tasks.start(input)).id).toBe(task.id);const duplicate=await f.tasks.wait(task.id);
+ expect(duplicate.revision).toBe(revised.revision);expect(duplicate.requirement_history).toEqual(revised.requirement_history);
+ expect(f.calls).toHaveLength(calls);
+ const restarted=new DevelopmentTasks(f.builder,()=>f.adapter);expect((await restarted.start(input)).revision).toBe(revised.revision);
+ await expect(restarted.start({...input,request:'不同修改'})).rejects.toThrow('请求标识');
+},20000);
+it.each(['prepare','revision','terminal'] as const)('does not repeat an update after its %s journal fails',async(stage)=>{
+ const f=await setup(),task=await start(f),ready=await f.tasks.wait(task.id);
+ await f.tasks.install(task.id,{...await tx(f),confirmed:true,candidate_version:ready.current_version});
+ const input={request_id:randomUUID(),request:'修改展示标题',extension_id:task.extension_id},write=atomic.writeAtomicJson;let failed=false;
+ const spy=vi.spyOn(atomic,'writeAtomicJson').mockImplementation(async(path,value)=>{
+  const data=value as {receipts?:Record<string,{state?:string}>;tasks?:{id:string;requirement_history:string[]}[]},receipt=data.receipts?.[input.request_id];
+  const length=data.tasks?.find(t=>t.id===task.id)?.requirement_history.length;
+  const hit=stage==='prepare'?receipt?.state==='prepared'&&length===1:stage==='revision'?receipt?.state==='prepared'&&length===2:receipt?.state==='completed';
+  if(!failed&&hit){failed=true;throw Error('update journal '+stage);}await write(path,value);
+ });
+ try{
+  await expect(f.tasks.start(input)).rejects.toThrow('update journal '+stage);expect(failed).toBe(true);
+  await f.tasks.wait(task.id);
+  if(stage==='prepare'){expect((await f.tasks.get(task.id)).requirement_history).toHaveLength(1);await f.tasks.start(input);await f.tasks.wait(task.id);}
+  else{
+   const before=await f.tasks.get(task.id),calls=f.calls.length;
+   await expect(f.tasks.start(input)).rejects.toThrow('修订结果尚未确认');expect(await f.tasks.get(task.id)).toEqual(before);expect(f.calls).toHaveLength(calls);
+   const restarted=new DevelopmentTasks(f.builder,()=>f.adapter);await expect(restarted.start(input)).rejects.toThrow('修订结果尚未确认');
+  }
+ }finally{spy.mockRestore();}
+},20000);
 it('goal creates a durable task, verified checkpoint and product preview without installing',async()=>{
  const f=await setup(),before=await f.service.current(),task=await start(f),ready=await f.tasks.wait(task.id);
  expect(ready.status).toBe('ready_for_preview');expect(ready.artifacts).toHaveLength(1);expect(ready.preview).toMatchObject({name:'状态开关',canonical_writes:[]});expect(ready.preview!.rules).toContain('切换：切换');

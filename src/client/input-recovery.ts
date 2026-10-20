@@ -1,4 +1,4 @@
-export type InputStatus<T>={state:'running'|'completed'|'failed'|'unknown';result?:T;error?:string;reason?:string;
+export type InputStatus<T>={state:'running'|'completed'|'failed'|'unknown';result?:T;error?:string;reason?:string;payload?:unknown;http_status?:number;
   phase?:'interpreting'|'planning'|'resolving'|'narrating'|'committing'|'finalizing';
   phase_history?:string[];committed_revision?:number|null};
 export class InputStillRunning extends Error{
@@ -58,7 +58,8 @@ export async function awaitInputResult<T>(send:Promise<T>,status:()=>Promise<Inp
     }
     options.signal?.throwIfAborted();
     if(latest.state==='completed'&&latest.result!==undefined)return latest.result;
-    if(latest.state==='failed')throw new Error(latest.error??'请求未完成，请刷新世界状态。');
+    if(latest.state==='failed')throw Object.assign(new Error(latest.error??'请求未完成，请刷新世界状态。'),
+      {payload:latest.payload,httpStatus:latest.http_status});
     if(latest.state==='unknown')throw new InputStatusUnknown();
     if(attempt+1<polls)await delay(attempt<40?pollMs:Math.min(15_000,pollMs*5),options.signal);
   }

@@ -16,7 +16,7 @@ export const intentResultSchema = z.strictObject({
   parameters_json: z.string().max(5000),
   clarification: z.string().nullable(),
 });
-export const narrativeResultSchema = narrativeSchema.omit({choice_offers:true}).extend({
+export const narrativeResultSchema = narrativeSchema.omit({choice_offers:true,presentation:true}).extend({
   presence_claims:z.array(scenePresenceClaimSchema).max(20).optional(),
   choices:providerEmptyArray(z.array(z.string().min(1).max(300)).max(6)),
   context_actions:providerEmptyArray(z.array(contextActionSchema).max(20)),

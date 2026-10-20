@@ -12,11 +12,13 @@ import { z } from 'zod';
 import { GameError, assert, safeParse, profileSchema, worldCreationProvenanceSchema, type SavePackage, type WorldCreationProvenance } from '../core/schema.js';
 import { normalizeProvenance } from '../core/provenance.js';
 import { exportSave, importSave, newSave, publicView, validateSave } from '../core/state.js';
+import { unbackedPossessionClaims } from '../core/possession-claims.js';
 import { executeFreeform,isPhysicalAction,assertFreeformGoalEvidence,FreeformRepairableError,environmentQueryForProposal,localSceneQuery } from '../core/freeform.js';
-import {EnvironmentQueryError,executeSceneSurvey,isBroadSceneObservation,broadContainerObservation} from '../core/environment.js';
+import {EnvironmentQueryError,EnvironmentAdmissionError,executeSceneSurvey,isBroadSceneObservation,broadContainerObservation} from '../core/environment.js';
 import {repairOpeningPossessionsForAction} from '../core/initial-possession-repair.js';
+import {reconcileDuplicateActivePlans} from '../core/pending-repair.js';
 import {applyNarrativeClaims} from '../core/narrative-claims.js';
-import {NarrativePatternError,physicalNarrativeFallback,canonicalResolutionNarrative,canonicalPerceptionNarrative,isSettledPerception,canonicalMovementNarrative,validateMovementNarrative,validateResolvedNarrative,validateScenePresenceNarrative} from '../core/narrative-firewall.js';
+import {NarrativePatternError,physicalNarrativeFallback,canonicalResolutionNarrative,canonicalPerceptionNarrative,isSettledPerception,canonicalMovementNarrative,canonicalCompoundNarrative,validateMovementNarrative,validateResolvedNarrative,validateScenePresenceNarrative} from '../core/narrative-firewall.js';
 import {isActivePerception} from '../agent/perception.js';
 import {makeCompiledChoiceOffers} from '../core/choice-offer.js';
 import { executeAction, applyPatches } from '../core/runtime.js';
@@ -25,6 +27,7 @@ import { capabilityList, createRegistry, moduleStatuses } from '../modules/index
 import type { PendingTurn,SaveStorage } from '../storage/json-store.js';
 import type { AIRuntime } from '../ai/runtime.js';
 import {withRequestBudget,generateWithinRequestBudget} from '../ai/request-budget.js';
+import {prepareRequestCommit} from '../recovery/request-context.js';
 import type { WorldPackage } from '../core/schema.js';
 import {prepareCharacterImport,adaptationSchema,type ImportCandidate} from '../characters/import.js';
 import {authoredCharacter} from '../characters/authoring.js';
@@ -50,6 +53,14 @@ const perceptionProseAuditSchema=z.strictObject({grounded:z.boolean(),reports_re
 function compoundStepId(requestId:string,index:number){
   const hex=createHash('sha256').update(`${requestId}:local-compound:${index}`).digest('hex');
   return `${hex.slice(0,8)}-${hex.slice(8,12)}-4${hex.slice(13,16)}-a${hex.slice(17,20)}-${hex.slice(20,32)}`;
+}
+/** A degradation reason must say which check failed, not only that one did. REV435
+ * recorded just "Narrator structured result failed validation", which cannot be
+ * diagnosed afterwards. Prose excerpts stay in the observability log, never in the save. */
+function narrationFailureReason(error:unknown){
+  if(error instanceof NarrativePatternError)return `${error.message}（校验项：${error.patternKind}）`.slice(0,500);
+  if(error instanceof ProviderError&&error.detail)return `${error.message}（${error.reason}）：${error.detail}`.slice(0,500);
+  return errorText(error);
 }
 /**
  * Optional narrator enrichment (for example a relationship delta) is applied per patch. A rejected enrichment is
@@ -132,9 +143,28 @@ export class GameService {
       if (player && !player.components.routine) { routineModule.manifest?.setup?.(save); changed = true; }
     }
 
+    this.reportUnbackedPossessions(save);
+
     // Normalisation always runs last, so a save is only ever returned and persisted in its current shape.
     const migrated = migrateInstalledWorld(save, this.installedWorlds);
     return { save: readValidated&&!changed&&!migrated.changed?migrated.save:validateSave(migrated.save), changed: changed || migrated.changed };
+  }
+  /**
+   * A world whose characters state possessions that exist as no item at all is already shipped and
+   * cannot be repaired from prose, so it is reported rather than fixed, once per game per process
+   * because `ensureBaseFeatures` runs on every read. This is how the live world's camera — described
+   * by the Narrator, present in no inventory, defined by no entity — becomes visible to an operator
+   * instead of surfacing only as a player noticing the story used something they do not have.
+   */
+  private reportedPossessionGaps=new Set<string>();
+  private reportUnbackedPossessions(save: SavePackage) {
+    if (this.reportedPossessionGaps.has(save.game_id)) return;
+    this.reportedPossessionGaps.add(save.game_id);
+    const unbacked = unbackedPossessionClaims(save);
+    if (!unbacked.length) return;
+    this.logger.warn('world.possession_unbacked', {module:'world',metadata:{
+      game_id:save.game_id,count:unbacked.length,claims:unbacked.slice(0,12),
+      detail:'人物设定里明确声明的随身物品在世界里没有对应物品实体；叙事可能描述玩家使用并不存在的物品。补齐属于世界数据迁移，需要授权，框架不会自动创建。'}});
   }
   constructor(readonly storage: SaveStorage, readonly ai: AIRuntime, readonly demo: WorldPackage, readonly installedWorlds:InstalledWorld[] = [], readonly logger: StructuredLogger = getLogger(),readonly systemCapabilities:CapabilityRegistry=new CapabilityRegistry(capabilityRegistry.all())) {}
   configureImageGeneration(runtime:ImageAssetRuntime){
@@ -169,12 +199,45 @@ export class GameService {
       assert(input.type!=='MOVE'&&!['START_ROUTINE','CONTINUE_ROUTINE'].includes(input.type),
         '行动需要进入另一场景，不能作为局部复合行动提交。');
       const generic=input.type==='FREEFORM_ACTION';
-      const proposal=generic?await this.ai.freeform(candidate,step):null;
-      const query=proposal?environmentQueryForProposal(step,proposal):null;
-      const localQuery=generic&&!query?localSceneQuery(candidate,step):null;
-      const environment=query||localQuery?await this.ai.assessEnvironment(candidate,step,query??localQuery!,Boolean(localQuery)):undefined;
-      const turn=generic?executeFreeform(candidate,step,proposal,stepId,undefined,false,undefined,environment):
-        executeAction(candidate,input,stepId,'ai');
+      let turn:ReturnType<typeof executeAction>;
+      if(generic){
+        let repair:FreeformRepairableError|undefined,feedback:GenerationRepair|null=null;
+        let accepted:ReturnType<typeof executeFreeform>|undefined;
+        for(let attempt=1;attempt<=2;attempt++){
+          let rejectedProposal:unknown;
+          try{
+            const proposal=await this.ai.freeform(candidate,step,repair?{
+              failure_code:repair.failure_code,public_targets:repair.public_targets,
+              diagnostics:repair.diagnostics,...(feedback?{generation_repair:feedback}:{})}:undefined);
+            rejectedProposal=proposal;
+            const query=environmentQueryForProposal(step,proposal);
+            const localQuery=!query?localSceneQuery(candidate,step):null;
+            const environment=query||localQuery?await this.ai.assessEnvironment(candidate,step,
+              query??localQuery!,Boolean(localQuery)):undefined;
+            accepted=executeFreeform(candidate,step,proposal,stepId,undefined,false,undefined,environment);
+            assertFreeformGoalEvidence(accepted.save,step,stepId);
+            if(attempt>1)currentTrace()?.info('agent.recovery.completed',{metadata:{
+              stage:'local_compound_freeform',attempts_used:attempt,step_index:index}});
+            break;
+          }catch(error){
+            if(error instanceof CandidateValidationError){
+              feedback=generationRepair(error);
+              error=new FreeformRepairableError('proposal_contract_invalid',error.detail,[],
+                error.issues.map(issue=>({path:issue.path,code:issue.code,expected:issue.expected??issue.message})));
+            }
+            if(!(error instanceof FreeformRepairableError))throw error;
+            currentTrace()?.warn('agent.recovery.decision',{metadata:{attempt,
+              failure_stage:'local_compound_freeform',failure_code:error.failure_code,
+              step_index:index,recoverable:attempt<2,strategy:attempt<2?'repair_proposal':'stop'}});
+            if(attempt===2)throw error;
+            feedback??=generationRepair(new CandidateValidationError('freeform',
+              error.diagnostics.map(issue=>({...issue,message:issue.expected})),rejectedProposal));
+            repair=error;
+          }
+        }
+        assert(accepted,'局部行动提案未能完成校验，世界没有改变。');
+        turn=accepted;
+      }else turn=executeAction(candidate,input,stepId,'ai');
       const receipt=turn.save.resolution_receipts?.find(entry=>entry.request_id===stepId);
       assert(receipt&&['success','strong_success'].includes(receipt.outcome),'局部复合行动有步骤未完成；世界状态没有改变。');
       // A registered action must satisfy the same player-goal evidence checks as a freeform step.
@@ -295,7 +358,23 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       const receipt = current.runtime.receipts.find(r => r.id === req.request_id);
       if (receipt) { assert(receipt.fingerprint === fingerprint, '请求 ID 已用于另一行动');this.pendingTurns.delete(req.request_id);await this.storage.clearPending?.(req.request_id).catch(()=>undefined); return publicView(current); }
       if (req.expected_revision !== current.state_revision) { trace.warn('save.conflict', { revision: current.state_revision, metadata: { reason: 'expected_revision_mismatch', expected_revision: req.expected_revision, actual_revision: current.state_revision } }); throw new GameError('状态已更新，请刷新后重试', 409); }
-      const pending=await this.storage.readPending?.(req.request_id)??this.pendingTurns.get(req.request_id);
+      let pending=await this.storage.readPending?.(req.request_id)??this.pendingTurns.get(req.request_id);
+      if(pending?.generic&&req.input&&!compoundSteps){
+        assert(pending.game_id===current.game_id&&pending.expected_revision===current.state_revision&&
+          pending.fingerprint===fingerprint,'待完成判定与当前请求不一致');
+        try{assertFreeformGoalEvidence(pending.candidate,req.input,req.request_id);}
+        catch(error){
+          if(!(error instanceof FreeformRepairableError))throw error;
+          trace.warn('agent.recovery.decision',{metadata:{failure_stage:'pending_freeform_evidence',
+            failure_code:error.failure_code,recoverable:true,strategy:'regenerate_uncommitted_candidate',
+            revision:current.state_revision}});
+          // The formal revision still matches: discard only the uncommitted candidate.
+          // The original request and its fixed request ID will be rebuilt below.
+          await this.storage.clearPending?.(req.request_id);
+          this.pendingTurns.delete(req.request_id);
+          pending=undefined;
+        }
+      }
       let actionBase=current;
       let openingRepairIds:string[]=[];
       if(!pending&&current.background_state?.needs_generation){
@@ -323,7 +402,26 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       let travelDecisionReceipt:{id:string;fingerprint:string}|null=null;
       if(pending){
         assert(pending.game_id===current.game_id&&pending.expected_revision===current.state_revision&&pending.fingerprint===fingerprint,'待完成判定与当前请求不一致');
-        generic=pending.generic;turn={save:validateSave(pending.candidate),action:pending.action,facts:pending.facts,events:[],registry:createRegistry(current.definition.enabled_modules)};
+        generic=pending.generic;
+        let candidate:SavePackage;
+        try{
+          candidate=validateSave(pending.candidate);
+        }catch(loadError){
+          // An uncommitted candidate from an earlier attempt can carry a known
+          // corruption (duplicate same-route NPC departure plans) that the
+          // deterministic Core repair can fix without re-rolling the player's
+          // already-settled action. Persist the repaired candidate so a later
+          // crash cannot re-enter the same invalid image.
+          const reconciled=reconcileDuplicateActivePlans(pending.candidate as SavePackage,req.request_id);
+          if(!reconciled.repaired)throw loadError;
+          candidate=validateSave(reconciled.save);
+          const repairedPending:PendingTurn={...pending,candidate};
+          await this.storage.writePending?.(repairedPending);
+          this.pendingTurns.set(req.request_id,structuredClone(repairedPending));
+          trace.warn('pending.candidate_repaired',{metadata:{request_id:req.request_id,reason:errorText(loadError),
+            stage:'pending_reconciliation',revision:current.state_revision}});
+        }
+        turn={save:candidate,action:pending.action,facts:pending.facts,events:[],registry:createRegistry(current.definition.enabled_modules)};
       }else{
         let input = req.action;
         if (req.input) {
@@ -334,8 +432,15 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
               try{
                 input=await trace.measure('intent.compile', () => this.ai.interpret(actionBase, req.input as string,repair));
                 const proposed=input as {type:string;parameters:unknown};
+                 const actions=createRegistry(actionBase.definition.enabled_modules).actions;
                 const action=proposed.type==='FREEFORM_ACTION'?null:
-                  createRegistry(actionBase.definition.enabled_modules).actions.get(proposed.type);
+                   actions.has(proposed.type)?actions.get(proposed.type):null;
+                 if(proposed.type!=='FREEFORM_ACTION'&&!action)
+                   throw new CandidateValidationError('action_type',[{path:'type',code:'unregistered_action',
+                     expected:'当前世界已注册的 Core 动作或 FREEFORM_ACTION',message:`${proposed.type} 未在当前世界注册`}],proposed);
+                 if(isPhysicalAction(req.input as string)&&proposed.type!=='FREEFORM_ACTION')
+                   throw new CandidateValidationError('action_family',[{path:'type',code:'physical_action_mismatch',
+                     expected:'FREEFORM_ACTION 以便交给受控身体行动裁决',message:'玩家要求身体行动，候选却选择了非身体行动'}],proposed);
                 if(action&&!action.parameters.safeParse(proposed.parameters).success){
                   const checked=action.parameters.safeParse(proposed.parameters);
                   if(!checked.success)throw new CandidateValidationError('action_parameters',schemaIssues(checked.error),proposed);
@@ -346,11 +451,13 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
               }catch(error){
                 const feedback=generationRepair(error);
                 if(!feedback)throw error;
-                repair={failure_code:'action_parameters_invalid',...(feedback.previous_output&&typeof feedback.previous_output==='object'&&typeof (feedback.previous_output as {type?:unknown}).type==='string'?{previous_action:(feedback.previous_output as {type:string}).type}:{}),generation_repair:feedback};
+                 repair={failure_code:error instanceof CandidateValidationError&&error.stage==='action_type'?'action_type_invalid':
+                   error instanceof CandidateValidationError&&error.stage==='action_family'?'action_family_mismatch':'action_parameters_invalid',
+                   ...(feedback.previous_output&&typeof feedback.previous_output==='object'&&typeof (feedback.previous_output as {type?:unknown}).type==='string'?{previous_action:(feedback.previous_output as {type:string}).type}:{}),generation_repair:feedback};
                 trace.warn('agent.recovery.decision',{metadata:{attempt,failure_stage:'action_parameters',
                   failure_code:repair.failure_code,recoverable:attempt<2,strategy:attempt<2?'repair_interpretation':'stop',
                   revision:current.state_revision}});
-                if(attempt===2)throw new GameError('行动参数未能通过校验，世界没有改变。',503);
+                 if(attempt===2)throw new GameError('行动参数未能通过校验，世界状态没有改变。',503);
               }
             }
           }
@@ -387,10 +494,28 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
             (s.container_id??null)===(containerSurveyId??null)).at(-1);
           const exhaustive=Boolean(containerSurveyId&&/(?:彻底|仔细|逐一)(?:检查|查看)/.test(req.input)&&
             /(?:空|全部|所有|有些什么|有什么东西)/.test(req.input));
-          const proposal=priorSurvey&&(!exhaustive||priorSurvey.complete_empty||priorSurvey.complete_contents)?undefined:
-            await trace.measure('environment.survey',()=>
-            this.ai.surveyEnvironment(actionBase,req.input!,undefined,containerSurveyId));
-          turn=executeSceneSurvey(actionBase,req.input,proposal,req.request_id,undefined,containerSurveyId);
+           const needsProposal=!priorSurvey||exhaustive&&!priorSurvey.complete_empty&&!priorSurvey.complete_contents;
+           let repair:GenerationRepair|null=null;
+           let surveyed:ReturnType<typeof executeSceneSurvey>|null=null;
+           for(let attempt=1;attempt<=2;attempt++){
+             const proposal=needsProposal?await trace.measure('environment.survey',()=>
+               this.ai.surveyEnvironment(actionBase,req.input!,undefined,containerSurveyId,repair)):undefined;
+             try{surveyed=executeSceneSurvey(actionBase,req.input,proposal,req.request_id,undefined,containerSurveyId);break;}
+             catch(error){
+               const rejected=error instanceof EnvironmentAdmissionError?
+                 new CandidateValidationError('environment_survey',[{path:error.field,code:error.failure_code,
+                   expected:'原始检查授权与当前权威场景、容器和历史观察范围',message:error.message}],proposal):
+                 error instanceof z.ZodError?new CandidateValidationError('environment_survey',schemaIssues(error),proposal):null;
+               repair=rejected?generationRepair(rejected):null;
+               const recoverable=Boolean(repair&&needsProposal&&attempt<2);
+               trace.warn('agent.recovery.decision',{metadata:{attempt,failure_stage:'environment_survey_admission',
+                 failure_code:error instanceof EnvironmentAdmissionError?error.failure_code:'survey_candidate_invalid',
+                 recoverable,strategy:recoverable?'repair_survey':'stop',revision:current.state_revision}});
+               if(!recoverable)throw error;
+             }
+           }
+           if(!surveyed)throw new GameError('环境概览候选未能通过校验，世界没有改变。',503);
+           turn=surveyed;
         }
         else if(generic){
           let repair:FreeformRepairableError|undefined;let proposalFeedback:GenerationRepair|null=null;
@@ -415,6 +540,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
               const environment=query||localQuery?await trace.measure('environment.adjudication',()=>
                 this.ai.assessEnvironment(actionBase,req.input!,query??localQuery!,Boolean(localQuery))):undefined;
               proposedTurn=executeFreeform(actionBase,req.input!,proposal,req.request_id,undefined,perceptionAuthorized,binding,environment);
+              assertFreeformGoalEvidence(proposedTurn.save,req.input!,req.request_id);
               if(attempt>1)trace.info('agent.recovery.completed',{metadata:{stage:'freeform_binding',
                 attempts_used:attempt,revision:current.state_revision}});
               break;
@@ -448,6 +574,11 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       }
       let next = turn.save;
       const notices: string[] = [];
+      let narrationPresentation:NonNullable<SavePackage['last_turn']>['presentation'];
+      const degradeNarration=(reason:string)=>{
+        narrationPresentation={status:'degraded',reasons:[...new Set([
+          ...(narrationPresentation?.reasons??[]),reason.slice(0,500)||'narration_unavailable'])].slice(0,8)};
+      };
       if(!compileOnly){
         const reactions=await settlePhysicalNpcReactions(this,next,req.request_id);
         next=reactions.save;turn.facts.push(...reactions.visibleFacts);
@@ -490,6 +621,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
         next.last_turn=structuredClone(current.last_turn);
         notices.push(...turn.facts);
       } else try {
+        narrationPresentation={status:'normal',reasons:[]};
         const receipt=(generic||turn.action.type==='MOVE')?next.resolution_receipts?.find(entry=>entry.request_id===req.request_id):undefined;
         if(generic)assert(receipt,'开放行动缺少程序判定凭据');
         if(generic&&!compoundSteps)assertFreeformGoalEvidence(next,req.input!,req.request_id);
@@ -628,7 +760,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
               }
             }catch(error){
               if(!(error instanceof GameError))throw error;
-              const reason=errorText(error);
+              const reason=narrationFailureReason(error);
               observe('warn','narrative.mechanical_claim_discarded',{module:'turn',request_id:req.request_id,
                 metadata:{reason:reason.slice(0,200),narrator_attempt:attempt,retry:attempt>1,
                   ...(error instanceof NarrativePatternError?{pattern_kind:error.patternKind,
@@ -637,6 +769,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
                 observe('warn','narrative.retry_exhausted',{module:'turn',request_id:req.request_id,
                   metadata:{attempts_used:attempt,reason:reason.slice(0,200)}});
                   if(receipt.physical_outcome){
+                    degradeNarration(reason);
                     observe('warn','narrative.safe_fallback',{module:'turn',request_id:req.request_id,
                       metadata:{reason:'physical_outcome_unverified',narrator_attempts:attempt}});
                     notices.push('场景描写校验未通过，本次展示采用已验证的场景与结算事实。');
@@ -645,6 +778,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
                       patches:[],interaction:null,item_claims:[],stable_locations:[],mechanical_claims:[],presence_claims:[]};
                   }
                   if(check?.spec?.domain==='perception'||isActivePerception(receipt.semantic_action)){
+                    degradeNarration(reason);
                     const canonical=canonicalPerceptionNarrative(next,receipt,Boolean(check?.hidden));
                     observe('warn','narrative.safe_fallback',{module:'turn',request_id:req.request_id,
                       metadata:{reason:'perception_prose_unverified',narrator_attempts:attempt}});
@@ -653,11 +787,21 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
                       item_claims:[],stable_locations:[],mechanical_claims:[]};
                   }
                   if(receipt.movement_route){
+                    degradeNarration(reason);
                     observe('warn','narrative.safe_fallback',{module:'turn',request_id:req.request_id,
                       metadata:{reason:'movement_route_unverified',narrator_attempts:attempt}});
                     return {...result,narrative:canonicalMovementNarrative(receipt,next),speaker:null,dialogue:null,choices:[],
                       choice_semantics:[],context_actions:[],patches:[],interaction:null,
                       item_claims:[],stable_locations:[],mechanical_claims:[]};
+                  }
+                  const settledCompoundReceipts=compoundReceipts?.filter((step):step is NonNullable<typeof step>=>Boolean(step));
+                  if(settledCompoundReceipts&&settledCompoundReceipts.length>1){
+                    degradeNarration(reason);
+                    observe('warn','narrative.safe_fallback',{module:'turn',request_id:req.request_id,
+                      metadata:{reason:'compound_steps_unverified',narrator_attempts:attempt}});
+                    return {...result,narrative:canonicalCompoundNarrative(next,Boolean(check?.hidden),settledCompoundReceipts),
+                      scene_beats:[],speaker:null,dialogue:null,choices:[],choice_semantics:[],context_actions:[],
+                      patches:[],interaction:null,item_claims:[],stable_locations:[],mechanical_claims:[],presence_claims:[]};
                   }
                 throw error;
               }
@@ -707,13 +851,19 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
             next.resolution_receipts?.find(entry=>entry.request_id===req.request_id):undefined;
           if(settledReceipt&&error instanceof ProviderError&&
             ['schema','timeout','server_error','max_output_tokens','length','invalid_json','missing_output_text'].includes(error.reason)){
+            degradeNarration(narrationFailureReason(error));
             // The candidate action and receipt have already passed authoritative validation.
             // A failed prose service must not discard a deterministic, grounded settlement.
             observe('warn','narrative.safe_fallback',{module:'turn',request_id:req.request_id,
               metadata:{reason:failureReason(error),action:turn.action.type,receipt_id:settledReceipt.request_id}});
             delete next.ai.threads.narrator;
             const check=next.resolution_history?.find(entry=>entry.request_id===req.request_id);
-            const degraded=settledReceipt.physical_outcome?physicalNarrativeFallback(next,settledReceipt,Boolean(check?.hidden),
+            const settledCompoundReceipts=(compoundSteps?.map((_,index)=>
+              next.resolution_receipts?.find(entry=>entry.request_id===compoundStepId(req.request_id,index)))??[])
+              .filter((step):step is NonNullable<typeof step>=>Boolean(step));
+            const degraded=(settledCompoundReceipts.length>1&&!settledReceipt.physical_outcome&&!settledReceipt.movement_route)?
+              {narrative:canonicalCompoundNarrative(next,Boolean(check?.hidden),settledCompoundReceipts)}:
+              settledReceipt.physical_outcome?physicalNarrativeFallback(next,settledReceipt,Boolean(check?.hidden),
               next.resolution_receipts?.filter(r=>!current.resolution_receipts?.some(old=>old.request_id===r.request_id))):
               {narrative:settledReceipt.movement_route?canonicalMovementNarrative(settledReceipt,next):
                 isSettledPerception(next,settledReceipt)?canonicalPerceptionNarrative(next,settledReceipt,Boolean(check?.hidden)):
@@ -738,11 +888,13 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
         }else{
         // Explicit provider refusal permits a neutral, player-facing safety fallback.
         observe('warn','narration.safety_degraded',{module:'turn',request_id:req.request_id,metadata:{action:turn.action.type,reason:failureReason(error)}});
+        degradeNarration(failureReason(error));
         delete next.ai.threads.narrator;
         next.last_turn = { narrative: narrationFallback(next, turn.action), speaker: null, dialogue: null, choices: [], context_actions: [] };
         notices.push('本次行动已完成并保存；这一刻的场景描写暂时没有生成。');
         }
       }
+      if(narrationPresentation&&next.last_turn)next.last_turn.presentation=narrationPresentation;
       const exposed=drainBackgroundDisplay(next);
       if(exposed.length&&next.last_turn){
         const missing=exposed.filter(text=>!next.last_turn!.narrative.includes(text));
@@ -845,6 +997,8 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       if(worldTurn)checkpointTurn(beforeTurn,next,req.request_id);
       onPhase?.('committing');
       const diff = summarizeSaveDiff(current, next), commit = trace.span('save.commit');
+      await prepareRequestCommit(req.game_id,req.request_id,fingerprint,current.state_revision);
+      signal?.throwIfAborted();
       await this.storage.write(next);
       this.pendingTurns.delete(req.request_id);await this.storage.clearPending?.(req.request_id).catch(error=>observe('warn','resolution.pending_cleanup_failed',{module:'turn',request_id:req.request_id,metadata:{reason:errorText(error)}}));
       trace.info('save.commit', { revision: next.state_revision, metadata: { step_request_id:req.request_id,revision_before: current.state_revision, revision_after: next.state_revision, validation: 'accepted', action: turn.action.type, source: turn.action.source, ...diff } });
@@ -866,7 +1020,9 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       const before=structuredClone(current),next=structuredClone(current),message=applyStoryCommand(next,command);
       next.state_revision=current.state_revision+1;next.runtime.receipts=[...next.runtime.receipts,{id:raw.request_id,fingerprint,revision:next.state_revision}].slice(-100);
       next.last_turn={narrative:message,speaker:null,dialogue:null,choices:[],context_actions:[]};
-      checkpointTurn(before,next,raw.request_id);const validated=validateSave(next);await this.storage.write(validated);return {view:publicView(validated),message};
+      checkpointTurn(before,next,raw.request_id);const validated=validateSave(next);
+      await prepareRequestCommit(raw.game_id,raw.request_id,fingerprint,current.state_revision);
+      await this.storage.write(validated);return {view:publicView(validated),message};
     });
   }
   async undo(raw:unknown){
@@ -994,8 +1150,9 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
     const identity=entity.components.identity as {name?:unknown;description?:unknown};
     const description=[String(identity.name??''),String(identity.description??''),prompt].filter(Boolean).join('；').slice(0,3000);
     const artifact=await this.imageRuntime.generateAndPersist({prompt:description,usage:'avatar',aspect:'square',entity_id:entityId});
-    try{return {view:await this.setAvatar(entityId,artifact.asset_id,gameId,expectedRevision),artifact};}
-    catch(error){await this.imageRuntime.discard(artifact);throw error;}
+    // Content-addressed bytes may already be shared, or the binding may commit
+    // before its response fails. Keep them across failures and reference clears.
+    return {view:await this.setAvatar(entityId,artifact.asset_id,gameId,expectedRevision),artifact};
   }
   async setAvatar(entityId: string, avatarId: string | null, gameId: string, _expectedRevision?: number,crop?:AvatarCropMetadata) {
     return this.media(async () => {
@@ -1047,6 +1204,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       next.definition.ruleset.max_wait_minutes=original;next.state_revision=current.state_revision+1;
       next.runtime.receipts=[...next.runtime.receipts,{id:input.request_id,fingerprint,revision:next.state_revision}].slice(-100);
       next.last_turn={narrative:rule.label+' completed.',speaker:null,dialogue:null,choices:[],context_actions:[]};
+      await prepareRequestCommit(input.game_id,input.request_id,fingerprint,current.state_revision);
       await this.storage.write(validateSave(next));return this.project(next);
     });
   }
@@ -1060,19 +1218,24 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       const body = safeParse(z.strictObject({ module: z.string().regex(/^[a-z][a-z0-9_]{0,63}$/), confirmed: z.boolean(), game_id: z.string().uuid(), expected_revision: z.number().int().min(0), request_id: z.string().uuid() }), raw);
       const current = await this.current();
       if (current.game_id !== body.game_id) throw new GameError('游戏已切换，请刷新后操作', 409);
-      if (current.state_revision !== body.expected_revision) throw new GameError('状态已更新，请刷新后重试', 409);
       const action = { type: command === 'enable' ? 'ENABLE_MODULE' : command === 'disable' ? 'DISABLE_MODULE' : 'REMOVE_MODULE', parameters: { module: body.module, confirmed: body.confirmed } };
+      const fingerprint=createHash('sha256').update(JSON.stringify({module_action:action})).digest('hex');
+      const receipt=current.runtime.receipts.find(entry=>entry.id===body.request_id);
+      if(receipt){assert(receipt.fingerprint===fingerprint,'请求 ID 已用于另一操作');return publicView(current);}
+      if (current.state_revision !== body.expected_revision) throw new GameError('状态已更新，请刷新后重试', 409);
+      const turn = executeAction(current, action, body.request_id, 'player');
+      const next = turn.save;
+      next.state_revision = current.state_revision + 1;
+      next.runtime.receipts = [...next.runtime.receipts, { id: body.request_id, fingerprint, revision: next.state_revision }].slice(-100);
+      const validated=validateSave(next);
+      await prepareRequestCommit(body.game_id,body.request_id,fingerprint,current.state_revision);
       // Removal is destructive: keep a checkpoint of the pre-removal state first.
       if (command === 'remove' && body.confirmed) {
         const checkpoint = structuredClone(current);
         checkpoint.runtime.receipts = [];
         await this.storage.write(checkpoint, 'checkpoint');
       }
-      const turn = executeAction(current, action, body.request_id, 'player');
-      const next = turn.save;
-      next.state_revision = current.state_revision + 1;
-      next.runtime.receipts = [...next.runtime.receipts, { id: body.request_id, fingerprint: createHash('sha256').update(JSON.stringify({ module_action: action })).digest('hex'), revision: next.state_revision }].slice(-100);
-      await this.storage.write(validateSave(next));
+      await this.storage.write(validated);
       const view = publicView(next);
       view.notices.push(turn.facts.join(' '));
       this.logger.info('module.lifecycle', { module: 'framework', request_id: body.request_id, revision: next.state_revision, metadata: { command, target: body.module } });
@@ -1174,6 +1337,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       checkpointTurn(before,validated,raw.request_id);
       // JsonStore performs the full final validation including the newly attached
       // checkpoint. Other storage adapters retain the explicit final check.
+      await prepareRequestCommit(raw.game_id,raw.request_id,fingerprint,before.state_revision);
       await this.storage.write(this.storage.validatesWrites?validated:validateSave(validated));this.logger.info('agent.transaction',{module:'agent',request_id:raw.request_id,revision:validated.state_revision});return publicView(validated);
     }));
   }
@@ -1184,7 +1348,9 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       if(receipt){assert(receipt.fingerprint===fingerprint,'请求 ID 已用于另一操作');return publicView(save);}
       if(save.state_revision!==raw.expected_revision)throw new GameError('状态已更新，请刷新后重试',409);
       mutate(save);save.state_revision++;save.runtime.receipts=[...save.runtime.receipts,{id:raw.request_id,fingerprint,revision:save.state_revision}].slice(-100);
-      await this.storage.write(validateSave(save));this.logger.info('extension.transaction',{module:'extension',request_id:raw.request_id,revision:save.state_revision,metadata:{operation}});
+      const validated=validateSave(save);
+      await prepareRequestCommit(raw.game_id,raw.request_id,fingerprint,raw.expected_revision);
+      await this.storage.write(validated);this.logger.info('extension.transaction',{module:'extension',request_id:raw.request_id,revision:save.state_revision,metadata:{operation}});
       return publicView(save);
     }));
   }

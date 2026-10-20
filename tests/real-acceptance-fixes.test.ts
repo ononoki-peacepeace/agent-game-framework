@@ -12,9 +12,12 @@ import { GameService } from '../src/server/service.js';
 import { fresh, MemoryStore } from './helpers.js';
 import type { SavePackage } from '../src/core/schema.js';
 
-async function serverWithCounter() {
+async function serverWithCounter(clarification=false) {
   const calls: string[] = [];
-  const adapter = { name: 'counting', generate: async (request: { role: string }) => { calls.push(request.role); throw Error('authoring model must not be called'); } };
+  const adapter = { name: 'counting', generate: async (request: { role: string }) => { calls.push(request.role);
+    if(clarification)return {data:{domain:'ambiguous',kind:'clarification',confidence:1,
+      answer:null,answer_basis:null,evidence_ids:[],clarification:'你指的是哪个对象，希望进行什么操作？',speech_target_id:null}};
+    throw Error('authoring model must not be called'); } };
   const service = new GameService(new MemoryStore(), new AIRuntime(adapter as never), fresh().definition);
   const server = createApp(service).listen(0, '127.0.0.1');
   await once(server, 'listening');
@@ -112,13 +115,17 @@ describe('D/E. System behaviour configuration and unknown intents', () => {
     expect((await service.current()).behavior_config).toEqual([]);
   });
   it('an unrecognised system request stays waiting for clarification, never completed', async () => {
-    const env = await serverWithCounter();
+    const env = await serverWithCounter(true),before=await env.service.current();
     try {
       const response = await fetch(`${env.base}/api/system`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Game-Token': env.token }, body: JSON.stringify({ input: '嗯……那个东西你懂的吧' }) });
       expect(response.status).toBe(200);
       const result = await response.json() as { category: string; needs_confirmation: boolean; session?: { status: string } };
       expect(result.session?.status).not.toBe('completed');
       expect(result.session?.status).toBe('waiting_for_clarification');
+      expect(env.calls).toEqual(['gm_reasoning']);
+      const after=await env.service.current();
+      expect(after.runtime.time).toEqual(before.runtime.time);
+      expect(after.runtime.receipts).toEqual(before.runtime.receipts);
     } finally { await env.close(); }
   });
 });

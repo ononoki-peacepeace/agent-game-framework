@@ -374,6 +374,78 @@ describe('natural scene interaction routing', () => {
     expect(prompts[0]).toContain('不以完整解决玩家问题为目标');
     expect(prompts[0]).not.toContain('Framework example system.guidance');
   });
+  it.each([
+    {personality:'谨慎慢热',style:'简短直白',input:'初次见面，可以聊聊吗？',reply:'现在不方便。'},
+    {personality:'热情随和',style:'轻快随意',input:'今天过得怎么样？',reply:'还好，你呢？'},
+    {personality:'谨慎独立',style:'低声简短',input:'我喜欢你，想约你出去。',reply:'谢谢，但我不想约会。'},
+    {personality:'开朗坦率',style:'干脆随意',input:'我喜欢你，想约你出去。',reply:'好啊，我也想多认识你。'},
+    {personality:'内敛寡言',style:'话少',input:'想安静待一会儿吗？',reply:null},
+  ])('preserves $personality response without requiring questions, warmth or relationship gain',async scenario=>{
+    const {f,npcId}=await sceneFixture(input=>({data:{understanding:'人物即时回应',
+      narrative:'这次交流结束。',dialogue:scenario.reply,
+      speech_events:[{speaker_id:'player',utterance:input,provenance:'verbatim_player_input'},
+        ...(scenario.reply?[{speaker_id:'npc_lin',utterance:scenario.reply,provenance:'npc_response'}]:[])],
+      beats:[{kind:'speech',speech_index:0},...(scenario.reply?[{kind:'speech',speech_index:1}]:[])],
+      continuation:'complete',effects:[]}}));
+    const save=await f.service.current(),npc=save.entities.find(entity=>entity.id===npcId)!;
+    npc.components.character={role:'研究者',traits:[],personality:scenario.personality,speech_style:scenario.style};
+    await f.store.write(save);
+    const before=await f.service.current(),relationships=structuredClone(npc.components.relationships);
+    const result=await say(f,scenario.input,{kind:'world_action',interaction_lane:'natural_scene',player_speech_mode:'verbatim'});
+    const after=await f.service.current();
+    expect(result.outcome).toMatchObject({type:'game',kind:'completed'});
+    expect(after.narrative_history?.at(-1)?.speech_events?.filter(event=>event.speaker_id===npcId)
+      .map(event=>event.utterance)).toEqual(scenario.reply?[scenario.reply]:[]);
+    if(scenario.reply)expect(result.message).toContain(scenario.reply);
+    expect(after.entities.find(entity=>entity.id===npcId)!.components.relationships).toEqual(relationships);
+    expect(after.state_revision).toBe(before.state_revision+1);
+    expect(after.resolution_receipts).toEqual(before.resolution_receipts);
+  });
+  it('supplies answered exchanges and repeated-scene prose once, without copying raw player stage directions',async()=>{
+    const prompts:string[]=[];
+    const replies=['那就说说别的。','嗯，听着呢。','今天先到这儿吧。'];
+    const {f,npcId}=await sceneFixture((input,count,prompt)=>{
+      prompts.push(prompt);
+      return {data:{understanding:'承接已回答的话题',narrative:['对话继续。','回应很短。','交谈自然结束。'][count-1],
+        dialogue:replies[count-1],speech_events:[
+          {speaker_id:'player',utterance:input,provenance:'verbatim_player_input'},
+          {speaker_id:'npc_lin',utterance:replies[count-1],provenance:'npc_response'}],
+        beats:[{kind:'speech',speech_index:0},{kind:'speech',speech_index:1}],effects:[]}};
+    });
+    const save=await f.service.current(),oldId=randomUUID(),marker='他没有立刻回答，把重心移回去。';
+    const peer=structuredClone(save.entities.find(entity=>entity.id===npcId)!);
+    peer.id='npc_peer';peer.components.identity.name='另一位在场人物';save.entities.push(peer);
+    save.narrative_history=[{request_id:oldId,narrative:marker,dialogue:'那就先这样。',speaker:npcId,facts:[],
+      player_input:'仅作历史动作记录的郑重长篇旁白不应复制到对话',
+      speech_events:[
+        {speaker_id:'player',utterance:'我已经回答：拍照前先征求你的许可。',provenance:'verbatim_player_input',source_intent:null},
+        {speaker_id:'npc_peer',utterance:'我只想喝茶。',provenance:'npc_response',source_intent:null},
+        {speaker_id:npcId,utterance:'那就先这样。',provenance:'npc_response',source_intent:null},
+      ]}];
+    save.npc_agent_state={[npcId]:emptyNpcAgentState()};
+    save.npc_agent_state[npcId].memories.push({event_ref:'scene:'+oldId,kind:'heard',
+      summary:'参与了之前的谈话',participant_ids:['player',npcId],at:save.runtime.time,importance:1});
+    await f.store.write(save);
+    const relationships=structuredClone(save.entities.find(entity=>entity.id===npcId)!.components.relationships);
+    for(const input of ['那我们聊聊别的吧。','今天有什么想说的？','好，那下次见。'])
+      await say(f,input,{kind:'world_action',interaction_lane:'natural_scene',player_speech_mode:'verbatim'});
+    const payload=JSON.parse(prompts[0].split('\n\n').at(-1)!);
+    expect(prompts[0].split(marker)).toHaveLength(2);
+    expect(prompts[0]).not.toContain('仅作历史动作记录的郑重长篇旁白');
+    expect(payload.recent_partner_exchanges[0].speech_events[0].utterance).toContain('拍照前先征求你的许可');
+    expect(payload.recent_partner_exchanges[0].speech_events)
+      .toContainEqual({speaker_id:'npc_peer',utterance:'我只想喝茶。'});
+    expect(payload.scene.recent_history[0].speech_ref).toBe('scene:'+oldId);
+    expect(payload.ensemble_context[0].witnessed_recent_exchanges[0]).toMatchObject({event_ref:'scene:'+oldId});
+    expect(payload.dialogue_continuity_policy).toContain('区分“对方已经回答”与“本人是否相信或接受”');
+    expect(payload.performance_continuity_policy).toContain('不是本轮行文范本');
+    expect(JSON.parse(prompts[1].split('\n\n').at(-1)!).recent_partner_exchanges.at(-1).speech_events)
+      .toContainEqual({speaker_id:'player',utterance:'那我们聊聊别的吧。'});
+    const after=await f.service.current();
+    expect(after.entities.find(entity=>entity.id===npcId)!.components.relationships).toEqual(relationships);
+    expect(after.npc_agent_state![npcId].knowledge).toEqual([]);
+    expect(after.narrative_history?.at(-1)?.speech_events?.at(-1)?.utterance).toBe('今天先到这儿吧。');
+  });
   it('provides actor-scoped ensemble context and records NPC-to-NPC exchange in one scene call',async()=>{
     const prompts:string[]=[];
     const {f,npcId,sceneCalls}=await sceneFixture((_input,_count,prompt)=>{

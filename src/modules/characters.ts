@@ -3,6 +3,7 @@ import {avatarCropSchema} from '../shared/avatar.js';
 import { assert, id, text } from '../core/schema.js';
 import type { Module } from '../core/registry.js';
 import {prepareCheck,resolveCheck} from '../core/resolution.js';
+import {physicalStateSchema} from '../core/perception-state.js';
 import {nextNpcPlanBoundary,settleNpcPlanWindow} from '../agent/npc-agent.js';
 export const charactersModule: Module = {
   id: 'characters', version: '0.1.0', requires: ['core'],
@@ -10,8 +11,7 @@ export const charactersModule: Module = {
   settle_time_window:settleNpcPlanWindow,
   manifest: { api_version:'1', provides:['character.identity','character.profile','character.visuals'], state_ownership:['components.character','components.character_card','components.character_import','components.visual_assets','components.residence','components.world_resident','components.physical_state'], state_schema_version:'characters.v1', migration_version:1, supports_enable_disable:false, supports_remove:false },
   components: {
-    physical_state:{schema:z.strictObject({awareness:z.enum(['unknown','unaware','alert']).default('unknown'),
-      alert_to_ids:z.array(id).max(20).default([]),restrained_by:id.nullable().default(null)}),project:d=>d},
+    physical_state:{schema:physicalStateSchema,project:d=>d},
     residence:{schema:z.strictObject({home_location_id:id,door_id:id,tenure:z.enum(['owner','tenant','guest','staff']),answer_policy:z.enum(['always','never','chance'])}),project:()=>undefined},
     world_resident:{schema:z.strictObject({origin_incident_id:id,entrance_reason:z.string().min(1).max(300),created_at:z.strictObject({day:z.number().int().min(0),minute:z.number().int().min(0)}),entered_world_at:z.strictObject({day:z.number().int().min(0),minute:z.number().int().min(0)}),importance:z.enum(['minor','recurring','major']),lifecycle:z.enum(['active','away','departed','deceased']),home_location_id:id.nullable(),motivation:z.string().max(300)}),project:()=>undefined},
     character: { schema: z.strictObject({ role: z.string().max(200), traits: z.array(z.string().max(100)).max(10),

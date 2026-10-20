@@ -27,7 +27,7 @@ describe('request reliability boundary',()=>{
     const bodies:string[]=[];
     globalThis.fetch=vi.fn(async(_url,init)=>{bodies.push(String(init?.body));throw new TypeError('socket hang up');}) as typeof fetch;
     const body={request_id:'2539b635-9ee8-4d8d-bb33-fbf46689f590',game_id:'game',expected_revision:1,input:'改名'};
-    await expect(request('system',body)).rejects.toThrow('当前状态没有被修改');
+    await expect(request('system',body)).rejects.toThrow('无法确认是否已结算');
     expect(bodies).toEqual([JSON.stringify(body)]);
   });
 

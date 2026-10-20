@@ -37,6 +37,10 @@ export async function exploreLocation(service:GameService,save:SavePackage,query
      ['known','discover'].includes(decision.decision)&&(!decision.location_id||decision.proposal!==null)||
      decision.decision==='propose'&&(decision.location_id!==null||!decision.proposal))
     throw new CandidateValidationError('location_search',[{path:'decision',code:'payload_mismatch',expected:'none无地点；known/discover引用已有ID；propose仅携带proposal',message:'地点决策类型与负载不一致'}],decision);
+   if((decision.decision==='known'||decision.decision==='discover')&&
+      !context.locations.some(location=>location.id===decision.location_id))
+     throw new CandidateValidationError('location_search',[{path:'location_id',code:'unknown_location',
+       expected:'当前权威地点列表中存在的 ID；没有可靠匹配时选择 none',message:'模型选择的地点并不存在于当前世界'}],decision);
   let review:z.infer<typeof locationReviewSchema>|null|undefined;
   const readReview=async(data:unknown)=>{
     let repair:GenerationRepair|null=null;
@@ -71,7 +75,9 @@ export async function exploreLocation(service:GameService,save:SavePackage,query
   catch(error){
     if(!(error instanceof GameError))throw error;
     service.logger.info('agent.location_search.proposal_rejected',{module:'agent',metadata:{reason:error.message}});
-    return {kind:'incompatible' as const,reason:'这个地点提案未通过世界地理与状态校验。',location:null};
+     if(attempt===1)return {kind:'incompatible' as const,reason:'这个地点提案未通过世界地理与状态校验。',location:null};
+     throw new CandidateValidationError('location_search',[{path:decision.decision==='propose'?'proposal':'location_id',
+       code:'world_fit_rejected',expected:'既有权威地理、可达性、可见性、唯一性及本次空间授权',message:error.message}],decision);
   }
   if(preview.location&&excluded.has(preview.location.id))return {kind:'incompatible' as const,
     reason:'寻找该区域所需的接近路线超出了本次移动授权。',location:null};

@@ -33,7 +33,7 @@ export class EnvironmentQueryError extends GameError{
   readonly failure_stage='environment_query_binding';readonly failure_engine_code='schema_failure';
   readonly diagnostics=[{path:'environment_query.source_quote',code:'authorization_quote',expected:'当前阶段完整原文，包含所查询物体的原文名称'}];
 }
-class EnvironmentAdmissionError extends GameError{
+export class EnvironmentAdmissionError extends GameError{
   readonly failure_stage='environment_admission';readonly failure_engine_code='schema_failure';
   constructor(readonly failure_code:string,readonly field:string,message:string){
     super(message,503);

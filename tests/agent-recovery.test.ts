@@ -36,6 +36,58 @@ async function act(f:Awaited<ReturnType<typeof fixture>>,input:string,lane='worl
 }
 
 describe('bounded pre-commit agent recovery',()=>{
+  it.each([
+    ['我走到长条桌旁，在一张固定座椅上坐下。','长条桌','固定座椅','长条桌旁的固定座椅'],
+    ['我走到书架旁，在空着的软垫上坐下。','书架','软垫','书架旁的软垫'],
+  ])('returns a wrong map binding and its full candidate to planning, then performs %s once',async(input,base,anchor,wrongDestination)=>{
+    const f=await fixture(),seeded=await f.service.current(),here=seeded.entities.find(entity=>entity.id===seeded.player_state.entity_id)!
+      .components.location!.location_id as string;
+    seeded.definition.map!.locations.find(location=>location.id===here)!.description=`现场有${base}与${anchor}。`;
+    seeded.environment_state={resolutions:[{id:'known_base',location_id:here,name:base,aliases:[],
+      status:'present',classification:'environment_detail',entity_id:null,description:`现场有${base}。`,
+      take_allowed:false,source_request_id:randomUUID(),at:structuredClone(seeded.runtime.time),
+      known_by:[seeded.player_state.entity_id]},{id:'known_anchor',location_id:here,name:anchor,aliases:[],
+      status:'present',classification:'environment_detail',entity_id:null,description:`现场有${anchor}。`,
+      take_allowed:false,source_request_id:randomUUID(),at:structuredClone(seeded.runtime.time),
+      known_by:[seeded.player_state.entity_id]}]};
+    await f.store.write(seeded);
+    vi.spyOn(f.ai,'interpret').mockResolvedValue({type:'FREEFORM_ACTION',parameters:{}});
+    const contexts:unknown[]=[];
+    const planner=vi.spyOn(f.ai,'planGoals').mockImplementation(async(_view,_input,_schema,context)=>{
+      contexts.push(context);
+      if(contexts.length===1)return {goals:[{...goal('attempt',input),operation_hint:'move',
+        referent:wrongDestination}]};
+      const [walk,sit]=input.replace(/[。！!]$/,'').split('，');
+      const first=goal('walk',walk),second={...goal('sit',sit),depends_on:['walk']};
+      delete first.operation_hint;delete second.operation_hint;
+      return {goals:[first,second]};
+    });
+    vi.spyOn(f.ai,'systemAgent').mockResolvedValue({verdict:'aligned',explanation:'保留完整目标。'} as never);
+    const {before,after,result,trace_id}=await act(f,input);
+    expect(planner).toHaveBeenCalledTimes(2);
+    expect(contexts[1]).toMatchObject({recovery:{original_request:input,
+      failure_code:'plan_binding_invalid',failure_stage:'plan_admission',completed_steps:[],
+      generation_repair:{stage:'plan_admission',previous_output:{goals:[{operation_hint:'move',
+        referent:wrongDestination}]},issues:[{path:'goals.attempt.referent',code:'unresolved_binding'}]}}});
+    expect(result.outcome).toMatchObject({type:'game',kind:'completed'});
+    expect(after.state_revision).toBe(before.state_revision+1);
+    expect(after.resolution_receipts?.length).toBe((before.resolution_receipts?.length??0)+3);
+    expect(after.entities.find(entity=>entity.id===after.player_state.entity_id)?.components.scene_position?.label)
+      .toBe(base+'旁');
+    expect(f.service.logger.entries({limit:1000}).some(entry=>entry.trace_id===trace_id&&
+      entry.event==='agent.recovery.decision'&&entry.metadata?.failure_stage==='plan_admission')).toBe(true);
+  });
+  it('stops an unchanged invalid plan as a technical failure without a world write',async()=>{
+    const f=await fixture(),input='我走到长条桌旁，在一张固定座椅上坐下。';
+    const planner=vi.spyOn(f.ai,'planGoals').mockResolvedValue({goals:[{...goal('attempt',input),
+      operation_hint:'move',referent:'长条桌旁的固定座椅'}]});
+    vi.spyOn(f.ai,'systemAgent').mockResolvedValue({verdict:'aligned',explanation:'保留完整目标。'} as never);
+    const {before,after,result}=await act(f,input);
+    expect(planner).toHaveBeenCalledTimes(2);
+    expect(result.outcome).toMatchObject({type:'engine_failure',code:'schema_failure',stage:'plan_admission'});
+    expect(after.state_revision).toBe(before.state_revision);
+    expect(after.resolution_receipts).toEqual(before.resolution_receipts);
+  });
   it('executes a perception identified by GoalSpec beyond the legacy fastPlan vocabulary',async()=>{
     const f=await fixture(),seed=await f.service.current();
     for(const entity of seed.entities)if(entity.id!==seed.player_state.entity_id&&
@@ -74,6 +126,35 @@ describe('bounded pre-commit agent recovery',()=>{
     expect(after.runtime.time.minute).toBe(before.runtime.time.minute+5);
     expect(after.runtime.receipts.length).toBe(before.runtime.receipts.length+1);
   });
+   it('feeds an unregistered action type to its interpreter before Core and executes the corrected action once',async()=>{
+     const f=await fixture(),before=await f.service.current();
+     const interpret=vi.spyOn(f.ai,'interpret').mockReset()
+       .mockResolvedValueOnce({type:'UNREGISTERED_MOVE',parameters:{minutes:5}} as never)
+       .mockResolvedValueOnce({type:'WAIT',parameters:{minutes:5}} as never);
+     await f.service.turn({request_id:randomUUID(),game_id:before.game_id,
+       expected_revision:before.state_revision,input:'等待五分钟'});
+     const after=await f.service.current();
+     expect(interpret).toHaveBeenCalledTimes(2);
+     expect(interpret.mock.calls[1][2]).toMatchObject({failure_code:'action_type_invalid',
+       generation_repair:{stage:'action_type',previous_output:{type:'UNREGISTERED_MOVE'},
+         issues:[{path:'type',code:'unregistered_action'}]}});
+     expect(after.state_revision).toBe(before.state_revision+1);
+     expect(after.runtime.time.minute).toBe(before.runtime.time.minute+5);
+     expect(after.runtime.receipts.length).toBe(before.runtime.receipts.length+1);
+   });
+   it('returns a misclassified physical action for correction without executing its wrong Core action',async()=>{
+     const f=await fixture(),before=await f.service.current();
+     const interpret=vi.spyOn(f.ai,'interpret').mockReset()
+       .mockResolvedValue({type:'WAIT',parameters:{minutes:5}} as never);
+     await expect(f.service.turn({request_id:randomUUID(),game_id:before.game_id,
+       expected_revision:before.state_revision,input:'我试着攻击林舟'})).rejects.toThrow('行动参数未能通过校验');
+     const after=await f.service.current();
+     expect(interpret).toHaveBeenCalledTimes(2);
+     expect(interpret.mock.calls[1][2]).toMatchObject({failure_code:'action_family_mismatch',
+       generation_repair:{stage:'action_family',issues:[{path:'type',code:'physical_action_mismatch'}]}});
+     expect(after.state_revision).toBe(before.state_revision);
+     expect(after.runtime.receipts).toEqual(before.runtime.receipts);
+   });
   it('stops repeated invalid action parameters without committing',async()=>{
     const f=await fixture(),before=await f.service.current();
     const interpret=vi.spyOn(f.ai,'interpret').mockReset()

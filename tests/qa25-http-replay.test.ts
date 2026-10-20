@@ -181,7 +181,10 @@ describe('QA25 real-shape HTTP -> semantic -> contract -> scene -> Core -> durab
         expect(result.data.presentation).toBe('failure');expect(result.data.message).toContain('交流');
         if(mode!=='invalid_speaker')expect(f.scenes()).toBe(1);
         expect(after.narrative_history?.filter(h=>h.speech_events?.some(e=>e.speaker_id==='absent_ghost'))??[]).toHaveLength(0);
-      }else expect(result.data.message).toContain(bindingBlocked?'目标对象尚未唯一确认':mode==='absent_listener'?'不在当前地点':'没有持有');
+      }else if(bindingBlocked){
+        expect(result.data.outcome).toMatchObject({type:'engine_failure',code:'schema_failure',stage:'plan_admission'});
+        expect(f.stages.filter(stage=>stage==='planner')).toHaveLength(2);
+      }else expect(result.data.message).toContain(mode==='absent_listener'?'不在当前地点':'没有持有');
       if(bindingBlocked){expect(f.scenes()).toBe(0);if(mode!=='semantic_id_mismatch')expect(result.data.plan.goals[0].contract.completion).not.toHaveProperty('audience_ids');}
     }else{
       expect(result.data.outcome.type,JSON.stringify(result.data)).toBe('game');expect(result.data.plan.status).toBe(mode==='independent_reading'?'waiting_for_player':'completed');

@@ -9,6 +9,7 @@ import type {Server} from 'node:http';
 import {AIRuntime} from '../src/ai/runtime.js';
 import {CandidateValidationError,ProviderError,generationBudget,generationRepair,takeGeneration} from '../src/ai/failures.js';
 import {decideNpc,settleAutonomousNpcTurn} from '../src/agent/npc-agent.js';
+import {emptyNpcAgentState} from '../src/agent/npc-state.js';
 import {exploreLocation} from '../src/agent/location-exploration.js';
 import {settleRoutine} from '../src/server/routine-controller.js';
 import {routineResultSchema} from '../src/ai/routine.js';
@@ -35,6 +36,22 @@ it.each(['schema','semantic'])('NPC %s failure feeds the candidate and exact con
  const save=newSave(demo),before=structuredClone(save);
  expect((await decideNpc(f.service,save,'npc_lin',{kind:'world_event',description:'正常生活'})).kind).toBe('no_action');
  expect(f.requests).toHaveLength(2);expect(save).toEqual(before);expect(f.requests.every(r=>r.signal)).toBe(true);
+});
+it('repairs an NPC decision that passes its schema but exceeds cognition admission capacity',async()=>{
+ const save=newSave(demo);
+ save.npc_agent_state??={};
+ save.npc_agent_state.npc_lin={...emptyNpcAgentState(),goals:Array.from({length:24},(_,i)=>({
+  id:`existing_${i}`,description:`既有目标 ${i}`,horizon:'short' as const,status:'active' as const,origin:'existing',priority:5,
+ }))};
+ const before=structuredClone(save),bad={...quiet(),goal_proposals:[{id:'extra',description:'再增加一个目标',horizon:'short',priority:5}]};
+ const f=runtime((request,index)=>{if(index===1)return bad;
+  expect(request.prompt).toContain('previous_output');expect(request.prompt).toContain('extra');
+  expect(request.prompt).toContain('goal_proposals');expect(request.prompt).toContain('capacity');
+  return {...quiet(),goal_updates:[{goal_id:'existing_0',status:'completed'}],goal_proposals:bad.goal_proposals};
+ });
+ const decision=await decideNpc(f.service,save,'npc_lin',{kind:'world_event',description:'继续自己的安排'});
+ expect(decision.goal_updates).toEqual([{goal_id:'existing_0',status:'completed'}]);
+ expect(f.requests).toHaveLength(2);expect(save).toEqual(before);
 });
 it.each(['accept','decline','conditional'])('repairs a missing invitation decision without prescribing NPC consent: %s',async response=>{
  const f=runtime((_r,index)=>index===1?quiet():{...quiet(),social_response:response});
@@ -66,6 +83,15 @@ const none=()=>({decision:'none',location_id:null,proposal:null,method:'none',re
 it('repairs a malformed location candidate locally in its owner, accepts a legitimate none result, creates nothing',async()=>{
  const f=runtime((r,index)=>{if(index===1)return {...none(),decision:'wrong'};expect(r.prompt).toContain('generation_repair');expect(r.prompt).toContain('decision');expect(r.prompt).toContain('wrong');return none();});
  const save=newSave(demo),before=structuredClone(save);expect((await exploreLocation(f.service,save,'附近的普通阅览室',randomUUID())).kind).toBe('none');
+ expect(f.requests).toHaveLength(2);expect(save).toEqual(before);
+});
+it('returns a nonexistent location match to its proposer with the failed ID and preserves the world',async()=>{
+ const bad={...none(),decision:'known',location_id:'invented_map_id',method:'public_map'};
+ const f=runtime((request,index)=>{if(index===1)return bad;
+  expect(request.prompt).toContain('previous_output');expect(request.prompt).toContain('invented_map_id');
+  expect(request.prompt).toContain('unknown_location');return none();});
+ const save=newSave(demo),before=structuredClone(save);
+ expect((await exploreLocation(f.service,save,'已有的公共场所',randomUUID())).kind).toBe('none');
  expect(f.requests).toHaveLength(2);expect(save).toEqual(before);
 });
 it('repairs the reviewer output rather than rerunning the location proposal, and respects a negative review',async()=>{

@@ -35,6 +35,7 @@ export interface ModuleStatus {
 export interface ActionInput { type: string; target_id?: string; parameters?: Record<string, unknown> }
 export interface ContextActionSuggestion { target_id: string; label: string; intent: string; family?: 'communicate'|'observe'|'approach'|'interact'|'help'|'use_item'|'follow'|'steal'|'intercept'|'attack'; category?: string|null }
 export interface Narrative { narrative: string; speaker: string | null; dialogue: string | null;
+  presentation?:{status:'normal'|'degraded';reasons:string[]};
   scene_beats?:({kind:'narration';text:string}|{kind:'speech';speaker_id:string;utterance:string})[];
   choices: string[]; choice_offers?:import('../core/schema.js').ChoiceOffer[]; context_actions?: ContextActionSuggestion[] }
 export interface MapPosition { x: number; y: number }

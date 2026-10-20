@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {CandidateValidationError,generationRepair,generationBudget,takeGeneration,type GenerationBudget,type GenerationRepair} from '../ai/failures.js';
+import {CandidateValidationError,generationRepair,generationBudget,takeGeneration,schemaIssues,type GenerationBudget,type GenerationRepair} from '../ai/failures.js';
 import {createHash} from 'node:crypto';
 import type {SavePackage} from '../core/schema.js';
 import {GameError,actionSchema} from '../core/schema.js';
@@ -16,6 +16,7 @@ import {npcExperienceContext} from './npc-experience.js';
 import {currentMap,routePath} from '../core/map.js';
 import {recentSettledActions} from '../ai/action-context.js';
 import type {ActionContext} from '../core/registry.js';
+import {establishTransient,physicalStateSummary,readPhysicalState,visionBlocked,visualClaimIssues} from '../core/perception-state.js';
 
 const ref=z.string().min(1).max(120);
 export const npcDecisionSchema=z.strictObject({
@@ -41,6 +42,15 @@ export const npcDecisionSchema=z.strictObject({
   })).max(3).default([]),
   decision_summary:z.string().min(1).max(500),
   social_response:z.enum(['accept','decline','conditional']).nullable().default(null),
+  /** The NPC's own bodily change. This — not Narrator prose — is the authoritative
+   * source for posture and sight, so the next turn's adjudication can read it. */
+  self_state:z.strictObject({
+    posture:z.enum(['standing','sitting','lying','kneeling']).nullish(),
+    eyes:z.enum(['open','closed']).nullish(),
+    statement:z.string().min(1).max(200),
+    duration_minutes:z.number().int().min(1).max(240).nullish(),
+    release_condition:z.string().min(1).max(200).nullish(),
+  }).nullish(),
 });
 export type NpcDecision=z.infer<typeof npcDecisionSchema>;
 export const MAX_NPC_AGENT_CALLS_PER_TURN=8;
@@ -49,7 +59,10 @@ const own=(save:SavePackage,npcId:string)=>save.npc_agent_state?.[npcId]??emptyN
 const locationOf=(entity:SavePackage['entities'][number])=>String(entity.components.location?.location_id??'');
 
 /** Deliberate allowlist: no gm_state, other NPC cognition, or whole-save spread crosses this boundary. */
-export function buildNpcAgentContext(save:SavePackage,npcId:string,event:{kind:string;description:string;candidate_ids?:string[];public_speech?:string|null}){
+export type NpcAgentEvent={kind:string;description:string;candidate_ids?:string[];public_speech?:string|null;
+  /** Recorded at settlement: this NPC had no sight of the event being reacted to. */
+  sight_blocked?:boolean};
+export function buildNpcAgentContext(save:SavePackage,npcId:string,event:NpcAgentEvent){
   const npc=save.entities.find(entity=>entity.id===npcId&&entity.components.character);
   if(!npc||npcId===save.player_state.entity_id)throw new Error('NPC context requires an existing non-player character');
   const state=own(save,npcId),locationId=locationOf(npc);
@@ -88,8 +101,21 @@ export function buildNpcAgentContext(save:SavePackage,npcId:string,event:{kind:s
       known_contact_ids:[...new Set([...state.memories.flatMap(memory=>memory.participant_ids),
         ...Object.keys(npc.components.relationships?.entries??{})])].filter(id=>id!==npcId).slice(0,40),
       event:{kind:event.kind,description:event.description,public_speech:event.public_speech??null,
-        candidate_ids:(event.candidate_ids??[]).filter(id=>visible.some(entity=>entity.id===id))}},
-    own_body:{condition:npc.components.condition??null,physical_state:npc.components.physical_state??null},
+        candidate_ids:(event.candidate_ids??[]).filter(id=>visible.some(entity=>entity.id===id)),
+        sight_blocked:Boolean(event.sight_blocked),
+        ...(event.sight_blocked?{perception_limit:
+          '本人在该事件发生时没有视觉信息，只能依靠触觉、听觉与此前已知的情况。不得声称看见、看清或目睹了动作过程。'}:{})}},
+    own_body:{condition:npc.components.condition??null,physical_state:npc.components.physical_state??null,
+      ...(physicalStateSummary(npc)?{physical_state_summary:physicalStateSummary(npc)}:{}),
+      sight_blocked:visionBlocked(npc).blocked,
+      // A transient this NPC itself established with a release condition is the NPC's own
+      // promise. Only its owner can judge that the condition occurred, so the condition is
+      // surfaced as data and the decision stays with the character (REV427/428).
+      pending_release_conditions:readPhysicalState(npc).transients
+        .filter(item=>item.release_condition).map(item=>({kind:item.kind,value:item.value,
+          statement:item.statement,release_condition:item.release_condition})).slice(0,6),
+      self_state_instruction:'若本次决定改变了自己的姿态或是否闭眼，必须填写 self_state；只写在台词里不会被世界记录。'+
+        '若 pending_release_conditions 中的条件此刻已经发生，就在 self_state 里写出恢复后的姿态或睁眼，否则该状态会继续有效。'},
     own_possessions:save.entities.filter(entity=>Number((npc.components.inventory?.items as Record<string,number>|undefined)?.[entity.id]??0)>0)
       .map(entity=>({id:entity.id,name:entity.components.identity?.name??null,condition:entity.components.item?.condition??'intact'})).slice(0,30),
     knowledge:state.knowledge.slice(-40),beliefs:state.beliefs.slice(-40),memories,
@@ -98,6 +124,13 @@ export function buildNpcAgentContext(save:SavePackage,npcId:string,event:{kind:s
     witnessed_relevant_exchanges:selected.witnessed_exchanges,
     active_goals:state.goals.filter(goal=>goal.status==='active').slice(0,12),
     active_plans:state.plans.filter(plan=>plan.status==='active').slice(0,12),
+    plan_recovery:state.plans.filter(plan=>plan.status==='active'&&plan.execution&&
+      ['core_rejected','route_unavailable','listener_not_present'].includes(plan.execution.blocked_reason??''))
+      .slice(0,2).map(plan=>({plan_id:plan.id,goal_id:plan.goal_id,intention:plan.intention,
+        failed_step:plan.execution!.steps[plan.execution!.cursor]??null,cursor:plan.execution!.cursor,
+        last_receipt_id:plan.execution!.last_receipt_id??null,blocked_reason:plan.execution!.blocked_reason,
+        diagnostic:plan.execution!.failure_diagnostic??null,
+        instruction:'原计划已完成的步骤有权威凭据，不得重做；若当前世界允许修正，明确放弃旧计划并用新 ID 提出可执行替代步骤。'})),
     objective_ids:{goals:state.goals.map(goal=>goal.id),plans:state.plans.map(plan=>plan.id)},
     private_facts:state.private_facts.slice(-20),
     relationships:npc.components.relationships?.entries??{},
@@ -192,6 +225,20 @@ function validateDecision(context:ReturnType<typeof buildNpcAgentContext>,decisi
     decision.kind==='proposed_action'&&!decision.proposed_action||decision.kind!=='vote'&&decision.vote_target)
     throw new NpcContractError('kind','NPC decision kind and payload disagree');
   if(decision.kind==='no_action'&&(decision.speech||decision.proposed_action))throw new NpcContractError('proposed_action','No-action decision has an action');
+  // NPC speech is written *into* canonical_facts, so a perception claim in it becomes
+  // authoritative world fact without passing the narrative firewall. REV435 minted
+  // "刚才那一记，我看得很清楚" from an NPC who had no sight at settlement. Rejecting here
+  // lets decideNpc's repair loop ask the model to correct itself instead of losing the reaction.
+  if(decision.speech){
+    const opening=decision.self_state?.eyes==='open';
+    const blind=context.scene.event.sight_blocked
+      ?{blocked:true,reason:'结算时本人没有视觉信息',transient:null}
+      :!opening&&context.own_body.sight_blocked
+        ?{blocked:true,reason:'本人当前没有视觉信息',transient:null}:null;
+    const issues=blind?visualClaimIssues(decision.speech,blind):[];
+    if(issues.length)throw new NpcContractError('speech',
+      `NPC_PERCEPTION_UNGROUNDED: ${blind!.reason}，不能声称「${issues.map(item=>item.match).join('、')}」`);
+  }
   const query=decision.proposed_action?.environment_query;
   if(query){
     if(decision.kind!=='proposed_action'||decision.proposed_action?.type!=='INSPECT'||decision.proposed_action.target_id||
@@ -203,7 +250,7 @@ function validateDecision(context:ReturnType<typeof buildNpcAgentContext>,decisi
   }
 }
 
-export async function decideNpc(service:GameService,save:SavePackage,npcId:string,event:{kind:string;description:string;candidate_ids?:string[];public_speech?:string|null},budget:GenerationBudget=generationBudget(),signal?:AbortSignal){
+export async function decideNpc(service:GameService,save:SavePackage,npcId:string,event:NpcAgentEvent,budget:GenerationBudget=generationBudget(),signal?:AbortSignal){
   const context=buildNpcAgentContext(save,npcId,event);let repair:GenerationRepair|null=null;
   for(let attempt=0;attempt<2;attempt++){
     const callSignal=takeGeneration(budget,signal);let decision:NpcDecision|undefined;
@@ -215,6 +262,9 @@ export async function decideNpc(service:GameService,save:SavePackage,npcId:strin
       if(!checked.success)throw new CandidateValidationError('npc_decision',checked.error.issues.map(i=>({path:i.path.join('.'),code:i.code,expected:'NPC decision schema',message:i.message})),decision);
       decision=checked.data;
       validateDecision(context,decision);
+       // Admission belongs to this uncommitted candidate. Feed capacity and
+       // resulting-state failures back to the NPC decision that produced them.
+       stageNpcDecision(save,npcId,'candidate-preflight',decision,false,event.kind==='physical_event');
       observe('info','npc_agent.decision_validated',{module:'agent',revision:save.state_revision,metadata:{npc_id:npcId,kind:decision.kind,evidence_refs:decision.evidence_refs,attempt:attempt+1}});
       return decision;
     }catch(cause){
@@ -248,7 +298,7 @@ function boundedObjectives<T extends {status:'active'|'completed'|'abandoned'}>(
   return result;
 }
 /** Called only inside an authoritative agentTransaction after a validated decision. */
-export function applyNpcDecision(save:SavePackage,npcId:string,eventRef:string,decision:NpcDecision){
+export function applyNpcDecision(save:SavePackage,npcId:string,eventRef:string,decision:NpcDecision,recordObservations=true){
   const state=own(save,npcId),at=structuredClone(save.runtime.time);
   state.last_decisions=bounded([...state.last_decisions,{event_ref:eventRef,kind:decision.kind,
     summary:decision.decision_summary,speech:decision.speech,target_id:decision.vote_target??decision.proposed_action?.target_id??null,
@@ -257,15 +307,15 @@ export function applyNpcDecision(save:SavePackage,npcId:string,eventRef:string,d
     participant_ids:[npcId],at,importance:2}]);
   for(const update of decision.belief_updates){
     state.beliefs=bounded([...state.beliefs.filter(item=>item.id!==update.id),{...update,updated_at:at}],80);
-    observe('debug','npc_agent.belief_updated',{module:'agent',revision:save.state_revision+1,metadata:{npc_id:npcId,belief_id:update.id}});
+    if(recordObservations)observe('debug','npc_agent.belief_updated',{module:'agent',revision:save.state_revision+1,metadata:{npc_id:npcId,belief_id:update.id}});
   }
   for(const update of decision.goal_updates){
     state.goals=state.goals.map(goal=>goal.id===update.goal_id?{...goal,status:update.status}:goal);
-    observe('debug','npc_agent.goal_updated',{module:'agent',revision:save.state_revision+1,metadata:{npc_id:npcId,goal_id:update.goal_id,status:update.status}});
+    if(recordObservations)observe('debug','npc_agent.goal_updated',{module:'agent',revision:save.state_revision+1,metadata:{npc_id:npcId,goal_id:update.goal_id,status:update.status}});
   }
   for(const goal of decision.goal_proposals){
     state.goals=boundedObjectives([...state.goals,{...goal,status:'active' as const,origin:eventRef}],24);
-    observe('debug','npc_agent.goal_updated',{module:'agent',revision:save.state_revision+1,metadata:{npc_id:npcId,goal_id:goal.id,status:'active'}});
+    if(recordObservations)observe('debug','npc_agent.goal_updated',{module:'agent',revision:save.state_revision+1,metadata:{npc_id:npcId,goal_id:goal.id,status:'active'}});
   }
   state.plans=state.plans.filter(plan=>state.goals.some(goal=>goal.id===plan.goal_id));
   for(const update of decision.plan_updates??[]){const plan=state.plans.find(plan=>plan.id===update.plan_id);if(plan)plan.status=update.status;}
@@ -274,7 +324,98 @@ export function applyNpcDecision(save:SavePackage,npcId:string,eventRef:string,d
     {...plan,status:'active' as const,...(steps?{execution:{steps,cursor:0,not_before:not_before??null,condition:condition??null,last_accounted_at:at,
       time_credit_minutes:0,last_request_id:null,blocked_reason:null}}:{})}],24);
   save.npc_agent_state??={};save.npc_agent_state[npcId]=state;
-  observe('debug','npc_agent.memory_updated',{module:'agent',revision:save.state_revision+1,metadata:{npc_id:npcId,event_ref:eventRef}});
+  applySelfState(save,npcId,eventRef,decision);
+  if(recordObservations)observe('debug','npc_agent.memory_updated',{module:'agent',revision:save.state_revision+1,metadata:{npc_id:npcId,event_ref:eventRef}});
+}
+
+/** Commit an NPC's declared bodily change as a provenance-carrying transient.
+ * REV427/428 and REV434/435 lost exactly this step: the change existed only in
+ * prose, so adjudication and the NPC's own later reaction never saw it. */
+export function applySelfState(save:SavePackage,npcId:string,eventRef:string,decision:NpcDecision){
+  const self=decision.self_state;if(!self)return [] as string[];
+  const established:string[]=[];
+  for(const [kind,value] of [['posture',self.posture],['eyes',self.eyes]] as const){
+    if(!value)continue;
+    const record=establishTransient(save,npcId,{kind,value,statement:self.statement,
+      source:'npc_decision',source_ref:eventRef,
+      duration_minutes:self.duration_minutes??null,release_condition:self.release_condition??null});
+    if(record)established.push(`${kind}=${value}`);
+  }
+  if(established.length)observe('info','npc_agent.self_state_committed',{module:'agent',revision:save.state_revision+1,
+    metadata:{npc_id:npcId,event_ref:eventRef,changes:established,
+      release_condition:self.release_condition??null,duration_minutes:self.duration_minutes??null}});
+  return established;
+}
+
+/** A physical reaction may continue an existing departure, but may not silently
+ * replace an owned executable plan or reset its earned time/cursor. This runs
+ * both in candidate admission and in the actual isolated reaction state. */
+function admitPhysicalDeparture(save:SavePackage,npcId:string,eventRef:string,decision:NpcDecision){
+  const move=decision.proposed_action;
+  if(move?.type!=='MOVE'||!move.target_id)return;
+  const context=buildNpcAgentContext(save,npcId,{kind:'physical_event',description:'核对离场计划'});
+  if(!context.scene.reachable_locations.some(place=>place.id===move.target_id))
+    throw new NpcContractError('proposed_action.target_id','NPC departure requires a currently reachable canonical destination');
+  const state=own(save,npcId),actor=save.entities.find(e=>e.id===npcId)!;
+  const active=state.plans.filter(plan=>plan.status==='active'&&(plan.activity||plan.execution));
+  if(active.length){
+    const now=save.runtime.time.day*context.minutes_per_day+save.runtime.time.minute;
+    const sameRoute=(plan:typeof active[number])=>{
+      const execution=plan.execution;
+      const scheduled=execution?.not_before;
+      const ready=!scheduled||scheduled.day*context.minutes_per_day+scheduled.minute<=now;
+      return plan.activity?
+        plan.activity.origin_location_id===locationOf(actor)&&plan.activity.destination_id===move.target_id&&!plan.activity.condition:
+        Boolean(execution&&!execution.condition&&ready&&execution.steps[execution.cursor]?.type==='MOVE'&&
+          execution.steps[execution.cursor]?.target_id===move.target_id);
+    };
+    const compatible=active.filter(sameRoute);
+    if(compatible.length){
+      // applyNpcDecision may have materialized a second plan before this
+      // boundary is checked. Preserve the oldest compatible plan (including
+      // its cursor and earned time credit) and discard only duplicate plans
+      // created by this reaction candidate; a different route remains a real
+      // NPC conflict and is sent back through the repair loop.
+      const keep=compatible.find(plan=>!plan.id.startsWith(`${eventRef}:`))??compatible[0];
+      const removed=compatible.filter(plan=>plan.id!==keep.id);
+      if(removed.length){
+        const removedGoals=new Set(removed.map(plan=>plan.goal_id));
+        state.plans=state.plans.filter(plan=>!removed.some(item=>item.id===plan.id));
+        state.goals=state.goals.filter(goal=>!removedGoals.has(goal.id)||goal.id===keep.goal_id);
+      }
+      if(active.filter(plan=>plan.status==='active'&&(plan.activity||plan.execution)).length===1)return;
+    }
+    throw new NpcContractError('proposed_action.target_id',
+      'NPC departure conflicts with its existing executable plan; explicitly end a superseded plan or preserve it without a competing immediate action');
+  }
+  const planId=`${eventRef}:${npcId}`,at=structuredClone(save.runtime.time);
+  state.goals=boundedObjectives([...state.goals,{id:planId,description:decision.intent,horizon:'short',
+    status:'active',origin:eventRef.replace(/^reaction:/,'physical:'),priority:10}],24);
+  state.plans=boundedObjectives([...state.plans,{id:planId,goal_id:planId,intention:decision.intent,status:'active',
+    activity:{kind:'move',origin_location_id:locationOf(actor),destination_id:move.target_id,
+      source_request_id:eventRef.replace(/^reaction:/,''),condition:null,last_accounted_at:at,time_credit_minutes:0}}],24);
+  save.npc_agent_state![npcId]=state;
+}
+
+function stageNpcDecision(save:SavePackage,npcId:string,eventRef:string,decision:NpcDecision,recordObservations:boolean,physicalReaction=false){
+  // Admission must leave no trace. The decided entity is isolated as well as its
+  // cognition, so a rejected candidate cannot write its posture/sight into the world.
+  const staged={...save,entities:save.entities.map(entity=>entity.id===npcId?structuredClone(entity):entity),
+    npc_agent_state:{...save.npc_agent_state,[npcId]:structuredClone(own(save,npcId))}};
+  try{
+    applyNpcDecision(staged,npcId,eventRef,decision,recordObservations);
+    if(physicalReaction)admitPhysicalDeparture(staged,npcId,eventRef,decision);
+    const state=npcAgentStateSchema.parse(staged.npc_agent_state[npcId]);
+    if(new Set(state.goals.map(g=>g.id)).size!==state.goals.length||new Set(state.plans.map(p=>p.id)).size!==state.plans.length||
+      state.plans.filter(p=>p.status==='active'&&(p.activity||p.execution)).length>1)
+      throw new NpcContractError('plan_proposals','NPC objective state is inconsistent');
+    return state;
+  }catch(cause){
+    if(cause instanceof z.ZodError)throw new CandidateValidationError('npc_cognition_admission',schemaIssues(cause),decision);
+    if(cause instanceof Error&&cause.message==='NPC active objective capacity reached')
+      throw new NpcContractError('goal_proposals','NPC active objective capacity reached; end an existing objective before proposing another');
+    throw cause;
+  }
 }
 
 /** Speech is evidence that words were spoken, never automatic proof of the proposition they contain. */
@@ -291,14 +432,15 @@ export function recordSceneObservation(save:SavePackage,requestId:string,
     if(!npc)continue;
     const state=own(save,npcId),participants=[...new Set(speechEvents.map(event=>event.speaker_id))];
     if(state.memories.some(memory=>memory.event_ref===eventRef))continue;
-    const heard=speechEvents.filter(event=>event.speaker_id!==npcId);
-    const excerpt=heard.at(-1);
-    const ownWords=speechEvents.filter(event=>event.speaker_id===npcId).map(event=>event.utterance).join('；');
-    // Retain the NPC's expressed view after the short narrative window expires.
-    // This is evidence of speech, not proof that its proposition is true, and
-    // never creates a relationship or rewrites private facts from an utterance.
-    const summary=[excerpt?`听到 ${excerpt.speaker_id} 说：“${excerpt.utterance.slice(0,220)}”`:null,
-      ownWords?`自己曾说：“${ownWords.slice(0,220)}”`:null].filter(Boolean).join('；')||'参与了当前对话';
+    // Keep every turn in order: a final question must not erase the answer
+    // preceding it. Excerpts remain speech evidence, never believed world facts.
+    const events=speechEvents.slice(0,12),prefix='现场原话摘录（…表示省略，不证明内容属实）：';
+    const labels=events.map(event=>event.speaker_id===npcId?'自己':event.speaker_id.slice(0,24));
+    const overhead=prefix.length+labels.reduce((sum,label)=>sum+label.length+4,0)+events.length-1;
+    const limit=Math.max(1,Math.floor((500-overhead)/events.length));
+    const quote=(text:string)=>text.length<=limit?text:
+      text.slice(0,Math.ceil((limit-1)/2))+'…'+text.slice(-Math.floor((limit-1)/2));
+    const summary=prefix+events.map((event,index)=>labels[index]+'说：“'+quote(event.utterance)+'”').join('；');
     state.memories=boundedMemories([...state.memories,{event_ref:eventRef,kind:'heard' as const,summary,
       participant_ids:participants,at,importance:1}]);
     save.npc_agent_state??={};save.npc_agent_state[npcId]=state;
@@ -380,9 +522,18 @@ export async function settlePhysicalNpcReactions(service:GameService,input:SaveP
     const actor=save.entities.find(entity=>entity.id===id&&entity.components.character);
     if(!actor||Number(actor.components.condition?.hp??100)<=0)continue;
     try{
-      const decision=await decideNpc(service,save,id,{kind:'physical_event',
-        description:`本人${id===outcome.target_id?'遭遇':'在场目击'}了一次已结算的强制身体行动。本次原始行为：${receipt.semantic_action}。本次手段：${outcome.action_forms?.join('/')??outcome.kind}；既有控制状态不是本次新抓握成功。${receipt.canonical_facts.join(' ')}`},reactionBudget);
-      applyNpcDecision(save,id,`reaction:${requestId}`,decision);
+      // Sight is read from the receipt, not from live state: a forced physical event
+      // ends a voluntary eyes-closed state at settlement, so only sight_blocked_ids
+      // still records what was true while the action happened. validateDecision turns
+      // this into a rejection the repair loop can correct (REV435).
+      const blocked=(outcome.sight_blocked_ids??[]).includes(id);
+      const decision=await decideNpc(service,save,id,{kind:'physical_event',sight_blocked:blocked,
+        description:`本人${id===outcome.target_id?'遭遇':'在场目击'}了一次已结算的强制身体行动。${
+          blocked?'本人在该动作发生时没有视觉信息，只能凭触觉、听觉和之前已知的情况判断，没有看见动作过程。':''
+        }本次原始行为：${receipt.semantic_action}。本次手段：${outcome.action_forms?.join('/')??outcome.kind}；既有控制状态不是本次新抓握成功。${receipt.canonical_facts.join(' ')}`},reactionBudget);
+      save.npc_agent_state![id]=stageNpcDecision(save,id,`reaction:${requestId}`,decision,true,true);
+      // Only an admitted decision changes the body; staging ran on an isolated copy.
+      applySelfState(save,id,`reaction:${requestId}`,decision);
       if(decision.speech){
         const fact=`${String(actor.components.identity?.name??id)}说：“${decision.speech}”`;
         visibleFacts.push(fact);
@@ -400,16 +551,6 @@ export async function settlePhysicalNpcReactions(service:GameService,input:SaveP
         visibleFacts.push(...result.facts);
       }
       if(decision.proposed_action?.type==='MOVE'&&decision.proposed_action.target_id){
-        const destination=decision.proposed_action.target_id;
-        const reachable=buildNpcAgentContext(save,id,{kind:'physical_event',description:'核对离场路线'}).scene.reachable_locations;
-        if(!reachable.some(place=>place.id===destination))continue;
-        const state=own(save,id),planId=`reaction:${requestId}:${id}`;
-        state.goals=boundedObjectives([...state.goals,{id:planId,description:decision.intent,horizon:'short',
-          status:'active',origin:`physical:${requestId}`,priority:10}],24);
-        state.plans=boundedObjectives([...state.plans,{id:planId,goal_id:planId,intention:decision.intent,status:'active',
-          activity:{kind:'move',origin_location_id:locationOf(actor),destination_id:destination,source_request_id:requestId,
-            condition:null,last_accounted_at:structuredClone(save.runtime.time),time_credit_minutes:0}}],24);
-        save.npc_agent_state![id]=state;
         visibleFacts.push(`${String(actor.components.identity?.name??id)}决定尝试离开；尚未结算离场。`);
       }
     }catch(error){observe('warn','npc_agent.physical_reaction_unavailable',{module:'agent',request_id:requestId,
@@ -615,6 +756,7 @@ function settleExecutableNpcPlans(input:SavePackage,beforeTime:SavePackage['runt
         if(!receipt||receipt.time_cost>execution.time_credit_minutes)throw Error('NPC planned action lacks a valid bounded receipt');
         save=result.save;receipt.commit_status='committed';actions++;
         plan=own(save,npcId).plans.find(p=>p.id===original.id)!;execution=plan.execution!;
+        delete execution.failure_diagnostic;
         execution.time_credit_minutes-=receipt.time_cost;execution.cursor++;execution.last_receipt_id=receipt.request_id;
         if(step.type==='TALK')recordSceneObservation(save,actionId,[{speaker_id:npcId,utterance:step.speech!}],[step.target_id!]);
         const playerHere=save.entities.find(e=>e.id===save.player_state.entity_id)?.components.location?.location_id;
@@ -627,10 +769,14 @@ function settleExecutableNpcPlans(input:SavePackage,beforeTime:SavePackage['runt
         }
         observe('info','npc_agent.planned_action',{module:'agent',request_id:requestId,revision:save.state_revision,
           metadata:{npc_id:npcId,plan_id:plan.id,step:execution.cursor-1,action_type:step.type,receipt_id:actionId,time_cost:receipt.time_cost}});
-      }catch(error){reason='core_rejected';plan.last_failed_request_id=turnId;observe('warn','npc_agent.planned_action_rejected',{module:'agent',request_id:requestId,
+      }catch(error){reason=error instanceof GameError||error instanceof WorldBlockedError?'core_rejected':'system_error';
+        execution.failure_diagnostic=(error instanceof Error?error.message:String(error)).slice(0,240);
+        plan.last_failed_request_id=turnId;observe('warn','npc_agent.planned_action_rejected',{module:'agent',request_id:requestId,
         revision:save.state_revision,metadata:{npc_id:npcId,plan_id:plan.id,reason:error instanceof Error?error.message:String(error)}});}
     }
-    if(reason&&['core_rejected','route_unavailable','listener_not_present'].includes(reason))execution.time_credit_minutes=0;
+    if(reason&&['core_rejected','route_unavailable','listener_not_present','system_error'].includes(reason))execution.time_credit_minutes=0;
+    if(reason==='route_unavailable')execution.failure_diagnostic='当前地点到计划目的地没有符合权威地图条件的公开可达路线';
+    if(reason==='listener_not_present')execution.failure_diagnostic='计划中的交谈对象目前不在行动者所在场景';
     execution.blocked_reason=reason??(execution.cursor<execution.steps.length?'action_budget':null);
     completeNpcPlan(own(save,npcId),plan);
     observe('info','npc_agent.plan_evaluated',{module:'agent',request_id:requestId,revision:save.state_revision,
@@ -1003,13 +1149,11 @@ export async function settleAutonomousNpcTurn(service:GameService,input:SavePack
     try{
       // Only cognition is staged here. Invalid/over-capacity NPC plans must not
       // discard the player's valid action or begin a physical step first.
-      const staged={...save,npc_agent_state:{...save.npc_agent_state,[npc.id]:structuredClone(own(save,npc.id))}};
-      applyNpcDecision(staged,npc.id,`autonomy:${actionId}`,decision);
-      const state=npcAgentStateSchema.parse(staged.npc_agent_state[npc.id]);
-      if(new Set(state.goals.map(g=>g.id)).size!==state.goals.length||new Set(state.plans.map(p=>p.id)).size!==state.plans.length||
-        state.plans.filter(p=>p.status==='active'&&(p.activity||p.execution)).length>1)throw Error('NPC objective state is inconsistent');
+      const state=stageNpcDecision(save,npc.id,`autonomy:${actionId}`,decision,true);
       state.last_autonomous_at=structuredClone(save.runtime.time);delete state.autonomy_retry;
       save.npc_agent_state![npc.id]=state;
+      // Only an admitted decision changes the body; staging ran on an isolated copy.
+      applySelfState(save,npc.id,`autonomy:${actionId}`,decision);
     }catch(error){observe('warn','npc_agent.background_failed',{module:'agent',request_id:requestId,revision:save.state_revision,
       metadata:{npc_id:npc.id,stage:'cognition_admission',reason:error instanceof Error?error.message:String(error)}});
       deferFailedDecision(npc.id,'cognition_admission');continue;}

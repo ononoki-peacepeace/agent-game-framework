@@ -326,6 +326,29 @@ describe('scoped container contents',()=>{
     expect((await f.service.current()).environment_state?.surveys).toHaveLength(1);
     expect(survey).toHaveBeenCalledOnce();
   });
+   it('repairs a survey candidate rejected by Core admission before any container fact is committed',async()=>{
+     const f=await sparseSetup(),save=await f.service.current();
+     const here=save.entities.find(e=>e.id===save.player_state.entity_id)!.components.location!.location_id;
+     save.definition.map!.locations.find(l=>l.id===here)!.description='这里有一只普通木盒。';
+     const container=ensureOrdinaryItem(save,'木盒',0.4,true);
+     putItemInInventory(save,container.id);
+     const staged=executeAction(save,{type:'MOVE_ITEM',parameters:{item_id:container.id,to:'scene',container_id:null,position_label:null}},randomUUID()).save;
+     await f.store.write(staged);
+     const survey=vi.spyOn(f.ai,'surveyEnvironment').mockResolvedValueOnce({features:[],complete_empty:true} as never)
+       .mockResolvedValueOnce({features:[]} as never);
+     vi.spyOn(f.ai,'narrate').mockResolvedValue({narrative:'你查看了木盒，暂时没有可确认的内容。',speaker:null,dialogue:null,
+       choices:[],context_actions:[],patches:[],interaction:null,item_claims:[],stable_locations:[],mechanical_claims:[]});
+     const input='我仔细检查木盒里面是否为空';
+     const request={game_id:staged.game_id,expected_revision:staged.state_revision,request_id:randomUUID(),input};
+     await f.service.turn(request);
+     const after=await f.service.current();
+     expect(survey).toHaveBeenCalledTimes(2);
+     expect(survey.mock.calls[1][4]).toMatchObject({stage:'environment_survey',
+       previous_output:{complete_empty:true},issues:[{path:'empty_assessment',code:'invalid_empty_scope'}]});
+     expect(after.state_revision).toBe(staged.state_revision+1);
+     expect(after.environment_state?.surveys?.[0].complete_empty).toBeUndefined();
+     expect(after.runtime.receipts.length).toBe(staged.runtime.receipts.length+1);
+   });
 
   it('materializes an ordinary item once inside an accessible scene container, then takes that same item',()=>{
     const save=fresh(),actor=save.entities.find(e=>e.id===save.player_state.entity_id)!;

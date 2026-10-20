@@ -6,6 +6,7 @@ import {validateSave,publicView} from '../src/core/state.js';
 import {emptyNpcAgentState} from '../src/agent/npc-state.js';
 import {npcExperienceContext} from '../src/agent/npc-experience.js';
 import {sceneEnsembleContext} from '../src/agent/scene-interaction.js';
+import {recordSceneObservation,buildNpcAgentContext} from '../src/agent/npc-agent.js';
 
 async function world(){
   const f=await sparseSetup(),save=await f.service.current();
@@ -27,6 +28,50 @@ async function world(){
 }
 
 describe('NPC personal authoritative experience',()=>{
+  it('retains an answer preceding a new question after the short transcript window expires',async()=>{
+    const {save}=await world(),requestId=randomUUID();
+    const state=save.npc_agent_state!.npc_lin,before=structuredClone(state);
+    const relationships=structuredClone(save.entities.find(entity=>entity.id==='npc_lin')!.components.relationships);
+    recordSceneObservation(save,requestId,[
+      {speaker_id:save.player_state.entity_id,utterance:'拍照前我会先问你，不经允许不会公开。'},
+      {speaker_id:save.player_state.entity_id,utterance:'你想去散步吗？'},
+      {speaker_id:'npc_lin',utterance:'今天不想出去。'},
+      {speaker_id:'npc_lin',utterance:'我想安静待一会儿。'},
+    ],['npc_lin']);
+    const memory=state.memories.at(-1)!;
+    expect(memory.summary).toContain('拍照前我会先问你，不经允许不会公开。');
+    expect(memory.summary).toContain('你想去散步吗？');
+    expect(memory.summary).toContain('今天不想出去。');
+    expect(memory.summary).toContain('我想安静待一会儿。');
+    expect(memory.summary.indexOf('拍照前')).toBeLessThan(memory.summary.indexOf('散步'));
+    expect(memory.summary.length).toBeLessThanOrEqual(500);
+    expect(state.knowledge).toEqual(before.knowledge);
+    expect(state.beliefs).toEqual(before.beliefs);
+    expect(save.entities.find(entity=>entity.id==='npc_lin')!.components.relationships).toEqual(relationships);
+    expect(save.npc_agent_state!.npc_absent.memories).toEqual([]);
+    save.narrative_history=[];save.turn_history=[];
+    const reloaded=validateSave(structuredClone(save));
+    expect(JSON.stringify(buildNpcAgentContext(reloaded,'npc_lin',{kind:'direct_scene',description:'拍照前的约定'}).memories))
+      .toContain('拍照前我会先问你');
+    recordSceneObservation(save,requestId,[{speaker_id:save.player_state.entity_id,utterance:'不能覆盖的重放'}],['npc_lin']);
+    expect(state.memories.filter(entry=>entry.event_ref==='scene:'+requestId)).toHaveLength(1);
+    expect(state.memories.at(-1)).toEqual(memory);
+  });
+  it('shares bounded space across long utterances instead of deleting earlier answers or final boundaries',async()=>{
+    const {save}=await world(),events=Array.from({length:12},(_,index)=>({
+      speaker_id:index%2?'npc_lin':save.player_state.entity_id,
+      utterance:'第'+index+'句开头'+('较长的发言'.repeat(100))+'第'+index+'句结束',
+    }));
+    recordSceneObservation(save,randomUUID(),events,['npc_lin']);
+    const summary=save.npc_agent_state!.npc_lin.memories.at(-1)!.summary;
+    expect(summary.length).toBeLessThanOrEqual(500);
+    for(let index=0;index<12;index++){
+      expect(summary).toContain('第'+index+'句开头');
+      expect(summary).toContain('第'+index+'句结束');
+    }
+    expect(summary).toContain('…');
+    expect(validateSave(save)).toBeDefined();
+  });
   it('records only actual movers and retrieves their own travel without granting a resident name',async()=>{
     const {save}=await world(),actionId=randomUUID();
     const moved=executeAction(save,{type:'MOVE',target_id:'library',parameters:{}},actionId,'player',()=>0.5).save;

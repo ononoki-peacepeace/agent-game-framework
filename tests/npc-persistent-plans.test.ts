@@ -55,6 +55,25 @@ describe('continuous authoritative NPC plans',()=>{
  expect(after.npc_agent_state!.npc_lin.plans[0].execution!.blocked_reason).toBe('route_unavailable');
  expect(after.entities.find(e=>e.id==='npc_lin')!.components.location?.location_id).toBe('square');
  });
+  it('returns a blocked persistent step and receipt cursor to the next NPC decision for safe replanning',async()=>{
+  const save=newSave(demo);save.definition.events=[];addPlan(save,[move('market')]);save.definition.map!.routes=[];
+  const blocked=executeAction(save,{type:'WAIT',parameters:{minutes:40}},randomUUID()).save;
+  const old=blocked.npc_agent_state!.npc_lin.plans[0],goal=blocked.npc_agent_state!.npc_lin.goals[0];
+  let supplied:ReturnType<typeof buildNpcAgentContext>|null=null;
+  const corrected={...quiet(),plan_updates:[{plan_id:old.id,status:'abandoned' as const}],
+    plan_proposals:[{id:'replacement_at_home',goal_id:goal.id,intention:'在原地继续可执行的准备',steps:[hold(8)]}]};
+  const service={ai:{npcDecision:async(_profile:unknown,context:ReturnType<typeof buildNpcAgentContext>)=>{
+    supplied=context;return corrected;}}} as unknown as GameService;
+  const decision=await decideNpc(service,blocked,'npc_lin',{kind:'world_event',description:'原计划受阻'});
+  expect(supplied!.plan_recovery).toMatchObject([{plan_id:old.id,goal_id:goal.id,cursor:0,
+    last_receipt_id:null,blocked_reason:'route_unavailable',
+    diagnostic:expect.stringContaining('没有符合权威地图条件')}]);
+  applyNpcDecision(blocked,'npc_lin','replan-after-route-failure',decision);
+  expect(blocked.npc_agent_state!.npc_lin.plans.find(plan=>plan.id===old.id)?.status).toBe('abandoned');
+  const after=executeAction(blocked,{type:'WAIT',parameters:{minutes:8}},randomUUID()).save;
+  expect(after.npc_agent_state!.npc_lin.plans.find(plan=>plan.id==='replacement_at_home')?.status).toBe('completed');
+  expect(after.resolution_receipts!.filter(receipt=>receipt.actor_id==='npc_lin').map(receipt=>receipt.semantic_action)).toEqual(['HOLD']);
+  });
  it('lets a real NPC arrival affect an event during the WAIT rather than after its deadline',()=>{
  const save=newSave(demo),at=save.runtime.time;save.definition.events=[{id:'npc_arrives',hook:'on_location_enter',location_id:'market',actor_scope:'any',probability:1,once:true,
  set_flag:'npc_arrived',public_text:'',reveal_location_id:null,interrupt_automation:false}];addPlan(save,[move('market')]);

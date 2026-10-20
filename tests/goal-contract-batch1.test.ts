@@ -3,7 +3,7 @@ import {randomUUID} from 'node:crypto';
 import {sparseSetup} from './sparse-fixture.js';
 import {publicView} from '../src/core/state.js';
 import {createAgentPlan,validatePlan} from '../src/agent/planner.js';
-import {compileGoalContract,sameGoalShape} from '../src/agent/goal-contract.js';
+import {compileGoalContract,recoverablePlanAdmission,sameGoalShape} from '../src/agent/goal-contract.js';
 import {makeCompiledChoiceOffers,checkChoiceOffer} from '../src/core/choice-offer.js';
 import {handleAgentInput} from '../src/agent/executor.js';
 import type {GoalInput} from '../src/agent/plan-schema.js';
@@ -47,7 +47,7 @@ describe('shared multi-step goal contract, compilation only',()=>{
     expect(choice.goals[2].contract?.completion).toEqual({kind:'presence_observed',person_id:f.npcId,location_id:null});
     expect(choice.goals.map(goal=>goal.status)).toEqual(['pending','pending','pending']);
     expect(choice.goals.every(goal=>goal.contract?.evidence_refs.length===0)).toBe(true);
-    expect(choice.goals[0].target_entities).toEqual([]);
+    expect(choice.goals[0].target_entities).toEqual([f.destinationId]);
     expect(choice.goals[2].target_entities).toEqual([f.npcId]);
     expect(JSON.stringify(choice)).not.toContain('fabricated_model_id');
     expect(offer.availability_at_generation).toBe('CONDITIONALLY_EXECUTABLE');
@@ -81,6 +81,8 @@ describe('shared multi-step goal contract, compilation only',()=>{
     const contract=compileGoalContract(view,compressed,{kind:'manual',text:input});
     expect(contract.contract?.execution_availability).toBe('runtime_gap');
     expect(contract.contract?.execution_mode).toBe('staged');
+     expect(recoverablePlanAdmission(contract)).toMatchObject({code:'plan_compound_incomplete',
+       issue:{code:'missing_compound_step'}});
     vi.spyOn(f.ai,'planGoals').mockResolvedValue({goals:[step('g1','WORLD_ACTION','前往白马便利店','move','白马便利店 雾见站前店')]});
     const offered=await makeCompiledChoiceOffers(f.save,[input],[],f.ai);
     expect(offered[0].availability_at_generation).toBe('UNSUPPORTED');

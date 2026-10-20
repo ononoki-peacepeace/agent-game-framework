@@ -4,6 +4,8 @@ import {relationshipSummary} from '../shared/relationship.js';
 import {composePersonaContext} from '../characters/persona.js';
 import {ProviderError} from './failures.js';
 
+export const dialogueContinuityPolicy='按实际听到的回答承接对话，区分“对方已经回答”与“本人是否相信或接受”。已回答的问题不因缺少信任或好感数值而重新变成未答；需要追问时针对仍未回答的部分、具体矛盾或本人当下确有关系的顾虑，而非每次更换一种动机或承诺审查。职业、谨慎等只是人格的一部分，只有眼前话题与本人目的相关时才主导用语。人物可以接受、拒绝、犹豫、沉默或结束交谈，无须另设证明任务来显示独立性；这些选择不自动增加好感或改变关系。玩家长篇、正式的输入不规定 NPC 的句长、语气或答复结构。历史原话是说过什么的证据，不是当前台词模板；保持既有意愿，不照搬旧句式或逐轮自述原则。';
+export const performanceContinuityPolicy='历史旁白仅用于保持已经发生的姿态、场景和表现连续，不是本轮行文范本。静态环境与姿态没有新意义时可以不再描述；不要为每次发言重复停顿、目光、手势或等待回应的收尾，也不要仅把旧微动作换成同义动作来凑变化。若当前只有一句话或沉默有意义，可以只呈现它。新动作仍需符合人物、身体状态与当前授权；不能为制造新鲜感新增道具、人物、声音、位置或其他世界变化。';
 export const continuityGuidance='保持人物人格、记忆、关系和行为连续性。结合近期事件和当下首要目标作出反应，不使用固定情绪顺序。不强迫讲话或最低字数；沉默、逃离、僵住、拒绝均可，关键是符合人物和刚发生的事。只采用公开可观察信息；人物不能知道不在场时的私密事件。interaction 只描述交流是否持续：NPC 主动交谈可返回 active；明确结束、离开、不能交流可返回 ended，否则 null；target_id 必须是给定人物。安全边界优先，必要时概括或淡出，禁止把模型拒绝说明写作人物台词。';
 export function characterContext(save:SavePackage,targetId?:string){
   const view=publicView(save),player=view.entities.find(e=>e.id===view.player_id);
@@ -12,7 +14,7 @@ export function characterContext(save:SavePackage,targetId?:string){
     scene:{time:view.time,location:player?.components.location??null,local_position:player?.components.scene_position??null},
     conversation_focus:view.interaction_context??null,
     characters:characters.map(e=>({id:e.id,name:e.components.identity?.name,
-      allowed_persona:composePersonaContext(save,e.id,1000)?.fields??{},
+      allowed_persona:composePersonaContext(save,e.id,1000,false)?.fields??{},
       public_description:String(e.components.identity?.description??'').slice(0,500),traits:e.components.traits??null,
       observable_condition:e.components.condition??null,relationship:relationshipSummary(view,e).text,
       knowledge_boundary:'只知道自身公开资料、现场可观察事实和以下与自己直接相关的互动；其余公开记录是叙述者上下文，不等同于该人物亲历。',

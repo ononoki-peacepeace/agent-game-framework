@@ -39,6 +39,7 @@ playwright/.cache/
 blob-report/
 /qa*-test-results.json
 /qa*-final-tests.json
+/.agent-runtime/
 /docs/qa-npc-schema-deploy-path.txt
 /docs/qa-npc-world-runtime.json
 

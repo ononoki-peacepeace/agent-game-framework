@@ -201,3 +201,9 @@ it('does not turn attention into departure, while still rejecting an actual depa
  expect(()=>validateResolvedNarrative(r,narrative('林舟的视线一直没离开你。'),false)).not.toThrow();
  expect(()=>validateResolvedNarrative(r,narrative('林舟的目光离开你，随后离开了这里。'),false)).toThrow();
 });
+
+it('does not mistake local stepping for leaving the scene',()=>{
+ const s=fixture();
+ expect(()=>validateScenePresenceNarrative(s,'林舟朝你走了两步，又停下。')).not.toThrow();
+ expect(()=>validateScenePresenceNarrative(s,'林舟走了。')).toThrow('离场');
+});

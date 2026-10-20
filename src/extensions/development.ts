@@ -1,7 +1,7 @@
 import {AIRuntime} from '../ai/runtime.js';
 import {structuredInputSchema,normalizeProviderOptionals} from '../ai/provider-schema.js';
 import {randomUUID,createHash} from 'node:crypto';
-import {mkdir,readFile,writeFile,rename} from 'node:fs/promises';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
@@ -13,16 +13,26 @@ import {assert,safeParse} from '../core/schema.js';
 import {manifestFrom,specSchema,templates,type ExtensionManifest,type ExtensionSpec} from './schema.js';
 import {ExtensionHost} from './host.js';
 import {verifyReference} from './verification.js';
+import {writeAtomicJson} from '../storage/atomic-json.js';
+import {withoutInputRecovery} from '../recovery/request-context.js';
+import {withoutRequestBudget,withRequestBudget} from '../ai/request-budget.js';
+import {startTrace,runWithTrace} from '../observability/index.js';
 const run=promisify(execFile);
 const requestSchema=z.strictObject({request_id:z.string().uuid(),request:z.string().min(1).max(3000),template:z.enum(templates),allow_betting:z.boolean().default(false),use_codex:z.boolean(),extension_id:z.string().regex(/^[a-z][a-z0-9_]{0,63}$/).refine(v=>!['constructor','prototype','__proto__'].includes(v)),spec:specSchema.optional()});
-export interface DevelopmentJob {job_id:string;request_id:string;status:'queued'|'running'|'ready'|'installed'|'failed'|'cancelled';phase:string;message:string;logs:string[];manifest:ExtensionManifest|null;hash:string|null;workspace:string}
+export interface DevelopmentJob {job_id:string;request_id:string;request_fingerprint?:string;trace_id?:string;status:'queued'|'running'|'ready'|'installed'|'failed'|'cancelled';phase:string;message:string;logs:string[];manifest:ExtensionManifest|null;hash:string|null;workspace:string}
 export class ExtensionDevelopment {
- private jobs:DevelopmentJob[]=[];private controllers=new Map<string,AbortController>();private running=new Map<string,Promise<void>>();private serial:Promise<void>=Promise.resolve();readonly ready:Promise<void>;
+ private jobs:DevelopmentJob[]=[];private controllers=new Map<string,AbortController>();private running=new Map<string,Promise<void>>();private serial:Promise<void>=Promise.resolve();private starts:Promise<void>=Promise.resolve();readonly ready:Promise<void>;
  constructor(readonly host:ExtensionHost,private adapterFactory:(directory:string)=>AIAdapter=directory=>new CodexAdapter(directory)){this.ready=this.load();}
  private async load(){try{this.jobs=JSON.parse(await readFile(join(this.host.directory,'development.json'),'utf8'));for(const j of this.jobs)if(['queued','running'].includes(j.status)){j.status='cancelled';j.phase='idle';j.message='服务重启，未安装的开发任务已停止。';}}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}}
- private persist(){const payload=JSON.stringify(this.jobs.slice(-50),null,2);this.serial=this.serial.then(async()=>{await mkdir(this.host.directory,{recursive:true});const tmp=join(this.host.directory,randomUUID()+'.tmp');await writeFile(tmp,payload);await rename(tmp,join(this.host.directory,'development.json'));});return this.serial;}
+ private persist(){const snapshot=structuredClone(this.jobs.slice(-50));const write=this.serial.then(()=>writeAtomicJson(join(this.host.directory,'development.json'),snapshot));this.serial=write.catch(()=>undefined);return write;}
  async get(){await this.ready;if(!['queued','running'].includes(this.jobs.at(-1)?.status??''))await this.serial;return structuredClone(this.jobs.at(-1)??null);}
- async start(raw:unknown,options?:{workspace:string;version:string}){await this.ready;const input=safeParse(requestSchema,raw),old=this.jobs.find(j=>j.request_id===input.request_id);if(old)return structuredClone(old);assert(!this.jobs.some(j=>['queued','running'].includes(j.status)),'已有扩展开发任务');const id=randomUUID(),job:DevelopmentJob={job_id:id,request_id:input.request_id,status:'queued',phase:'requirements',message:'已确认需求，等待生成。',logs:[],manifest:null,hash:null,workspace:options?.workspace??resolve(this.host.directory,'workspaces',id)};this.jobs.push(job);const controller=new AbortController();this.controllers.set(id,controller);await this.persist();const running=this.build(job,input,controller,options?.version);this.running.set(id,running);void running.catch(error=>this.host.service.logger.error('extension.development.storage_failed',{module:'extension',metadata:{reason:String(error)}})).finally(()=>this.running.delete(id));return structuredClone(job);}
+ async start(raw:unknown,options?:{workspace:string;version:string}){
+ const operation=this.starts.then(()=>this.startJob(raw,options));this.starts=operation.then(()=>undefined,()=>undefined);return operation;
+ }
+ private async startJob(raw:unknown,options?:{workspace:string;version:string}){await this.ready;const input=safeParse(requestSchema,raw),fingerprint=createHash('sha256').update(JSON.stringify({input,workspace:options?.workspace??null,version:options?.version??null})).digest('hex'),old=this.jobs.find(j=>j.request_id===input.request_id);
+ if(old){assert(old.request_fingerprint&&old.request_fingerprint===fingerprint,'请求标识已用于不同需求，或旧记录缺少可核验的请求身份');return structuredClone(old);} assert(!this.jobs.some(j=>['queued','running'].includes(j.status)),'已有扩展开发任务');const id=randomUUID(),trace=startTrace({module:'extension',logger:this.host.service.logger,request_id:input.request_id,job_id:id}),job:DevelopmentJob={job_id:id,request_id:input.request_id,request_fingerprint:fingerprint,trace_id:trace.trace_id,status:'queued',phase:'requirements',message:'已确认需求，等待生成。',logs:[],manifest:null,hash:null,workspace:options?.workspace??resolve(this.host.directory,'workspaces',id)};this.jobs.push(job);const controller=new AbortController();this.controllers.set(id,controller);
+ try{await this.persist();}catch(error){this.jobs=this.jobs.filter(entry=>entry.job_id!==id);this.controllers.delete(id);throw error;}
+ const running=withoutInputRecovery(()=>withoutRequestBudget(()=>withRequestBudget(()=>runWithTrace(trace,()=>this.build(job,input,controller,options?.version)))));this.running.set(id,running);void running.catch(error=>this.host.service.logger.error('extension.development.storage_failed',{module:'extension',job_id:id,trace_id:trace.trace_id,metadata:{reason:String(error)}})).finally(()=>this.running.delete(id));return structuredClone(job);}
  async wait(id:string){await this.running.get(id);const job=this.jobs.find(j=>j.job_id===id);assert(job,'开发任务不存在');return structuredClone(job);}
  async cancel(id:string){const j=this.jobs.find(j=>j.job_id===id);assert(j,'开发任务不存在');this.controllers.get(id)?.abort(new Error('用户取消扩展生成'));return structuredClone(j);}
  private async build(job:DevelopmentJob,input:z.infer<typeof requestSchema>,controller:AbortController,versionOverride?:string){

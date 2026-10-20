@@ -1,5 +1,5 @@
 import {randomUUID,createHash} from 'node:crypto';
-import {mkdir,readFile,writeFile,rename} from 'node:fs/promises';
+import {readFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {z} from 'zod';
 import {assert,GameError,safeParse} from '../core/schema.js';
@@ -7,6 +7,11 @@ import {requestSchema,type GameService} from '../server/service.js';
 import {routineOf} from './scheduler.js';
 import {absoluteTime} from './calendar.js';
 import {startTrace,runWithTrace,errorText,type LogLevel,type Trace} from '../observability/index.js';
+import {withoutInputRecovery,withInputRecovery,originalRecoveryInput,committedInputReceipts,type InputRecovery} from '../recovery/request-context.js';
+import {withoutRequestBudget} from '../ai/request-budget.js';
+import {writeAtomicJson} from '../storage/atomic-json.js';
+import {ProviderError} from '../ai/failures.js';
+import {engineOutcome,gameOutcome,type FrameworkOutcome} from '../agent/outcome.js';
 const runSchema=z.strictObject({request_id:z.string().uuid(),game_id:z.string().uuid(),expected_revision:z.number().int().min(0),action:z.unknown(),max_days:z.number().int().min(1).max(7).optional()});
 
 export type RoutineJobStatus='queued'|'running'|'paused'|'interrupted'|'failed'|'completed'|'cancelled';
@@ -16,6 +21,7 @@ export interface RoutineJob {
  job_id:string;game_id:string;request_id:string;fingerprint:string;status:RoutineJobStatus;phase:RoutineJobPhase;message:string;
  created_at:string;updated_at:string;start_revision:number;last_revision:number;steps:number;last_ai:RoutineAiSummary|null;
  metrics:{ai_requests:number;compiler_calls:number;ai_wait_ms:number;local_ms:number;input_tokens:number;output_tokens:number;usage_available:boolean};
+ recovery?:InputRecovery;outcome?:FrameworkOutcome;
 }
 const active=(j:RoutineJob)=>j.status==='queued'||j.status==='running';
 const phaseMessage:Record<RoutineJobPhase,string>=({
@@ -31,8 +37,19 @@ const phaseMessage:Record<RoutineJobPhase,string>=({
 export class RoutineJobs {
  private completions=new Map<string,Promise<void>>();private jobs:RoutineJob[]=[];private controllers=new Map<string,AbortController>();private serial:Promise<void>=Promise.resolve();readonly ready:Promise<void>;
  constructor(readonly service:GameService,private directory?:string,private handoffTimeoutMs=120000){this.ready=this.recover();}
- private async recover(){if(!this.directory)return;try{const parsed=JSON.parse(await readFile(join(this.directory,'routine-jobs.json'),'utf8'));assert(Array.isArray(parsed),'后台任务日志格式无效');this.jobs=parsed;for(const j of this.jobs)if(active(j)){j.status='cancelled';j.phase='idle';j.message='服务已重启；已保存结果保留，未完成段未重放。可继续原计划。';}await this.persist();}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}}
- private persist(){if(!this.directory)return Promise.resolve();const text=JSON.stringify(this.jobs.slice(-100),null,2),dir=this.directory;this.serial=this.serial.then(async()=>{await mkdir(dir,{recursive:true});const path=join(dir,'routine-jobs.json'),tmp=path+'.'+randomUUID()+'.tmp';await writeFile(tmp,text);await rename(tmp,path);});return this.serial;}
+ private async recover(){if(!this.directory)return;try{const parsed=JSON.parse(await readFile(join(this.directory,'routine-jobs.json'),'utf8'));assert(Array.isArray(parsed),'后台任务日志格式无效');this.jobs=parsed;
+ const save=await this.service.storage.read('current','request_recovery').catch(()=>null);
+ for(const j of this.jobs)if(active(j)){j.status='cancelled';j.phase='idle';j.message='服务已重启；已保存结果保留，未完成段未重放。可继续原计划。';
+   const sameWorld=save?.game_id===j.game_id,receipts=sameWorld?committedInputReceipts(save,j.recovery):[];
+   if(sameWorld)j.last_revision=save.state_revision;
+   j.outcome=engineOutcome('state_failure','routine_restart',sameWorld?save.state_revision:null,false,
+     receipts.length?['已提交生活片段']:[],receipts);
+ }await this.persist();}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}}
+ private persist(){if(!this.directory)return Promise.resolve();const snapshot=structuredClone(this.jobs.slice(-100)),dir=this.directory;
+ const write=this.serial.then(()=>writeAtomicJson(join(dir,'routine-jobs.json'),snapshot));
+ // A failed flush stops its caller. It must not permanently poison the queue:
+ // final safe-stop records still need a chance to persist after storage recovers.
+ this.serial=write.catch(()=>undefined);return write;}
  async get(id?:string){await this.ready;const job=id?this.jobs.find(j=>j.job_id===id):this.jobs.at(-1);if(id&&!job)throw new GameError('后台任务不存在',404);if(job&&!active(job))await this.completions.get(job.job_id);return job?structuredClone(job):null;}
  async start(raw:unknown){await this.ready;const input=safeParse(runSchema,raw);const req=safeParse(requestSchema,{request_id:input.request_id,game_id:input.game_id,expected_revision:input.expected_revision,action:input.action});
  const action=req.action as {type?:string};assert(['START_ROUTINE','CONTINUE_ROUTINE'].includes(action?.type??''),'仅支持启用或继续生活模式');
@@ -42,10 +59,13 @@ export class RoutineJobs {
  try{const save=await this.service.current();if(save.game_id!==req.game_id||save.state_revision!==req.expected_revision)throw new GameError('状态已更新，请刷新后重试',409);
  const job:RoutineJob={job_id:jobId,game_id:save.game_id,request_id:req.request_id,fingerprint,status:'queued',phase:'queued',message:phaseMessage.queued,created_at:new Date().toISOString(),updated_at:new Date().toISOString(),start_revision:save.state_revision,last_revision:save.state_revision,steps:0,last_ai:null,metrics:{ai_requests:0,compiler_calls:0,ai_wait_ms:0,local_ms:0,input_tokens:0,output_tokens:0,usage_available:false}};
  const trace=startTrace({module:'routine.job',logger:this.service.logger,job_id:jobId,request_id:req.request_id,game_id:save.game_id,revision:save.state_revision});
- this.jobs.push(job);const controller=new AbortController();this.controllers.set(jobId,controller);await this.persist();this.completions.set(jobId,new Promise<void>(resolve=>setImmediate(()=>{void this.run(job,req,input.max_days??1,controller,trace).catch(error=>console.error("Routine job persistence failed",errorText(error))).finally(()=>{this.completions.delete(jobId);resolve();});})));return structuredClone(job);
- }catch(e){this.service.routineLease=null;throw e;}}
+ job.recovery={original_player_input:originalRecoveryInput()??String((input.action as {parameters?:{pattern?:string}})?.parameters?.pattern??action.type),
+   trace_id:trace.trace_id,transactions:[]};
+ this.jobs.push(job);const controller=new AbortController();this.controllers.set(jobId,controller);await this.persist();this.completions.set(jobId,new Promise<void>(resolve=>setImmediate(()=>{void withoutInputRecovery(()=>withoutRequestBudget(()=>this.run(job,req,input.max_days??1,controller,trace))).catch(error=>console.error("Routine job persistence failed",errorText(error))).finally(()=>{this.completions.delete(jobId);resolve();});})));return structuredClone(job);
+ }catch(e){this.controllers.delete(jobId);this.jobs=this.jobs.filter(job=>job.job_id!==jobId);this.service.routineLease=null;throw e;}}
  async cancel(id:string){await this.ready;const job=this.jobs.find(j=>j.job_id===id);assert(job,'后台任务不存在');if(active(job)){job.message='已请求安全暂停，将在当前安全结算点停止。';this.controllers.get(id)?.abort(new Error('USER_CANCELLED'));await this.persist();}return structuredClone(job);}
- private async run(job:RoutineJob,req:{request_id:string;game_id:string;expected_revision:number;action?:unknown;input?:string},days:number,controller:AbortController,trace:Trace){return runWithTrace(trace,async()=>{const metrics={...this.service.ai.metrics},begin=performance.now();const signal=controller.signal;
+ private async run(job:RoutineJob,req:{request_id:string;game_id:string;expected_revision:number;action?:unknown;input?:string},days:number,controller:AbortController,trace:Trace){return runWithTrace(trace,()=>withInputRecovery({game_id:job.game_id,recovery:job.recovery!,persist:()=>this.persist()},async()=>{const metrics={...this.service.ai.metrics},begin=performance.now();const signal=controller.signal;
+ let failureCode:Extract<FrameworkOutcome,{type:'engine_failure'}>['code']='unexpected_internal_failure';
  trace.info('routine.job.started',{metadata:{game_id:job.game_id,start_revision:job.start_revision,days}});
  const sync=()=>{const now=this.service.ai.metrics;job.metrics={ai_requests:now.requests-metrics.requests,compiler_calls:now.compiler_calls-metrics.compiler_calls,ai_wait_ms:Math.round(now.ai_wait_ms-metrics.ai_wait_ms),local_ms:Math.max(0,Math.round(performance.now()-begin-(now.ai_wait_ms-metrics.ai_wait_ms))),input_tokens:now.input_tokens-metrics.input_tokens,output_tokens:now.output_tokens-metrics.output_tokens,usage_available:now.usage_available};const last=this.service.ai.last;if(last)job.last_ai={role:last.role,provider:last.provider,model:last.model,status:last.status,duration_ms:last.duration_ms,reason:last.reason,usage:last.usage,retry_count:last.retry_count};job.updated_at=new Date().toISOString();};
  const phase=(value:string)=>{job.phase=(value==='compiler'?'compiling':value==='local'?'running_local':value==='ai'?'waiting_for_ai':value==='validating'?'validating':value==='committing'?'committing':'running_local') as RoutineJobPhase;job.status='running';job.message=phaseMessage[job.phase];sync();void this.persist().catch(()=>controller.abort(new Error('JOB_STORAGE_FAILED')));};
@@ -64,11 +84,19 @@ export class RoutineJobs {
  assert(absoluteTime(save)>before,'调度器没有取得进展，已停止以避免重复结算');await new Promise<void>(resolve=>setImmediate(resolve));}
  if(job.status==='running'){job.status=job.steps>=200?'interrupted':'completed';job.message=job.steps>=200?'已到安全事件数量上限，可检查后继续。':'本批普通生活已完成。';}
  }catch(e){if(signal.aborted && signal.reason instanceof Error && signal.reason.message==='USER_CANCELLED'){job.status='cancelled';job.message='已安全暂停；已提交的生活保留，未提交的段没有修改存档。';}
-else{job.status='failed';job.message=readableFailure(e);}}
- finally{sync();job.phase='idle';try{job.last_revision=(await this.service.current()).state_revision;await this.persist();}finally{this.controllers.delete(job.job_id);this.service.routineLease=null;
+else{job.status='failed';job.message=readableFailure(e);failureCode=e instanceof ProviderError?'provider_failure':e instanceof GameError?'state_failure':'unexpected_internal_failure';}}
+ finally{sync();job.phase='idle';try{
+ const authoritative=await this.service.storage.read('current','request_recovery').catch(()=>null);
+ const sameWorld=authoritative?.game_id===job.game_id,receipts=sameWorld?committedInputReceipts(authoritative,job.recovery):[];
+ if(sameWorld)job.last_revision=authoritative.state_revision;
+ const certain=sameWorld&&(job.recovery?.transactions??[]).every(transaction=>receipts.includes(transaction.request_id)||authoritative.state_revision===transaction.expected_revision);
+ job.outcome=job.status==='failed'||!sameWorld?engineOutcome(failureCode,'routine_job',sameWorld?job.last_revision:null,certain,
+   receipts.length?['已提交生活片段']:[],receipts):gameOutcome(job.status==='completed'?'completed':'interrupted','routine_job',job.last_revision,
+   receipts.length?['已提交生活片段']:[],receipts);
+ await this.persist();}finally{this.controllers.delete(job.job_id);this.service.routineLease=null;
  const level:LogLevel=job.status==='failed'?'error':job.status==='completed'?'info':'warn';
  trace.log(level,'routine.job.completed',{duration_ms:performance.now()-begin,revision:job.last_revision,metadata:{status:job.status,steps:job.steps,start_revision:job.start_revision,last_revision:job.last_revision,message:job.message,last_ai:job.last_ai,metrics:job.metrics}});
- }}});
+ }}}));
  }
  // Enabling routine never preempts a foreground transaction: it waits for a safe handoff, or arms itself.
  private async awaitSafeHandoff(job:RoutineJob,controller:AbortController,begin:number){

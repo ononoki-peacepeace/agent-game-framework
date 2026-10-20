@@ -9,6 +9,7 @@ import type {PublicView} from '../shared/contracts.js';
 import {admitNpcDecision,decideNpc,buildNpcAgentContext,validateNpcPlanSteps,type NpcDecision} from './npc-agent.js';
 import {npcExperienceContext} from './npc-experience.js';
 import {composeScenePersonaContexts} from '../characters/persona.js';
+import {dialogueContinuityPolicy,performanceContinuityPolicy} from '../ai/narrative-health.js';
 import {relationshipSummary} from '../shared/relationship.js';
 import {interpretSemanticEntry} from './semantic-entry.js';
 import {regionFrontier} from '../core/region-expansion.js';
@@ -323,9 +324,8 @@ export function sceneEnsembleContext(save:SavePackage,people:PublicView['entitie
     const relations=save.entities.find(entity=>entity.id===person.id)?.components.relationships?.entries??{};
     const recent=(mind?.memories??[]).slice(-8).flatMap(memory=>{
       const entry=history.get(memory.event_ref);
-      return entry? [{at:memory.at,speech_events:(entry.speech_events??[]).slice(0,8)
-        .map(event=>({speaker_id:event.speaker_id,utterance:event.utterance.slice(0,240)})),
-        observed_scene:entry.narrative.slice(0,180)}]:[];
+      return entry? [{event_ref:memory.event_ref,at:memory.at,speech_events:(entry.speech_events??[]).slice(0,12)
+        .map(event=>({speaker_id:event.speaker_id,utterance:event.utterance.slice(0,240)}))}]:[];
     }).slice(-3);
     return {
       npc_id:person.id,
@@ -378,15 +378,20 @@ export async function runSceneInteraction(service:GameService,save:SavePackage,v
   const partnerExperience=npcExperienceContext(save,partner.id,input);
   const recentExchanges=(save.narrative_history??[]).filter(entry=>
     entry.speech_events?.some(event=>event.speaker_id===partner.id)||entry.speaker===partner.id).slice(-6)
-    .map(entry=>({player_input:entry.speech_events?.some(event=>event.speaker_id===view.player_id)?
-      entry.player_input?.slice(0,500)??null:null,
-      speech_events:entry.speech_events?.filter(event=>event.speaker_id===partner.id||event.speaker_id===view.player_id)
-        .slice(0,8).map(event=>({speaker_id:event.speaker_id,utterance:event.utterance.slice(0,500)}))??null,
-      npc_dialogue:entry.speech_events?null:entry.dialogue?.slice(0,500)??null,
-      observed_scene:entry.narrative.slice(0,240)}));
+    .map(entry=>({event_ref:'scene:'+entry.request_id,
+      // References from other witnesses must resolve to the whole exchange,
+      // including third-party replies and the final answer, not just this pair.
+      speech_events:entry.speech_events?.slice(0,12).map(event=>({speaker_id:event.speaker_id,
+        utterance:event.utterance.length<=500?event.utterance:
+          event.utterance.slice(0,250)+'…'+event.utterance.slice(-249),
+        ...(event.utterance.length>500?{excerpt:true}:{})}))??null,
+      npc_dialogue:entry.speech_events?null:entry.dialogue?.slice(0,500)??null}));
+  const exchangeRefs=new Set(recentExchanges.map(entry=>entry.event_ref));
   const autonomous=phase==='interaction'&&admitNpcDecision(save,partner.id,'direct_scene')
     ?await decideNpc(service,save,partner.id,{kind:'direct_scene',description:input,public_speech:input}):undefined;
   const scene=await service.ai.sceneAgent(sceneResultSchema,save.definition.prompt_profile,{
+    dialogue_continuity_policy:dialogueContinuityPolicy,
+    performance_continuity_policy:performanceContinuityPolicy,
     persistent_activity_policy:'NPC 本人明确决定有序日常安排时，npc_activity_intents 可提供 steps（最多6步 MOVE/INSPECT/TALK/HOLD）和具体 not_before；未知时刻填 null，不擅自猜测。沿用本人 speech_index、ready/conditional/cancelled 与已有 plan_id。HOLD 原地工作或休息，target_id=null、duration_minutes 为所需分钟，不保证产出、修理、伤害或新线索；其他步骤 duration_minutes=null。TALK 的 speech 为本人对真实可接触人物的发言，非 TALK 的 speech=null。移动目标只能来自公开地点。原地工作 destination_id 填当前地点，移动后工作填实际目的地；这里只登记意图，不能叙述已经执行或保证他人合作。没有具体安排时不必生成计划。',
     soft_contact_instruction:'玩家试图进行普通亲近、搀扶等非强制接触时，在同一次场景生成中演绎尝试与 NPC 自主反应，不能默认升级为对抗判定。soft_contacts 按发生顺序登记需要跨回合记住的接触、拒绝或结束；玩家动作的 source_quote 必须逐字取自本次 input，NPC 自行结束接触时填 null。只有对方确实接受且接触成立才填 active；拒绝、避开或原本没有接触时不能把“继续”写成 active。短暂目光、表情不必登记。玩家同时授权亲自观察或检查当前场景时，在 effects 中以 inspect 和原文连续子串 source_quote 提议权威调查；这一步交由现有调查结算，未发现新东西仍是正常结果。场景台词与软接触不能代替调查。权威开门、物品和移动仍须由执行器结算，soft_contacts 不授权这些效果，也不保证 NPC 会接受委托。NPC 明确接受、附条件接受或拒绝以后要执行的通知/集合等具体任务时，以 social_commitments 记录本人对应 speech_index；普通寒暄不得生成任务。conditional 需填 condition 且不能立即执行；accepted 才能执行。地点只能从 public_known_locations 选择，不得使用隐藏地点；通知对象必须真实接触后才能知情，NPC 接受通知也不代表收信者答应参加。若人物明确取消、改期或自行确认原有附条件承诺现在可执行，只更新 partner_cognition.short_term_social_tasks 中真实存在的本人任务：social_commitments.task_id 填该任务 ID，status 分别填 cancelled、postponed、condition_cleared；新承诺 task_id 填 null。已通知他人的安排不可静默改期，必须先有真实传播；条件不能因玩家单方面宣称满足就解除。普通聊天不得变更任务。NPC 本人明确决定稍后前往某个 public_known_locations 地点时，另在 npc_activity_intents 登记 speech_index、目标 ID 与 ready 或 conditional；有“做完某事再走”等前提时必须 conditional，不能立即出发。含糊想法、替别人作决定、仅描述住处、只说散会或并无真实目标地点时留空。后续本人明确取消或解除条件才引用已有 plan_id；只有 ready 能在之后的世界时间推进中尝试权威 MOVE。',
     independent_decision_instruction:'若 fixed_npc_decision 非空，此 NPC 已独立作出决定。speech 必须作为该 NPC 的 npc_response 原话逐字进入 speech_events；其后若现场对话确实引出新的自然回应，同一 NPC 可以再次发言，但不能推翻已决定的态度或新增未结算行动。no_action 不得替他编台词；不得改写其决定，也不得把未结算的 proposed_action 写成已发生的事实。',
@@ -397,7 +402,13 @@ export async function runSceneInteraction(service:GameService,save:SavePackage,v
     dialogue_output_instruction:'speech_events 是有序事件数组，不是按 NPC ID 唯一的答复表。同一人物可在别人发言后再次说话，部分在场人物可全程沉默；只收录现场自然发生的发言，不按人物列表排队，也不为填满数组强迫交锋。speech_events.utterance 只放人物实际说出口的话，不含引号、说话人标签或动作描写；dialogue 与最后一条 NPC 台词相同，没有则为 null。beats 是玩家看到的唯一有序场景：narration beat 承载有依据的环境、局势、连续人物行为与收束，speech beat 用 speech_index 引用 speech_events 的索引；每条台词必须按顺序恰好引用一次。不要把直接台词再写入 narrative 或 narration beat。narrative 仅是旧客户端用的简短非对白摘要，其长度限制不适用于玩家实际阅读的 narration beats。旁白和台词按现场节奏交错，不强制开头、过渡或结尾都放旁白。',
     incident_continuity_policy:'own_body、亲历记忆与已登记的攻击威胁属于持续状态。严重冲突不会因下一句普通问话自动消失；各人可谨慎、愤怒、沉默、求助或作出其他符合自身动机的反应，不强制同一种情绪，也不能因玩家一句话就自动和解。叙事中的离场、反击与伤害仍须权威凭据；在场名单优先于旧历史和玩家话中假定的人数。',
     persona_contexts:composeScenePersonaContexts(save,people.map(entity=>entity.id)),
-    ensemble_context:ensemble,
+    // The transcript is supplied once; actor-scoped references still identify
+    // who actually witnessed it. Historical prose is not a speaking template.
+    ensemble_context:ensemble.map(context=>({...context,
+      witnessed_recent_exchanges:context.witnessed_recent_exchanges.map(entry=>
+        exchangeRefs.has(entry.event_ref)?{event_ref:entry.event_ref,at:entry.at}:entry),
+      witnessed_relevant_exchanges:context.witnessed_relevant_exchanges.map(entry=>
+        exchangeRefs.has(entry.event_ref)?{event_ref:entry.event_ref,location_id:entry.location_id}:entry)})),
     ensemble_scope_instruction:'ensemble_context 按 npc_id 分隔每个人的主观知识、信念、目标、当下动机、与其他在场者的关系及其亲历过的近期对话。own_experiences 是本人实际参与的权威经历；historical_presence 来自旧存档的权威位置快照，只证明本人曾在该地点，不证明认识那里所有人的姓名。不能无依据否认本人已发生的行动；有已登记的欺骗意图或记忆异常时仍可依人物动机表现，但不得为了自圆其说临时创造失忆。只让人物依据自己的条目、现场可听见的话和公开事实行动；不能让 A 知道 B 的私有认知。关系数值与目标是生成依据，不是人物要说出的清单，也不自动结算关系变化。没有 recorded activity 时不要凭空声称人物正拿着物品或完成某项工作。当前场景可自然发生 NPC 对 NPC 的反应；安静或无人接话也有效。effects 中的 move/wait 只能提议玩家原始请求授权的动作；NPC 自主持久行动走既有 npc_decision 和权威结算，不能借玩家 effects 让 NPC 行动。',
     instruction:'你是当前局部场景的统一现场扮演者，只输出 JSON。让在场人物依据各自资料及现场所闻自然互动；玩家不是每句台词的唯一对象，NPC 可以对 NPC 说话、回应或不回应，也可以保持安静，不要让所有人轮流回答玩家。speech_events 按实际说话顺序列出本轮所有玩家与在场 NPC 的台词；beats 按真实发生的顺序交错引用台词与可观察的现场表现，作为唯一玩家可见场景。speaker_id 必须是 player.id 或 present_people 的 id；dialogue 与最后一位 NPC 的台词一致，没有 NPC 台词时为 null。玩家逐字给出的台词须忠实保留，provenance=verbatim_player_input；玩家只给明确说话意图而没有逐字台词时，可以按意图、方式、性格和情境具体化，provenance=generated_from_player_intent。不得替玩家增加未授权的意图、威胁、承诺、决定或情感表态；只有动作或观察而无说话授权时不要生成玩家台词。历史中的 speech event 只证明说过，不证明话里的命题为世界事实；旧历史没有玩家发言记录时不得推断旧台词或断言玩家没说过。narrative 只描述此刻可观察内容，可简短，且须与 present_people 一致，不含台词。不得编造已提交事实之外的世界状态，不得泄露隐藏信息。会改变位置、时间、金钱、物品、伤势或持久世界状态的意图只能放进 effects 提案，由程序结算；effects 只允许 move、wait、inspect 或 unsupported。travel_intents 仅记录本轮真正发言回应同行邀请的在场 NPC：无保留地愿意同行用 willing；要求先定地点、先查看风险、限定去处等尚未满足的条件用 conditional；明确拒绝用 declined。普通闲聊、模糊建议和没有本人台词的猜测必须为空。只有 willing 可成为后续真实移动的候选；conditional 不得被当成已经同意，后续明确答应时才更新。该意愿并不代表已经移动，也不保证将来一定同行。',
     scene_phase:phase,
@@ -425,10 +436,9 @@ export async function runSceneInteraction(service:GameService,save:SavePackage,v
       location_description:currentLocation?.description.slice(0,500)??'',visible_objects:visibleObjects,
       recent_history:(save.narrative_history??[]).slice(-4).map(entry=>({
         player_input_recorded:entry.speech_events?.some(event=>event.speaker_id===view.player_id)??false,
-        player_input:entry.speech_events?.some(event=>event.speaker_id===view.player_id)?
-          entry.player_input?.slice(0,500)??null:null,
-        speech_events:entry.speech_events?.slice(0,10).map(event=>({speaker_id:event.speaker_id,utterance:event.utterance.slice(0,500)}))??null,
-        npc_dialogue:entry.speech_events?null:entry.dialogue?.slice(0,500)??null,
+        ...(exchangeRefs.has('scene:'+entry.request_id)?{speech_ref:'scene:'+entry.request_id}:{
+          speech_events:entry.speech_events?.slice(0,12).map(event=>({speaker_id:event.speaker_id,utterance:event.utterance.slice(0,500)}))??null,
+          npc_dialogue:entry.speech_events?null:entry.dialogue?.slice(0,500)??null}),
         narrative:entry.narrative.slice(0,300)})),
       conversation_active:save.interaction_context?.status==='active',
       current_contacts:people.map(entity=>({npc_id:entity.id,
@@ -456,7 +466,7 @@ export async function runSceneInteraction(service:GameService,save:SavePackage,v
           activity_location_id:task.activity_location_id,activity_at:task.activity_at,condition:task.condition}))??[],
       recent_memories:partnerExperience.memories,historical_presence:partnerExperience.historical_presence,
       witnessed_relevant_exchanges:partnerExperience.witnessed_exchanges},
-    knowledge_scope_instruction:'partner_cognition 是此人物自己的主观知识、信念、记忆与目标；空数组不表示他已知整个公开世界。known_locations 仅供保持地点名称一致，不是该人物全部去过或知道的地点。recent_history 是叙事连续性资料，只有 recent_partner_exchanges 或人物确曾参与、听到的事才可视为其个人经历。已显示的 observed_scene 可用于保持动作与姿态连贯，但不能把主观推测或未登记物品当成权威事实。',
+    knowledge_scope_instruction:'partner_cognition 是此人物自己的主观知识、信念、记忆与目标；空数组不表示他已知整个公开世界。known_locations 仅供保持地点名称一致，不是该人物全部去过或知道的地点。recent_history 是叙事连续性资料，只有 recent_partner_exchanges 或人物确曾参与、听到的事才可视为其个人经历。speech_ref 和 event_ref 引用 recent_partner_exchanges 中同一份原话；其他人物只能使用其 witnessed 条目明确引用的对话，不因主持人看见就自动知道。历史旁白可保持动作与姿态连贯，但不能把主观推测或未登记物品当成权威事实。',
     fixed_npc_decision:autonomous?{npc_id:partner.id,kind:autonomous.kind,speech:autonomous.speech,
       intent:autonomous.intent,proposed_action:autonomous.proposed_action}:null,
     known_locations:view.locations.map(location=>location.name),

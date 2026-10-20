@@ -2,6 +2,7 @@ import {z} from 'zod';
 import {worldInitializationSchema} from './contracts.js';
 import {GameError} from '../core/schema.js';
 import {defaultCalendar} from '../routine/schema.js';
+import {statedPossessionClauses,statedPossessionClaims} from '../core/possession-claims.js';
 
 export type WorldIssue={path:string;code:string;message:string;current:unknown;requirement:string};
 
@@ -122,20 +123,16 @@ export function worldCandidateIssues(candidate:unknown,description='',requireOpe
     const possessionByItem=new Map(possessions.map(entry=>[entry.item_id,entry]));
     // This guard only treats an explicit opening/current-possession clause as
     // authoritative. Profession, historical use and incidental prose are not
-    // grounds to create an item or assign it to a character.
+    // grounds to create an item or assign it to a character. The phrasing rules live in
+    // `core/possession-claims.ts` so that the load-time reliability check reads a world's stated
+    // possessions exactly the way this gate does; the live world wrote 「随身只有相机、半卷胶片和
+    // 一件沾了海雾的外套」, matched the older narrower trigger nowhere, and the camera the Narrator
+    // then described was never a structured item at all.
+    const itemNames=(result.data.items??[]).map(item=>item.name);
     for(const actor of [result.data.player,...result.data.characters]){
-      const clauses=actor.description.split(/[。；;\n]/).filter(clause=>
-        /(?:开局|开场|此刻|现在|目前)[^。；;\n]{0,60}(?:随身带着|随身携带|手持|穿着|已装在|装在)/.test(clause)&&
-        !/(?:没有|并未|不再|曾经|过去)[^。；;\n]{0,20}(?:带着|携带|手持|穿着|装在)/.test(clause));
-      for(const clause of clauses){
+      for(const clause of statedPossessionClauses(actor.description)){
         const named=(result.data.items??[]).filter(item=>clause.includes(item.name));
-        const segments=clause.split(/[，,、]/).map(segment=>segment.trim()).filter(Boolean);
-        const claims=segments.flatMap(segment=>{
-          const container=segment.match(/(.+?)(?:已装在|装在)(.+)/);
-          if(container)return [container[1].replace(/^(?:开局|开场|此刻|现在|目前)/,'').trim()];
-          const held=segment.match(/(?:随身带着|随身携带|手持|穿着)(.+)/);
-          return held?[held[1].trim()]:[];
-        }).filter(claim=>claim.length>=2);
+        const claims=statedPossessionClaims(clause,itemNames);
         for(const claim of claims)if(!named.some(item=>claim.includes(item.name)||item.name.includes(claim)))
           issues.push({path:`${actor.id}.description`,code:'initial_possession_definition_missing',
             message:'明确的开局随身物品没有结构化物品定义',current:claim,

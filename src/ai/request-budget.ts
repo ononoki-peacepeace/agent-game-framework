@@ -15,6 +15,9 @@ export function withRequestBudget<T>(work:()=>Promise<T>,limits:RequestBudgetLim
   return scope.run(budget,work);
 }
 
+/** A separately scheduled job must not inherit a foreground request's spent budget. */
+export function withoutRequestBudget<T>(work:()=>T):T{return scope.exit(work);}
+
 /** Every provider attempt, including truncation and schema repair, crosses this boundary. */
 export async function generateWithinRequestBudget(adapter:AIAdapter,request:AIRequest):Promise<AIResult>{
   const budget=scope.getStore();

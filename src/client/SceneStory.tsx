@@ -3,7 +3,13 @@ import {Avatar,nameOf} from './panels.js';
 import {visibleStoryBeats,anchoredStoryBeats} from './story-beats.js';
 
 /** One ordered performance is the visible scene; legacy turns retain their existing layout. */
-export function SceneStory({view,override,onSelectEntity}:{view:PublicView;override:string|null;onSelectEntity:(entity:Entity)=>void}){
+type SceneStoryProps={view:PublicView;override:string|null;onSelectEntity:(entity:Entity)=>void};
+export function SceneStory(props:SceneStoryProps){
+  return <>{props.view.last_turn?.presentation?.status==='degraded'&&
+    <p role="status" className="narration-notice">场景描写已降级为事实摘要，本轮世界结算结果以已保存状态为准。</p>}
+    <SceneStoryContent {...props}/></>;
+}
+function SceneStoryContent({view,override,onSelectEntity}:SceneStoryProps){
   const turn=view.last_turn;
   if(override!==null)return <p className="narrative">{override}</p>;
   const beats=turn?.scene_beats?.length?anchoredStoryBeats(turn,view.entities):visibleStoryBeats(turn?.narrative||view.description,view.entities);

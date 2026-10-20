@@ -194,10 +194,9 @@ describe('semantic understanding bounded retry',()=>{
     const f=await sparseSetup();(f.ai.adapter as {name:string}).name='controlled-model';
     const semantic=vi.spyOn(f.ai,'systemAgent').mockResolvedValue(null);
     const before=await f.service.current();
-    const route=await routeContext(f.service,'去河岸车站看看','world_input');
+    await expect(routeContext(f.service,'去河岸车站看看','world_input')).rejects.toMatchObject({
+      name:'ProviderError',failure_engine_code:'provider_failure',failure_stage:'semantic_provider'});
     expect(semantic).toHaveBeenCalledTimes(2);
-    expect(route.destination).toBe('AMBIGUOUS');
-    expect(route.clarification).toContain('可重试原请求');
     const after=await f.service.current();
     expect(after.state_revision).toBe(before.state_revision);
     expect(after.resolution_receipts).toEqual(before.resolution_receipts);

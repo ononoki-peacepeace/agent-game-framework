@@ -1,12 +1,13 @@
 import {z} from 'zod';
 import {randomUUID} from 'node:crypto';
-import {mkdir,readFile,writeFile,rename} from 'node:fs/promises';
+import {readFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import type {GameService} from '../server/service.js';
 import {assert,safeParse,type SavePackage} from '../core/schema.js';
 import {secureRng} from '../core/dice.js';
 import {blackjack,combat,playView,type PlayState,type Request} from './sdk.js';
 import {extensionActionSchema,manifestSchema,type ExtensionManifest} from './schema.js';
+import {writeAtomicJson} from '../storage/atomic-json.js';
 export const transactionSchema=z.strictObject({game_id:z.string().uuid(),expected_revision:z.number().int().min(0),request_id:z.string().uuid()});
 const card=z.number().int().min(0).max(51);
 const playSchema=z.discriminatedUnion('kind',[
@@ -58,8 +59,12 @@ export class ExtensionHost {
  private async load(){try{const raw=JSON.parse(await readFile(join(this.directory,'approved.json'),'utf8'));this.approved=safeParse(z.record(z.string(),z.array(manifestSchema)),raw);}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}}
  private has(manifest:ExtensionManifest){return (this.approved[manifest.extension_id]??[]).some(m=>JSON.stringify(m)===JSON.stringify(manifest));}
  async nextVersion(id:string,current?:string){await this.ready;const versions=[...(this.approved[id]??[]).map(m=>m.version),...(current?[current]:[])];if(!versions.length)return '0.1.0';versions.sort((a,b)=>{const x=a.split('.').map(Number),y=b.split('.').map(Number);return x[0]-y[0]||x[1]-y[1]||x[2]-y[2];});const [major,minor,patch]=versions.at(-1)!.split('.').map(Number);return [major,minor,patch+1].join('.');}
- async approve(manifest:ExtensionManifest){await this.ready;const parsed=safeParse(manifestSchema,manifest);this.approved[parsed.extension_id]??=[];const same=this.approved[parsed.extension_id].find(m=>m.version===parsed.version);assert(!same||JSON.stringify(same)===JSON.stringify(parsed),'相同版本不可覆盖，请生成新版本');if(!this.has(parsed))this.approved[parsed.extension_id].push(parsed);
- const payload=JSON.stringify(this.approved,null,2);this.writes=this.writes.then(async()=>{await mkdir(this.directory,{recursive:true});const tmp=join(this.directory,randomUUID()+'.tmp');await writeFile(tmp,payload);await rename(tmp,join(this.directory,'approved.json'));});await this.writes;}
+ async approve(manifest:ExtensionManifest){await this.ready;const parsed=safeParse(manifestSchema,manifest);
+ const write=this.writes.then(async()=>{const next=structuredClone(this.approved);next[parsed.extension_id]??=[];
+ const same=next[parsed.extension_id].find(m=>m.version===parsed.version);assert(!same||JSON.stringify(same)===JSON.stringify(parsed),'相同版本不可覆盖，请生成新版本');
+ if(!same)next[parsed.extension_id].push(parsed);
+ await writeAtomicJson(join(this.directory,'approved.json'),next);this.approved=next;
+ });this.writes=write.catch(()=>undefined);await write;}
  async list(){await this.ready;const save=await this.service.current();return Object.entries(save.extensions??{}).map(([id,e])=>({id,name:e.manifest.name,version:e.version,manifest:e.manifest,enabled:e.enabled,installed:e.installed,available:this.has(e.manifest),can_open:e.enabled&&e.installed&&this.has(e.manifest)&&sceneMatches(save,e.manifest),state:playView(validatedPlay(e.state,e.manifest)),previous_version:e.previous?.version??null,warning:this.has(e.manifest)?null:'本机缺少已验证的对应扩展版本；状态已保留为休眠。'}));}
  async install(raw:unknown,manifest:ExtensionManifest,migrationConfirmed=false){await this.ready;assert(this.has(manifest),'扩展尚未通过安装验证');const tx=safeParse(transactionSchema,raw);return this.service.extensionTransaction(tx,{install:manifest.extension_id,version:manifest.version,migrationConfirmed},save=>{const entries=save.extensions??={},old=entries[manifest.extension_id];if(old){assert(old.manifest.template===manifest.template,'升级不能更换状态类型');const state=validatedPlay(old.state,old.manifest) as {phase?:string}|null;assert(state?.phase!=='playing','请先结束当前局，再更新扩展');}
  let nextState=old?.state??initialState(manifest);

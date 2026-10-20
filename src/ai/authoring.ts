@@ -6,6 +6,7 @@ import { suggestLifeHorizon } from '../narrative/policy.js';
 import { defaultCalendar } from '../routine/schema.js';
 import type { worldInitializationSchema } from './contracts.js';
 import {authoredCharacter} from '../characters/authoring.js';
+import {frameworkCapabilityDomains} from '../core/capability.js';
 import { defaultRoleplayConfig } from '../narrative/policy.js';
 import { hiddenTruthStateSchema } from '../narrative/schema.js';
 
@@ -68,14 +69,15 @@ export function compileWorld(b: z.infer<typeof worldInitializationSchema>, profi
   const capabilityLabels={strength:'力量',agility:'敏捷',endurance:'耐力',perception:'感知',cognition:'认知',willpower:'意志'};
   const modules = resolveModules([...(b.modules ?? ['map','characters','relationships','inventory','commerce','routine']),
     ...(possessions.length?['inventory']:[]),
+    // Module selection stays need-driven: Core reads a body through the declared domains below
+    // and falls back to a neutral baseline, so adjudication never depends on this module being
+    // installed. Per-person ability data is what needs it, and that arrives with profiles.
     ...(capabilities.length?['attributes']:[]),...(capabilities.some(p=>p.skills.length)?['skills']:[]),
     ...(possessions.some(entry=>entry.placement==='held'||entry.placement==='worn')?['equipment']:[])]);
   const has = (id: string) => modules.includes(id);
-  const capabilityDomains:NonNullable<WorldPackage['ruleset']['capability_domains']>={};
-  for(const key of ['strength','agility','endurance','perception','cognition','willpower','physique'])
-    capabilityDomains[key]={attribute:key==='physique'?'strength':key,skills:[],
-      condition_sensitive:['strength','agility','endurance','physique'].includes(key),
-      exertion_cost:['strength','agility','endurance','physique'].includes(key)?1:0};
+  // One source of truth with the floor Core applies to worlds that predate this: an authored
+  // world and a legacy world must read a body the same way.
+  const capabilityDomains:NonNullable<WorldPackage['ruleset']['capability_domains']>=frameworkCapabilityDomains();
   for(const profile of capabilities)for(const skill of profile.skills){
     const physical=['strength','agility','endurance'].includes(skill.attribute??'');
     capabilityDomains[skill.id]={attribute:skill.attribute??null,skills:[skill.id],condition_sensitive:physical,exertion_cost:physical?1:0};
@@ -171,7 +173,8 @@ export function compileWorld(b: z.infer<typeof worldInitializationSchema>, profi
     enabled_modules: modules,
     calendar: b.opening_time?.calendar ?? defaultCalendar(),
     ...(has('routine') ? { routine_rules: defaultRoutineRules(home) } : {}),
-    ruleset: { ...(capabilities.length?{capability_domains:capabilityDomains}:{}), minutes_per_day: 1440, max_wait_minutes: 1440, talk_minutes: 5, trade_minutes: 2, default_check: '2d6+1',resolution_profile:{version:1,kind:b.resolution_profile??'bell_2d6'},
+    // Declared unconditionally: these domains are how Core reads a body, not authoring flavour.
+    ruleset: { capability_domains:capabilityDomains, minutes_per_day: 1440, max_wait_minutes: 1440, talk_minutes: 5, trade_minutes: 2, default_check: '2d6+1',resolution_profile:{version:1,kind:b.resolution_profile??'bell_2d6'},
       currencies: { [b.currency.id]: b.currency.name }, relationship_dimensions: { trust: { min: -100, max: 100, initial: 0 }, familiarity: { min: 0, max: 100, initial: 0 } } },
     prompt_profile: profile, world: { description: b.description },
     entities,

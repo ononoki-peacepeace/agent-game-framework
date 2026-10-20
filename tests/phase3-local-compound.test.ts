@@ -3,6 +3,8 @@ import {randomUUID} from 'node:crypto';
 import {sparseSetup} from './sparse-fixture.js';
 import {createAgentPlan,localCompoundSteps,validatePlan} from '../src/agent/planner.js';
 import {executePlan,handleAgentInput} from '../src/agent/executor.js';
+import {canExecuteContractPlan} from '../src/agent/affordances.js';
+import {compileGoalContract} from '../src/agent/goal-contract.js';
 import {publicView} from '../src/core/state.js';
 import type {SavePackage} from '../src/core/schema.js';
 import type {GoalInput} from '../src/agent/plan-schema.js';
@@ -48,6 +50,19 @@ async function seedRoomAnchors(f:Awaited<ReturnType<typeof sparseSetup>>){
 }
 
 describe('Phase 3 local compound candidate',()=>{
+  it('keeps a tagged local compound in one Core candidate instead of separate commits',async()=>{
+    const f=await setup(['走到厨房','坐下']);
+    const tagged=validatePlan({goals:[{...goal(0,'走到厨房'),operation_hint:'move',referent:'厨房'},
+      {...goal(1,'坐下'),operation_hint:'activity'}]});
+    tagged.local_compound={steps:['走到厨房','坐下']};
+    const compiled=compileGoalContract(f.service.project(f.before),tagged,{kind:'manual',text:f.request.input});
+    expect(compiled.goals[0].operation_hint).toBe('activity');
+    expect(canExecuteContractPlan(compiled)).toBe(false);
+    const result=await executePlan(f.service,f.request,compiled),after=await f.service.current();
+    expect(result.outcome).toMatchObject({type:'game',kind:'completed'});
+    expect(after.state_revision).toBe(f.before.state_revision+1);
+    expect(player(after).components.scene_position?.label).toBe('厨房');
+  });
   it('commits two generic activities once with one revision and both receipts',async()=>{
     const steps=['伸个懒腰','简单整理桌面'],f=await setup(steps);
     const result=await run(f),after=await f.service.current();
@@ -68,6 +83,45 @@ describe('Phase 3 local compound candidate',()=>{
     expect(player(after).components.scene_position?.label).toBe('厨房');
     expect(after.resolution_receipts?.at(-1)?.effects).toEqual(expect.arrayContaining(['position','activity','time']));
     expect(f.writes).toHaveBeenCalledTimes(1);
+  });
+  it('repairs a first local movement candidate lacking Core position evidence before committing a three-part observation',async()=>{
+    const steps=['我从座椅上起身','走到配给柜前','查看里面有哪些商品、各自的价格，以及有没有人在值班。'];
+    const f=await setup(steps),before=await f.service.current();
+    const here=String(player(before).components.location!.location_id);
+    const shop=before.entities.find(entity=>entity.components.shop)!;
+    shop.components.identity!.name='配给柜';
+    shop.components.location={location_id:here};
+    before.definition.map!.locations.find(location=>location.id===here)!.description+=' 配给柜在房间一侧。';
+    await f.store.write(before);f.writes.mockClear();
+    f.request.input='我从座椅上起身，走到配给柜前，查看里面有哪些商品、各自的价格，以及有没有人在值班。';
+    const first={...proposal(),environment_query:{name:'配给柜',source_quote:steps[1],intent:'observe'}};
+    let movementCalls=0;
+    f.freeform.mockImplementation(async (_save,input,repair)=>{
+      if(input===steps[1]&&++movementCalls===1)return first;
+      if(input===steps[1]){
+        expect(repair).toMatchObject({failure_code:'proposal_contract_invalid',
+          diagnostics:[{code:'position_receipt_mismatch'}]});
+        expect(JSON.stringify(repair)).toContain('environment_query');
+      }
+      return proposal();
+    });
+    vi.spyOn(f.ai,'assessEnvironment').mockResolvedValue({
+      authorized_intent:'observe',scope_complete:true,classification:'environment_detail',
+      existence:'present',ownership:'shared',world_compatible:true,scene_compatible:true,
+      contradicts_known:false,resource_advantage:false,weight:0,description:'房间一侧的配给柜。',
+      basis:[{source:'scene',quote:'配给柜在房间一侧。'}],same_as:null,
+    });
+    const result=await run(f),after=await f.service.current();
+    expect(result.plan?.status,result.message).toBe('completed');
+    expect(movementCalls).toBe(2);
+    expect(after.state_revision).toBe(before.state_revision+1);
+    expect(f.writes).toHaveBeenCalledTimes(1);
+    expect(player(after).components.scene_position?.label).toBe('配给柜前');
+    expect(after.resolution_receipts?.slice(-4).map(receipt=>receipt.commit_status))
+      .toEqual(['committed','committed','committed','committed']);
+    expect(after.resolution_receipts?.at(-1)?.effects).toEqual(expect.arrayContaining(['position','activity']));
+    const exposed=f.service.project(after).entities.find(entity=>entity.id===shop.id)?.components.shop;
+    expect(exposed).toEqual(shop.components.shop);
   });
   it('accumulates three local steps and their time before a single formal commit',async()=>{
     const steps=['走到厨房','等一会儿','回到门口'],f=await setup(steps);
@@ -120,6 +174,20 @@ describe('Phase 3 local compound candidate',()=>{
     expect((player(after).components.inventory as Inventory).placements?.qa_wood).toBeUndefined();
     expect(f.writes).not.toHaveBeenCalled();
   });
+  it('does not claim arrival or commit earlier steps when World Gap rejects a local destination',async()=>{
+    const steps=['站起来','走到不存在的陈列架前'],f=await setup(steps);
+    vi.spyOn(f.ai,'assessEnvironment').mockResolvedValue({
+      authorized_intent:'observe',scope_complete:true,classification:'environment_detail',
+      existence:'absent',ownership:'unknown',world_compatible:true,scene_compatible:false,
+      contradicts_known:false,resource_advantage:false,weight:0,description:'当前场景没有确认该陈列架。',
+      basis:[{source:'scene',quote:'这个测试场景是一间有开放厨房、门口和书桌的起居室。'}],same_as:null,
+    });
+    const result=await run(f),after=await f.service.current();
+    expect(result.plan?.status).toBe('blocked');
+    expect(after).toEqual(f.before);
+    expect(f.writes).not.toHaveBeenCalled();
+    expect(f.narrate).not.toHaveBeenCalled();
+  });
   it('does not persist candidate steps or narrate them after a failure',async()=>{
     const steps=['伸个懒腰','坐下'],f=await setup(steps,1);
     await run(f);const after=await f.service.current();
@@ -129,7 +197,7 @@ describe('Phase 3 local compound candidate',()=>{
     expect(after.action_facts).toEqual(f.before.action_facts);
     expect(f.narrate).not.toHaveBeenCalled();
   });
-  it('lets Narrator cite activity facts from each settled step but rejects unsupported progress',async()=>{
+  it('lets Narrator cite activity facts from each settled step and degrades fabricated progress to canonical facts',async()=>{
     const steps=['伸个懒腰','简单整理桌面'],f=await setup(steps);
     f.narrate.mockImplementation(async (_save,_action,_facts,receipt,_repair,stepReceipts)=>{
       expect(stepReceipts).toHaveLength(2);
@@ -139,14 +207,18 @@ describe('Phase 3 local compound candidate',()=>{
     const result=await run(f);
     expect(result.plan?.status,result.message).toBe('completed');
     expect(f.writes).toHaveBeenCalledTimes(1);
-    const blocked=await setup(steps);
-    blocked.narrate.mockImplementation(async (_save,_action,_facts,receipt)=>({
+    const degraded=await setup(steps);
+    degraded.narrate.mockImplementation(async (_save,_action,_facts,receipt)=>({
       ...narration,mechanical_claims:[{kind:'progress' as const,
         fact_index:receipt!.canonical_facts.findIndex(fact=>fact.startsWith('进行了活动：'))}]}));
-    const failure=await run(blocked);
-    expect(failure.plan?.status).toBe('blocked');
-    expect(await blocked.service.current()).toEqual(blocked.before);
-    expect(blocked.writes).not.toHaveBeenCalled();
+    const failure=await run(degraded);
+    expect(failure.plan?.status,failure.message).toBe('completed');
+    const after=await degraded.service.current();
+    expect(after.state_revision).toBe(degraded.before.state_revision+1);
+    expect(after.last_turn?.presentation).toMatchObject({status:'degraded'});
+    expect(after.last_turn?.narrative).toContain('伸个懒腰');
+    expect(after.last_turn?.narrative).toContain('整理桌面');
+    expect(after.last_turn?.narrative).not.toContain('progress');
   });
   it('can combine a registered time action with a generic activity without a separate commit',async()=>{
     const steps=['等待两分钟','伸个懒腰'],f=await setup(steps);
@@ -167,20 +239,19 @@ describe('Phase 3 local compound candidate',()=>{
     expect(localCompoundSteps(view,'伸个懒腰，整理桌面',validatePlan({goals:[goal(0,'伸个懒腰'),
       goal(1,'去寻找未知人物')]}))).toBeNull();
   });
-  it('retries a pending compound after Narrator rejection without re-executing its steps',async()=>{
+  it('degrades a compound whose narrator keeps failing, committing settled steps without re-executing them',async()=>{
     const steps=['伸个懒腰','整理桌面'],f=await setup(steps);
     const unsupported={...narration,mechanical_claims:[{kind:'progress' as const,fact_index:0}]};
-    f.narrate.mockReset().mockResolvedValueOnce(unsupported).mockResolvedValueOnce(unsupported)
-      .mockResolvedValueOnce(unsupported).mockResolvedValue(narration);
+    f.narrate.mockReset().mockResolvedValue(unsupported);
     const request={...f.request};
-    await expect(f.service.turn(request,undefined,undefined,undefined,false,undefined,steps)).rejects.toThrow('未结算');
-    expect(await f.service.current()).toEqual(f.before);
-    expect(f.freeform).toHaveBeenCalledTimes(2);
     await f.service.turn(request,undefined,undefined,undefined,false,undefined,steps);
-    const after=await f.service.current();
     expect(f.freeform).toHaveBeenCalledTimes(2);
+    const after=await f.service.current();
     expect(after.state_revision).toBe(f.before.state_revision+1);
     expect(f.writes).toHaveBeenCalledTimes(1);
+    expect(after.last_turn?.presentation).toMatchObject({status:'degraded'});
+    expect(after.last_turn?.narrative).toContain('1、');
+    expect(after.last_turn?.narrative).toContain('2、');
   });
   it('preserves all local steps in planner output and expands movement plus activity',async()=>{
     const f=await sparseSetup(),save=await f.service.current();

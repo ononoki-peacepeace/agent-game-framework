@@ -54,7 +54,9 @@ export function gameNarrative(outcome:Extract<FrameworkOutcome,{type:'game'}>,fa
 export const safeEngineMessage='这一回合没有完成安全结算。请刷新当前世界状态，再决定是否重试。';
 export function engineMessage(outcome:Extract<FrameworkOutcome,{type:'engine_failure'}>){
   if(outcome.receipt_ids.length||outcome.committed_steps.length)
-    return '前面已经结算的行动保持有效；后续步骤未能可靠完成。请查看当前世界状态后再决定下一步。';
+    return outcome.stage==='natural_scene'?
+      '此前已保存的状态记录保持有效；后续交流未能可靠完成。请查看当前世界状态后再决定下一步。':
+      '前面已经结算的行动保持有效；后续步骤未能可靠完成。请查看当前世界状态后再决定下一步。';
   if(!outcome.state_certain)return safeEngineMessage;
   if(outcome.stage==='natural_scene')return outcome.code==='provider_failure'?
     '这次交流的模型响应未能完成，交流尚未提交；后续行动尚未执行。':

@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {createHash,randomUUID} from 'node:crypto';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
-import {mkdir,readFile,writeFile,rename,copyFile} from 'node:fs/promises';
+import {mkdir,readFile,writeFile,copyFile} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {assert} from '../core/schema.js';
@@ -17,6 +17,10 @@ import {capabilityRegistry,type CapabilityDescriptor} from '../system/capabiliti
 import {changePlanSchema,type ChangePlan} from '../change/contracts.js';
 import {isDelegateAnswer} from '../system/feature-guide.js';
 import {CoreCandidateInstaller,type CoreInstallRecord} from '../development/core-installer.js';
+import {writeAtomicJson} from '../storage/atomic-json.js';
+import {withoutInputRecovery} from '../recovery/request-context.js';
+import {withoutRequestBudget,withRequestBudget} from '../ai/request-budget.js';
+import {startTrace,runWithTrace} from '../observability/index.js';
 const runCommand=promisify(execFile);
 export type DevelopmentFailureClassification='TRANSIENT_EXECUTION_FAILURE'|'DETERMINISTIC_REQUEST_FAILURE'|'IMPLEMENTATION_FAILURE'|'CAPABILITY_EXTERNAL_BLOCK'|'UNRECOVERABLE_FAILURE';
 export function classifyDevelopmentFailure(message:string):DevelopmentFailureClassification{
@@ -40,7 +44,7 @@ export type CapabilityGap=z.infer<typeof capabilityGapSchema>;
 export interface CoreProposal {problem:string;proposed_api:string[];impact:string[];migration:string;tests:string[];rollback:string;risk:string;minimum_change_review?:ChangePlan['minimum_change_review'];canonical_change_warning?:string|null;status:'pending'|'approved';approved_at?:string}
 export interface DevelopmentTask {
  kind?:'extension'|'capability';
- id:string;game_id:string;extension_id:string;original_request:string;normalized_requirements:string[];requirement_history:string[];
+ id:string;game_id:string;trace_id?:string;extension_id:string;original_request:string;normalized_requirements:string[];requirement_history:string[];
  complexity:'LOW'|'MEDIUM'|'HIGH'|'VERY_HIGH';status:'planning'|'developing'|'testing'|'repairing'|'waiting_for_user'|'waiting_for_core_approval'|'ready_for_preview'|'installed'|'failed'|'cancelled'|'paused';
  replan_required?:boolean;workspace:string;current_version:string;installed_version:string|null;revision:number;attempts:number;budget:{max_attempts:number};
  milestones:(z.infer<typeof developmentPlanSchema>['milestones'][number]&{status:'pending'|'passed'|'failed';checkpoint?:string})[];
@@ -56,13 +60,15 @@ export interface DevelopmentTask {
  preview:null|{name:string;requirements:string[];usage:string;rules:string[];ui:string[];world_integration:string;canonical_writes:string[];own_state:string[];permissions:string[];risk:string;version:string;migration:string[]};
  core_execution?:CoreDevelopmentReport|null;
  capability_artifacts?:{version:string;path:string;capability_ids:string[];hash:string}[];
+ capability_registration?:{stage:'prepared'|'registered';goal_resume:'not_started'|'started'|'completed'|'failed'};
  change_plan?:ChangePlan|null;
  core_install?:CoreInstallRecord|null;
 }
 const inputSchema=z.strictObject({request:z.string().min(1).max(3000),request_id:z.string().uuid(),extension_id:z.string().regex(/^[a-z][a-z0-9_]{0,63}$/).refine(x=>!['constructor','prototype','__proto__'].includes(x)).optional(),change_plan:changePlanSchema.optional()});
 const sdk='SDK 支持扩展自有 number/flag/text 字段、extension/entity scope、可读 label、increment/decrement/set/toggle 动作，以及 panel/modal/contextual_panel；人物宿主只支持 character_detail/character_card。人物独立属性必须声明 entity scope 和真实 host projection。不支持任意代码、连续输入、随机游戏规则、世界状态写入。只能开发 SDK 可表达的需求。';
 export class DevelopmentTasks {
- private tasks:DevelopmentTask[]=[];private receipts:Record<string,{id:string;request:string}>={};private writes:Promise<void>=Promise.resolve();
+ private tasks:DevelopmentTask[]=[];private receipts:Record<string,{id:string;request:string;state?:'prepared'|'completed'}>={};private writes:Promise<void>=Promise.resolve();
+ private creations:Promise<void>=Promise.resolve();
  private installing=new Set<string>();private controls=new Set<string>();private starting=false;
  private interruptedCore=new Set<string>();
  private runs=new Map<string,{controller:AbortController;promise:Promise<void>}>();private activitySignatures=new Map<string,string>();readonly ready:Promise<void>;
@@ -74,6 +80,14 @@ export class DevelopmentTasks {
    t.status='paused';t.message='服务重启，需求与检查点已保留，可以继续。';
  }
  const current=await this.builder.host.service.storage.read();
+ for(const t of this.tasks)if(t.kind==='capability'&&t.capability_artifacts?.length){
+  try{
+   const descriptors=await this.capabilityDescriptors(t);
+   const available=descriptors.every(descriptor=>JSON.stringify(this.builder.host.service.systemCapabilities.get(descriptor.id))===JSON.stringify(descriptor));
+   if(current?.game_id===t.game_id&&available){t.status='installed';t.installed_version=t.current_version;t.message='已核验能力包及当前运行时注册；原目标不会因重启自动重放。';}
+   else{t.status='paused';t.installed_version=null;t.message='此能力包在当前运行时尚未注册；保留已验证产物，可继续校验与注册，原目标不会自动重放。';}
+  }catch(error){t.status='failed';t.installed_version=null;t.message='能力包产物身份无法核验，未自动恢复注册。';this.history(t,'capability_recovery_failed',String((error as Error).message).slice(0,1500));}
+ }
  for(const t of this.tasks){const installed=current?.game_id===t.game_id?current.extensions?.[t.extension_id]:undefined;const candidate=t.artifacts.at(-1)?.manifest;if(installed&&candidate&&installed.version===t.current_version&&JSON.stringify(installed.manifest)===JSON.stringify(candidate)){t.status='installed';t.installed_version=installed.version;t.message='已从存档确认此版本安装成功。';}}
  }catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e;}}
  private async recoverApprovedCore(){
@@ -83,7 +97,7 @@ export class DevelopmentTasks {
    const available=await this.coreExecutor.availability();
    if(!available.available){task.message='核心编码后端暂不可用；已保留批准与检查点，待恢复后可继续。';continue;}
    task.status='developing';task.message='服务已恢复，正在隔离工作区继续已批准的核心开发。';await this.persist();
-   const controller=new AbortController(),promise=Promise.resolve().then(()=>this.runCore(task,controller.signal)).finally(()=>this.runs.delete(task.id));this.runs.set(task.id,{controller,promise});
+   this.launchDetached(task,signal=>this.runCore(task,signal));
   }
   this.interruptedCore.clear();
  }
@@ -93,7 +107,13 @@ export class DevelopmentTasks {
    const signature=JSON.stringify([task.status,task.message,task.attempts,task.candidate_job_id,task.milestones.map(m=>m.status),task.core_execution?.status,task.core_install?.stage]);
    if(this.activitySignatures.get(task.id)!==signature){task.started_at??=task.history[0]?.at??now;task.last_activity_at=now;task.current_phase=task.status;task.active_job=this.runs.has(task.id)||['planning','developing','testing','repairing'].includes(task.status)?(task.candidate_job_id??(task.kind==='capability'?'能力包构建':'开发任务')):null;task.latest_progress_message=task.message;this.activitySignatures.set(task.id,signature);}
   }
-  const payload=JSON.stringify({tasks:this.tasks,receipts:this.receipts},null,2);this.writes=this.writes.catch(()=>{}).then(async()=>{await mkdir(this.builder.host.directory,{recursive:true});const path=join(this.builder.host.directory,randomUUID()+'.tmp');await writeFile(path,payload);await rename(path,join(this.builder.host.directory,'tasks.json'));});return this.writes;}
+  const snapshot=structuredClone({tasks:this.tasks,receipts:this.receipts});const write=this.writes.then(()=>writeAtomicJson(join(this.builder.host.directory,'tasks.json'),snapshot));this.writes=write.catch(()=>undefined);return write;}
+ private async persistCreated(task:DevelopmentTask,requestId:string){
+  try{await mkdir(task.workspace,{recursive:true});await this.persist();}
+  catch(error){this.tasks=this.tasks.filter(entry=>entry.id!==task.id);
+    if(this.receipts[requestId]?.id===task.id)delete this.receipts[requestId];
+    this.activitySignatures.delete(task.id);throw error;}
+ }
  private history(t:DevelopmentTask,event:string,detail:string){t.history.push({at:new Date().toISOString(),event,detail});}
  private recovery(t:DevelopmentTask){return t.development_recovery??={classification:null,stage:'需求分析',provider_calls:0,repair_attempts:0,last_fingerprint:null,repeated_failures:0,last_error:null,last_meaningful_progress_at:new Date().toISOString()};}
  private providerAttempt(t:DevelopmentTask,stage:string){const recovery=this.recovery(t);recovery.stage=stage;recovery.provider_calls+=1;}
@@ -102,29 +122,51 @@ export class DevelopmentTasks {
  private async find(id:string){await this.ready;const t=this.tasks.find(t=>t.id===id);assert(t,'开发任务不存在');assert(t.game_id===(await this.builder.host.service.current()).game_id,'开发任务属于另一个世界');return t;}
  async list(){await this.ready;const s=await this.builder.host.service.current();return structuredClone(this.tasks.filter(t=>t.game_id===s.game_id));}
  async get(id:string){return structuredClone(await this.find(id));}
- async start(raw:unknown){await this.ready;const input=inputSchema.parse(raw),old=this.receipts[input.request_id];if(old){assert(old.request===JSON.stringify(input),'请求标识已用于不同需求');return this.get(old.id);}
+ private create<T>(work:()=>Promise<T>){const operation=this.creations.then(work);this.creations=operation.then(()=>undefined,()=>undefined);return operation;}
+ async start(raw:unknown){return this.create(()=>this.startTask(raw));}
+ private async startTask(raw:unknown){await this.ready;const input=inputSchema.parse(raw),old=this.receipts[input.request_id];if(old){assert(old.request===JSON.stringify(input),'请求标识已用于不同需求');assert(old.state!=='prepared','请求已登记，但修订结果尚未确认；已停止自动重放，请检查原任务进度');return this.get(old.id);}
  assert(!this.runs.size&&!this.starting,'已有开发任务正在运行');this.starting=true;try{const save=await this.builder.host.service.current();
- if(input.extension_id){const existing=this.tasks.findLast(t=>t.game_id===save.game_id&&t.extension_id===input.extension_id);if(existing)return this.revise(existing.id,input.request);}
+ if(input.extension_id){const existing=this.tasks.findLast(t=>t.game_id===save.game_id&&t.extension_id===input.extension_id);if(existing){
+ this.receipts[input.request_id]={id:existing.id,request:JSON.stringify(input),state:'prepared'};
+ try{await this.persist();}catch(error){delete this.receipts[input.request_id];throw error;}
+ // Once the revision has begun, a failed response or journal is uncertain. Keep
+ // its durable intent instead of appending the same requirements a second time.
+ const revised=await this.revise(existing.id,input.request);this.receipts[input.request_id].state='completed';
+ try{await this.persist();}catch(error){this.receipts[input.request_id].state='prepared';throw error;}
+ return revised;
+ }}
  const id=randomUUID(),extension_id=input.extension_id??'extension_'+id.replaceAll('-','').slice(0,16),installed=save.extensions?.[extension_id];
  assert(!input.extension_id||installed,'找不到要更新的已安装功能');
  const version=await this.builder.host.nextVersion(extension_id,installed?.version);
  const t:DevelopmentTask={id,game_id:save.game_id,extension_id,original_request:input.request,normalized_requirements:[input.request],requirement_history:[input.request],complexity:'MEDIUM',status:'planning',workspace:resolve(this.builder.host.directory,'tasks',id),current_version:version,installed_version:installed?.version??null,revision:1,attempts:0,budget:{max_attempts:3},milestones:[],capability_gaps:[],core_proposal:null,artifacts:[],test_results:[],history:[],message:'正在整理需求及开发阶段。',candidate_job_id:null,preview:null,clarification_options:[],clarification_rounds:0,change_plan:input.change_plan??null};
  if(installed)t.artifacts.push({version:installed.version,milestone:'installed',path:'',job_id:'',manifest:installed.manifest});
- this.tasks.push(t);this.receipts[input.request_id]={id,request:JSON.stringify(input)};this.history(t,'created',input.request);await mkdir(t.workspace,{recursive:true});await this.persist();this.launch(t);return structuredClone(t);}finally{this.starting=false;}}
- async startCapability(input:{request_id:string;request:string;capability_ids:string[]}){
+ this.tasks.push(t);this.receipts[input.request_id]={id,request:JSON.stringify(input)};this.history(t,'created',input.request);await this.persistCreated(t,input.request_id);this.launch(t);return structuredClone(t);}finally{this.starting=false;}}
+ async startCapability(input:{request_id:string;request:string;capability_ids:string[]}){return this.create(()=>this.startCapabilityTask(input));}
+ private async startCapabilityTask(input:{request_id:string;request:string;capability_ids:string[]}){
   await this.ready;const receipt=this.receipts[input.request_id];const fingerprint=JSON.stringify(input);
-  if(receipt){assert(receipt.request===fingerprint,'请求标识已用于不同需求');return this.get(receipt.id);}
+  if(receipt){assert(receipt.request===fingerprint,'请求标识已用于不同需求');assert(receipt.state!=='prepared','请求已登记，但修订结果尚未确认；已停止自动重放，请检查原任务进度');return this.get(receipt.id);}
   assert(!this.runs.size&&!this.starting,'已有开发任务正在运行');this.starting=true;
   try{
    const save=await this.builder.host.service.current(),id=randomUUID(),version='0.1.0';
    const descriptors=input.capability_ids.map(capabilityId=>{const descriptor=capabilityRegistry.get(capabilityId);assert(descriptor?.implemented&&descriptor.access!=='external',`能力 ${capabilityId} 不能由本地安全 builder 安装`);return descriptor;});
    const available=new Set((await this.builder.host.service.view())!.capabilities);for(const descriptor of descriptors)for(const requirement of descriptor.provider_requirements)assert(available.has(requirement),`缺少外部或世界前置能力：${requirement}`);
    const task:DevelopmentTask={kind:'capability',id,game_id:save.game_id,extension_id:'capability_'+id.replaceAll('-','').slice(0,16),original_request:input.request,normalized_requirements:[input.request],requirement_history:[input.request],complexity:'LOW',status:'developing',workspace:resolve(this.builder.host.directory,'tasks',id),current_version:version,installed_version:null,revision:1,attempts:1,budget:{max_attempts:1},milestones:[{id:'package',title:'构建并注册可复用能力包',kind:'integration',acceptance:['manifest 校验','Framework build','运行时注册','恢复原目标'],status:'pending'}],capability_gaps:[],core_proposal:null,artifacts:[],test_results:[],history:[],message:'正在隔离构建并验证本地能力包。',candidate_job_id:null,preview:null,clarification_options:[],clarification_rounds:0,capability_artifacts:[]};
-   this.tasks.push(task);this.receipts[input.request_id]={id,request:fingerprint};this.history(task,'created',input.request);await mkdir(task.workspace,{recursive:true});await this.persist();
-   const controller=new AbortController(),promise=this.runCapability(task,descriptors,controller.signal).finally(()=>this.runs.delete(task.id));this.runs.set(task.id,{controller,promise});return structuredClone(task);
+   this.tasks.push(task);this.receipts[input.request_id]={id,request:fingerprint};this.history(task,'created',input.request);await this.persistCreated(task,input.request_id);
+   this.launchDetached(task,signal=>this.runCapability(task,descriptors,signal));return structuredClone(task);
   }finally{this.starting=false;}
  }
+ private async capabilityDescriptors(task:DevelopmentTask){
+  const artifact=task.capability_artifacts?.at(-1);assert(artifact&&artifact.version===task.current_version,'没有可核验的能力包产物');
+  assert(artifact.path===join(task.workspace,'capability-package.json'),'能力包产物路径不匹配');
+  const payload=await readFile(artifact.path,'utf8');assert(createHash('sha256').update(payload).digest('hex')===artifact.hash,'能力包产物已改变');
+  const data=JSON.parse(payload);assert(data.format_version===1&&data.version===task.current_version&&Array.isArray(data.capabilities)&&data.capabilities.length>0,'能力包结构无效');
+  const descriptors:CapabilityDescriptor[]=data.capabilities;
+  assert(JSON.stringify(descriptors.map(descriptor=>descriptor.id))===JSON.stringify(artifact.capability_ids),'能力包身份不匹配');
+  for(const descriptor of descriptors){const trusted=capabilityRegistry.get(descriptor.id);assert(trusted?.implemented&&trusted.access!=='external'&&JSON.stringify(trusted)===JSON.stringify(descriptor),'能力包不匹配可信实现');}
+  return descriptors;
+ }
  private async runCapability(task:DevelopmentTask,descriptors:CapabilityDescriptor[],signal:AbortSignal){
+  let registered=false;
   try{
    const packagePath=join(task.workspace,'capability-package.json'),payload=JSON.stringify({format_version:1,version:task.current_version,capabilities:descriptors},null,2);await writeFile(packagePath,payload);
    await runCommand(process.execPath,[resolve('node_modules/tsx/dist/cli.mjs'),'scripts/verify-capability-package.ts',packagePath],{cwd:resolve('.'),signal,timeout:60_000,maxBuffer:1024*1024,windowsHide:true});
@@ -134,10 +176,25 @@ export class DevelopmentTasks {
     :{file:'npm',args:['run','build']};
    await runCommand(build.file,build.args,{cwd:resolve('.'),signal,timeout:10*60_000,maxBuffer:8*1024*1024,windowsHide:true});
    task.test_results.push({version:task.current_version,milestone:'framework_build',passed:true,detail:'npm run build 通过。'});
-   for(const descriptor of descriptors)this.builder.host.service.systemCapabilities.register(descriptor);
-   const hash=createHash('sha256').update(payload).digest('hex');task.capability_artifacts=[{version:task.current_version,path:packagePath,capability_ids:descriptors.map(item=>item.id),hash}];task.milestones[0].status='passed';task.milestones[0].checkpoint=packagePath;task.status='installed';task.installed_version=task.current_version;task.message='能力包已通过校验和构建，并注册到当前运行时。';this.history(task,'installed',task.current_version);await this.persist();
-   if(this.onInstalled)await this.onInstalled(structuredClone(task));
-  }catch(error){task.status=signal.aborted?'paused':'failed';task.message=signal.aborted?'能力包开发已暂停。':'能力包验证失败，未注册任何能力。';task.test_results.push({version:task.current_version,milestone:'package',passed:false,detail:String((error as Error).message).slice(0,1500)});this.history(task,'stopped',String((error as Error).message).slice(0,1500));await this.persist();}
+   signal.throwIfAborted();
+   const current=await this.builder.host.service.storage.read();
+   assert(current?.game_id===task.game_id,'世界已切换，能力包未注册');signal.throwIfAborted();
+   const hash=createHash('sha256').update(payload).digest('hex');task.capability_artifacts=[{version:task.current_version,path:packagePath,capability_ids:descriptors.map(item=>item.id),hash}];
+   task.capability_registration={stage:'prepared',goal_resume:task.capability_registration?.goal_resume??'not_started'};await this.persist();
+   signal.throwIfAborted();const latest=await this.builder.host.service.storage.read();assert(latest?.game_id===task.game_id,'世界已切换，能力包未注册');signal.throwIfAborted();
+   this.builder.host.service.systemCapabilities.registerMany(descriptors);registered=true;task.capability_registration.stage='registered';
+   task.milestones[0].status='passed';task.milestones[0].checkpoint=packagePath;task.status='installed';task.installed_version=task.current_version;task.message='能力包已通过校验和构建，并注册到当前运行时。';this.history(task,'installed',task.current_version);await this.persist();
+   if(this.onInstalled&&task.capability_registration.goal_resume==='not_started'){
+    task.capability_registration.goal_resume='started';await this.persist();
+    try{await this.onInstalled(structuredClone(task));task.capability_registration.goal_resume='completed';await this.persist();}
+    catch(error){task.capability_registration.goal_resume='failed';this.history(task,'goal_resume_failed',String((error as Error).message).slice(0,1500));task.message='能力包已注册，但恢复原目标失败；已有能力保留，原目标未自动重放。';await this.persist();}
+   }
+  }catch(error){
+   const detail=String((error as Error).message).slice(0,1500);
+   if(registered){task.status='installed';task.installed_version=task.current_version;task.message='能力包已注册，但后续记录或原目标恢复失败；已有能力保留，未重复注册。';this.history(task,'registration_followup_failed',detail);}
+   else{task.status=signal.aborted?'paused':'failed';task.message=signal.aborted?'能力包开发已暂停。':'能力包验证失败，未注册任何能力。';task.test_results.push({version:task.current_version,milestone:'package',passed:false,detail});this.history(task,'stopped',detail);}
+   await this.persist();
+  }
  }
  /**
   * A clarification is only worth the player's attention when it changes behaviour they will actually see, and
@@ -148,7 +205,14 @@ export class DevelopmentTasks {
   if(t.clarification_rounds>=2){this.history(t,'clarification_capped','已经问过两轮，剩余差异按最小合理方案处理。');return false;}
   return true;
  }
- private launch(t:DevelopmentTask){const controller=new AbortController();const promise=Promise.resolve().then(()=>this.run(t,controller.signal)).finally(()=>this.runs.delete(t.id));this.runs.set(t.id,{controller,promise});}
+ private launchDetached(task:DevelopmentTask,work:(signal:AbortSignal)=>Promise<void>){
+  const controller=new AbortController(),trace=startTrace({module:'development.task',logger:this.builder.host.service.logger,job_id:task.id,game_id:task.game_id});task.trace_id=trace.trace_id;
+  const promise=withoutInputRecovery(()=>withoutRequestBudget(()=>withRequestBudget(()=>runWithTrace(trace,()=>Promise.resolve().then(()=>work(controller.signal)))))).finally(()=>this.runs.delete(task.id));
+  this.runs.set(task.id,{controller,promise});
+  void promise.catch(error=>this.builder.host.service.logger.error('development.task.background_failed',{
+    module:'development.task',job_id:task.id,trace_id:trace.trace_id,metadata:{reason:String((error as Error).message).slice(0,500)}}));
+ }
+ private launch(t:DevelopmentTask){this.launchDetached(t,signal=>this.run(t,signal));}
  private gap(t:DevelopmentTask,gaps:CapabilityGap[]){const simple=/(人物|角色|npc)/i.test(t.original_request)&&/(开关|切换|标记|关注)/i.test(t.original_request)&&!/(回合|时间|系统状态|canonical|schema|源码|框架)/i.test(t.original_request);if(simple){t.capability_gaps=[];this.history(t,'minimum_change_review','现有 entity-scoped flag、toggle 和 Character Host 已能表达需求；拒绝升级 Core。');return;}t.capability_gaps=gaps;t.status='waiting_for_core_approval';t.message='当前扩展接口不足以完成需求，核心能力提案等待审阅。';t.core_proposal={problem:gaps.map(g=>g.why_needed).join('\n'),proposed_api:gaps.map(g=>g.proposed_generic_capability),impact:gaps.flatMap(g=>g.affected_modules),migration:'新增状态必须可选且版本化；旧档往返兼容，迁移前保留检查点。',tests:['权限越界拒绝','旧档往返兼容','并发冲突与原子回滚','中断恢复','新接口行为验证'],rollback:'禁用新能力，恢复迁移前检查点和上一扩展版本。',risk:gaps.map(g=>g.risk).join('\n'),minimum_change_review:t.change_plan?.minimum_change_review,canonical_change_warning:gaps.some(g=>/(schema|canonical|存档|回合|时间|runtime)/i.test(g.why_needed+' '+g.proposed_generic_capability))?'这已经不再是普通扩展修改，而是在增加新的 Framework 核心概念；可能影响存档、撤销或历史语义。':null,status:'pending'};this.history(t,'capability_gap',t.message);}
  private async run(t:DevelopmentTask,signal:AbortSignal){
  try{
@@ -208,9 +272,15 @@ export class DevelopmentTasks {
  t.replan_required=true;await this.persist();this.launch(t);return structuredClone(t);
  }
  async resume(id:string){return this.control(id,()=>this.resumeTask(id));}
- private async resumeTask(id:string){const t=await this.find(id);assert(!this.runs.size&&['paused','failed'].includes(t.status),'当前任务不能恢复');if(t.core_proposal?.status==='approved'){assert(this.coreExecutor,'当前主机没有配置核心编码执行器');const availability=await this.coreExecutor.availability();assert(availability.available,`核心编码后端不可用：${availability.reason??availability.provider}`);t.status='developing';t.message='正在重新检查安全条件并从新的隔离 attempt 继续核心开发。';await this.persist();const controller=new AbortController(),promise=this.runCore(t,controller.signal).finally(()=>this.runs.delete(t.id));this.runs.set(t.id,{controller,promise});return structuredClone(t);}assert(!t.capability_gaps.length,'核心能力尚未提供，请先修改需求或完成核心开发');t.budget.max_attempts=t.attempts+Math.max(3,t.milestones.length*2);t.status='developing';await this.persist();this.launch(t);return structuredClone(t);}
+ private async resumeTask(id:string){const t=await this.find(id);assert(!this.runs.size&&['paused','failed'].includes(t.status),'当前任务不能恢复');if(t.kind==='capability'){
+ const descriptors=await this.capabilityDescriptors(t);
+ // Legacy installed packages have no durable goal callback identity. Re-register
+ // only after explicit resume; never replay an unprovable original goal.
+ t.capability_registration??={stage:'prepared',goal_resume:'started'};
+ t.status='developing';t.message='正在重新校验已保存能力包并恢复运行时注册。';await this.persist();this.launchDetached(t,signal=>this.runCapability(t,descriptors,signal));return structuredClone(t);
+ }if(t.core_proposal?.status==='approved'){assert(this.coreExecutor,'当前主机没有配置核心编码执行器');const availability=await this.coreExecutor.availability();assert(availability.available,`核心编码后端不可用：${availability.reason??availability.provider}`);t.status='developing';t.message='正在重新检查安全条件并从新的隔离 attempt 继续核心开发。';await this.persist();this.launchDetached(t,signal=>this.runCore(t,signal));return structuredClone(t);}assert(!t.capability_gaps.length,'核心能力尚未提供，请先修改需求或完成核心开发');t.budget.max_attempts=t.attempts+Math.max(3,t.milestones.length*2);t.status='developing';await this.persist();this.launch(t);return structuredClone(t);}
  async cancel(id:string){return this.control(id,()=>this.cancelTask(id));}
- private async cancelTask(id:string){assert(!this.installing.has(id),'安装正在提交');const t=await this.find(id),running=this.runs.get(id);running?.controller.abort();await running?.promise;t.status='cancelled';t.message='已取消；工作区与历史保留。';await this.persist();return structuredClone(t);}
+ private async cancelTask(id:string){assert(!this.installing.has(id),'安装正在提交');const t=await this.find(id),running=this.runs.get(id);running?.controller.abort();await running?.promise;if(t.status==='installed')return structuredClone(t);t.status='cancelled';t.message='已取消；工作区与历史保留。';await this.persist();return structuredClone(t);}
  async approveCore(id:string,confirmed:boolean){return this.control(id,()=>this.approveCoreTask(id,confirmed));}
  private async approveCoreTask(id:string,confirmed:boolean){
   const t=await this.find(id);assert(confirmed===true&&t.core_proposal&&t.status==='waiting_for_core_approval','请明确确认核心开发提案');
@@ -219,7 +289,7 @@ export class DevelopmentTasks {
   const availability=await this.coreExecutor.availability();
   if(!availability.available){t.status='paused';t.message=`提案已批准，但核心编码后端不可用：${availability.reason??availability.provider}`;await this.persist();return structuredClone(t);}
   t.status='developing';t.message='核心编码后端正在隔离工作区准备候选；尚未安装或注册。';await this.persist();
-  const controller=new AbortController();const promise=this.runCore(t,controller.signal).finally(()=>this.runs.delete(t.id));this.runs.set(t.id,{controller,promise});
+  this.launchDetached(t,signal=>this.runCore(t,signal));
   return structuredClone(t);
  }
  private async runCore(t:DevelopmentTask,signal:AbortSignal){

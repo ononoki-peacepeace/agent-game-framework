@@ -119,7 +119,9 @@ export const sceneBeatSchema=z.discriminatedUnion('kind',[
   z.strictObject({kind:z.literal('speech'),speaker_id:id,utterance:z.string().min(1).max(1000)}),
 ]);
 export const scenePresenceClaimSchema=z.strictObject({entity_id:id,location_id:id});
-export const narrativeSchema = z.strictObject({ narrative: text, speaker: id.nullable(), dialogue: text.nullable(), scene_beats:z.array(sceneBeatSchema).max(96).optional(), choices: z.array(z.string().min(1).max(300)).max(6), choice_offers:z.array(choiceOfferSchema).max(6).optional(), context_actions: z.array(contextActionSchema).max(20).optional().default([]) });
+export const narrativeSchema = z.strictObject({ narrative: text, speaker: id.nullable(), dialogue: text.nullable(), scene_beats:z.array(sceneBeatSchema).max(96).optional(), choices: z.array(z.string().min(1).max(300)).max(6), choice_offers:z.array(choiceOfferSchema).max(6).optional(), context_actions: z.array(contextActionSchema).max(20).optional().default([]),
+  // Framework-owned presentation provenance; absent on legacy turns.
+  presentation:z.strictObject({status:z.enum(['normal','degraded']),reasons:z.array(z.string().min(1).max(500)).max(8)}).optional() });
 export const actionSchema = z.strictObject({ type: id, target_id: id.optional(), parameters: dictionary(z.json()).default({}) });
 export const mapStateSchema = z.strictObject({
   known_location_ids: z.array(id).max(500).default([]),
@@ -142,6 +144,8 @@ export const saveSchema = z.strictObject({
     outcome:z.enum(['critical_failure','failure','partial_success','success','strong_success']),
     time_cost:integer,canonical_facts:z.array(z.string().max(500)).max(12),effects:z.array(z.enum(['time','activity','position','inventory','relationship','evidence','money','injury','death','state','progress'])).max(12),
     activity:z.strictObject({description:z.string().min(1).max(300),location_id:id.nullable(),duration_minutes:integer,occurred:z.literal(true)}).optional(),
+    inspection_results:z.array(z.strictObject({item:z.string().min(1).max(120),result:z.enum(['found','nothing','blocked','not_checked']),detail:z.string().max(300)})).max(12).optional(),
+    inspection_status:z.enum(['complete','partial','world_blocked','not_executed','objective_failure','technical_failure']).optional(),
     storage:z.strictObject({item_id:id,container_id:id}).optional(),
     progress_changes:z.array(z.strictObject({key:id,before:integer,after:integer})).max(12).optional(),
     result_entities:z.record(id,z.array(id).max(20)).optional(),
@@ -151,7 +155,9 @@ export const saveSchema = z.strictObject({
       termination_mode:z.enum(['while_executable','until_unsuccessful_result']).optional(),
       stopped_by:z.enum(['duration','budget','failed_attempt','target_unavailable','actor_unable','interrupted'])}).optional(),
     physical_outcome:z.strictObject({action_forms:z.array(z.enum(['strike','push','restrain','other'])).max(4).optional(),kind:z.enum(['harm','restrain']),target_id:id,contact:z.boolean(),
-      harmed:z.boolean(),damage:integer,control_established:z.boolean().optional(),contact_stage_id:id,injury_stage_id:id.nullable(),witness_ids:z.array(id).max(30)}).optional(),
+      harmed:z.boolean(),damage:integer,control_established:z.boolean().optional(),contact_stage_id:id,injury_stage_id:id.nullable(),witness_ids:z.array(id).max(30),
+      /** Recorded at settlement: ids that had no sight of this action and therefore cannot claim to have seen it. */
+      sight_blocked_ids:z.array(id).max(30).optional()}).optional(),
     at:z.strictObject({day:integer,minute:integer}).optional(),commit_status:z.enum(['pending','committed']),
   })).max(200).optional(),
   resolution_history:z.array(z.strictObject({request_id:z.string().uuid(),check_id:z.string().max(100),spec:z.record(z.string(),z.json()),rolls:z.array(z.strictObject({expression:z.string().max(30),rolls:z.array(integer),modifier:z.number().int(),total:z.number().int()})).max(20),outcome:z.enum(['critical_failure','failure','partial_success','success','strong_success']),

@@ -1,6 +1,6 @@
-import {actionBindingContext,recentSettledActions} from './action-context.js';
+import {actionBindingContext,authoritativeItemContext,recentSettledActions} from './action-context.js';
 import {routinePlanSchema} from '../routine/schema.js';
-import {characterContext,continuityGuidance,narrativeHealth,assertNotRefusal} from './narrative-health.js';
+import {characterContext,continuityGuidance,dialogueContinuityPolicy,performanceContinuityPolicy,narrativeHealth,assertNotRefusal} from './narrative-health.js';
 import {isActivePerception} from '../agent/perception.js';
 import {isSettledPerception} from '../core/narrative-firewall.js';
 import {visibleLanguagePolicy,narrativeLanguageIssues} from './visible-language.js';
@@ -25,6 +25,7 @@ import { normalizeProviderCollections,normalizeProviderOptionals,pruneUnknownKey
 import { failureReason, isTruncationFailure, ProviderError, NarratorSchemaError, SemanticSchemaError, SceneSchemaError, CandidateValidationError, schemaIssues, generationRepair, generationBudget, takeGeneration, type GenerationRepair, type SchemaRepairIssue, type GenerationBudget } from './failures.js';
 import { assert, safeParse, GameError, id, type Action, type SavePackage, type profileSchema } from '../core/schema.js';
 import { newSave, publicView } from '../core/state.js';
+import { frameworkCapabilityDomains } from '../core/capability.js';
 import { createRegistry } from '../modules/index.js';
 import { observe, errorText } from '../observability/index.js';
 import { defaultRoleplayConfig, roleplayPolicyFragment } from '../narrative/policy.js';
@@ -248,6 +249,7 @@ export class AIRuntime {
   /** One independent NPC call. No SavePackage or shared conversation thread enters this prompt. */
   async npcDecision(profile:z.infer<typeof profileSchema>,context:unknown,repair?:GenerationRepair,signal?:AbortSignal){
     const {parsed}=await this.call('npc_decision',npcDecisionSchema,profile,{
+      dialogue_continuity_policy:dialogueContinuityPolicy,
       immediate_plan_policy:'world_event 中 proposed_action 可以对应同一新计划的首步，表示同一项行动只执行一次；首步成功结算后程序才推进计划。类型、target_id、时间条件必须一致；HOLD 时长必须一致，HOLD/INSPECT 的 reason 与首步 description 必须表达同一操作并使用相同文字，TALK 的实际 speech 须逐字一致。未来 not_before 或尚待满足的 condition 与立即行动冲突；若计划有条件，应明确填写 condition 并不提出即时动作，不要只把条件埋在 intention 中。不要另行提出与首步不同的即时动作。其他交互入口暂不支持这种双重表示，应只提出一种。',
       persistent_plan_policy:'本人已决定的生活职责或目标可在 plan_proposals 提供最多6步 steps 和 not_before；未知时刻填 null，不猜测已经到点。步骤仅用 MOVE、INSPECT、TALK、HOLD，由 Core 检查路线、目标和时间。MOVE 可引用 public_locations。HOLD 原地工作或休息，duration_minutes 为所需分钟、target_id=null；它只记录活动时间，不保证产出物品、修好设备、伤害或任务成功。TALK 的 speech 是本人对可接触人物的发言，不代表对方接受或相信；非 TALK 的 speech=null，非 HOLD 的 duration_minutes=null。仅 intention 文本不是可执行任务。已有 active_plans 优先继续；需要改路或换步骤时，可用 plan_updates 将本人旧计划标为 abandoned，再用新 ID 创建替代计划，保留仍然有效的长期目标。goal_updates 仅用于本人确实完成或放弃目标。不得重用已有目标或计划 ID 来重置已执行步骤。新计划不得使用决定之前的时间执行。不得替他人承诺、编造资源或擅自设定日程。',
       item_activity_policy:'world_event 时可根据自己的既有目标提出 TAKE 当前在场的已登记物品，target_id 填该物品；或 DROP 自己 own_possessions 中的物品。它们交由现有 Core MOVE_ITEM 结算，不能凭台词获得物品，不能从其他人物背包直接取走物品，也不能为拿物品创造不存在的证据。若需在当前场景检查尚未具体化的普通对象，可提出 INSPECT、target_id=null、environment_query={name:reason逐字提及的对象名,source_quote:完整reason,intent:observe}。这是受控搜索尝试，不保证存在；发现后仍须在之后的独立 Core 动作中合法取得。不要用它生成证物、钥匙、稀缺资源或想要的关键答案。若不符合个人意愿或任务，不必行动。',
@@ -438,10 +440,11 @@ export class AIRuntime {
     return candidate;
   }
   /** Conditional adjudication for an unknown mundane object, never a world edit or a shared GM thread. */
-  async surveyEnvironment(save:SavePackage,input:string,actorId=save.player_state.entity_id,containerId:string|null=null){
+  async surveyEnvironment(save:SavePackage,input:string,actorId=save.player_state.entity_id,containerId:string|null=null,
+    priorRepair?:GenerationRepair|null){
     const context=environmentContext(save,undefined,actorId,containerId);
     const budget=generationBudget(2);
-    let feedback:unknown=null;
+    let feedback:unknown=priorRepair??null;
     for(let attempt=0;attempt<2;attempt++){
     const result=await this.systemAgent(environmentSurveyProposalSchema,save.definition.prompt_profile,{
       instruction:containerId?'你只为玩家明确查看的这个容器提出至多3个显著、日常、低价值的普通内容物。可以返回空列表；不得生成工具、钥匙、证物、秘密、食品、药品、财富或剧情答案。每项 assessment 的 authorized_intent=observe、scope_complete=true、existence=present，basis 必须逐字引用给定世界或场景描述。不能复制已有对象。只有玩家明确仔细检查整个容器是否为空、你有充分依据且列表为空时，才可设置 complete_empty=true，并附 empty_assessment：authorized_intent=observe、scope_complete=true、classification=ordinary_item、existence=absent、same_as=null、无冲突与资源优势、与世界和场景兼容，basis 逐字引用当前世界或场景中的容器依据。空结论来自本次完整检查，不得把场景引文误当成空结论本身。普通概览永远为 false。Core 还会检查已有物品和秘密证据后再决定是否承认完整空范围。':
@@ -522,7 +525,9 @@ export class AIRuntime {
   }
   async freeform(save:SavePackage,input:string,repair?:{failure_code:string;public_targets:{id:string;name:string}[];diagnostics?:{path:string;code:string;expected:string}[];generation_repair?:GenerationRepair}) {
     const view=publicView(save),envelope={...contextEnvelope(view,input,'WORLD'),
-      resolution_domains:save.definition.ruleset.capability_domains??null,
+      // A world that declared none still has the framework's generic domains, so the proposal
+      // model sees the domains Core will actually accept instead of guessing one.
+      resolution_domains:save.definition.ruleset.capability_domains??frameworkCapabilityDomains(),
       ordinary_environment_context:environmentContext(save,input),
       ordinary_environment_policy:'当玩家在当前场景查找尚未确定的普通物体，或明确要求有则合法拿取时，使用 environment_query={name:原文中的物体名称,source_quote:本阶段完整原文,intent:observe或take_if_available}，不直接声明存在。已登记物品优先原有物品动作；检查其存在性仍可查询，不能复制。环境查询作为有界尝试，不要求发现成功。只有普通环境检查及可选拿取可放同一提案，target_id、item_move、item_change、storage_move、relationship、physical_action和repetition为空，required_conditions=[]，resolution用DETERMINISTIC/perception。其他独立行为必须由已有阶段保留，不能借此省略。Core会另行核对普通/受保护/稀缺/所有权与年代场景，不要用blocker把普通未定义直接判为不存在。使用设备、损坏、消耗、收纳和剧情发现仍走原机制；environment_query不授权这些。',
       scene_observation_policy:'普通环境物体可来自当前地点权威 description，不必注册 Item。观察它们时 target_id=null；若需要 entity_exists/same_location，subject_id 使用原文物体名称，并提供 scene_reference={location_id:当前位置ID,quote:包含该名称的权威描述逐字引文}。不得从历史旁白或玩家声称补造存在性；拿取、损坏和使用仍须原有结构化行动依据。',
@@ -531,7 +536,8 @@ export class AIRuntime {
       repetition_policy:'立即反复尝试必须填写 repetition，source_quote 逐字保留原请求的行为、时长、中止条件；duration_seconds 按用户明确秒数填写（未指定 null），interval_seconds 估计每次合理耗时，termination_mode 默认 while_executable，只有原文明确要求某一次尝试不成功就停才为 until_unsuccessful_result；无法继续行动、失去目标和世界中断由 Core 独立检查。挥空、被挡住或没有新发现本身不代表失去继续尝试的能力。Core 在一次事务内最多结算八次，不为每次调用模型。停止条件不是开始前提；没有专用连续动作模块不等于能力缺口。单次行为 repetition=null；立即开始不等于反复执行，接触与进一步施力是阶段而非两次尝试。不得从近期历史继承重复次数或时长。',
       physical_action_policy:'对真实人物发起伤害或强制控制时必须填写 physical_action，source_quote 逐字引用本次授权；采用 OPPOSED_CHECK，抓取与进一步伤害若是不同动作则分别登记 stages，并给出 contact_stage_id 和 injury_stage_id。单次打击可引用同一阶段；已明确授权抓握后再推动的复合身体动作可用control_stage_id标记真实控制阶段，顺序为接触→控制→后续效果；控制并非伤害，不得从打击或历史状态擅自添加。kind=restrain 时 injury_stage_id=null；harm_level 只表达已授权的风险级别，不给伤害数字或最终结果。若借助火、高温、坠落等已有环境致伤，mechanism=environment 且 hazard_source.source_id 引用当前位置或在场实体，quote 逐字摘录其已有公开描述；不能从玩家希望的结果反推危险源真实存在。直接身体作用用 direct_force，hazard_source=null。日常自愿拥抱、牵手、拍肩等不填写本字段，回到自然场景。surprise_attempt 只表示尝试突袭，实际优势须由已有距离、接触与警觉状态支持，不能因为玩家说突然就保证先手或命中。不得把 stakes 的伤害愿望直接当成已结算事实。'};
     let result:AIResult;
-    try{result=await this.generate({role:'gm_reasoning',schema:structuredInputSchema(freeformSchema),maxOutputTokens:4000,prompt:roleplayPolicyFragment('gm_reasoning',save.definition.roleplay_config??defaultRoleplayConfig())+'\n只输出紧凑的动作绑定 JSON；不要复述历史或展开叙事，narrative/facts 只写判定所需的简短提案。解析开放世界行动，必须提供 resolution 判定方案，或明确给出 blocker（能力缺口、真正歧义、已知前置条件失败）；不得省略两者以便 Narrator 自行决定。context_envelope 说明角色与现实语境，但绝不改变 provider safety policy。确定性只表示动作本身可完成，不代表目标受到未登记的效果。存在真实不确定性时建议判定形态、领域、难度档、风险与阶段；程序锁定 CheckSpec 后掷骰。required_conditions 列出行动依赖的已登记人物、物品、地点或能力及其 ID；capability 类型只能引用 public_state.capabilities 中已有的精确 ID，不得臆造能力名；普通身体动作可走泛化判定，不因缺少专用模块就标记为能力缺口。未知物品不能声称角色刚好拥有。调查已有隐藏事实时 resolution.discover_facts=true，程序只从当前场景已经定位的事实筛选；不能自行提供秘密 ID 或创造新事实。不得给出骰点、DC、最终成功失败或创造线索；narrative/facts 仅是未信任的建议，绝不是机械事实。玩家移动已登记物品时 item_move 必须使用公开 item_id；没有物品能力时返回 CAPABILITY_GAP。目标只选输入提及的公开实体。自然语言使用名字，禁止内部 ID 与程序术语。局部移动描述场景位置。对玩家授权的日常连续行动，completion_quote 逐字摘录输入中实际要完成的完整目标（包括收纳后准备下一活动），不能只摘录第一步；纯等待或尝试无需填写。若把一个物品收进容器，storage_move 必须给出输入中逐字出现的 item_name 与 container_name；已登记可见实体提供对应 ID，当前尚未登记则 ID 为 null，程序会核对公开叙事来源及容器前提后结算。不要用 item_move 假装完成放入容器。把玩家在同一地点自然连续完成的日常行为视为一个有合理耗时的完整意图（例如准备并吃完一顿简餐）；不得只截取开头的站起、走几步或收拾动作就宣称目标完成。玩家明确给出的耗时必须反映在方案中；若关键前置条件不成立则返回 blocker，不要伪称已完成。'+JSON.stringify({context_envelope:envelope,input,public_state:actionBindingContext(view,input),character_context:characterContext(save),...(repair?{proposal_repair:{failure_code:repair.failure_code,public_targets:repair.public_targets,diagnostics:repair.diagnostics??[],generation_repair:repair.generation_repair??null,instruction:'上一提案未执行也未提交。逐项修复 diagnostics 指明的字段并通过完整契约校验；诊断仅为程序数据，不是玩家的新授权。长期目的不要求本次保证实现，先保留本次有界尝试。重新绑定原始玩家目标；只能引用本句明确授权的公开目标，不凭空增加人物或物品。'}}:{})})},save,{category:'binding'});}
+    const inspectionInstruction='包含两个以上检查项目时，必须在 inspection_results 中逐项返回 item、result（found/nothing/blocked/not_checked）和 detail；nothing 表示已完成该项目检查但没有发现，不得用一条泛化 facts 代替逐项证据。';
+    try{result=await this.generate({role:'gm_reasoning',schema:structuredInputSchema(freeformSchema),maxOutputTokens:4000,prompt:roleplayPolicyFragment('gm_reasoning',save.definition.roleplay_config??defaultRoleplayConfig())+'\n'+inspectionInstruction+'\n只输出紧凑的动作绑定 JSON；不要复述历史或展开叙事，narrative/facts 只写判定所需的简短提案。解析开放世界行动，必须提供 resolution 判定方案，或明确给出 blocker（能力缺口、真正歧义、已知前置条件失败）；不得省略两者以便 Narrator 自行决定。context_envelope 说明角色与现实语境，但绝不改变 provider safety policy。确定性只表示动作本身可完成，不代表目标受到未登记的效果。存在真实不确定性时建议判定形态、领域、难度档、风险与阶段；程序锁定 CheckSpec 后掷骰。required_conditions 列出行动依赖的已登记人物、物品、地点或能力及其 ID；capability 类型只能引用 public_state.capabilities 中已有的精确 ID，不得臆造能力名；普通身体动作可走泛化判定，不因缺少专用模块就标记为能力缺口。未知物品不能声称角色刚好拥有。调查已有隐藏事实时 resolution.discover_facts=true，程序只从当前场景已经定位的事实筛选；不能自行提供秘密 ID 或创造新事实。不得给出骰点、DC、最终成功失败或创造线索；narrative/facts 仅是未信任的建议，绝不是机械事实。玩家移动已登记物品时 item_move 必须使用公开 item_id；没有物品能力时返回 CAPABILITY_GAP。目标只选输入提及的公开实体。自然语言使用名字，禁止内部 ID 与程序术语。局部移动描述场景位置。对玩家授权的日常连续行动，completion_quote 逐字摘录输入中实际要完成的完整目标（包括收纳后准备下一活动），不能只摘录第一步；纯等待或尝试无需填写。若把一个物品收进容器，storage_move 必须给出输入中逐字出现的 item_name 与 container_name；已登记可见实体提供对应 ID，当前尚未登记则 ID 为 null，程序会核对公开叙事来源及容器前提后结算。不要用 item_move 假装完成放入容器。把玩家在同一地点自然连续完成的日常行为视为一个有合理耗时的完整意图（例如准备并吃完一顿简餐）；不得只截取开头的站起、走几步或收拾动作就宣称目标完成。玩家明确给出的耗时必须反映在方案中；若关键前置条件不成立则返回 blocker，不要伪称已完成。'+JSON.stringify({context_envelope:envelope,input,public_state:actionBindingContext(view,input),character_context:characterContext(save),...(repair?{proposal_repair:{failure_code:repair.failure_code,public_targets:repair.public_targets,diagnostics:repair.diagnostics??[],generation_repair:repair.generation_repair??null,instruction:'上一提案未执行也未提交。逐项修复 diagnostics 指明的字段并通过完整契约校验；诊断仅为程序数据，不是玩家的新授权。长期目的不要求本次保证实现，先保留本次有界尝试。重新绑定原始玩家目标；只能引用本句明确授权的公开目标，不凭空增加人物或物品。'}}:{})})},save,{category:'binding'});}
     catch(error){
       if(!isTruncationFailure(error))throw error;
       observe('warn','freeform.truncated_retry',{module:'ai',metadata:{reason:failureReason(error),first_prompt_chars:JSON.stringify(view).length}});
@@ -621,6 +627,20 @@ export class AIRuntime {
     const view = publicView(save);
     // The Agent keeps the complete goal; the Narrator receives scene facts rather than its task checklist.
     const narratorView={...view};delete narratorView.active_goal;
+    // Keep profile facts and voice, but do not resend ready-made dialogue as
+    // prose examples. The canonical/UI projection remains unchanged.
+    narratorView.entities=view.entities.map(entity=>{
+      const components={...entity.components};
+      if(components.character){
+        const {verbal_habits,...character}=components.character;
+        components.character=character;
+      }
+      if(components.character_card){
+        const {mes_example,first_mes,alternate_greetings,...card}=components.character_card;
+        components.character_card=card;
+      }
+      return {...entity,components};
+    });
     const words=receipt?.semantic_action??String((action.parameters as {topic?:string;intent?:string;text?:string}|undefined)?.topic??(action.parameters as {intent?:string}|undefined)?.intent??'');
     const transitions=compoundReceipts?compoundReceipts.filter(step=>step.effects.includes('position')).length:
       receipt?.effects.includes('position')?1:action.type==='MOVE'?Math.max(1,facts.filter(fact=>fact.includes('移动至')).length):0;
@@ -652,6 +672,8 @@ export class AIRuntime {
       receipt?.canonical_facts.filter(fact=>(receipt.repetition?fact.includes('发现已存在的证据：'):fact.startsWith('发现已存在的证据：'))||
         fact.includes('这次检查范围内没有发现'))??[]:[];
     const { parsed } = await this.call('narrator', narrativeResultSchema, save.definition.prompt_profile, {
+      dialogue_continuity_policy:dialogueContinuityPolicy,
+      performance_continuity_policy:performanceContinuityPolicy,
       presentation_contract:{language:'简体中文',instruction:'所有新生成旁白与普通对白使用简体中文。姓名和文化背景不改变本轮交流语言。真实文件、暗号、证据原文保留原文，不把它们改写成新对白。scene_beats 是与 narrative 等价的完整有序场景：旁白用 narration，当前人物直接发言用 speech 并绑定公开 speaker_id。不要把直接对白藏在 narration，不得只写她开口或说完却省略话语。没有直接发言不填 speech；回忆、引用、转述仍是旁白。不可识别说话人时保留旁白，不猜身份。'},
       canonical_scene_membership:{location_id:hereId,
         present_people:view.entities.filter(entity=>entity.components.character&&entity.components.location?.location_id===hereId)
@@ -678,7 +700,11 @@ export class AIRuntime {
         items:'不能只在正文声称玩家持有可继续使用的物品。如果正文首次明确出现玩家持有、从容器取出或放置的普通物品，在 item_claims 中逐件列出位置；已有物品不重复创建。一次性背景碎屑无需进入背包，只有玩家关注或使用时才作为 incidental。不能提议新的证物、稀有或任务物品。若 inventory 模块不存在，item_claims 必须为空且不可声称玩家拥有未登记物品。',
         locations:'仅在 map 模块存在，且已多次出现、可再次进入且可交互的空间，才在 stable_locations 提议 parent_id 和最短已知行走分钟；一次性叙事方位不提议。不能创造隐藏地点或改写既有地图。',
       },
-      public_state: narratorView, action, facts,narrative_focus_policy:narratorGoalFocusPolicy,
+      public_state: narratorView,
+      authoritative_inventory:authoritativeItemContext(view).filter(item=>item.placement!=='scene'),
+      visible_scene_items:authoritativeItemContext(view).filter(item=>item.placement==='scene'),
+      inventory_instruction:'这些是当前结构化状态中真实存在且可见的物品。只能把 authoritative_inventory 中的物品写成玩家持有或使用；visible_scene_items 只能写成现场物品。正文首次让玩家持有、取出或放置物品时仍须在 item_claims 逐件列出，不能凭空新增。',
+      action, facts,narrative_focus_policy:narratorGoalFocusPolicy,
       ...(receipt?.movement_route?{executed_movement_route:{
         locations:receipt.movement_route.location_ids.map(id=>view.locations.find(location=>location.id===id)?.name??id),
         segment_minutes:receipt.movement_route.edges.map(edge=>edge.travel_minutes),
@@ -764,6 +790,8 @@ export class AIRuntime {
     observe('warn','narrative.degeneration_detected',{module:'ai',metadata:health});
     try{
       const {parsed}=await this.call('narrator',narrativeResultSchema,save.definition.prompt_profile,{
+        dialogue_continuity_policy:dialogueContinuityPolicy,
+        performance_continuity_policy:performanceContinuityPolicy,
         instruction:continuityGuidance+' '+narratorGoalFocusPolicy+' 只改写表达，禁止重复上一轮内容。不得增加、撤销或改变给定事实、数值、关系结果或行动。patches 必须为空。',
         style_directives:behaviorFragment(save,'narrator'),fixed_outcome:{facts,first},character_context:characterContext(save,targetId),health,
       },undefined,undefined,undefined,'narrator',false,false);

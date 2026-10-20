@@ -1,14 +1,14 @@
 import type {AvatarCropMetadata} from '../shared/avatar.js';
 import {awaitInputResult,clearPendingInput,type InputStatus} from './input-recovery.js';
 let token = '';
-const naturalFailure='这次请求没有成功完成，当前状态没有被修改。请检查本地服务后重试。';
+const naturalFailure='这次请求没有成功完成，连接中断后无法确认是否已结算。请先同步当前世界状态，避免重复提交。';
 const internalFailure=/Failed to fetch|TypeError|ECONNRESET|AbortError|socket hang up|HTTP\s*5\d\d|at\s+\S+\s*\(/i;
 function readableError(value:unknown,fallback=naturalFailure){const text=typeof value==='string'?value:'';return text&&!internalFailure.test(text)?text:fallback;}
 async function fetchJson(url:string,init:RequestInit,retryRead=false){
  let response:Response;
  for(let attempt=0;;attempt++)try{response=await fetch(url,init);break;}catch{if(retryRead&&attempt===0)continue;throw new Error(naturalFailure);}
  let result:any;try{result=await response.json();}catch{throw new Error(response.ok?'本地服务返回了无法读取的结果。':naturalFailure);}
- if(!response.ok)throw Object.assign(new Error(readableError(result?.error,'请求没有完成，当前状态没有被修改。')),{payload:result,httpStatus:response.status});
+ if(!response.ok)throw Object.assign(new Error(readableError(result?.error,'请求没有完成，无法确认是否已结算；请先同步当前世界状态。')),{payload:result,httpStatus:response.status});
  return result;
 }
 export async function session() {

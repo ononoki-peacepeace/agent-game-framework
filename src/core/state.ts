@@ -5,6 +5,7 @@ import {resolvePresentation} from '../shared/display.js';
 import {calendarText} from '../routine/calendar.js';
 import {defaultCalendar} from '../routine/schema.js';
 import {validateRoutineIntegrity} from '../routine/integrity.js';
+import {readPhysicalState} from './perception-state.js';
 import { randomUUID } from 'node:crypto';
 import { assert, safeParse, saveSchema, worldSchema, VERSION, type SavePackage, type WorldPackage } from './schema.js';
 import { capabilityList, createRegistry, moduleStatuses, panelMeta } from '../modules/index.js';
@@ -291,8 +292,12 @@ export function publicView(save: SavePackage, registry = createRegistry(save.def
       if (!registry.components.has(name)) return [];
       if(name==='physical_state'&&entity.id!==save.player_state.entity_id){
         if(entity.components.location?.location_id!==playerLocation)return [];
-        const physical=data as {awareness:string;restrained_by:string|null};
-        return [['physical_state',{awareness:physical.awareness,alert_to_ids:[],restrained_by:physical.restrained_by}]];
+        // Posture, eyes and other bodily transients are plainly visible to anyone
+        // sharing the scene; who the NPC is privately alert to is not.
+        const physical=readPhysicalState(entity);
+        return [['physical_state',{awareness:physical.awareness,alert_to_ids:[],restrained_by:physical.restrained_by,
+          posture:physical.posture,eyes:physical.eyes,
+          transients:physical.transients.filter(item=>item.kind!=='attention')}]];
       }
       if(name==='location'&&entity.components.character&&entity.id!==save.player_state.entity_id&&
         entity.components.location?.location_id!==playerLocation)return [];
@@ -393,7 +398,9 @@ export function publicView(save: SavePackage, registry = createRegistry(save.def
     currencies: structuredClone(rules.currencies),
     known_evidence:(save.gm_state.hidden_truth?.commitments??[]).flatMap(truth=>truth.evidence)
       .filter(evidence=>evidence.discovered_by.includes(save.player_state.entity_id)).map(evidence=>({id:evidence.id,description:evidence.description})),
-    last_turn: structuredClone(save.last_turn), notices: (save.future_intents??[]).filter(i=>i.status==='due').map(i=>'你的打算已到期：'+i.goal+'。尚未自动执行；请先处理当前场景，再决定是否尝试。'),
+    last_turn: structuredClone(save.last_turn), notices: [
+      ...(save.last_turn?.presentation?.status==='degraded'?['场景描写已降级为已验证的事实摘要；本轮世界结算结果以已保存状态为准。']:[]),
+      ...(save.future_intents??[]).filter(i=>i.status==='due').map(i=>'你的打算已到期：'+i.goal+'。尚未自动执行；请先处理当前场景，再决定是否尝试。')],
   },entities,publicLocations,{activities:(save.definition.routine_rules?.activities??[]).map(activity=>({id:activity.id,label:activity.label}))});
 }
 type Migration = (data: unknown) => unknown;
