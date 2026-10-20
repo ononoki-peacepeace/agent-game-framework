@@ -137,7 +137,11 @@ export function validateResolvedNarrative(receipt:Receipt,result:Narrative,hidde
   const prose=[body,...(result.scene_beats??[]).filter(beat=>beat.kind==='narration').map(beat=>beat.text)].join('\n');
   // The aggregate inherits its final child type; earlier physical results still
   // constrain injuries and event-time perception when the last child is TALK.
-  const physicalReceipts=(compoundReceipts??[receipt]).filter(step=>step.physical_outcome);
+  const physicalCandidates=(compoundReceipts??[receipt]).filter(step=>step.physical_outcome);
+  // Repetition owns its scoped success/failure facts. Checking each raw attempt
+  // against the whole paragraph would reject its truthful failed prefix.
+  const repeatedAttemptIds=new Set([...physicalCandidates,receipt].flatMap(step=>step.repetition?.attempt_ids??[]));
+  const physicalReceipts=physicalCandidates.filter(step=>!repeatedAttemptIds.has(step.request_id));
   if(!physicalReceipts.length&&receipt.physical_outcome)physicalReceipts.push(receipt);
   if(scene)for(const step of physicalReceipts)validatePerceptionNarrative(scene,step,result);
   if(physicalReceipts.length){

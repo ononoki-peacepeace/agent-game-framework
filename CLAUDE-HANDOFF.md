@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Repetition narrative scope follow-up — 2026-10-20
+
+Parent `a549439`; source checkpoint containing this section fixes an introduced8ae218b regression: raw repeated attempts were checked against the entire truthful failed-prefix paragraph. Repetition aggregates now own their raw attempt scope; independent physical children and factual injury/sight guards remain. Corrected baseline1fail/1control, final11files104pass, isolated build in local SESSION. Initial invalid module fixture and first9file81pass command with nonexistent optional filename are retained separately. See docs/repeated-physical-narrative-scope.md. Explicit N4.2 withdrawal/restoration net0;60%=96/160 unchanged. Latest full1957pass remains9917459. Next: keep source checkpoints and inspect reaction ownership separately, then remaining fixed matrices. Original dirt and all safety boundaries preserved.
+
 ## Compound physical child firewall — 2026-10-20
 
 Parent `77e1965`; source checkpoint containing this section keeps concrete-injury/denial/event-time-sight checks when a later TALK becomes the aggregate type. Reads actual physical child receipts, does not create reactions/results. Corrected baseline2fail/2controls; first malformed physical-state fixture excluded. Final8files79pass and isolated build in local SESSION; service cases reject3candidates then degrade once and replay without new effects. See docs/compound-physical-firewall.md. N4.1 counterexample requires explicit withdrawal then repair restoration in ledger, net0; N4.3 stays open,60%=96/160 unchanged. Full195files1957pass remains9917459, prior to this edit. Next: separate audit of reaction ownership for earlier physical compound steps; broad temporal/subject scope remains open. Original QA/audit/untracked handoff dirt preserved; no formal save/3100/paid/deploy/push/Claude edits.

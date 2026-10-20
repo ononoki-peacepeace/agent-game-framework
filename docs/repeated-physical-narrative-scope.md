@@ -1,0 +1,9 @@
+# Preserve repetition scope in physical child validation
+
+Follow-up review found a regression introduced by `8ae218b`: passing the real repeated-attempt receipts alongside their aggregate made each successful raw attempt reject a truthful earlier failed prefix. The same narrative passed with only the repetition aggregate. A corrected lawful baseline had one failure and one control pass; an initial module-version fixture error was excluded from product evidence.
+
+Physical validation now excludes raw attempt IDs owned by a supplied repetition aggregate, preserving its existing scoped failure/success logic. Other independent physical children remain checked; an attempts-only projection falls back to the actual aggregate. Concrete injuries and event-time perception retain the preceding repair. No outcome, resources, RNG, time, NPC decision or receipt is changed.
+
+[repeated-physical-narrative-scope.test.ts](../tests/repeated-physical-narrative-scope.test.ts) uses actual Core repeated outcomes with no child projection, all receipts, and raw attempts only. The true failed prefix passes in all three shapes; a false global denial still fails. Final 11 files / 104 tests passed, including physical-first/TALK-last firewall and actual immediate repetition/social regressions. Complete isolated build result is recorded in local SESSION. One first command included a nonexistent optional test filename; the JSON correctly reports only nine executed files/81 passes, not ten. The expanded final command uses eleven existing files and is the final evidence.
+
+N4.2's introduced counterexample is recorded as an explicit withdrawal followed by repair restoration; net score change is zero, total 60.00% (96/160). N4.3/N4.4 remain open. Complete195-file/1957-pass snapshot remains at `9917459`, before these firewall edits; focused regressions do not replace that versioned boundary.
