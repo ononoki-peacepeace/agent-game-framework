@@ -72,7 +72,10 @@ export const rulesSchema = z.strictObject({
     condition_sensitive:z.boolean().default(false),exertion_cost:integer.max(10).default(0)})).optional(),
   physical_rules:z.strictObject({minor_damage:integer.min(1).max(100),serious_damage:integer.min(1).max(100)}).optional(),
   resolution_profile:z.strictObject({version:z.literal(1),kind:z.enum(['classic_d20','bell_2d6','percentile_d100'])}).optional(),
-  relationship_dimensions: dictionary(z.strictObject({ min: z.number().int(), max: z.number().int(), initial: z.number().int() })),
+  relationship_dimensions: dictionary(z.strictObject({ min: z.number().int(), max: z.number().int(), initial: z.number().int(),
+    // Authored semantics, never inferred from a dimension's name or numeric bounds.
+    event_deltas:z.strictObject({contact:z.number().int().min(-2).max(2).optional(),
+      conflict:z.number().int().min(-2).max(2).optional(),harmed:z.number().int().min(-2).max(2).optional()}).optional() })),
 });
 export const provenanceSourceSchema = z.enum(['PLAYER_DECLARED','TEMPLATE_DECLARED','AI_GENERATED','CANONICAL_INSTANTIATED','DERIVED','UNKNOWN']);
 export const worldCreationProvenanceSchema = z.strictObject({

@@ -1,5 +1,9 @@
 # Claude Code starting handoff
 
+## Latest: unified takeover
+
+Claude quota is exhausted; the user transferred all four themes to Codex. Work continues in `D:\game` on `codex/claude-takeover-integration`. `D:\game-claude` remains at `bf0ea40114b625c74a2ec4a6a759cffa3a832bca` with its original interrupted Batch 4 edits intact. Product-only Batch 2 is `976f7c0`, Batch 3 is `b8a5069`. See `docs/claude-takeover-integration.md` and ignored `.codex-checkpoints/framework-reliability-handoff/takeover-2026-10-20/` for snapshots, verification, revised Batch 4 contract and next work. The older sections below are historical, not current ownership instructions. No model/service was launched and no remote push or production save write occurred.
+
 Status: parallel workspace prepared from the reviewed latest local source baseline. Exact baseline hash, synced-file hashes and setup validation are recorded locally under `D:\game\.codex-checkpoints\framework-reliability-handoff\parallel-workspaces\` and copied into Claude's ignored `.agent-runtime/claude/handoff/` directory after setup.
 
 Work only in `D:\game-claude` on `claude/npc-world-narrator`. Responsibilities: (3) autonomous NPCs and persistent world; (4) natural Narrator prose. Read `AGENTS.md` and `docs/parallel-development.md` first.

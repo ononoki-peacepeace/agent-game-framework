@@ -1,7 +1,22 @@
 import { z } from 'zod';
-import { assert, dictionary } from '../core/schema.js';
+import { assert, dictionary, type SavePackage } from '../core/schema.js';
 import type { Module } from '../core/registry.js';
 type Relations = { entries: Record<string, Record<string, number>> };
+/** Shared numeric mutation. Callers separately authorize the two participants. */
+export function applyRelationshipDelta(save:SavePackage,patch:{entity_id:string;target_id:string;dimension:string;delta:number}){
+  const entity=save.entities.find(e=>e.id===patch.entity_id&&e.components.character);
+  assert(entity&&patch.entity_id!==patch.target_id&&save.entities.some(e=>e.id===patch.target_id&&e.components.character),
+    '关系变化必须属于两个有效人物');
+  assert(Number.isInteger(patch.delta)&&Math.abs(patch.delta)<=2,'单回合关系变化最多 2');
+  const d=save.definition.ruleset.relationship_dimensions[patch.dimension];
+  assert(d,'未知关系维度');
+  const rel=entity.components.relationships as Relations|undefined;
+  assert(rel,'角色没有关系组件');
+  const next=(rel.entries[patch.target_id]?.[patch.dimension]??d.initial)+patch.delta;
+  assert(next>=d.min&&next<=d.max,'关系变化越界');
+  rel.entries[patch.target_id]??={};
+  rel.entries[patch.target_id][patch.dimension]=next;
+}
 export const relationshipsModule: Module = {
   id: 'relationships', version: '0.1.0', requires: ['characters'],
   manifest: { api_version:'1', provides:['relationship.graph'], state_ownership:['components.relationships'], state_schema_version:'relationships.v1', migration_version:1, supports_enable_disable:false, supports_remove:false },
@@ -20,15 +35,8 @@ export const relationshipsModule: Module = {
   },
   patches: { relationship_delta(save, patch, action) {
     assert(['TALK','SOCIAL_INTERACT','FREEFORM_ACTION'].includes(action.type) && action.actor_id === patch.entity_id && action.target_id === patch.target_id, '只允许更新本次人物互动的玩家关系');
-    assert(Number.isInteger(patch.delta) && Math.abs(patch.delta) <= 2, '单回合关系变化最多 2');
-    const d = save.definition.ruleset.relationship_dimensions[patch.dimension];
-    assert(d, '未知关系维度');
-    const entity = save.entities.find(e => e.id === patch.entity_id)!;
-    const rel = entity.components.relationships as Relations | undefined;
-    assert(rel, '角色没有关系组件');
-    rel.entries[patch.target_id] ??= {};
-    const next = (rel.entries[patch.target_id][patch.dimension] ?? d.initial) + patch.delta;
-    assert(next >= d.min && next <= d.max, '关系变化越界');
-    rel.entries[patch.target_id][patch.dimension] = next;
+    assert(!save.definition.ruleset.relationship_dimensions[patch.dimension]?.event_deltas,
+      '本次关系维度由权威事件结算');
+    applyRelationshipDelta(save,patch);
   } },
 };

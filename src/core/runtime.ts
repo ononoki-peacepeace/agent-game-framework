@@ -12,6 +12,7 @@ import { observe, errorText } from '../observability/index.js';
 import {resolutionKindSchema} from './resolution.js';
 import {evaluateBackgroundTime,evaluateBackgroundLocation} from '../background/runtime.js';
 import {recordNpcActionExperience} from '../agent/npc-experience.js';
+import {settleRelationshipOutcomes} from '../agent/npc-relations.js';
 import {expirePhysicalTransients} from './perception-state.js';
 
 /** One bounded world tick: registered module handlers, authored events and schedules share the same clock. */
@@ -140,7 +141,7 @@ export function executeAction(current: SavePackage, input: unknown, requestId: s
     }].slice(-200);
   }
   recordNpcActionExperience(save,requestId,action.actor_id,action.type,facts);
-  return { save: validateSave(save, registry), action, facts, events, registry };
+  return { save: settleRelationshipOutcomes(validateSave(save, registry),action,registry), action, facts, events, registry };
 }
 const patchSchema = z.strictObject({ op: z.string(), entity_id: z.string(), target_id: z.string(), dimension: z.string(), delta: z.number().int() });
 export function applyPatches(save: SavePackage, input: unknown, action: Action, registry = createRegistry(save.definition.enabled_modules)) {

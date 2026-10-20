@@ -175,7 +175,9 @@ export function compileWorld(b: z.infer<typeof worldInitializationSchema>, profi
     ...(has('routine') ? { routine_rules: defaultRoutineRules(home) } : {}),
     // Declared unconditionally: these domains are how Core reads a body, not authoring flavour.
     ruleset: { capability_domains:capabilityDomains, minutes_per_day: 1440, max_wait_minutes: 1440, talk_minutes: 5, trade_minutes: 2, default_check: '2d6+1',resolution_profile:{version:1,kind:b.resolution_profile??'bell_2d6'},
-      currencies: { [b.currency.id]: b.currency.name }, relationship_dimensions: { trust: { min: -100, max: 100, initial: 0 }, familiarity: { min: 0, max: 100, initial: 0 } } },
+      currencies: { [b.currency.id]: b.currency.name }, relationship_dimensions: {
+        trust: { min: -100, max: 100, initial: 0,event_deltas:{conflict:-1,harmed:-2} },
+        familiarity: { min: 0, max: 100, initial: 0,event_deltas:{contact:1,conflict:1,harmed:1} } } },
     prompt_profile: profile, world: { description: b.description },
     entities,
     ...(has('map') ? { map: { locations: locations.map(l => ({ ...l,spatial:l.spatial??undefined, tags: [], position: positions[l.id] })),

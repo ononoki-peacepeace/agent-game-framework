@@ -17,11 +17,13 @@ export function narratorCharacterCognition(save:SavePackage,ids:readonly string[
       authoritative_body:{summary:physicalStateSummary(entity),posture:state.posture,eyes:state.eyes,
         restrained_by:state.restrained_by},
       sight:{blocked:sight.blocked,reason:sight.reason},
+      own_relationships:Object.entries((entity.components.relationships?.entries??{}) as Record<string,Record<string,number>>)
+        .slice(0,6).map(([target_id,dimensions])=>({target_id,dimensions})),
       own_active_goals:(mind?.goals??[]).filter(goal=>goal.status==='active')
         .sort((a,b)=>b.priority-a.priority).slice(0,3)
         .map(goal=>({description:goal.description,horizon:goal.horizon})),
       own_knowledge:(mind?.knowledge??[]).slice(-5).map(item=>({proposition:item.proposition.slice(0,200),
-        source_type:item.source_type,confidence:item.confidence})),
+        source_type:item.source_type,source_ref:item.source_ref,confidence:item.confidence})),
       own_beliefs:(mind?.beliefs??[]).slice(-3).map(item=>({proposition:item.proposition.slice(0,200),
         stance:item.stance})),
       own_recent_experience:(mind?.memories??[]).slice(-3).map(item=>({kind:item.kind,

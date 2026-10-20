@@ -60,7 +60,7 @@ describe('narrator character cognition',()=>{
     expect(entries.map(entry=>entry.id)).toEqual(['npc_lin','npc_qiao']);
     const target=entries[0]!,other=entries[1]!;
     expect(target.own_knowledge).toEqual([{proposition:'有人说仓库的钥匙不见了',source_type:'told_by',
-      confidence:0.4}]);
+      source_ref:'npc_qiao',confidence:0.4}]);
     expect(target.own_active_goals).toEqual([{description:'今天只想安静休息',horizon:'short'}]);
     // One character's private cognition never appears inside another's entry.
     expect(JSON.stringify(target)).not.toContain('那笔欠款');
@@ -99,5 +99,25 @@ describe('narrator character cognition',()=>{
     expect(prompt).not.toContain('GM_ONLY_TRUTH_NOT_FOR_ANY_CHARACTER');
     // Presentation must not mutate authoritative state.
     expect(turn.save).toEqual(before);
+  });
+
+  it('reuses the same cognition and hearsay provenance when repetitive prose is refined',async()=>{
+    const save=fixture(),text='他在毫无防备中被攥住手腕，猛地绷紧了身体。';
+    const turn=executeFreeform(save,input,proposal() as never,randomUUID(),rng([.95,.1,.95,.1]));
+    turn.save.narrative_history=[{request_id:randomUUID(),narrative:text,dialogue:null,speaker:null,facts:[],
+      time:turn.save.runtime.time}];
+    const contexts:unknown[]=[];
+    const ai=new AIRuntime({name:'refine-cognition-fixture',generate:async request=>{
+      contexts.push(JSON.parse(request.prompt.split('\n\n').at(-1)!).character_context);
+      return {data:{narrative:contexts.length===1?text:'手腕骤然被攥紧，他的身体随之一僵。',speaker:null,dialogue:null,
+        choices:[],context_actions:[],patches:[],item_claims:[],stable_locations:[],mechanical_claims:[]}};
+    }});
+    await ai.narrate(turn.save,turn.action,turn.facts,turn.save.resolution_receipts!.at(-1));
+    expect(contexts).toHaveLength(2);
+    const first=contexts[0] as {character_cognition:unknown;cognition_policy:string};
+    const refined=contexts[1] as typeof first;
+    expect(refined.character_cognition).toEqual(first.character_cognition);
+    expect(refined.cognition_policy).toBe(first.cognition_policy);
+    expect(JSON.stringify(refined.character_cognition)).toContain('"source_ref":"npc_qiao"');
   });
 });

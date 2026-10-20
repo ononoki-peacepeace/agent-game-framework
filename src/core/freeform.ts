@@ -24,6 +24,7 @@ import {WorldBlockedError} from '../agent/outcome.js';
 import {environmentQuerySchema,type EnvironmentAssessment} from './environment-schema.js';
 import {executeEnvironmentQuery,resolveLocalSceneAnchor,validateEnvironmentQuery} from './environment.js';
 import {currentMap} from './map.js';
+import {settleRelationshipOutcomes} from '../agent/npc-relations.js';
 
 /** An outcome proposal, never a save patch. Numeric mechanics remain owned by modules. */
 export const freeformSchema = z.strictObject({
@@ -687,5 +688,6 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
     at:structuredClone(turn.save.runtime.time),commit_status:'pending' as const,
   }].slice(-200);
   turn.save.last_turn = { narrative:turn.facts.join(' '), speaker: null, dialogue: null, choices: [], context_actions: [] };
+  turn.save=settleRelationshipOutcomes(turn.save,turn.action,turn.registry);
   return turn;
 }

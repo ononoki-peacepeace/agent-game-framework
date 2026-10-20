@@ -1,5 +1,7 @@
 # Codex / Claude Code parallel development
 
+2026-10-20 takeover: Claude quota is exhausted. The user's later instruction transfers all four themes to Codex. Current integration branch is `codex/claude-takeover-integration` in `D:\game`; `D:\game-claude` and its dirty interruption state are preserved. See `docs/claude-takeover-integration.md` for commit provenance, public policy additions and remaining dependencies. The ownership table below describes the earlier parallel phase.
+
 Common base: the local WIP checkpoint commit that first adds this document (the exact hash and per-file manifest are in the local `parallel-workspaces` handoff record). It includes the reviewed current `src/`, tests, build configuration and reliability audit scripts, including the latest public Schema. Existing generated QA JSON, private save/checkpoint directories, credentials, runtime logs, node_modules and dist are excluded from that checkpoint. No remote push is part of setup.
 
 | Owner | Checkout | Branch | Responsibility | HTTP / Vite |

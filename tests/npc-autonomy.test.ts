@@ -116,6 +116,7 @@ describe('background NPC Agent settlement',()=>{
   });
   it('turns an explicit scene commitment into a timed relay, independent reply and real arrival',async()=>{
     const world=structuredClone(demo);
+    world.ruleset.relationship_dimensions.familiarity.event_deltas={contact:1};
     world.runtime.time={day:1,minute:11*60+5};
     const save=newSave(world),now=structuredClone(save.runtime.time);
     save.entities.find(item=>item.id===save.player_state.entity_id)!.components.location={location_id:'station'};
@@ -142,6 +143,13 @@ describe('background NPC Agent settlement',()=>{
     expect(after.npc_agent_state?.npc_qiao?.social_tasks.some(item=>item.kind==='attend')).toBe(true);
     expect(after.runtime.time).toEqual(candidate.runtime.time);
     expect(ai.calls()).toBe(1);
+    const relations=(id:string)=>after.entities.find(entity=>entity.id===id)!.components.relationships?.entries as
+      Record<string,Record<string,number>>|undefined;
+    expect(relations('npc_lin')!.npc_qiao.familiarity).toBe(1);
+    expect(relations('npc_qiao')!.npc_lin.familiarity).toBe(1);
+    expect(relations('npc_remote')?.npc_lin).toBeUndefined();
+    expect((validateSave(JSON.parse(JSON.stringify(after))).entities.find(entity=>entity.id==='npc_lin')!
+      .components.relationships.entries as Record<string,Record<string,number>>).npc_qiao.familiarity).toBe(1);
     expect(validateSave(JSON.parse(JSON.stringify(after))).npc_agent_state?.npc_lin?.social_tasks[0].notified_ids)
       .toContain('npc_qiao');
     let split=structuredClone(save);
