@@ -1,5 +1,10 @@
 # Claude Code starting handoff
 
+## Complete current offline snapshot — 2026-10-21
+
+Product `1bad19e` / ledger `5c083d8`:207files2064/2064pass across16fresh isolated shards, exact current file coverage once,515pinned hashes unchanged. Identical-product complete isolated build passed. Original QA restored after every shard; generated copies retained,27frozen hashes and formal-save SHA match. Old0xC0000409 and all earlier failures retained; no root-cause/process-stability claim. See docs/post-context-offline-snapshot.md and ignored post-context-offline-summary.json. R5.4 refresh only;60%=96/160,+0. No active tests/build or source WIP. Next: fixed conditional/dynamic-intent/partial-result and other four-theme matrices; no whole-goal completion. Original dirt/safety preserved.
+
+
 ## Named scene-presence clauses — 2026-10-20
 
 Parent `06f594f`; source checkpoint containing this section checks independent named/player clauses instead of skipping every multi-NPC sentence, preserving single-subject implicit continuations. Baseline7fail/5controls; first63/66 exposed3regressions from splitting all clauses, narrowed repair final7files92pass/build in SESSION. Actual absent-person WAIT prose degrades with no move/duplicate receipt; player-motion unit checks only this NPC guard ownership, not whole-scene validity. See docs/scene-presence-subjects.md. N4.1 explicit withdrawal/restoration net0;60%=96/160, N4.3/N4.4 open. Full1992pass remains29e6a5f. Next: conditional/future/partial narrative matrix and other fixed themes; preserve original dirt/safety.

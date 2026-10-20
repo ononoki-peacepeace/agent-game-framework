@@ -151,9 +151,10 @@
       "evidence": [
         "docs/current-offline-snapshot.md",
         "docs/post-reaction-offline-snapshot.md",
-        "scripts/agent-workspace.mjs"
+        "scripts/agent-workspace.mjs",
+        "docs/post-context-offline-snapshot.md"
       ],
-      "basis": "Product9917459/ledger6be22bb fixed195-file494-hash complete offline snapshot1957/1957pass, exact coverage once, build pass; original shard5 native0xC0000409 retained, exact halves passed. Native stability and later source edits need new evidence. Fresh source29e6a5f/ledgerc351367:199files1992/1992pass,502pinned hashes unchanged, exact coverage once,16shards; isolated build passed. Old native crash retained."
+      "basis": "Product9917459/ledger6be22bb fixed195-file494-hash complete offline snapshot1957/1957pass, exact coverage once, build pass; original shard5 native0xC0000409 retained, exact halves passed. Native stability and later source edits need new evidence. Fresh source29e6a5f/ledgerc351367:199files1992/1992pass,502pinned hashes unchanged, exact coverage once,16shards; isolated build passed. Old native crash retained. Fresh product1bad19e/ledger5c083d8 full snapshot207files2064/2064pass,515pinned hashes unchanged, exact coverage once,16shards exit0. Identical-product complete isolated build passed. Historical native crash retained; no later-source or process-stability claim."
     },
     "R6.1": {
       "status": "met",
@@ -1966,6 +1967,13 @@
           "reason": "Final7files92pass/build; single-subject continuations retained, independent named clauses checked, actual service false presence degrades without move/replay. Prior explicit withdrawal; net0."
         }
       ]
+    },
+    {
+      "batch": "post-context-offline-snapshot",
+      "type": "evidence_correction",
+      "source": "1bad19e",
+      "transitions": [],
+      "note": "207files2064/2064pass across16fresh shards,515hashes match, exact coverage once; original QA/frozen27/formal hash preserved. Complete build on identical product. R5.4 already met/net0; other matrices remain open. Initial documentation generation rejected unsupported evidence_refresh type; corrected to existing evidence_correction enum without modifying scoring script."
     }
   ],
   "new_risks": [],

@@ -60,6 +60,7 @@
 | scene-presence-negation-repair | repair | N4.1: unmet → met | +0.625 pp |
 | scene-presence-subjects-counterexample | evidence_correction | N4.1: met → unmet | -0.625 pp |
 | scene-presence-subjects-repair | repair | N4.1: unmet → met | +0.625 pp |
+| post-context-offline-snapshot | evidence_correction | 无条件状态变化 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -104,7 +105,7 @@
 | R5.1 | 已有故障矩阵区分技术失败与游戏内失败，保留已提交步骤 | 满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md) |
 | R5.2 | 已有分层修复与安全停止测试验证不重复 Core 副作用 | 满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md) |
 | R5.3 | 逐条关闭矩阵中仍未核验的嵌套故障出口 | 未满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md), [partial-plan-visible-status.test.ts](../tests/partial-plan-visible-status.test.ts), [partial-plan-visible-status.md](../docs/partial-plan-visible-status.md), [plan-handoff-failure.test.ts](../tests/plan-handoff-failure.test.ts), [plan-handoff-failure.md](../docs/plan-handoff-failure.md), [plan-unreadable-state.test.ts](../tests/plan-unreadable-state.test.ts), [plan-unreadable-state.md](../docs/plan-unreadable-state.md) |
-| R5.4 | 最新完整离线代码快照全套通过，旧失败不得改写为通过 | 满足 | [current-offline-snapshot.md](../docs/current-offline-snapshot.md), [post-reaction-offline-snapshot.md](../docs/post-reaction-offline-snapshot.md), [agent-workspace.mjs](../scripts/agent-workspace.mjs) |
+| R5.4 | 最新完整离线代码快照全套通过，旧失败不得改写为通过 | 满足 | [current-offline-snapshot.md](../docs/current-offline-snapshot.md), [post-reaction-offline-snapshot.md](../docs/post-reaction-offline-snapshot.md), [agent-workspace.mjs](../scripts/agent-workspace.mjs), [post-context-offline-snapshot.md](../docs/post-context-offline-snapshot.md) |
 
 ## R6 Pending/background jobs and asynchronous restart continuation
 
