@@ -364,9 +364,6 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
  const initialSave=save;
  plan.plan_id=body.request_id;plan.status='running';let clarification:string|null=null,awarenessStatus:AgentResult['awareness_status'];let stepOutcome:AgentResult['outcome']|null=null;const ui:UIAction[]=[],changes:string[]=[],calls:AgentResult['tool_calls']=[],futures:FutureIntent[]=[];
  for(const id of plan.execution_order){const goal=plan.goals.find(g=>g.goal_id===id)!;
-  if(changes.length&&goal.side_effect_level==='world'&&await service.handoffBlocker()){
-    clarification='眼前出现需要你决定的情况，后续行动已暂停。';goal.status='unresolved';goal.result={summary:clarification};break;
-  }
   const compoundWorldGoals=plan.goals.filter(goal=>goal.side_effect_level==='world');
   if(plan.contract?.execution_mode==='staged'&&
      (compoundWorldGoals.length>1||plan.goals.some(goal=>goal.operation_hint&&['move','purchase','presence_query'].includes(goal.operation_hint)))&&
@@ -386,7 +383,15 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
   if(dependencies.some(g=>g.status!=='completed')){goal.status='skipped';goal.result={summary:'前置目标未成功，未执行。'};continue;}
   if(goal.branch){const parent=dependencies.find(g=>g.type==='CONDITIONAL_INTENT');if(!parent||parent.result?.condition===null||parent.result?.condition===undefined){goal.status='unresolved';goal.result={summary:'条件未知，未执行任何分支。'};continue;}if(parent.result.condition!==(goal.branch==='then')){goal.status='skipped';goal.result={summary:'条件不匹配，跳过此分支。'};continue;}}
   goal.status='ready';goal.status='running';
+  let stepStage='plan_step';
   try {
+   if(changes.length&&goal.side_effect_level==='world'){
+    stepStage='plan_handoff';
+    if(await service.handoffBlocker()){
+     clarification='眼前出现需要你决定的情况，后续行动已暂停。';goal.status='unresolved';goal.result={summary:clarification};break;
+    }
+    stepStage='plan_step';
+   }
    const view=publicView(save);let message='';
    if(plan.local_compound){
     assert(id===plan.execution_order[0]&&plan.goals.every(item=>item.type==='WORLD_ACTION'),
@@ -464,7 +469,7 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
   }catch(error){const detail=(error as Error).message;service.logger.warn('agent.goal.failed',{module:'agent',metadata:{detail,goal:goal.goal_id,reason:failureReason(error)}});
    if(error instanceof WorldBlockedError){goal.status='blocked';goal.result={summary:error.message};stepOutcome=gameOutcome('blocked_by_world','plan_step',save.state_revision,changes);
      calls.push({tool_id:goal.type,ok:false});break;}
-   stepOutcome=executionFailure(error,'plan_step',await service.current(),save);goal.status='failed';goal.result={summary:failureReason(error)!=='unknown'?
+   stepOutcome=executionFailure(error,stepStage,await service.current(),save);goal.status='failed';goal.result={summary:failureReason(error)!=='unknown'?
     '这次行动的模型响应未完整生成，当前目标尚未完成。请稍后从当前状态重试。':
     /未注册|parameters|schema|Invalid|FREEFORM_ACTION|relationship_delta|ConditionNode|条件必须由独立条件节点|框架校验|状态校验|canonical delta|contract/i.test(detail)?
       '这次行动没有正常完成，世界状态没有改变，可以安全重试。':displayText(detail,publicView(save).entities,publicView(save).locations)};calls.push({tool_id:goal.type,ok:false});if(goal.side_effect_level==='world'||clarification||plan.local_compound)break;}

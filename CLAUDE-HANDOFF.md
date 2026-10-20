@@ -1,5 +1,10 @@
 # Claude Code starting handoff
 
+## Between-step handoff failure boundary — 2026-10-20
+
+Parent `6348a5d`; source checkpoint containing this section moves handoff inspection after dependency/branch authorization and inside the step failure boundary. Baseline3fail/1control; final7distinctfiles57pass. Real memory/disk read faults preserve WAIT receipt/story; explicit refreshed-revision continuation after service rebuild only executes remainder. Actual player decision remains game pause. One nonexistent optional filename excluded from counts. Complete isolated build in SESSION. See docs/plan-handoff-failure.md. R5.3/A7.3 still open;60%=96/160,+0; full1992pass remains29e6a5f before latest changes. Persistent storage/finalizer exits and other fixed matrices remain. Original dirt/safety preserved.
+
+
 ## Repeated-failure successful prefix evidence — 2026-10-20
 
 Parent `169b77e`, product stays `70a4575`; checkpoint containing this section adds two actual Core prefix/repeated-block/revision cases, no product change. Initial2pass; three new WAIT/reloads each retain one INSPECT receipt/cursor1/zero blocked credit; owner revision preserves long goal and adds exactly one HOLD without replay. Destination-closed and listener-absent causes remain distinct. Adjacent10file regression and build in SESSION. See docs/npc-repeated-plan-failure.md. W5.3/W5.4 remain open,60%=96/160,+0; full1992pass remains29e6a5f before latest changes. Next: fixed-condition coverage audit across remaining reliability/NL/NPC/Narrator work, no generic completion claim. Original dirt/safety preserved.

@@ -1,0 +1,9 @@
+# Between-step handoff failure preserves committed progress
+
+Parent `6348a5d`. Four fixed cases and executor/test hashes were saved before the baseline run in the local `plan-handoff-scenarios.json`. Baseline: three failures and one passing real-player-handoff control. After a real WAIT, storage/provider failures in the next handoff inspection escaped the step failure boundary; a false world branch also inspected handoff before evaluating its guard, preventing its read-only ELSE alternative.
+
+The executor now evaluates dependencies/branches first and inspects handoff inside the bounded step error boundary. A failed inspection returns `engine_failure` at `plan_handoff`, keeps the original WAIT receipt and story, marks the next step failed and leaves later steps unexecuted. An actual player decision still pauses as a game result. No Core, schema, time, provider budget or settlement interface changes.
+
+Final six cases add real storage-read fault injection in MemoryStore and JsonStore. After service reconstruction, an explicitly requested retry against the refreshed revision and the same child identities preserves the prefix receipt and executes only the remaining WAIT: two minutes/two receipts total. This is a direct executor continuation test, not automatic top-level HTTP replay or process-kill acceptance. Persistent unreadable storage and other recovery/finalizer exits remain open.
+
+Seven distinct regression files / 57 tests passed; the initial five-file command also named nonexistent `turn-failure-recovery.test.ts`, which was not run or counted. Two reports overlap on the six-case handoff file. Complete isolated build is recorded in SESSION. No full-suite claim for this source; the last complete 199-file/1992-test evidence remains `29e6a5f`. R5.3 and A7.3 remain unmet: **60.00%, 96/160, +0**. Frozen criteria, original dirty QA/audit files, formal save and service boundaries are preserved.
