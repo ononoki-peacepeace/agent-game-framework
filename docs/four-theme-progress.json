@@ -2925,6 +2925,21 @@
           ]
         }
       ]
+    },
+    {
+      "batch": "post-wait-complete-offline-snapshot",
+      "type": "repair",
+      "source": "fa53def",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R5.4",
+          "result": "Refresh already-met full offline evidence:238files2371pass/zero skip,550unchanged hashes,exact coverage once;20fresh isolated process exit0,build61704 passed. Historical failures and separate real R9.3 two-service preflight failure retained.",
+          "evidence": [
+            "docs/post-wait-offline-snapshot.md"
+          ]
+        }
+      ]
     }
   ],
   "new_risks": [],
