@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "6337357 + reviewed temporal-pronoun presence repair",
+  "assessed_source": "43ce66e + reviewed delayed image binding guard",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -265,9 +265,11 @@
       "evidence": [
         "docs/media-canonical-coordination.md",
         "tests/image-existing-content.test.ts",
-        "docs/image-existing-content.md"
+        "docs/image-existing-content.md",
+        "docs/image-late-binding.md",
+        "tests/image-late-binding.test.ts"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. b2c22d0 rejects corrupt/truncated existing content-addressed image bytes before binding;baseline2fail2controls,final5files42pass/build,actual JsonStore/save bytes unchanged. Provider identity/GC/external writer matrix remains open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. b2c22d0 rejects corrupt/truncated existing content-addressed image bytes before binding;baseline2fail2controls,final5files42pass/build,actual JsonStore/save bytes unchanged. Provider identity/GC/external writer matrix remains open. Delayed Provider result loses newer avatar/clear/recrop authority:3fail2controls4.312s repaired by target binding compare inside media queue.5files40pass16.938s/strict37.355sexit0;Provider durable request identity/general external writers/GC remain open."
     },
     "R8.4": {
       "status": "unverified",
@@ -4349,6 +4351,23 @@
         }
       ],
       "note": "103/16064.375%;net0fromparent; no canonical NPC effects invented."
+    },
+    {
+      "batch": "image-late-binding-ownership",
+      "type": "repair",
+      "source": "43ce66e+reviewed-worktree",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R8.3",
+          "result": "Late generated avatar no longer overwrites newer replace/clear/recrop; queuedmanual/newgame/unrelatedrevision/diskrecreation controls pass;5files40pass16.938s/strict37.355sexit0. Full Provider identity/external writers/GC stay open.",
+          "evidence": [
+            "docs/image-late-binding.md",
+            "tests/image-late-binding.test.ts"
+          ]
+        }
+      ],
+      "note": "103/16064.375%delta0; no fullbuild/fullsuite/currentProvideracceptance."
     }
   ],
   "new_risks": [],
@@ -5412,6 +5431,18 @@
         "tests/scene-presence-temporal-pronoun.test.ts"
       ],
       "summary": "Temporal prefixed joined pronoun silently drops the local preceding subject from canonical presence checks."
+    },
+    {
+      "id": "image-late-binding-ownership",
+      "scope": "original",
+      "condition": "R8.3",
+      "status": "resolved",
+      "source": "43ce66e",
+      "evidence": [
+        "docs/image-late-binding.md",
+        "tests/image-late-binding.test.ts"
+      ],
+      "summary": "Delayed generation overwrites a newer target avatar/clear/crop; target binding compare inside media queue now refuses late assignment and retains immutable output."
     }
   ]
 }

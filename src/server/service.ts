@@ -1350,19 +1350,24 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
     if(expectedRevision!==undefined&&before.state_revision!==expectedRevision)throw new GameError('状态已更新，请刷新后重试',409);
     const entity=before.entities.find(item=>item.id===entityId);
     assert(entity?.components.identity,'目标没有可设置头像的身份信息');
+    const expectedBinding=JSON.stringify([entity.components.identity.avatar_id??null,entity.components.visual_assets?.avatar_crop??null]);
     const identity=entity.components.identity as {name?:unknown;description?:unknown};
     const description=[String(identity.name??''),String(identity.description??''),prompt].filter(Boolean).join('；').slice(0,3000);
     const artifact=await this.imageRuntime.generateAndPersist({prompt:description,usage:'avatar',aspect:'square',entity_id:entityId});
     // Content-addressed bytes may already be shared, or the binding may commit
     // before its response fails. Keep them across failures and reference clears.
-    return {view:await this.setAvatar(entityId,artifact.asset_id,gameId,expectedRevision),artifact};
+    return {view:await this.setAvatar(entityId,artifact.asset_id,gameId,expectedRevision,undefined,expectedBinding),artifact};
   }
-  async setAvatar(entityId: string, avatarId: string | null, gameId: string, _expectedRevision?: number,crop?:AvatarCropMetadata) {
+  async setAvatar(entityId: string, avatarId: string | null, gameId: string, _expectedRevision?: number,crop?:AvatarCropMetadata,expectedBinding?:string) {
     return this.media(async () => {
       const save = await this.presentationCurrent();
       if (save.game_id !== gameId) throw new GameError('游戏已切换，请刷新后操作', 409);
       const entity = save.entities.find(e => e.id === entityId);
       assert(entity?.components.identity, '目标没有可设置头像的身份信息');
+      // A delayed generation must not supersede a newer upload, clear or crop.
+      // Compare inside the media queue; unrelated world/media revisions still work.
+      if(expectedBinding!==undefined&&expectedBinding!==JSON.stringify([entity.components.identity.avatar_id??null,entity.components.visual_assets?.avatar_crop??null]))
+        throw new GameError('生成期间头像已更新，已保留当前头像；生成图片尚未绑定。',409);
       entity.components.identity.avatar_id = avatarId;
       if(crop){const parsed=safeParse(avatarCropSchema,crop);assert(entity.components.visual_assets?.images&&((entity.components.visual_assets.images as Record<string,unknown>).fullbody===parsed.source_asset_id),'全身图已更换，请重新裁剪');entity.components.visual_assets.avatar_crop=parsed;}else if(entity.components.visual_assets)delete entity.components.visual_assets.avatar_crop;
       save.state_revision++;

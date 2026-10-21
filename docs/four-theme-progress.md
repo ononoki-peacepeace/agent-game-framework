@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：6337357 + reviewed temporal-pronoun presence repair。整体 **64.38%**（103/160 个固定条件满足）。未满足 24，待验证 33。
+计分版本 v1；评估源代码：43ce66e + reviewed delayed image binding guard。整体 **64.38%**（103/160 个固定条件满足）。未满足 24，待验证 33。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：55 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：56 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -159,6 +159,7 @@
 | perception-joined-pronoun-repair | repair | N4.1: unmet → met | +0.625 pp |
 | scene-presence-temporal-pronoun-withdrawal | evidence_correction | N4.1: met → unmet | -0.625 pp |
 | scene-presence-temporal-pronoun-repair | repair | N4.1: unmet → met | +0.625 pp |
+| image-late-binding-ownership | repair | R8.3: Late generated avatar no longer overwrites newer replace/clear/recrop; queuedmanual/newgame/unrelatedrevision/diskrecreation controls pass;5files40pass16.938s/strict37.355sexit0. Full Provider identity/external writers/GC stay open.；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -229,7 +230,7 @@
 |---|---|---|---|
 | R8.1 | 同实例 System 与媒体写协调，19个已复现覆盖写故障消失 | 满足 | [media-canonical-coordination.md](../docs/media-canonical-coordination.md) |
 | R8.2 | 长回合图片可写且最终凭据、HTTP 重启重放不重复行动 | 满足 | [media-canonical-coordination.md](../docs/media-canonical-coordination.md) |
-| R8.3 | 图片 Provider 身份、外部写者、资产 GC 不遗失权威修改 | 未满足 | [media-canonical-coordination.md](../docs/media-canonical-coordination.md), [image-existing-content.test.ts](../tests/image-existing-content.test.ts), [image-existing-content.md](../docs/image-existing-content.md) |
+| R8.3 | 图片 Provider 身份、外部写者、资产 GC 不遗失权威修改 | 未满足 | [media-canonical-coordination.md](../docs/media-canonical-coordination.md), [image-existing-content.test.ts](../tests/image-existing-content.test.ts), [image-existing-content.md](../docs/image-existing-content.md), [image-late-binding.md](../docs/image-late-binding.md), [image-late-binding.test.ts](../tests/image-late-binding.test.ts) |
 | R8.4 | 前端所有写路径在断连、迟到响应、多客户端下同步正确 | 待验证 | [media-canonical-coordination.md](../docs/media-canonical-coordination.md) |
 
 ## R9 Read-time current/view migration race acceptance
