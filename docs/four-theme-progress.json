@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "6da4368 + verified direct inventory-denial prose repair",
+  "assessed_source": "afa94ad + reviewed typed-speech occurrence repair",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -1190,9 +1190,11 @@
         "docs/perception-joined-pronoun.md",
         "tests/perception-joined-pronoun.test.ts",
         "docs/scene-presence-temporal-pronoun.md",
-        "tests/scene-presence-temporal-pronoun.test.ts"
+        "tests/scene-presence-temporal-pronoun.test.ts",
+        "docs/typed-speech-occurrence-scope.md",
+        "tests/typed-speech-occurrence-scope.test.ts"
       ],
-      "basis": "Sourcee9ea62a audited251files2538selectedpasses/zero skip/exactinventory/566hashes/build18453. Initial12/16native0xC0000409 retained;24freshsinglefilepasses complete coverage, native root cause unresolved. Actual Core/HTTP/disk/replay counterexamples and lawful/unsafe controls repaired; only original bounded existing authority/legal-regression condition restored. Full three-structure prose breadth and human quality remain open. cd51062 counterexample: pre-time-hook check discovers evidence whose authoritative placement moved away; N4.1 withdrawn pending repair. Verified settlement-state check refresh removes remote evidence discovery and public facts; paired accessible/newly-accessible controls, actual disk replay and7files87distinctpassunion; final6pass8.452s/strict51.222sexit0 restore N4.1. No new complete-suite claim. c2ef1d8 counterexample: external departure continuation after ASCII quoted speech escapes presence guard;withdrawn pending repair. AttributedASCIIquotes preserve claims while externaltail implicit/joined departures remainguarded;7files85distinctpassingunion/strict47.224sexit0/twoactualdiskWAITdegradedreplay restoreN4.1. c6c7449 actual4fail4controls3.439s: leading joined pronoun loses sightless antecedent; N4.1 withdrawn pending repair. Leading joined pronoun retains unique antecedent;6files56distinctpassingunion/final12direct5.563s/HTTP1pass5.875s/strict final documented in evidence restoreN4.1. Direct turn replay publicView contract preserves exact committed bytes; transient first-call notice difference explicitly checked, not called exact response replay. Actual6fail5controls3.898s: temporal prefix drops local joined-pronoun antecedent;N4.1 withdrawn pending repair. Leading temporal joined pronoun retains unique local antecedent;4files51pass11.045s/twoactualdiskWAITreplay/strict34.815sexit0 restoreN4.1."
+      "basis": "Sourcee9ea62a audited251files2538selectedpasses/zero skip/exactinventory/566hashes/build18453. Initial12/16native0xC0000409 retained;24freshsinglefilepasses complete coverage, native root cause unresolved. Actual Core/HTTP/disk/replay counterexamples and lawful/unsafe controls repaired; only original bounded existing authority/legal-regression condition restored. Full three-structure prose breadth and human quality remain open. cd51062 counterexample: pre-time-hook check discovers evidence whose authoritative placement moved away; N4.1 withdrawn pending repair. Verified settlement-state check refresh removes remote evidence discovery and public facts; paired accessible/newly-accessible controls, actual disk replay and7files87distinctpassunion; final6pass8.452s/strict51.222sexit0 restore N4.1. No new complete-suite claim. c2ef1d8 counterexample: external departure continuation after ASCII quoted speech escapes presence guard;withdrawn pending repair. AttributedASCIIquotes preserve claims while externaltail implicit/joined departures remainguarded;7files85distinctpassingunion/strict47.224sexit0/twoactualdiskWAITdegradedreplay restoreN4.1. c6c7449 actual4fail4controls3.439s: leading joined pronoun loses sightless antecedent; N4.1 withdrawn pending repair. Leading joined pronoun retains unique antecedent;6files56distinctpassingunion/final12direct5.563s/HTTP1pass5.875s/strict final documented in evidence restoreN4.1. Direct turn replay publicView contract preserves exact committed bytes; transient first-call notice difference explicitly checked, not called exact response replay. Actual6fail5controls3.898s: temporal prefix drops local joined-pronoun antecedent;N4.1 withdrawn pending repair. Leading temporal joined pronoun retains unique local antecedent;4files51pass11.045s/twoactualdiskWAITreplay/strict34.815sexit0 restoreN4.1. Typed-speech occurrence counterexample:7fail5controls3.483s;global same-quote masking lets later uncommitted player pickup escape INSPECT validation,including actualdisknormalprose. Credit withdrawn pending repair. Ordered per-event quote masking verified final6files68pass12.665s/strict27.806sexit0; explicit quote membership preserves unquoted tail actions. Actual disk INSPECT rejects uncommitted pickup, retains legal speech, exact replay without extra calls. Restores bounded N4.1 only; N4.3 remains open."
     },
     "N4.2": {
       "status": "met",
@@ -4577,6 +4579,42 @@
         }
       ],
       "note": "103/16064.375%delta0;initial7fail7pass3.642s includes one wrongfailedattempt expectation,corrected without weakening production guard. Selectedpassingunion68,notonefinalsource greenrun."
+    },
+    {
+      "batch": "typed-speech-occurrence-counterexample",
+      "type": "evidence_correction",
+      "source": "afa94ad",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "reason": "Actual7fail5controls3.483s: one typed speech globally masks later same-text uncommitted world assertion;actualdiskprose accepted.",
+          "evidence": [
+            "docs/typed-speech-occurrence-scope.md",
+            "tests/typed-speech-occurrence-scope.test.ts"
+          ],
+          "before": "met",
+          "after": "unmet"
+        }
+      ],
+      "note": "102/16063.75%;withdraw1condition/-0.625pp pending repair. No Core mutation or uncommitted change loss."
+    },
+    {
+      "batch": "typed-speech-occurrence-repair",
+      "type": "repair",
+      "source": "afa94ad+reviewed-worktree",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "before": "unmet",
+          "after": "met",
+          "reason": "Ordered quoted event masked once; all later mechanical assertions remain guarded. Final6files68pass12.665s/strict27.806sexit0; actual disk/replay controls.",
+          "evidence": [
+            "docs/typed-speech-occurrence-scope.md",
+            "tests/typed-speech-occurrence-scope.test.ts"
+          ]
+        }
+      ],
+      "note": "103/16064.375%; restore1/+0.625pp after withdrawal, wholebatch net0. N4.3 stays unmet; no fullsuite/build claim."
     }
   ],
   "new_risks": [],
@@ -5748,6 +5786,18 @@
         "tests/inventory-denial-prose.test.ts"
       ],
       "summary": "Direct inventory non-action denials falsely trigger mechanical world-change guard; now narrow whole-clause negatives preserve exact legal prose without authorizing transfers."
+    },
+    {
+      "id": "typed-speech-occurrence-scope",
+      "scope": "original",
+      "condition": "N4.1",
+      "status": "resolved",
+      "source": "afa94ad",
+      "evidence": [
+        "docs/typed-speech-occurrence-scope.md",
+        "tests/typed-speech-occurrence-scope.test.ts"
+      ],
+      "summary": "One typed speech globally masks repeated quoted text, hiding a later uncommitted world assertion from mechanical validation."
     }
   ]
 }

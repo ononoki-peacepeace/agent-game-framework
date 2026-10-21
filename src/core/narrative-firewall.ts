@@ -206,10 +206,17 @@ export function validateResolvedNarrative(receipt:Receipt,result:Narrative,hidde
   }
   // Character speech can contain fears, intentions or lies. It is not an
   // authoritative assertion that those actions happened. Preserve the text.
-  let body=result.narrative;
+  let body=result.narrative,speechCursor=0;
+  const quotePairs:Record<string,string>={'“':'”','「':'」','『':'』','"':'"'};
   for(const beat of result.scene_beats??[])if(beat.kind==='speech'){
-    for(const [open,close] of [['“','”'],['「','」'],['『','』'],['"','"']])
-      body=body.split(open+beat.utterance+close).join('');
+    // Match the ordered anchor used by presentation, once per typed event.
+    // Repeated identical emphasis elsewhere remains an asserted world claim.
+    const start=body.indexOf(beat.utterance,speechCursor);if(start<0)continue;
+    const end=start+beat.utterance.length,open=body[start-1];speechCursor=end;
+    if(open&&quotePairs[open]&&quotePairs[open]===body[end]){
+      body=body.slice(0,start-1)+' '.repeat(beat.utterance.length+2)+body.slice(end+1);
+      speechCursor=end+1;
+    }
   }
   const prose=[body,...(result.scene_beats??[]).filter(beat=>beat.kind==='narration').map(beat=>beat.text)].join('\n');
   // The aggregate inherits its final child type; earlier physical results still
