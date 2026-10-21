@@ -74,29 +74,45 @@ function sourcePronounBeforeName(text:string,name:string){
   const intent=normalized(text),index=intent.indexOf(normalized(name));
   return index>=0&&[...intent.matchAll(/(?:询问|问|告诉|告知|通知|对|向|跟|与|和)(?:他|她|对方)/g)].some(match=>match.index! < index);
 }
-function sourceNamesRecipient(text:string,name:string){
-  if(hasMultipleClauses(text))return false;
-  const intent=normalized(text),key=normalized(name),index=intent.indexOf(key);
-  if(index<0)return false;
-  // A preceding pronoun can already occupy the addressee slot (“向他询问林舟…”).
-  // A later query verb does not make the named subject a new recipient.
-  if(sourcePronounBeforeName(text,name))return false;
-  const before=intent.slice(0,index),after=intent.slice(index+key.length);
-  return /(?:询问|问|告诉|告知|通知)$/.test(before)||
-    /(?:对|向|跟|与|和)$/.test(before)&&/^(?:说|询问|问|表示|解释|道谢|交谈|交流|聊天|讨论)/.test(after);
+function sourceRecipientRank(clause:string,name:string){
+  const key=normalized(name);let rank=0;
+  for(let index=clause.indexOf(key);index>=0;index=clause.indexOf(key,index+key.length)){
+    const before=clause.slice(0,index),after=clause.slice(index+key.length);
+    if(/(?:询问|问|告诉|告知|通知|对|向|跟|与|和)(?:他|她|对方)/.test(before))continue;
+    // “向林舟询问乔宁” addresses 林舟; the object of the later question is a topic.
+    if(/(?:对|向|跟|与|和)$/.test(before)&&/^(?:说|询问|问|表示|解释|道谢|交谈|交流|聊天|讨论)/.test(after))rank=2;
+    else if(/(?:询问|问|告诉|告知|通知)$/.test(before))rank=Math.max(rank,1);
+  }
+  return rank;
 }
-/** Only an explicit one-clause address frame can override every model hint. */
+const sourceGuardClause=(clause:string)=>/^(?:如果|假如|要是|若是?|只要|除非|当)/.test(clause);
+const sourceDirectiveClause=(clause:string)=>sourceGuardClause(clause)?clause.match(/(?:那么|就|则)(.+)$/)?.[1]??'':clause;
+function sourceNamesRecipient(text:string,name:string){
+  return !hasMultipleClauses(text)&&normalized(text).split(/[，,；;。！？!?]/)
+    .some(clause=>sourceRecipientRank(sourceDirectiveClause(clause),name)>0);
+}
+/** Only a uniquely proved source address can override every model hint.
+ * A conditional guard may mention another person without addressing them. */
 function sourceNamedListener(view:PublicView,text:string){
-  if(hasMultipleClauses(text)||/[，,；;。！？!?：:「」“”]/.test(text.trim().replace(/[。！？!?]+$/,'')))return null;
+  if(hasMultipleClauses(text)||/[「」“”"']/u.test(text))return null;
   const intent=normalized(text),named=view.entities.filter(entity=>entity.id!==view.player_id&&entity.components.character&&
     String(entity.components.identity?.name??'').length>=2&&text.includes(String(entity.components.identity?.name)))
-    .sort((a,b)=>intent.indexOf(normalized(String(a.components.identity?.name)))-intent.indexOf(normalized(String(b.components.identity?.name))));
-  if(!named.length)return null;
-  const name=String(named[0].components.identity?.name),index=intent.indexOf(normalized(name));
-  const prefix=intent.slice(0,index),after=intent.slice(index+normalized(name).length);
-  if(!/^(?:、|和|与|以及|及|或|还是)/.test(after)&&/(?:对|向|跟|与|和|告诉|告知|通知)$/.test(prefix)&&sourceNamesRecipient(text,name))
-    return bind(view,'person',name);
-  return null;
+    .map(entity=>String(entity.components.identity?.name));
+  const names=[...new Set(named)],directed:string[]=[];
+  for(const clause of intent.split(/[，,；;。！？!?]/)){
+    const directive=sourceDirectiveClause(clause);if(!directive)continue;
+    const ranked=names.map(name=>({name,rank:sourceRecipientRank(directive,name)})),rank=Math.max(0,...ranked.map(item=>item.rank));
+    const listeners=ranked.filter(item=>rank>0&&item.rank===rank).map(item=>item.name);
+    for(const name of listeners){
+      const key=normalized(name);
+      if(names.some(other=>other!==name&&['或','还是'].some(separator=>directive.includes(key+separator+normalized(other)))))
+        return {role:'person',mention:text.slice(0,120),entity_id:null,status:'ambiguous'} as const;
+      if(names.some(other=>other!==name&&['、','和','与','以及','及'].some(separator=>directive.includes(key+separator+normalized(other)))))return null;
+    }
+    directed.push(...listeners);
+  }
+  const unique=[...new Set(directed)];
+  return unique.length===1?bind(view,'person',unique[0]):null;
 }
 function talkPerson(view:PublicView,goal:AtomicGoal,source:GoalSource){
   // A stage-owned recipient is not the set of every person mentioned in the
@@ -289,7 +305,7 @@ function stepContract(view:PublicView,goal:AtomicGoal,source:GoalSource):StepCon
     completion={kind:'conversation_attempted',person_id:listeners.length?listeners[0].entity_id:person?.entity_id??null,
       ...(explicitGroup?{audience_ids:listeners.map(binding=>binding.entity_id!)}:{})};
     currentTrace()?.info('agent.speech_binding',{metadata:{goal_id:goal.goal_id,
-      source:goal.speech_recipients?.length?'speech_recipients':audience.length?'legacy_recipient_list':'single_person_fallback',
+      source:sourceListener?'original_named_listener':goal.speech_recipients?.length?'speech_recipients':audience.length?'legacy_recipient_list':'single_person_fallback',
       listeners:bindings.filter(binding=>binding.role==='person').map(binding=>({entity_id:binding.entity_id,status:binding.status}))}});
   }else if(hint==='item_move'){
     required_capabilities.push('inventory.storage');

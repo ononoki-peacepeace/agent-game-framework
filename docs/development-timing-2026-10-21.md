@@ -1,0 +1,20 @@
+# Official continuation: measured work, 2026-10-21
+
+The resumed state was HEAD0c60ea4 plus two interrupted source edits,96/160 (60.00%). The edits were backed up and tested before any source correction. Only isolated offline tests and one build ran; no real game Provider,3100 or production action was invoked.
+
+| Run | Result | Wall seconds | Why run/repeat |
+|---|---|---:|---|
+| Inherited conditional speech | 7 passed | 5.971 | Establish whether interrupted repair already works |
+| Additional role/hint boundaries | 2 passed,4 failed | 4.444 | New guard/topic and explicit hint counterexamples |
+| First role correction and adjacent controls | 31 passed,7 failed | 9.730 | Six source-role regressions plus one inconsistent old expectation, retained |
+| Corrected role review | 42 passed | 9.977 | Changed source; retain original clear-address sentence and add genuine ambiguity |
+| Unpunctuated conditional boundaries | 9 passed,3 failed | 5.539 | New if/then body variants, same small file |
+| HTTP replay and edges | 14 passed | 9.561 | Changed source plus actual disk/server recreation |
+| Final affected regression | 17 files,188 passed,0 skipped | 45.684 | Exact relevant binding/conditional/dependency/HTTP/Core-social inventory |
+| Complete isolated build | Exit0 | 54.329 | Once after final source; strict noEmit, Vite and server emit |
+
+Test process wall time totals **90.906s** over7 runs; build wall time **54.329s** over1 run. Same-file-set reruns account for15.516s, already included in the test total; they followed source changes or new counterexamples. Test sets overlap: passing counts are not additive coverage, and no251-file full regression was repeated. Source/config fingerprints match between the final tests and build. The existing two TypeScript stages are part of the single standard build; checks were not weakened.
+
+Real game Provider calls:0. Test interpreters/planners/Narrators use local controlled doubles or MockAIAdapter. The developer model's per-call count and inference-only latency are not exposed by the available tools, so they are recorded as unobserved rather than estimated from wall time. Two observed Goal counters were331598→662725 tokens and3191→4700 active seconds; these are cumulative counter deltas, not per-call/billing figures or inference-only time. Raw timestamps, commands, overlap, source hashes and process exits are preserved in the ignored checkpoint's `runs.jsonl` and individual timing JSON. This small recorder adds no product runtime dependency.
+
+These measurements belong to this official continuation. Earlier intermediary work/test/build time is not reconstructed or attributed to this interval. The previous selected complete snapshot and its unresolved native-process failures remain historical evidence.

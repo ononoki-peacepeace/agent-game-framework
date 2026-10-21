@@ -84,10 +84,17 @@ describe('stage-owned addressee binding without a planner referent',()=>{
       {kind:'manual',text:'询问林舟今天的安排。'});
     expect(plan.goals[0].contract?.completion).toEqual({kind:'conversation_attempted',person_id:'npc_lin'});
   });
-  it('keeps a two-person single-stage question ambiguous when there is no addressee role',async()=>{
+  it('recognizes the direct question addressee while retaining a named discussion subject',async()=>{
     const f=await sparseSetup(),save=await f.service.current();
     const plan=compileGoalContract(f.service.project(save),validatePlan({goals:[step('a','询问林舟关于乔宁的安排')]}),
       {kind:'manual',text:'询问林舟关于乔宁的安排。'});
+    expect(plan.goals[0].contract?.availability).toBe('ready');
+    expect(plan.goals[0].contract?.completion).toEqual({kind:'conversation_attempted',person_id:'npc_lin'});
+  });
+  it('keeps a two-person question ambiguous when the original source gives no addressee role',async()=>{
+    const f=await sparseSetup(),save=await f.service.current();
+    const plan=compileGoalContract(f.service.project(save),validatePlan({goals:[step('a','询问林舟关于乔宁的安排')]}),
+      {kind:'manual',text:'林舟和乔宁的安排都想了解，找人问问。'});
     expect(plan.goals[0].contract?.availability).toBe('needs_binding');
     expect(plan.goals[0].contract?.completion).toEqual({kind:'conversation_attempted',person_id:null});
   });

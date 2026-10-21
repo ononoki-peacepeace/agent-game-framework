@@ -473,15 +473,17 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
    }else if(goal.type==='CONTINUE_ROUTINE'){
     assert(startRoutine,'此执行入口未配置后台生活任务');assert(!plan.execution_order.slice(plan.execution_order.indexOf(id)+1).some(other=>plan.goals.find(g=>g.goal_id===other)!.side_effect_level!=='none'),'后台生活任务之后不能继续执行写入目标');
     const job=await startRoutine({...body,request_id:childId(body.request_id,id),expected_revision:save.state_revision,action:{type:'CONTINUE_ROUTINE',parameters:{}}});message='已提交后台生活请求；任务状态：'+job.status;
-   }else if(conditionalTrade&&goal.type==='WORLD_ACTION'){
+   }else if((conditionalTrade&&goal.type==='WORLD_ACTION')||
+     (goal.side_effect_level==='world'&&goal.contract?.completion.kind==='conversation_attempted')){
     assert(!goal.branch||!await service.handoffBlocker(),'当前前台事项尚未处理，条件行动不能抢占');
-    // Rebind against the actual arrived scene, preserving the original source's
-    // quantity/intent authority. Conditions and dependencies were checked above.
-    const rebound=compileGoalContract(view,plan,{kind:'manual',text:plan.contract!.original_intent});
-    const currentGoal=rebound.goals.find(item=>item.goal_id===id)!;
+    // Trade binds post-arrival stock; speech retains its source-owned listener.
+    // Both use registered candidates and verified receipts after branch checks.
+    const currentGoal=conditionalTrade&&goal.type==='WORLD_ACTION'&&goal.contract?.completion.kind!=='conversation_attempted'?compileGoalContract(view,plan,
+      {kind:'manual',text:plan.contract!.original_intent}).goals.find(item=>item.goal_id===id)!:goal;
     stepStage='contract_step';
     const result=await executeContractStep(service,save,currentGoal,childId(body.request_id,id),
-      undefined,undefined,plan.contract!.original_intent,false,plan.plan_id);
+      undefined,undefined,plan.contract?.original_intent??body.input,
+      Boolean(body.end_conversation&&goal.type==='WORLD_SPEECH'),plan.plan_id);
     save=result.candidate;goal.contract=currentGoal.contract;goal.target_entities=currentGoal.target_entities;
     if(result.status!=='completed'){
      goal.status=result.status==='waiting_for_player'?'unresolved':'blocked';goal.result={summary:result.reason};
