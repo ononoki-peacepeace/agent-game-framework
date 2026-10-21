@@ -1,8 +1,8 @@
-import type {AgentResult} from '../agent/contracts.js';
+import type {AgentResult,StoryTurn} from '../agent/contracts.js';
 import type {PublicView} from '../shared/contracts.js';
 
 export interface AgentPresentation {
-  storyOverride: {revision:number;text:string}|null;
+  storyOverride: {revision:number;text:string;turns?:StoryTurn[]}|null;
   agentReply: {intent:string;message:string;appearance?:'handoff'|'failure'}|null;
   goalProgress: {completed:string[];unfinished:string[];reason:string|null}|null;
 }
@@ -58,7 +58,7 @@ export function agentPresentation(previous:PublicView|null,result:AgentResult,
     (result.outcome.receipt_ids.length>0||result.outcome.committed_steps.length>0)){
     const story=result.story?.trim();
     if(story){
-      return {storyOverride:story!==next.last_turn?.narrative?.trim()?{revision:next.revision,text:story}:null,
+      return {storyOverride:story!==next.last_turn?.narrative?.trim()?{revision:next.revision,text:story,...(result.story_turns?.length?{turns:result.story_turns}:{})}:null,
         agentReply:{intent:result.intent,message:result.message,appearance:'failure'},goalProgress};
     }
   }
@@ -72,11 +72,11 @@ export function agentPresentation(previous:PublicView|null,result:AgentResult,
         .map(goal=>result.results?.find(entry=>entry.goal_id===goal.goal_id)?.summary?.trim())
         .filter((value):value is string=>Boolean(value)&&value!==story&&value!==next.last_turn?.narrative);
       if(story&&remaining.length&&message!==story&&message!==next.last_turn?.narrative?.trim())factualReply.push(message);
-      // Narration-only beats are another rendering of the latest turn, not a
-      // reason to hide earlier validated turns. Keep attributed speech intact.
+      // Structured snapshots retain speech in every committed turn. Legacy
+      // text-only summaries still cannot replace attributed speech.
       const hasSpeech=Boolean(next.last_turn?.dialogue||next.last_turn?.scene_beats?.some(beat=>beat.kind==='speech'));
-      return {storyOverride:story&&!hasSpeech&&story!==next.last_turn?.narrative?
-        {revision:next.revision,text:story}:null,
+      return {storyOverride:story&&(!hasSpeech||Boolean(result.story_turns?.length))&&(story!==next.last_turn?.narrative||(result.story_turns?.length??0)>1)?
+        {revision:next.revision,text:story,...(result.story_turns?.length?{turns:result.story_turns}:{})}:null,
         agentReply:factualReply.length?{intent:result.intent,message:[...new Set(factualReply)].join('\n')}:null,goalProgress};
     }
   }

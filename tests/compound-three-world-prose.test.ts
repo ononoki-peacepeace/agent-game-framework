@@ -64,11 +64,11 @@ it.each(matrix)('keeps all actual long stages in $kind/fallback=$fallback/$bound
   });
   const request={input:actions.join('，再'),game_id:before.game_id,expected_revision:before.state_revision,request_id:randomUUID()};
   const response=await executePlan(service,request,validatePlan({goals:actions.map(goal)})),after=await service.current(),receipts=after.resolution_receipts!.filter(r=>r.actor_id==='player'&&!old.has(r.request_id));
-  const shown=agentPresentation(service.project(before),response),html=renderToStaticMarkup(createElement(SceneStory,{view:response.view!,override:shown.storyOverride?.text??null,onSelectEntity:()=>{}}));
+  const shown=agentPresentation(service.project(before),response),html=renderToStaticMarkup(createElement(SceneStory,{view:response.view!,override:shown.storyOverride?.text??null,turns:shown.storyOverride?.turns,onSelectEntity:()=>{}}));
   await writeFile(join(process.cwd(),'.agent-runtime/codex',`long-prose-${captureRun}-${kind}-${fallback?'fallback':'normal'}-${boundary}.json`),JSON.stringify({kind,fallback,boundary,
    request,source_structure:{modules:seed.definition.enabled_modules,receipts:prepared.evidence.map(r=>r.semantic_action)},response,receipts,html},null,2)+'\n');
   const count=['missing','world'].includes(boundary)?2:boundary==='after'?3:boundary==='partial'?4:5;
-  expect(receipts).toHaveLength(count);expect(injected).toBe(boundary==='after');
+  expect(receipts).toHaveLength(count);expect(response.story_turns).toHaveLength(count);expect(new Set(response.story_turns!.map(snapshot=>snapshot.request_id)).size).toBe(count);expect(injected).toBe(boundary==='after');
   expect(response.results?.map(r=>r.status)).toEqual(boundary==='normal'?Array(5).fill('completed'):boundary==='partial'?['completed','completed','completed','blocked','skipped']:
    ['completed','completed',boundary==='after'?'failed':'blocked','skipped','skipped']);
   expect(after.runtime.time.minute-before.runtime.time.minute).toBe(receipts.reduce((minutes,r)=>minutes+r.time_cost,0));

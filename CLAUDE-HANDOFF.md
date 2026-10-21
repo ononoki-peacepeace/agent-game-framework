@@ -783,3 +783,7 @@ No deployment, Release, port 3100, formal save or paid game model operation.
 Windows owner should inspect this tiny firewall hunk against current main at a
 safe checkpoint and integrate only after explicit review; do not auto-merge.
 Broader paraphrase/historical-state semantics remain outside this bounded corpus.
+
+## Cloud N3/N6 independent checkpoint (2026-10-22)
+
+Branch `codex/cloud-narrator-compound-items`, latest remote main base `dc3ac77`; PR #2 is not incorporated. N3 actual missing attributed-turn display repaired using optional public `AgentResult.story_turns` snapshots and existing per-turn renderer. Tests and raw failed evidence documented in `docs/cloud-compound-items.md`. No Core/schema/frozen ledger edits. Shared conflicts: `src/agent/executor.ts`, `src/agent/contracts.ts`, `src/client/agent-presentation.ts`, `SceneStory.tsx`, App state type and props. Preserve PR #2 fallback/history work independently. 73 selected tests and strict isolated build pass; N3.4 quality remains unmet. Continuing N6.3/N6.4 actual item projection/possession/lifecycle work next; those unstaged files are not part of this N3 checkpoint.
