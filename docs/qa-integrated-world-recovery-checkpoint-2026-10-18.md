@@ -1,6 +1,6 @@
 # Integrated world and recovery checkpoint (2026-10-18)
 
-Task source: `C:\Users\wx\.codex\attachments\1e829c75-f18b-46fb-b349-e31b3bebcadc\已粘贴的文本.txt`.
+Task source: user-provided requirements supplied during local QA; local attachment paths are omitted.
 This is an implementation checkpoint, not an acceptance report. The earlier checkpoint was at 84%; the current continuation is approximately 98%.
 
 ## Safety and takeover
