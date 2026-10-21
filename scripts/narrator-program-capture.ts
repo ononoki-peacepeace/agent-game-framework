@@ -1,5 +1,5 @@
 import './narrator-prose-benchmark-capture.js';
-import {beforeEach,expect,vi} from 'vitest';
+import {beforeEach,afterEach,expect,vi} from 'vitest';
 import {readFile,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -13,6 +13,9 @@ if(!directory)throw Error('Use narrator-quality-program.mjs');
 const spec=JSON.parse(await readFile('docs/narrator-quality-program.v1.json','utf8')) as {cases:{id:string;test_name?:string}[]};
 const original=executor.executePlan;
 const turn=GameService.prototype.turn;
+// Some new capture fixtures do not install their own mock cleanup. A previous
+// case's wrapper must never label a later case's invocation as its own.
+afterEach(()=>vi.restoreAllMocks());
 beforeEach(()=>{
  const name=expect.getState().currentTestName,scenario=spec.cases.find(c=>c.id.startsWith('F')&&c.test_name===name);
  // Preserve the existing capture implementation when the original 18-case

@@ -40,6 +40,11 @@ const records=fs.readdirSync(directory).filter(f=>f.endsWith('.json')).flatMap(f
 });
 const envelopes=fs.readdirSync(directory).filter(f=>/^E-.*\.json$/.test(f)).map(file=>
  ({file,...JSON.parse(fs.readFileSync(path.join(directory,file),'utf8'))}));
+const owners=new Map();
+for(const envelope of envelopes){
+ const names=owners.get(envelope.app_action_id)??new Set();names.add(envelope.case_test_name);owners.set(envelope.app_action_id,names);
+}
+const crossCaseEnvelopes=[...owners].filter(([,names])=>names.size>1).map(([id])=>id);
 const packet={manifest_sha256:sha(manifestPath),cases:cases.map(c=>({...c,
  records:records.filter(r=>r.case_id===c.id).map(r=>({file:r.file,sha256:r.sha256,
  provenance:r.provenance??'actual_offline_fallback'})),hard_gates:null,ratings:null,reviewer:null})),
@@ -63,7 +68,7 @@ const hashesMatch=source.every(file=>sha(file.path)===file.sha256);
 const status={head,exit:result.status,signal:result.signal,error:result.error?.message,
  passed:report?.numPassedTests,failed:report?.numFailedTests,skipped:report?.numPendingTests,
  cases:cases.length,captured:cases.length-missing.length,missing,request_jobs:queue.length,missing_request_cases:missingRequests,
- queue_file_sha256:sha(path.join(directory,'candidate-queue.json')),
+ queue_file_sha256:sha(path.join(directory,'candidate-queue.json')),cross_case_envelopes:crossCaseEnvelopes,
  pinned_hashes:source.length,hashes_match:hashesMatch,
  quality_ratings_assigned:0,real_provider_calls:0,conditions_awarded:[],unreviewed_cases:packet.cases.map(c=>c.id),
  external_requirements:spec.external_requirements};
@@ -79,4 +84,5 @@ assert.equal(result.status,0,'Fixture failure: retain original run.log and outpu
 assert(report&&report.numFailedTests===0&&report.numPendingTests===0&&report.numPassedTests===report.numTotalTests,'Incomplete test run');
 assert.equal(missing.length,0,'A missing capture is not a passing benchmark case');
 assert.equal(missingRequests.length,0,'Missing actual-context request construction');
+assert.equal(crossCaseEnvelopes.length,0,'Capture hook crossed test identities');
 assert(hashesMatch,'Pinned source changed during capture');
