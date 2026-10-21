@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "db1fd51",
+  "assessed_source": "162ebad",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -553,12 +553,15 @@
       "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
     },
     "A6.2": {
-      "status": "unmet",
+      "status": "met",
       "evidence": [
         "tests/conditional-pronoun-topic-binding.test.ts",
+        "tests/conditional-speech-http-recovery.test.ts",
+        "tests/goal-stage-person-binding.test.ts",
+        "tests/source-recipient-topic-authority.test.ts",
         "docs/conditional-pronoun-topic-binding.md"
       ],
-      "basis": "Actual executed conditional pronoun listener follows guard/topic model guess instead of public focus; absent focus ambiguity writes an unauthorized TALK. Baseline5fail3controls retained."
+      "basis": "Source162ebad: directive-address pronoun uses existing public focus/unique presence before any model hint, genuine ambiguity retained; named topic/guard and multi-stage controls. Latest passing file reports171assertions/14files on identical product fingerprints, strict build50.543s passed. Actual HTTP JsonStore then/else pronoun replay exact response/bytes and no generation. Two new fixture mistakes/failures retained and corrected without product change; not a single all-green full suite."
     },
     "A6.3": {
       "status": "unmet",
@@ -3690,6 +3693,26 @@
         }
       ],
       "note": "Original scope withdrawal -0.625pp; 99/160, no denominator change."
+    },
+    {
+      "batch": "conditional-pronoun-topic-repair",
+      "type": "repair",
+      "transitions": [
+        {
+          "id": "A6.2",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "tests/conditional-pronoun-topic-binding.test.ts",
+            "tests/conditional-speech-http-recovery.test.ts",
+            "tests/goal-stage-person-binding.test.ts",
+            "tests/source-recipient-topic-authority.test.ts",
+            "docs/conditional-pronoun-topic-binding.md"
+          ],
+          "reason": "Source162ebad: directive-address pronoun uses existing public focus/unique presence before any model hint, genuine ambiguity retained; named topic/guard and multi-stage controls. Latest passing file reports171assertions/14files on identical product fingerprints, strict build50.543s passed. Actual HTTP JsonStore then/else pronoun replay exact response/bytes and no generation. Two new fixture mistakes/failures retained and corrected without product change; not a single all-green full suite."
+        }
+      ],
+      "note": "Restore1/+0.625pp; net0 against pre-counterexample100/160. A6.3/4 remain open."
     }
   ],
   "new_risks": [],
@@ -4517,13 +4540,16 @@
       "id": "conditional-pronoun-topic-binding",
       "scope": "original",
       "condition": "A6.2",
-      "status": "open",
-      "source": "db1fd51",
+      "status": "resolved",
+      "source": "162ebad",
       "evidence": [
         "tests/conditional-pronoun-topic-binding.test.ts",
+        "tests/conditional-speech-http-recovery.test.ts",
+        "tests/goal-stage-person-binding.test.ts",
+        "tests/source-recipient-topic-authority.test.ts",
         "docs/conditional-pronoun-topic-binding.md"
       ],
-      "summary": "Actual executed conditional pronoun listener follows guard/topic model guess instead of public focus; absent focus ambiguity writes an unauthorized TALK. Baseline5fail3controls retained."
+      "summary": "Source162ebad: directive-address pronoun uses existing public focus/unique presence before any model hint, genuine ambiguity retained; named topic/guard and multi-stage controls. Latest passing file reports171assertions/14files on identical product fingerprints, strict build50.543s passed. Actual HTTP JsonStore then/else pronoun replay exact response/bytes and no generation. Two new fixture mistakes/failures retained and corrected without product change; not a single all-green full suite."
     }
   ]
 }

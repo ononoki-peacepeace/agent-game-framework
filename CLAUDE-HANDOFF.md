@@ -1,3 +1,7 @@
+## Conditional pronoun listener recovery — 2026-10-21
+
+Source162ebad/parent e724950. A6.2 restored100/16062.50%,26unmet34unverified; macro13/23/4. Minimal private source-address pronoun binding precedes model hints, reuses existing public focus/unique-presence resolver, restricts global override to one speech stage. Result refs/named roles unchanged; no public schema/Core/service/config change. Selected latest passing reports171assertions/14files with matching product hashes; two new fixture failures retained/corrected, only affected file rerun. Once strict isolated build50.543s passed. Test batch57.571s; cumulative official tests148.477s/build104.872s; live game Provider0/developer call timing unobserved. Original dirt/frozen/formal/Claude/3100 preserved. Next:continue original W5 adaptation evidence matrix (fact/resource/location/relationship/repeated failure), keep broad long-process conditions open until proved. Goal active.
+
 ## Conditional pronoun counterexample — 2026-10-21
 
 Parent98783fe/source db1fd51. Actual execution baseline5fail3pass/4.960s; conditional guard/topic names override public pronoun focus, including typed recipient hints; missing focus incorrectly writes TALK. A6.2 withdrawn:99/16061.875%,27unmet34unverified; macro13/23/4. Fixed160 unchanged. Minimal source repair next; raw reports retained; Goal active. Original dirt/formal/frozen/3100 untouched. See docs/conditional-pronoun-topic-binding.md.
