@@ -1253,7 +1253,9 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
         const sceneRevision=save.state_revision;
         const sceneLocationId=save.entities.find(entity=>entity.id===save.player_state.entity_id)
           ?.components.location?.location_id;
-        try{await service.agentTransaction({...body,expected_revision:sceneRevision,request_id:childId(body.request_id,'scene')},{scene_interaction:true},next=>{
+        const sceneRequestId=childId(body.request_id,'scene');
+        let committedView:Awaited<ReturnType<GameService['agentTransaction']>>;
+        try{committedView=await service.agentTransaction({...body,expected_revision:sceneRevision,request_id:sceneRequestId},{scene_interaction:true},next=>{
           if(outcome.npcDecision?.proposed_action){
             const action=applyNpcProposedAction(next,childId(body.request_id,'npc-action'),partner.id,outcome.npcDecision.proposed_action);
             if(action.settled)outcome.settled.push('人物行动已经世界结算');
@@ -1316,12 +1318,33 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
             if(settled.action.time_cost<minutes)next.runtime.scene_seconds=0;
           }
           sceneCommit?.(save,next);
-        });}catch(error){const latest=await service.current();service.logger.warn('agent.scene.commit_failed',{
+        });}catch(error){
+          let latest:SavePackage;
+          try{latest=await service.current();}catch{
+            // A failed write can already be durable. Candidate speech/actions
+            // are not commit evidence when recovery cannot read authority.
+            const failure=engineOutcome('transaction_failure','natural_scene_commit',sceneRevision,false);
+            return agentResult('WORLD_ACTION',engineMessage(failure),{outcome:failure,
+              recovery:recoveryContext(body.original_input??body.input,failure),presentation:'failure'});
+          }
+          service.logger.warn('agent.scene.commit_failed',{
           module:'agent',metadata:{detail:(error as Error).message,revision:latest.state_revision}});
-          return agentResult('WORLD_ACTION',safeEngineMessage,{outcome:engineOutcome('transaction_failure',
-            'natural_scene_commit',latest.state_revision,latest.state_revision===sceneRevision,
-            outcome.settled,committedSince(save,latest)),presentation:'failure',view:service.project(latest)});}
-        const committedScene=await service.current();
+          const ownCommit=latest.game_id===save.game_id&&latest.runtime.receipts.some(receipt=>receipt.id===sceneRequestId);
+          const failure=engineOutcome('transaction_failure','natural_scene_commit',latest.state_revision,
+            latest.game_id===save.game_id&&latest.state_revision===sceneRevision,
+            ownCommit?['scene_interaction',...outcome.settled]:[],
+            [...new Set([...committedSince(save,latest),...(ownCommit?[sceneRequestId]:[])])]);
+          return agentResult('WORLD_ACTION',engineMessage(failure),{outcome:failure,presentation:'failure',view:service.project(latest)});}
+        let committedScene:SavePackage;
+        try{committedScene=await service.current();}catch{
+          // The transaction returned its committed view; preserve that proof,
+          // but do not present an old view as the unreadable current authority.
+          const failure=engineOutcome('transaction_failure','natural_scene_refresh',committedView.revision,false,
+            ['scene_interaction',...outcome.settled],[sceneRequestId]);
+          return agentResult('WORLD_ACTION',engineMessage(failure),{outcome:failure,
+            recovery:recoveryContext(body.original_input??body.input,failure),presentation:'failure',
+            story:sceneMessage({...outcome,settled:[]},view)});
+        }
         service.logger.info('scene.response.committed',{module:'agent',request_id:body.request_id,metadata:{
           player_speech_events:outcome.result.speech_events.filter(event=>event.speaker_id===view.player_id).length,
           npc_speech_events:outcome.result.speech_events.filter(event=>event.speaker_id!==view.player_id).length,
