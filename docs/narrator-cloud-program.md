@@ -163,3 +163,25 @@ Conflict surface for Windows additionally includes the optional fourth argument
 to `canonicalCompoundNarrative`, its one service call, and the two display-format
 expectations. Review these presentation-only hunks against any unmerged N3 work;
 do not overwrite that work. This program does not claim N3 or N4 condition credit.
+
+## Capture integrity and remaining clock-label defect
+
+The first request-envelope run on `918663d` passed its 103 application assertions
+and generated 100 receipt-filtered jobs, but a post-run identity audit found 95
+action IDs labelled by more than one test. New fixtures without mock cleanup
+allowed old capture wrappers to survive into later cases. These were offline
+construction probes, not provider calls. Preserve that run and its
+`postrun-attribution-audit.json`; it is not the final capture evidence.
+The capture hook now restores mocks after every case and the runner rejects
+any cross-case action identity. A full run on `90a39a4` then passed 103/103,
+captured 56/56, pinned 647 unchanged hashes and had zero cross-case identities.
+
+Reading those actual texts also found Core clock labels copied verbatim into
+interrupted activity prose. A stricter real-HOLD baseline produced 4 failures /
+5 controls: the story contained `已到安排时间：已经接受的会面`. The new read-only
+`foregroundNarrative` renders only that registered task-clock format as
+`「已经接受的会面」的时间到了。`; the original foreground reason remains exactly
+unchanged, and no attendance or fulfilment is claimed. Unknown/natural event
+reasons are preserved. Directed HOLD/WAIT/long-HOLD/format regression: four
+files / 24 passed. Raw failure/fixed reports are retained. This is N8
+presentation work, not a change to time, scheduling or interruption rules.

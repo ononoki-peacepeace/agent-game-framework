@@ -28,6 +28,8 @@ it.each([0,1].flatMap(due=>(['refusal','content_filter'] as const).map(reason=>(
  const body={game_id:f.before.game_id,expected_revision:f.before.state_revision,request_id:randomUUID(),action:hold()};
  await f.service.turn(body);const after=await f.service.current(),text=after.last_turn!.narrative,receipt=after.resolution_receipts!.find(r=>r.request_id===body.request_id)!;
  expect(receipt.time_cost).toBe(due);expect(text).toContain(activity);expect(text).toContain('已经接受的会面');
+ expect(text).not.toContain('已到安排时间：');
+ expect(after.foreground).toMatchObject({blocker:'task',reason:'已到安排时间：已经接受的会面'});
  expect(text).not.toMatch(/完成|已登记|结算|生成|hold_meeting|5分钟/);expect(text).toMatch(due===0?/尚未|还没|停/:/1分钟/);
  expect(after.last_turn!.presentation?.status).toBe('degraded');expect(after.state_revision).toBe(f.before.state_revision+1);
  await f.service.turn(body);expect(await f.service.current()).toEqual(after);
