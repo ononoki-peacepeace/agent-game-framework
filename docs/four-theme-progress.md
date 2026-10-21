@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：75f5511 + reviewed live item operation guard。整体 **64.38%**（103/160 个固定条件满足）。未满足 24，待验证 33。
+计分版本 v1；评估源代码：7694341 + reviewed sealed storage choice binding。整体 **64.38%**（103/160 个固定条件满足）。未满足 24，待验证 33。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：50 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：51 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -151,6 +151,7 @@
 | freeform-live-hazard-repair | repair | A8.2: unmet → met | +0.625 pp |
 | destination-prerequisite-parity | repair | A8.3: 5fail1control5.051s repaired;6files96distinctpassingunion/expanded9direct/strict48.420sexit0. Original25HTTPpermissionfailures retained and only affectedfile25pass11.389s. Full dynamic matrix open.；完整条件保持开放 | +0.000 pp |
 | freeform-live-item-operation-contract | repair | A8.3: 2fail4controls4.829s repaired;4files52distinctpassingunion/final9direct6.840s/strict47.923sexit0; actualdiskrecreatedrefusals unchangedbytes/state zeroNarrator/livegeneration. Full dynamic/consumption breadth remains open.；完整条件保持开放 | +0.000 pp |
+| sealed-storage-choice-binding | repair | A8.3: 4fail6controls5.518s repaired;5files65distinctpasses/finalexpanded21pass8.437s/strict49.386sexit0; realdiskchoicefiltering unchangedbytes and legal exterior movecontrols. Full matrix open.；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -311,7 +312,7 @@
 |---|---|---|---|
 | A8.1 | 已有 Freeform 身体动作及环境能力可结算 | 满足 | [low-stakes-open-goal.test.ts](../tests/low-stakes-open-goal.test.ts) |
 | A8.2 | 距离、身体和环境前提不能由描写虚构满足 | 满足 | [low-stakes-open-goal.test.ts](../tests/low-stakes-open-goal.test.ts), [freeform-live-actor.md](../docs/freeform-live-actor.md), [freeform-live-actor.test.ts](../tests/freeform-live-actor.test.ts), [freeform-live-hazard.md](../docs/freeform-live-hazard.md), [freeform-live-hazard.test.ts](../tests/freeform-live-hazard.test.ts) |
-| A8.3 | 开放交互涵盖各类物品、地形及能力的动态前提 | 未满足 | [low-stakes-open-goal.test.ts](../tests/low-stakes-open-goal.test.ts), [sealed-item-movement.test.ts](../tests/sealed-item-movement.test.ts), [sealed-item-movement.md](../docs/sealed-item-movement.md), [sealed-item-damage.test.ts](../tests/sealed-item-damage.test.ts), [sealed-item-damage.md](../docs/sealed-item-damage.md), [tracked-item-sale.test.ts](../tests/tracked-item-sale.test.ts), [tracked-item-sale.md](../docs/tracked-item-sale.md), [equipped-item-sale.test.ts](../tests/equipped-item-sale.test.ts), [equipped-item-sale.md](../docs/equipped-item-sale.md), [sealed-equipment-access.test.ts](../tests/sealed-equipment-access.test.ts), [sealed-equipment-access.md](../docs/sealed-equipment-access.md), [destroyed-activity-resource.md](../docs/destroyed-activity-resource.md), [destroyed-activity-resource.test.ts](../tests/destroyed-activity-resource.test.ts), [freeform-time-prerequisites.md](../docs/freeform-time-prerequisites.md), [freeform-time-prerequisites.test.ts](../tests/freeform-time-prerequisites.test.ts), [freeform-live-check.md](../docs/freeform-live-check.md), [freeform-live-check.test.ts](../tests/freeform-live-check.test.ts), [freeform-live-anchor.md](../docs/freeform-live-anchor.md), [freeform-live-anchor.test.ts](../tests/freeform-live-anchor.test.ts), [destination-prerequisite-parity.md](../docs/destination-prerequisite-parity.md), [destination-prerequisite-parity.test.ts](../tests/destination-prerequisite-parity.test.ts), [freeform-live-item-contract.md](../docs/freeform-live-item-contract.md), [freeform-live-item-contract.test.ts](../tests/freeform-live-item-contract.test.ts) |
+| A8.3 | 开放交互涵盖各类物品、地形及能力的动态前提 | 未满足 | [low-stakes-open-goal.test.ts](../tests/low-stakes-open-goal.test.ts), [sealed-item-movement.test.ts](../tests/sealed-item-movement.test.ts), [sealed-item-movement.md](../docs/sealed-item-movement.md), [sealed-item-damage.test.ts](../tests/sealed-item-damage.test.ts), [sealed-item-damage.md](../docs/sealed-item-damage.md), [tracked-item-sale.test.ts](../tests/tracked-item-sale.test.ts), [tracked-item-sale.md](../docs/tracked-item-sale.md), [equipped-item-sale.test.ts](../tests/equipped-item-sale.test.ts), [equipped-item-sale.md](../docs/equipped-item-sale.md), [sealed-equipment-access.test.ts](../tests/sealed-equipment-access.test.ts), [sealed-equipment-access.md](../docs/sealed-equipment-access.md), [destroyed-activity-resource.md](../docs/destroyed-activity-resource.md), [destroyed-activity-resource.test.ts](../tests/destroyed-activity-resource.test.ts), [freeform-time-prerequisites.md](../docs/freeform-time-prerequisites.md), [freeform-time-prerequisites.test.ts](../tests/freeform-time-prerequisites.test.ts), [freeform-live-check.md](../docs/freeform-live-check.md), [freeform-live-check.test.ts](../tests/freeform-live-check.test.ts), [freeform-live-anchor.md](../docs/freeform-live-anchor.md), [freeform-live-anchor.test.ts](../tests/freeform-live-anchor.test.ts), [destination-prerequisite-parity.md](../docs/destination-prerequisite-parity.md), [destination-prerequisite-parity.test.ts](../tests/destination-prerequisite-parity.test.ts), [freeform-live-item-contract.md](../docs/freeform-live-item-contract.md), [freeform-live-item-contract.test.ts](../tests/freeform-live-item-contract.test.ts), [sealed-storage-binding.md](../docs/sealed-storage-binding.md), [sealed-storage-binding.test.ts](../tests/sealed-storage-binding.test.ts) |
 | A8.4 | 多世界自由动作语料通过，游戏内失败原样保留 | 待验证 | [low-stakes-open-goal.test.ts](../tests/low-stakes-open-goal.test.ts) |
 
 ## A9 Broad multi-world natural-language acceptance corpus

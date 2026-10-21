@@ -2,6 +2,7 @@ import type {SavePackage} from './schema.js';
 import {publicView} from './state.js';
 import {evaluateWorldPrerequisites} from './prerequisites.js';
 import type {Inventory} from '../modules/inventory.js';
+import {unsealedContainerAncestors} from './item-access.js';
 
 type ItemEntity=SavePackage['entities'][number];
 export type BoundItem={
@@ -56,7 +57,8 @@ function bindRole(save:SavePackage,name:string|null,role:'item'|'container',visi
   const canReach=held||inScene;
   const correctId=!claimedId||!save.entities.some(entity=>entity.id===claimedId)||claimedId===selected.id;
   return {status:'bound',entity:selected,known:isKnown,visible:isVisible&&canReach,reachable:canReach,
-    usableForAction:isVisible&&canReach&&correctId&&Boolean(selected.components.item)&&(role==='item'||selected.components.item?.container===true),
+    usableForAction:isVisible&&canReach&&correctId&&Boolean(selected.components.item)&&unsealedContainerAncestors(save,selected)&&
+      (role==='item'||selected.components.item?.container===true&&!(selected.components.item.tags as string[]|undefined)?.includes('sealed')),
     possession:held?'held':inScene?'scene':'elsewhere'};
 }
 
@@ -80,6 +82,9 @@ export function bindStorageAction(save:SavePackage,input:string,hints?:{
     :container.status==='missing'?'收纳容器当前没有对应实体'
     :!item.reachable?'要收纳的物品当前不可接触'
     :!container.reachable?'收纳容器当前不可接触'
+    :item.entity&&!unsealedContainerAncestors(save,item.entity)?'要收纳的物品仍在密封或不可接触的容器内'
+    :container.entity&&(!unsealedContainerAncestors(save,container.entity)||
+      (container.entity.components.item?.tags as string[]|undefined)?.includes('sealed'))?'收纳容器仍处于密封或不可接触状态'
     :!item.usableForAction?'物品引用与当前状态不一致'
     :!container.usableForAction?'收纳容器不是当前可用的容器，或引用与当前状态不一致'
     :item.entity?.id===container.entity?.id?'物品不能装入自身':null;
