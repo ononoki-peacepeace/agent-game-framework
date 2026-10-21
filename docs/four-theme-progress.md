@@ -1,16 +1,16 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：acd56ad。整体 **60.00%**（96/160 个固定条件满足）。未满足 30，待验证 34。
+计分版本 v1；评估源代码：db1fd51。整体 **62.50%**（100/160 个固定条件满足）。未满足 26，待验证 34。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
 | 主题 | 满足 | 未满足 | 待验证 | 完成/部分/未完成项 | 主题进度 |
 |---|---:|---:|---:|---|---:|
 | ① 可靠性 | 32 | 5 | 3 | 5/5/0 | 80.0% |
-| ② 自然语言行动 | 18 | 11 | 11 | 2/6/2 | 45.0% |
+| ② 自然语言行动 | 22 | 7 | 11 | 3/5/2 | 55.0% |
 | ③ 自主持续世界 | 26 | 6 | 8 | 3/7/0 | 65.0% |
 | ④ Narrator 与体验 | 20 | 8 | 12 | 2/6/2 | 50.0% |
-| 合计 | 96 | 30 | 34 | 12/24/4 | 60.00% |
+| 合计 | 100 | 26 | 34 | 13/23/4 | 62.50% |
 
 旧台账的12/21/7是工作包人工分类，保留作历史。这里的完成/部分/未完成由4个条件满足数推导，不能与旧分类混用。旧46%为退役估计；首次建立口径不是产品进展，不计算相对46%的提升。
 
@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：35 已修复，19 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：36 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -128,6 +128,7 @@
 | complete-narration-authority-snapshot | repair | N4.1: unmet → met; N4.2: unmet → met | +1.250 pp |
 | runnable-offline-prose-capture | repair | N9.1: Fixed18casecaptureandrubricexist;representativedifferentiatedvoice/memory/normalcontrastsremainincomplete.；完整条件保持开放; N9.2: Fiveanchorsdefined;actualqualityratingsblank,modelvoice/memorycontrastsnotestablished.；完整条件保持开放; N9.3: Captured18existingofflinefallbackcases/47pass/486hashes;notcompleteoriginalqualitybenchmark.；完整条件保持开放 | +0.000 pp |
 | conditional-speech-binding-counterexample | evidence_correction | A1.1: met → unmet; A1.2: met → unmet; A1.4: met → unmet; A5.2: met → unmet | -2.500 pp |
+| official-conditional-speech-binding-recovery | repair | A1.1: unmet → met; A1.2: unmet → met; A1.4: unmet → met; A5.2: unmet → met | +2.500 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -223,10 +224,10 @@
 
 | 条件 | 具体通过条件 | 状态 | 依据 |
 |---|---|---|---|
-| A1.1 | 各复合发言阶段绑定原文授权的唯一姓名 | 未满足 | [goal-stage-person-binding.test.ts](../tests/goal-stage-person-binding.test.ts), [conditional-speech-binding.test.ts](../tests/conditional-speech-binding.test.ts), [conditional-speech-binding.md](../docs/conditional-speech-binding.md) |
-| A1.2 | 上游猜测不能覆盖原文直接收件人 | 未满足 | [goal-stage-person-binding.test.ts](../tests/goal-stage-person-binding.test.ts), [conditional-speech-binding.test.ts](../tests/conditional-speech-binding.test.ts), [conditional-speech-binding.md](../docs/conditional-speech-binding.md) |
+| A1.1 | 各复合发言阶段绑定原文授权的唯一姓名 | 满足 | [goal-stage-person-binding.test.ts](../tests/goal-stage-person-binding.test.ts), [conditional-speech-binding.test.ts](../tests/conditional-speech-binding.test.ts), [conditional-speech-binding.md](../docs/conditional-speech-binding.md), [conditional-speech-authority-edges.test.ts](../tests/conditional-speech-authority-edges.test.ts), [conditional-speech-http-recovery.test.ts](../tests/conditional-speech-http-recovery.test.ts), [source-recipient-topic-authority.test.ts](../tests/source-recipient-topic-authority.test.ts) |
+| A1.2 | 上游猜测不能覆盖原文直接收件人 | 满足 | [goal-stage-person-binding.test.ts](../tests/goal-stage-person-binding.test.ts), [conditional-speech-binding.test.ts](../tests/conditional-speech-binding.test.ts), [conditional-speech-binding.md](../docs/conditional-speech-binding.md), [conditional-speech-authority-edges.test.ts](../tests/conditional-speech-authority-edges.test.ts), [conditional-speech-http-recovery.test.ts](../tests/conditional-speech-http-recovery.test.ts), [source-recipient-topic-authority.test.ts](../tests/source-recipient-topic-authority.test.ts) |
 | A1.3 | 依赖结果保留先前收件人与阶段身份 | 满足 | [goal-stage-person-binding.test.ts](../tests/goal-stage-person-binding.test.ts) |
-| A1.4 | 真实歧义要求澄清，实际 TALK 命中正确人物且重放不重复 | 未满足 | [goal-stage-person-binding.test.ts](../tests/goal-stage-person-binding.test.ts), [conditional-speech-binding.test.ts](../tests/conditional-speech-binding.test.ts), [conditional-speech-binding.md](../docs/conditional-speech-binding.md) |
+| A1.4 | 真实歧义要求澄清，实际 TALK 命中正确人物且重放不重复 | 满足 | [goal-stage-person-binding.test.ts](../tests/goal-stage-person-binding.test.ts), [conditional-speech-binding.test.ts](../tests/conditional-speech-binding.test.ts), [conditional-speech-binding.md](../docs/conditional-speech-binding.md), [conditional-speech-authority-edges.test.ts](../tests/conditional-speech-authority-edges.test.ts), [conditional-speech-http-recovery.test.ts](../tests/conditional-speech-http-recovery.test.ts), [source-recipient-topic-authority.test.ts](../tests/source-recipient-topic-authority.test.ts) |
 
 ## A2 Repeated physical attempts retain Core outcomes with one aggregate social consequence
 
@@ -260,7 +261,7 @@
 | 条件 | 具体通过条件 | 状态 | 依据 |
 |---|---|---|---|
 | A5.1 | NPC/item/place/scene-object 的现有候选绑定受公开场景约束 | 满足 | [goal-stage-person-binding.test.ts](../tests/goal-stage-person-binding.test.ts) |
-| A5.2 | 原文收件人优先于 Planner 错人，依赖执行命中正确实体 | 未满足 | [goal-stage-person-binding.test.ts](../tests/goal-stage-person-binding.test.ts), [conditional-speech-binding.test.ts](../tests/conditional-speech-binding.test.ts), [conditional-speech-binding.md](../docs/conditional-speech-binding.md) |
+| A5.2 | 原文收件人优先于 Planner 错人，依赖执行命中正确实体 | 满足 | [goal-stage-person-binding.test.ts](../tests/goal-stage-person-binding.test.ts), [conditional-speech-binding.test.ts](../tests/conditional-speech-binding.test.ts), [conditional-speech-binding.md](../docs/conditional-speech-binding.md), [conditional-speech-authority-edges.test.ts](../tests/conditional-speech-authority-edges.test.ts), [conditional-speech-http-recovery.test.ts](../tests/conditional-speech-http-recovery.test.ts), [source-recipient-topic-authority.test.ts](../tests/source-recipient-topic-authority.test.ts) |
 | A5.3 | 跨世界别名、同名、缺席和混合角色覆盖所有对象类别 | 未满足 | [goal-stage-person-binding.test.ts](../tests/goal-stage-person-binding.test.ts) |
 | A5.4 | 固定多世界绑定语料通过，歧义不猜测 | 待验证 | [goal-stage-person-binding.test.ts](../tests/goal-stage-person-binding.test.ts) |
 

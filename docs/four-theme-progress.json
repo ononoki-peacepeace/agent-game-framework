@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "acd56ad",
+  "assessed_source": "db1fd51",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -346,22 +346,46 @@
       "basis": "Known remaining implementation or acceptance gap in the existing ledger."
     },
     "A1.1": {
-      "status": "unmet",
+      "status": "met",
       "evidence": [
         "tests/goal-stage-person-binding.test.ts",
         "tests/conditional-speech-binding.test.ts",
-        "docs/conditional-speech-binding.md"
+        "docs/conditional-speech-binding.md",
+        "tests/conditional-speech-authority-edges.test.ts",
+        "tests/conditional-speech-http-recovery.test.ts",
+        "tests/source-recipient-topic-authority.test.ts"
       ],
-      "basis": "Actual conditional TALK follows the rewritten Planner recipient instead of the original named listener; repeated name in guard also masks later address frame. Counterexamples retained; bounded repair pending."
+      "basis": "Restored from reviewed source db1fd51: inherited WIP retained, source directive roles and verified conditional TALK execution corrected. Final17 exact files/188 passed/zero skip; matching then/else, guard/topic/hint, repeated names, no-comma variants, duplicate/alternative ambiguity and real HTTP JsonStore service recreation exact-response/current-byte replay covered. Same-source single complete isolated build exit0. Earlier counterexamples and intermediate failed reports retained; not a new full251-file snapshot.",
+      "verification": {
+        "source": "db1fd51",
+        "kind": "affected_offline_regression",
+        "report": ".codex-checkpoints/framework-reliability-handoff/takeover-2026-10-20/official-resume-2026-10-21/conditional-speech-adjacent-final.json",
+        "files": 17,
+        "passed": 188,
+        "skipped": 0,
+        "build_exit": 0
+      }
     },
     "A1.2": {
-      "status": "unmet",
+      "status": "met",
       "evidence": [
         "tests/goal-stage-person-binding.test.ts",
         "tests/conditional-speech-binding.test.ts",
-        "docs/conditional-speech-binding.md"
+        "docs/conditional-speech-binding.md",
+        "tests/conditional-speech-authority-edges.test.ts",
+        "tests/conditional-speech-http-recovery.test.ts",
+        "tests/source-recipient-topic-authority.test.ts"
       ],
-      "basis": "Actual conditional TALK follows the rewritten Planner recipient instead of the original named listener; repeated name in guard also masks later address frame. Counterexamples retained; bounded repair pending."
+      "basis": "Restored from reviewed source db1fd51: inherited WIP retained, source directive roles and verified conditional TALK execution corrected. Final17 exact files/188 passed/zero skip; matching then/else, guard/topic/hint, repeated names, no-comma variants, duplicate/alternative ambiguity and real HTTP JsonStore service recreation exact-response/current-byte replay covered. Same-source single complete isolated build exit0. Earlier counterexamples and intermediate failed reports retained; not a new full251-file snapshot.",
+      "verification": {
+        "source": "db1fd51",
+        "kind": "affected_offline_regression",
+        "report": ".codex-checkpoints/framework-reliability-handoff/takeover-2026-10-20/official-resume-2026-10-21/conditional-speech-adjacent-final.json",
+        "files": 17,
+        "passed": 188,
+        "skipped": 0,
+        "build_exit": 0
+      }
     },
     "A1.3": {
       "status": "met",
@@ -371,13 +395,25 @@
       "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
     },
     "A1.4": {
-      "status": "unmet",
+      "status": "met",
       "evidence": [
         "tests/goal-stage-person-binding.test.ts",
         "tests/conditional-speech-binding.test.ts",
-        "docs/conditional-speech-binding.md"
+        "docs/conditional-speech-binding.md",
+        "tests/conditional-speech-authority-edges.test.ts",
+        "tests/conditional-speech-http-recovery.test.ts",
+        "tests/source-recipient-topic-authority.test.ts"
       ],
-      "basis": "Actual conditional TALK follows the rewritten Planner recipient instead of the original named listener; repeated name in guard also masks later address frame. Counterexamples retained; bounded repair pending."
+      "basis": "Restored from reviewed source db1fd51: inherited WIP retained, source directive roles and verified conditional TALK execution corrected. Final17 exact files/188 passed/zero skip; matching then/else, guard/topic/hint, repeated names, no-comma variants, duplicate/alternative ambiguity and real HTTP JsonStore service recreation exact-response/current-byte replay covered. Same-source single complete isolated build exit0. Earlier counterexamples and intermediate failed reports retained; not a new full251-file snapshot.",
+      "verification": {
+        "source": "db1fd51",
+        "kind": "affected_offline_regression",
+        "report": ".codex-checkpoints/framework-reliability-handoff/takeover-2026-10-20/official-resume-2026-10-21/conditional-speech-adjacent-final.json",
+        "files": 17,
+        "passed": 188,
+        "skipped": 0,
+        "build_exit": 0
+      }
     },
     "A2.1": {
       "status": "met",
@@ -475,13 +511,25 @@
       "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
     },
     "A5.2": {
-      "status": "unmet",
+      "status": "met",
       "evidence": [
         "tests/goal-stage-person-binding.test.ts",
         "tests/conditional-speech-binding.test.ts",
-        "docs/conditional-speech-binding.md"
+        "docs/conditional-speech-binding.md",
+        "tests/conditional-speech-authority-edges.test.ts",
+        "tests/conditional-speech-http-recovery.test.ts",
+        "tests/source-recipient-topic-authority.test.ts"
       ],
-      "basis": "Actual conditional TALK follows the rewritten Planner recipient instead of the original named listener; repeated name in guard also masks later address frame. Counterexamples retained; bounded repair pending."
+      "basis": "Restored from reviewed source db1fd51: inherited WIP retained, source directive roles and verified conditional TALK execution corrected. Final17 exact files/188 passed/zero skip; matching then/else, guard/topic/hint, repeated names, no-comma variants, duplicate/alternative ambiguity and real HTTP JsonStore service recreation exact-response/current-byte replay covered. Same-source single complete isolated build exit0. Earlier counterexamples and intermediate failed reports retained; not a new full251-file snapshot.",
+      "verification": {
+        "source": "db1fd51",
+        "kind": "affected_offline_regression",
+        "report": ".codex-checkpoints/framework-reliability-handoff/takeover-2026-10-20/official-resume-2026-10-21/conditional-speech-adjacent-final.json",
+        "files": 17,
+        "passed": 188,
+        "skipped": 0,
+        "build_exit": 0
+      }
     },
     "A5.3": {
       "status": "unmet",
@@ -3560,6 +3608,70 @@
         }
       ],
       "note": "Baseline7cases:4fail3controls; original5case drafts2fail3controls retained. No product edit yet."
+    },
+    {
+      "batch": "official-conditional-speech-binding-recovery",
+      "type": "repair",
+      "source": "db1fd51",
+      "transitions": [
+        {
+          "id": "A1.1",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "tests/conditional-speech-binding.test.ts",
+            "tests/conditional-speech-authority-edges.test.ts",
+            "tests/conditional-speech-http-recovery.test.ts",
+            "tests/goal-stage-person-binding.test.ts",
+            "tests/source-recipient-topic-authority.test.ts",
+            "docs/conditional-speech-binding.md"
+          ],
+          "reason": "Restored from reviewed source db1fd51: inherited WIP retained, source directive roles and verified conditional TALK execution corrected. Final17 exact files/188 passed/zero skip; matching then/else, guard/topic/hint, repeated names, no-comma variants, duplicate/alternative ambiguity and real HTTP JsonStore service recreation exact-response/current-byte replay covered. Same-source single complete isolated build exit0. Earlier counterexamples and intermediate failed reports retained; not a new full251-file snapshot."
+        },
+        {
+          "id": "A1.2",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "tests/conditional-speech-binding.test.ts",
+            "tests/conditional-speech-authority-edges.test.ts",
+            "tests/conditional-speech-http-recovery.test.ts",
+            "tests/goal-stage-person-binding.test.ts",
+            "tests/source-recipient-topic-authority.test.ts",
+            "docs/conditional-speech-binding.md"
+          ],
+          "reason": "Restored from reviewed source db1fd51: inherited WIP retained, source directive roles and verified conditional TALK execution corrected. Final17 exact files/188 passed/zero skip; matching then/else, guard/topic/hint, repeated names, no-comma variants, duplicate/alternative ambiguity and real HTTP JsonStore service recreation exact-response/current-byte replay covered. Same-source single complete isolated build exit0. Earlier counterexamples and intermediate failed reports retained; not a new full251-file snapshot."
+        },
+        {
+          "id": "A1.4",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "tests/conditional-speech-binding.test.ts",
+            "tests/conditional-speech-authority-edges.test.ts",
+            "tests/conditional-speech-http-recovery.test.ts",
+            "tests/goal-stage-person-binding.test.ts",
+            "tests/source-recipient-topic-authority.test.ts",
+            "docs/conditional-speech-binding.md"
+          ],
+          "reason": "Restored from reviewed source db1fd51: inherited WIP retained, source directive roles and verified conditional TALK execution corrected. Final17 exact files/188 passed/zero skip; matching then/else, guard/topic/hint, repeated names, no-comma variants, duplicate/alternative ambiguity and real HTTP JsonStore service recreation exact-response/current-byte replay covered. Same-source single complete isolated build exit0. Earlier counterexamples and intermediate failed reports retained; not a new full251-file snapshot."
+        },
+        {
+          "id": "A5.2",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "tests/conditional-speech-binding.test.ts",
+            "tests/conditional-speech-authority-edges.test.ts",
+            "tests/conditional-speech-http-recovery.test.ts",
+            "tests/goal-stage-person-binding.test.ts",
+            "tests/source-recipient-topic-authority.test.ts",
+            "docs/conditional-speech-binding.md"
+          ],
+          "reason": "Restored from reviewed source db1fd51: inherited WIP retained, source directive roles and verified conditional TALK execution corrected. Final17 exact files/188 passed/zero skip; matching then/else, guard/topic/hint, repeated names, no-comma variants, duplicate/alternative ambiguity and real HTTP JsonStore service recreation exact-response/current-byte replay covered. Same-source single complete isolated build exit0. Earlier counterexamples and intermediate failed reports retained; not a new full251-file snapshot."
+        }
+      ],
+      "note": "Restore only the4 withdrawn original conditions:96→100/160,60→62.50%,+2.5pp; returns to pre-counterexample score, no extra credit or denominator changes. Tests90.906s across7 targeted runs/build54.329s once; no current251-file full-suite claim."
     }
   ],
   "new_risks": [],
@@ -4371,13 +4483,17 @@
       "id": "conditional-speech-binding",
       "scope": "original",
       "condition": "A5.2",
-      "status": "open",
-      "source": "acd56ad",
+      "status": "resolved",
+      "source": "db1fd51",
       "evidence": [
         "tests/conditional-speech-binding.test.ts",
+        "tests/conditional-speech-authority-edges.test.ts",
+        "tests/conditional-speech-http-recovery.test.ts",
+        "tests/goal-stage-person-binding.test.ts",
+        "tests/source-recipient-topic-authority.test.ts",
         "docs/conditional-speech-binding.md"
       ],
-      "summary": "Actual conditional TALK follows the rewritten Planner recipient instead of the original named listener; repeated name in guard also masks later address frame. Counterexamples retained; bounded repair pending."
+      "summary": "Restored from reviewed source db1fd51: inherited WIP retained, source directive roles and verified conditional TALK execution corrected. Final17 exact files/188 passed/zero skip; matching then/else, guard/topic/hint, repeated names, no-comma variants, duplicate/alternative ambiguity and real HTTP JsonStore service recreation exact-response/current-byte replay covered. Same-source single complete isolated build exit0. Earlier counterexamples and intermediate failed reports retained; not a new full251-file snapshot."
     }
   ]
 }
