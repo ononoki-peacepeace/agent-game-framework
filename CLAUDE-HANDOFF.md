@@ -1,3 +1,7 @@
+## Conditional pronoun counterexample — 2026-10-21
+
+Parent98783fe/source db1fd51. Actual execution baseline5fail3pass/4.960s; conditional guard/topic names override public pronoun focus, including typed recipient hints; missing focus incorrectly writes TALK. A6.2 withdrawn:99/16061.875%,27unmet34unverified; macro13/23/4. Fixed160 unchanged. Minimal source repair next; raw reports retained; Goal active. Original dirt/formal/frozen/3100 untouched. See docs/conditional-pronoun-topic-binding.md.
+
 ## Official conditional speech recovery — 2026-10-21
 
 Recovered HEAD0c60ea4 and both interrupted source edits exactly; original WIP backed up before changes. Inherited7/7passed. Added4 role/hint failures plus3 unpunctuated failures, then preserved source directive addressees and actual contract execution after branch/dependency checks; coordinated/alternative/duplicate-name controls remain. Source-owned speech no longer reinterprets a wrong Planner paraphrase. Trade rebinding stays trade-only; WORLD_ACTION-labeled speech also follows its verified contract. No schema/Core/API/provider-config change or new model retries.

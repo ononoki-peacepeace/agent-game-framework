@@ -1,16 +1,16 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：db1fd51。整体 **62.50%**（100/160 个固定条件满足）。未满足 26，待验证 34。
+计分版本 v1；评估源代码：db1fd51。整体 **61.88%**（99/160 个固定条件满足）。未满足 27，待验证 34。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
 | 主题 | 满足 | 未满足 | 待验证 | 完成/部分/未完成项 | 主题进度 |
 |---|---:|---:|---:|---|---:|
 | ① 可靠性 | 32 | 5 | 3 | 5/5/0 | 80.0% |
-| ② 自然语言行动 | 22 | 7 | 11 | 3/5/2 | 55.0% |
+| ② 自然语言行动 | 21 | 8 | 11 | 3/5/2 | 52.5% |
 | ③ 自主持续世界 | 26 | 6 | 8 | 3/7/0 | 65.0% |
 | ④ Narrator 与体验 | 20 | 8 | 12 | 2/6/2 | 50.0% |
-| 合计 | 100 | 26 | 34 | 13/23/4 | 62.50% |
+| 合计 | 99 | 27 | 34 | 13/23/4 | 61.88% |
 
 旧台账的12/21/7是工作包人工分类，保留作历史。这里的完成/部分/未完成由4个条件满足数推导，不能与旧分类混用。旧46%为退役估计；首次建立口径不是产品进展，不计算相对46%的提升。
 
@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：36 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：36 已修复，19 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -129,6 +129,7 @@
 | runnable-offline-prose-capture | repair | N9.1: Fixed18casecaptureandrubricexist;representativedifferentiatedvoice/memory/normalcontrastsremainincomplete.；完整条件保持开放; N9.2: Fiveanchorsdefined;actualqualityratingsblank,modelvoice/memorycontrastsnotestablished.；完整条件保持开放; N9.3: Captured18existingofflinefallbackcases/47pass/486hashes;notcompleteoriginalqualitybenchmark.；完整条件保持开放 | +0.000 pp |
 | conditional-speech-binding-counterexample | evidence_correction | A1.1: met → unmet; A1.2: met → unmet; A1.4: met → unmet; A5.2: met → unmet | -2.500 pp |
 | official-conditional-speech-binding-recovery | repair | A1.1: unmet → met; A1.2: unmet → met; A1.4: unmet → met; A5.2: unmet → met | +2.500 pp |
+| conditional-pronoun-topic-counterexample | evidence_correction | A6.2: met → unmet | -0.625 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -270,7 +271,7 @@
 | 条件 | 具体通过条件 | 状态 | 依据 |
 |---|---|---|---|
 | A6.1 | 公开对话焦点与唯一在场候选支持已有代词绑定 | 满足 | [goal-stage-person-binding.test.ts](../tests/goal-stage-person-binding.test.ts) |
-| A6.2 | 话题人物不当收件人，真实歧义不能被 Planner 猜测解除 | 满足 | [goal-stage-person-binding.test.ts](../tests/goal-stage-person-binding.test.ts) |
+| A6.2 | 话题人物不当收件人，真实歧义不能被 Planner 猜测解除 | 未满足 | [conditional-pronoun-topic-binding.test.ts](../tests/conditional-pronoun-topic-binding.test.ts), [conditional-pronoun-topic-binding.md](../docs/conditional-pronoun-topic-binding.md) |
 | A6.3 | 跨句代词、多个动作角色及上下文切换有确定验收 | 未满足 | [goal-stage-person-binding.test.ts](../tests/goal-stage-person-binding.test.ts) |
 | A6.4 | 固定多世界指代语料通过且无过度澄清回退 | 待验证 | [goal-stage-person-binding.test.ts](../tests/goal-stage-person-binding.test.ts) |
 

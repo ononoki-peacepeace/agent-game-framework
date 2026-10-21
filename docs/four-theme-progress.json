@@ -553,11 +553,12 @@
       "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
     },
     "A6.2": {
-      "status": "met",
+      "status": "unmet",
       "evidence": [
-        "tests/goal-stage-person-binding.test.ts"
+        "tests/conditional-pronoun-topic-binding.test.ts",
+        "docs/conditional-pronoun-topic-binding.md"
       ],
-      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+      "basis": "Actual executed conditional pronoun listener follows guard/topic model guess instead of public focus; absent focus ambiguity writes an unauthorized TALK. Baseline5fail3controls retained."
     },
     "A6.3": {
       "status": "unmet",
@@ -3672,6 +3673,23 @@
         }
       ],
       "note": "Restore only the4 withdrawn original conditions:96→100/160,60→62.50%,+2.5pp; returns to pre-counterexample score, no extra credit or denominator changes. Tests90.906s across7 targeted runs/build54.329s once; no current251-file full-suite claim."
+    },
+    {
+      "batch": "conditional-pronoun-topic-counterexample",
+      "type": "evidence_correction",
+      "transitions": [
+        {
+          "id": "A6.2",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "tests/conditional-pronoun-topic-binding.test.ts",
+            "docs/conditional-pronoun-topic-binding.md"
+          ],
+          "reason": "Actual executed conditional pronoun listener follows guard/topic model guess instead of public focus; absent focus ambiguity writes an unauthorized TALK. Baseline5fail3controls retained."
+        }
+      ],
+      "note": "Original scope withdrawal -0.625pp; 99/160, no denominator change."
     }
   ],
   "new_risks": [],
@@ -4494,6 +4512,18 @@
         "docs/conditional-speech-binding.md"
       ],
       "summary": "Restored from reviewed source db1fd51: inherited WIP retained, source directive roles and verified conditional TALK execution corrected. Final17 exact files/188 passed/zero skip; matching then/else, guard/topic/hint, repeated names, no-comma variants, duplicate/alternative ambiguity and real HTTP JsonStore service recreation exact-response/current-byte replay covered. Same-source single complete isolated build exit0. Earlier counterexamples and intermediate failed reports retained; not a new full251-file snapshot."
+    },
+    {
+      "id": "conditional-pronoun-topic-binding",
+      "scope": "original",
+      "condition": "A6.2",
+      "status": "open",
+      "source": "db1fd51",
+      "evidence": [
+        "tests/conditional-pronoun-topic-binding.test.ts",
+        "docs/conditional-pronoun-topic-binding.md"
+      ],
+      "summary": "Actual executed conditional pronoun listener follows guard/topic model guess instead of public focus; absent focus ambiguity writes an unauthorized TALK. Baseline5fail3controls retained."
     }
   ]
 }
