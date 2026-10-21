@@ -121,8 +121,8 @@ export function validateScenePresenceNarrative(save:SavePackage,prose:string,cla
     let compact=sentence.replace(/\s/g,'');
     // A single preceding speaker can remain a member of a joined subject
     // (他和乔宁). Do not infer this when the preceding subject was ambiguous.
-    if(subjects.length===1&&/^[他她](?=以及|和|与|、|跟)/.test(compact))
-      compact=String(subjects[0].components.identity?.name??'').replace(/\s/g,'')+compact.slice(1);
+    if(subjects.length===1)compact=compact.replace(/^(随后|随即|接着|然后|这时|同时)?[他她](?=以及|和|与|、|跟)/,
+      (_match,prefix:string|undefined)=>(prefix??'')+String(subjects[0].components.identity?.name??'').replace(/\s/g,''));
     const named=people.filter(entity=>{
       const name=String(entity.components.identity?.name??'');
       return presenceAliases(name).some(alias=>compact.includes(alias));
