@@ -527,6 +527,15 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
       throw new WorldBlockedError('prerequisite','局部移动所依据的现场位置已经改变；本次行动未提交。');
     if(!environmentSourceValid(c.save))
       throw new WorldBlockedError('prerequisite','环境危险来源已经改变或无法接触；本次行动未提交。');
+    if(proposal.item_change&&c.save.entities.find(entity=>entity.id===proposal.item_change!.item_id)?.components.item?.condition==='destroyed')
+      throw new WorldBlockedError('prerequisite','该物品已经损毁，当前不能继续损坏；本次行动未提交。');
+    if(storage){
+      const liveStorage=bindStorageAction(c.save,input,{itemName:storage.item_name,containerName:storage.container_name,
+        itemId:sourceItem!.id,containerId:containerItem!.id});
+      if(!liveStorage.usableForAction||
+        (liveStorage.container.entity?.components.item?.tags as string[]|undefined)?.includes('sealed'))
+        throw new WorldBlockedError('prerequisite',`收纳前置条件已经改变（${liveStorage.reason??'目标容器处于密封状态'}）；本次行动未提交。`);
+    }
     // Ability, fatigue and discoverable evidence can also change during the
     // interval. Bind every result to the state that will actually be settled.
     check=prepareCheck(c.save,requestId,checkInput);

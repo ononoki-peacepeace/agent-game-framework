@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "2b7a87e + reviewed destination prerequisite parity",
+  "assessed_source": "75f5511 + reviewed live item operation guard",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -666,9 +666,11 @@
         "docs/freeform-live-anchor.md",
         "tests/freeform-live-anchor.test.ts",
         "docs/destination-prerequisite-parity.md",
-        "tests/destination-prerequisite-parity.test.ts"
+        "tests/destination-prerequisite-parity.test.ts",
+        "docs/freeform-live-item-contract.md",
+        "tests/freeform-live-item-contract.test.ts"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 5f29a42 repairs sealed ancestry for source/destination movement/transfer and Freeform prerequisites;baseline8fail/3controls,expanded destination/Freeform counterexamples retained,7files99pass/build,actual disk no-write refusals. Full condition remains open. f537de7 repairs registered/shared sealed-contained damage before RNG/mutation;baseline4fail/2controls,6files111pass/build,actual disk service no-write/no-generation refusal. Full matrix stays open. 132de1c repairs tracked sale placement/owner cleanup and sealed/filled-container refusal;baseline4fail/1control,6files105pass/build,real disk/service replay with one payment/receipt and no extra generation. Equipped/consumption/full matrix stays open. 857a42c replaces equipped SELL invariant failure with pre-settlement world refusal;baseline2fail/1explicit-UNEQUIP control,5files77pass/build,real disk/service repeated refusal no writes/generation. Full condition remains open. d1721f4 guards player/NPC EQUIP through sealed ancestors;baseline5fail/4open/exterior controls,7files98pass/build,actual disk/service refusal no-write/no-generation. Full condition remains open. Registered destroyed/sealed activity resources now block actual execution and disk/service recreation without mutation/generation; final8directpass/strict40.891s. Broader dynamic matrix remains open. Time-hook destroyed/remote resources, sealed ancestry and departed NPCs now recheck before action results; final7directpass/strict54.467s, actual disk recreation unchanged. Full body/terrain/capability/multi-world matrix remains open. Paired fatigue/recovery now affects actual nonphysical result using current settlement state; broad dynamic matrix remains open. Live local destinations rebind after time hooks: moved non-item/absent environment anchors refuse before position effects; actual disk restart,4files55distinctpassingunion/strict47.785s. Full dynamic matrix remains open. Destination prerequisites now match registeredMOVE route flags/known endpoints/closed lifecycle;5actualcounterexamples repaired, alternative/hierarchy/disk controls,6files96distinctpassingunion/strict48.420s. Other dynamic object/capability breadth remains open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 5f29a42 repairs sealed ancestry for source/destination movement/transfer and Freeform prerequisites;baseline8fail/3controls,expanded destination/Freeform counterexamples retained,7files99pass/build,actual disk no-write refusals. Full condition remains open. f537de7 repairs registered/shared sealed-contained damage before RNG/mutation;baseline4fail/2controls,6files111pass/build,actual disk service no-write/no-generation refusal. Full matrix stays open. 132de1c repairs tracked sale placement/owner cleanup and sealed/filled-container refusal;baseline4fail/1control,6files105pass/build,real disk/service replay with one payment/receipt and no extra generation. Equipped/consumption/full matrix stays open. 857a42c replaces equipped SELL invariant failure with pre-settlement world refusal;baseline2fail/1explicit-UNEQUIP control,5files77pass/build,real disk/service repeated refusal no writes/generation. Full condition remains open. d1721f4 guards player/NPC EQUIP through sealed ancestors;baseline5fail/4open/exterior controls,7files98pass/build,actual disk/service refusal no-write/no-generation. Full condition remains open. Registered destroyed/sealed activity resources now block actual execution and disk/service recreation without mutation/generation; final8directpass/strict40.891s. Broader dynamic matrix remains open. Time-hook destroyed/remote resources, sealed ancestry and departed NPCs now recheck before action results; final7directpass/strict54.467s, actual disk recreation unchanged. Full body/terrain/capability/multi-world matrix remains open. Paired fatigue/recovery now affects actual nonphysical result using current settlement state; broad dynamic matrix remains open. Live local destinations rebind after time hooks: moved non-item/absent environment anchors refuse before position effects; actual disk restart,4files55distinctpassingunion/strict47.785s. Full dynamic matrix remains open. Destination prerequisites now match registeredMOVE route flags/known endpoints/closed lifecycle;5actualcounterexamples repaired, alternative/hierarchy/disk controls,6files96distinctpassingunion/strict48.420s. Other dynamic object/capability breadth remains open. Live item damage/storage contracts recheck destroyedtarget/containerrole/ownseal before RNG with structured worldrefusal;capability pair already passed.4files52distinctpassingunion/finalstrict47.923s/actualdisk bytesrefusal. Consumption/broader matrix remains open."
     },
     "A8.4": {
       "status": "unverified",
@@ -4142,6 +4144,23 @@
         }
       ],
       "note": "103/16064.375%delta0; unknown-name exploration uncertainty retained; nofullsuite/build claim."
+    },
+    {
+      "batch": "freeform-live-item-operation-contract",
+      "type": "repair",
+      "source": "75f5511+reviewed-worktree",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "A8.3",
+          "result": "2fail4controls4.829s repaired;4files52distinctpassingunion/final9direct6.840s/strict47.923sexit0; actualdiskrecreatedrefusals unchangedbytes/state zeroNarrator/livegeneration. Full dynamic/consumption breadth remains open.",
+          "evidence": [
+            "docs/freeform-live-item-contract.md",
+            "tests/freeform-live-item-contract.test.ts"
+          ]
+        }
+      ],
+      "note": "103/16064.375%delta0; originallatefailures did notcommitpartialmutations."
     }
   ],
   "new_risks": [],
@@ -5133,6 +5152,18 @@
         "tests/destination-prerequisite-parity.test.ts"
       ],
       "summary": "Shared destination predicate ignored route flags/known endpoints/closed destinations and transit; now matches registered player MOVE filtering and rechecks time-hook closure."
+    },
+    {
+      "id": "freeform-late-item-operation-refusal",
+      "scope": "original",
+      "condition": "A8.3",
+      "status": "resolved",
+      "source": "reviewed-worktree",
+      "evidence": [
+        "docs/freeform-live-item-contract.md",
+        "tests/freeform-live-item-contract.test.ts"
+      ],
+      "summary": "Time-hook destroyed target yielded late genericassertion and newlysealed storage spent RNG before refusal; live operation guards now classify worldrefusal before result RNG, with old original-save safety preserved."
     }
   ]
 }
