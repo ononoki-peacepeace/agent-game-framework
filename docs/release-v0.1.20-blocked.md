@@ -1,4 +1,6 @@
-# v0.1.20 publication gate: blocked (2026-10-21)
+# v0.1.20 initial publication hold and subsequent review (2026-10-21)
+
+**Superseded status:** after the initial hold below, the repository owner explicitly authorized a reviewed low-risk exception for ordinary local paths already in public history. Full-document review found an ordinary local attachment path, not a credential, attachment contents or personal record. GitHub's public object/commit API and fetched integration ancestry confirmed prior public availability. The initial classification as sensitive data was too broad. The current document remains sanitized; `public-audit-exceptions.json` records only the exact historical home-path object. Credentials and other findings cannot use this exception. No history rewrite or force push is permitted. Publication verification resumed; see [final release evidence](releases/v0.1.20.md). The following sections retain the initial failure history and checks as they stood at the hold.
 
 No main push, tag creation or Release publication was attempted. Version metadata remains 0.1.19. The proposed patch version is reserved only by this document, not by a Git tag.
 

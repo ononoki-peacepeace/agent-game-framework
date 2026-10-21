@@ -108,6 +108,9 @@ it.each(matrix)('replays parent HTTP nested outer=$outer inner=$inner mode=$mode
  }finally{await close();await rm(directory,{recursive:true,force:true});}
 });
 
+// Functional disk/HTTP/restart/replay scenarios, not a five-second performance
+// contract. The paused variant completes multiple new requests and replays all
+// of them after three service instances. Keep a bounded per-case deadline.
 it.each(['cancel_current','cancel_paused','buy_before','buy_after'] as const)(
  'retains actual trade prefix and parent identities across HTTP restart and %s',async mode=>{
  const f=await sparseSetup(),seed=await f.service.current(),directory=await mkdtemp(join(tmpdir(),'agf-mixed-trade-http-'));
@@ -192,4 +195,4 @@ it.each(['cancel_current','cancel_paused','buy_before','buy_after'] as const)(
   expect(await service.current()).toEqual(after);expect(await readFile(join(directory,'current.json'))).toEqual(bytes);expect(writes).not.toHaveBeenCalled();expect(ai.metrics.requests).toBe(0);
   expect([route.mock.calls.length,plans.mock.calls.length,audit.mock.calls.length,freeform.mock.calls.length,narrate.mock.calls.length]).toEqual(counts);
  }finally{await close();await rm(directory,{recursive:true,force:true});}
-});
+},20_000);

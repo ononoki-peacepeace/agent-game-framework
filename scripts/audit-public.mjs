@@ -5,10 +5,20 @@ import { StringDecoder } from 'node:string_decoder';
 import { once } from 'node:events';
 
 // Bounded metadata records and size-framed blob streams; never buffer a blob.
-const root = process.cwd(), args = process.argv.slice(2);
-if (args.length && (args.length !== 2 || args[0] !== '--revision' || args[1].startsWith('-')))
-  throw Error('Usage: node scripts/audit-public.mjs [--revision REV]');
-const revision = args[1], findings = new Map();
+const root = process.cwd(), args = process.argv.slice(2), options = new Map();
+for (let i = 0; i < args.length; i += 2) {
+  if (!['--revision', '--exceptions'].includes(args[i]) || !args[i + 1] || args[i + 1].startsWith('-') || options.has(args[i]))
+    throw Error('Usage: node scripts/audit-public.mjs [--revision REV] [--exceptions FILE]');
+  options.set(args[i], args[i + 1]);
+}
+const revision = options.get('--revision'), findings = new Map();
+const exceptions = options.has('--exceptions') ? JSON.parse(fs.readFileSync(options.get('--exceptions'), 'utf8')).exceptions : [];
+// Only exact, reviewed historical home-path objects can be excepted. This
+// mechanism cannot waive credentials, private keys, URLs or runtime files.
+if (!Array.isArray(exceptions) || exceptions.some(entry => !entry ||
+    !/^git-object:[a-f0-9]{40,64}$/.test(entry.file) || entry.kind !== 'home-path' ||
+    typeof entry.reason !== 'string' || !entry.reason.trim() || typeof entry.approved_by !== 'string' || !entry.approved_by.trim()))
+  throw Error('Invalid audit exceptions: only documented exact-object home-path exceptions are supported');
 const forbidden = /^(?:node_modules|dist|data|imports|saves|checkpoints|exports|logs|\.tmp[^/]*|test-results|playwright-report|blob-report|\.codex|\.agents|\.agent-runtime|\.codex-checkpoints)\//;
 const patterns = [
   ['credential-format', /\b(?:sk-(?:proj-)?[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[A-Z0-9]{16})\b/],
@@ -126,9 +136,15 @@ async function main() {
     }
     batch.child.stdin.end(); await batch.done;
   } finally { if (batch.child.exitCode === null) batch.child.kill(); }
+  const active = [], knownExceptions = [];
+  for (const item of findings.values()) {
+    const approved = exceptions.find(entry => entry.file === item.file && entry.kind === item.kind);
+    if (approved) knownExceptions.push({ ...item, reason: approved.reason, approved_by: approved.approved_by });
+    else active.push(item);
+  }
   console.log(JSON.stringify({ scope: revision ? 'revision-and-reachable-history:' + revision : 'working-files-and-all-local-objects',
-    candidateFiles, gitBlobs: blobs, bytesScanned, largestBlob, findings: [...findings.values()] }, null, 2));
+    candidateFiles, gitBlobs: blobs, bytesScanned, largestBlob, findings: active, knownExceptions }, null, 2));
   console.log('Heuristic audit only: manually review candidate content and history. Bounded 64 KiB overlap; no secret values are printed.');
-  if (findings.size) process.exitCode = 1;
+  if (active.length) process.exitCode = 1;
 }
 main().catch(error => { console.error(error.message); process.exitCode = 2; });

@@ -56,3 +56,17 @@ it('still rejects a private path deleted from the candidate tree but retained in
  expect(result.report.candidateFiles).toBe(0);
  expect(result.report.findings).toContainEqual({file:'.env.local',kind:'private-or-runtime-path'});
 }));
+it('reports an approved exact home-path object while still blocking an unapproved credential object',()=>fixture((directory,git)=>{
+ const home='C:'+String.fromCharCode(92)+'Users'+String.fromCharCode(92)+'demo'+String.fromCharCode(92)+'notes';
+ writeFileSync(join(directory,'path.txt'),home);git('add','.');git('commit','--quiet','-m','ordinary path');
+ const object=git('rev-parse','HEAD:path.txt'),file=join(directory,'exceptions.json');
+ const approved={file:'git-object:'+object,kind:'home-path',reason:'Reviewed synthetic ordinary path',approved_by:'Offline test'};
+ writeFileSync(file,JSON.stringify({exceptions:[approved]}));
+ const clean=audit(directory,'--revision','HEAD','--exceptions',file);
+ expect(clean.status,clean.stderr).toBe(0);expect(clean.report.knownExceptions).toHaveLength(1);expect(clean.report.findings).toEqual([]);
+ writeFileSync(join(directory,'credential.txt'),'sk-'+('C'.repeat(24)));git('add','credential.txt');git('commit','--quiet','-m','credential control');
+ const blocked=audit(directory,'--revision','HEAD','--exceptions',file);
+ expect(blocked.status).toBe(1);expect(blocked.report.findings[0].kind).toBe('credential-format');
+ writeFileSync(file,JSON.stringify({exceptions:[{...approved,kind:'credential-format'}]}));
+ expect(audit(directory,'--revision','HEAD','--exceptions',file).status).not.toBe(0);
+}));

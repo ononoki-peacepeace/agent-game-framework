@@ -1,0 +1,10 @@
+{
+  "exceptions": [
+    {
+      "file": "git-object:9b2f8bb18a18af1b197abbbf02287e7a4ec8e857",
+      "kind": "home-path",
+      "reason": "Reviewed ordinary local Windows user/attachment path in a development QA document. No attachment contents, credential values or personal records are embedded in the path. Already public in commit 797ff6ab1a52eaa62c3b3a9506f44e7cb3a5050d on the integration branch; current document is sanitized. Exact historical object only, no history rewrite.",
+      "approved_by": "Repository owner: release-conversation instruction on 2026-10-21 permits low-risk ordinary-path exceptions after verification."
+    }
+  ]
+}
