@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "162ebad",
+  "assessed_source": "5166f52",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -223,9 +223,12 @@
     "R7.3": {
       "status": "unmet",
       "evidence": [
-        "docs/build-performance-diagnosis-2026-10-20.md"
+        "docs/build-performance-diagnosis-2026-10-20.md",
+        "tests/extension-development-failure-identity.test.ts",
+        "tests/p0a-extension-lifecycle.test.ts",
+        "docs/extension-development-failure-identity.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 5166f52: creation/file-write/compiler failures retain precise phases, durable terminal identity and bounded stdout/stderr/exit/signal; full text redacted before tail to preserve final diagnostics and avoid credential-prefix truncation. Baseline3fail1control plus long-output1fail; latest passing46assertions/7files selected union and one standard build49.043s. Old exact journal-message expectation updated to assert precise phase/prefix with all safety checks retained. Full install/registration before/after matrix and R7.4 kill boundaries remain open; no condition closure."
     },
     "R7.4": {
       "status": "unverified",
@@ -3772,6 +3775,23 @@
         }
       ],
       "note": "+1/+0.625pp=102/16063.75%; W5 completes, macro14/22/4. Fixed weights/standards unchanged; no other world/prose criteria credited."
+    },
+    {
+      "batch": "extension-development-failure-identity",
+      "type": "repair",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R7.3",
+          "evidence": [
+            "tests/extension-development-failure-identity.test.ts",
+            "tests/p0a-extension-lifecycle.test.ts",
+            "docs/extension-development-failure-identity.md"
+          ],
+          "result": "5166f52: creation/file-write/compiler failures retain precise phases, durable terminal identity and bounded stdout/stderr/exit/signal; full text redacted before tail to preserve final diagnostics and avoid credential-prefix truncation. Baseline3fail1control plus long-output1fail; latest passing46assertions/7files selected union and one standard build49.043s. Old exact journal-message expectation updated to assert precise phase/prefix with all safety checks retained. Full install/registration before/after matrix and R7.4 kill boundaries remain open; no condition closure."
+        }
+      ],
+      "note": "Original-scope partial repair, delta0;102/16063.75%,macro14/22/4. No new denominator/weight."
     }
   ],
   "new_risks": [],
@@ -4609,6 +4629,19 @@
         "docs/conditional-pronoun-topic-binding.md"
       ],
       "summary": "Source162ebad: directive-address pronoun uses existing public focus/unique presence before any model hint, genuine ambiguity retained; named topic/guard and multi-stage controls. Latest passing file reports171assertions/14files on identical product fingerprints, strict build50.543s passed. Actual HTTP JsonStore then/else pronoun replay exact response/bytes and no generation. Two new fixture mistakes/failures retained and corrected without product change; not a single all-green full suite."
+    },
+    {
+      "id": "extension-candidate-failure-identity",
+      "scope": "original",
+      "condition": "R7.3",
+      "status": "resolved",
+      "source": "5166f52",
+      "evidence": [
+        "tests/extension-development-failure-identity.test.ts",
+        "tests/p0a-extension-lifecycle.test.ts",
+        "docs/extension-development-failure-identity.md"
+      ],
+      "summary": "5166f52: creation/file-write/compiler failures retain precise phases, durable terminal identity and bounded stdout/stderr/exit/signal; full text redacted before tail to preserve final diagnostics and avoid credential-prefix truncation. Baseline3fail1control plus long-output1fail; latest passing46assertions/7files selected union and one standard build49.043s. Old exact journal-message expectation updated to assert precise phase/prefix with all safety checks retained. Full install/registration before/after matrix and R7.4 kill boundaries remain open; no condition closure."
     }
   ]
 }
