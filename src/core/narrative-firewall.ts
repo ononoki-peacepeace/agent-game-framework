@@ -87,7 +87,7 @@ function jointNarrativeSubjects<T extends {components:{identity?:{name?:unknown}
 }
 
 /** Current-scene prose cannot turn a player's presupposition or an old paragraph into an NPC MOVE. */
-export function validateScenePresenceNarrative(save:SavePackage,prose:string,claims:readonly {entity_id:string;location_id:string}[]=[],movements:readonly Receipt[]=[]){
+export function validateScenePresenceNarrative(save:SavePackage,prose:string,claims:readonly {entity_id:string;location_id:string}[]=[],movements:readonly Receipt[]=[],departureScene?:SavePackage){
   for(const claim of claims){
     const entity=save.entities.find(entity=>entity.id===claim.entity_id&&entity.components.character);
     if(!entity||entity.components.location?.location_id!==claim.location_id)
@@ -98,7 +98,20 @@ export function validateScenePresenceNarrative(save:SavePackage,prose:string,cla
   let subjects:typeof people=[];
   // Quoted speech can recall another time or make a character's own claim;
   // only the unquoted narration asserts the current authoritative scene.
-  const unquoted=prose.replace(/[“「『][^”」』]*[”」』]/g,'');
+  let unquoted=prose.replace(/[“「『][^”」』]*[”」』]/g,'');
+  if(departureScene){
+    const origin=departureScene.entities.find(entity=>entity.id===departureScene.player_state.entity_id)?.components.location?.location_id;
+    if(origin&&origin!==here)unquoted=unquoted.split(/(?<=[。！？\n])/).filter(sentence=>{
+      // Explicit pre-departure context and a person left behind describe the
+      // previous scene. Mixed/current clauses must still pass the current guard.
+      if(!/出发前|离开前|留在原地/.test(sentence)||/现在|此刻|抵达|到达|随后|接着|然后|但是|可是|却/.test(sentence))return true;
+      const named=people.filter(entity=>presenceAliases(String(entity.components.identity?.name??'')).some(alias=>sentence.replace(/\s/g,'').includes(alias)));
+      if(!named.length||!named.every(entity=>departureScene.entities.find(old=>old.id===entity.id)?.components.location?.location_id===origin))return true;
+      if(/留在原地/.test(sentence)&&!named.every(entity=>entity.components.location?.location_id===origin))return true;
+      validateScenePresenceNarrative(departureScene,sentence);
+      return false;
+    }).join('');
+  }
   const sentences=unquoted.split(/[。！？\n]/);
   for(let index=0;index<sentences.length;index++){
     const sentence=sentences[index];

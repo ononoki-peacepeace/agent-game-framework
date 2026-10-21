@@ -889,8 +889,8 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
                   !String(turn.action.parameters.topic??'').includes(beat.utterance))
                   throw new GameError('场景描写不能替玩家新增未授权的台词。',503);
               }
-              if(!receipt.movement_route&&!compoundReceipts?.some(step=>step?.movement_route))
-                validateScenePresenceNarrative(next,[result.narrative,...(result.scene_beats??[]).filter(beat=>beat.kind==='narration').map(beat=>beat.text)].join('\n'),result.presence_claims,visibleSteps);
+              validateScenePresenceNarrative(next,[result.narrative,...(result.scene_beats??[]).filter(beat=>beat.kind==='narration').map(beat=>beat.text)].join('\n'),result.presence_claims,visibleSteps,
+                receipt.movement_route||compoundReceipts?.some(step=>step?.movement_route&&step.actor_id===next.player_state.entity_id)?current:undefined);
               if(req.arrival_scene_pending===true&&turn.action.type==='MOVE'&&
                 (result.speaker!==null||result.dialogue!==null||result.scene_beats?.some(beat=>beat.kind==='speech')||/[：:]\s*[“\"]/.test(result.narrative)))
                 throw new GameError('抵达后的直接对话应由到达场景生成，不能提前写入移动旁白',503);
