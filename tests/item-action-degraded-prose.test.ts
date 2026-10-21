@@ -60,7 +60,7 @@ it('keeps ordered item stages readable after a real compound purchase and equip'
  const body={game_id:before.game_id,expected_revision:before.state_revision,request_id:randomUUID(),input:'买戒指，再装备戒指'};
  await service.turn(body,undefined,undefined,undefined,false,undefined,['买戒指','装备戒指']);
  const after=await service.current(),prose=after.last_turn!.narrative;
- expect(prose).toBe(`1、你买下了1件铜戒指，付了10${before.definition.ruleset.currencies.credit}。\n2、你装备好了铜戒指。`);
+ expect(prose).toBe(`你买下了1件铜戒指，付了10${before.definition.ruleset.currencies.credit}。\n\n你装备好了铜戒指。`);
  expect(after.resolution_receipts!.slice(-3,-1).map(r=>r.semantic_action)).toEqual(['BUY','EQUIP']);
  expect(after.resolution_receipts!.at(-1)!.commit_status).toBe('committed');
  expect((after.entities.find(e=>e.id==='player')!.components.equipment!.slots as Record<string,string|null>).hand).toBe('qa_ring');

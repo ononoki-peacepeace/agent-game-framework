@@ -92,7 +92,7 @@ function narrationFallback(save: SavePackage, action: Parameters<typeof applyPat
     const steps=compound?.map((_,index)=>save.resolution_receipts?.find(entry=>entry.request_id===compoundStepId(action.id,index)))
       .filter((entry):entry is NonNullable<typeof entry>=>Boolean(entry));
     if(steps&&steps.length>1){
-      const narrative=canonicalCompoundNarrative(save,hidden,steps);
+      const narrative=canonicalCompoundNarrative(save,hidden,steps,'scene_prose');
       const speech=steps.filter(step=>step.physical_outcome).flatMap(step=>
         physicalNarrativeFallback(save,step,hidden,related).scene_beats.filter(beat=>beat.kind==='speech'));
       return {narrative,scene_beats:speech.length?[

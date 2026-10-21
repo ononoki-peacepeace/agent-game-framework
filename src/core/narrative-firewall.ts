@@ -502,7 +502,7 @@ function activityActionNarrative(receipt:Receipt,hidden:boolean){
 /** Multi-step grounded degradation: a compound turn must never collapse into one
  * generic completion line. Present each settled step's confirmed facts in order,
  * without inventing any world state beyond the committed receipts. */
-export function canonicalCompoundNarrative(save:SavePackage,hidden:boolean,steps:Receipt[]){
+export function canonicalCompoundNarrative(save:SavePackage,hidden:boolean,steps:Receipt[],presentation:'receipt_list'|'scene_prose'='receipt_list'){
   const lines=steps.map((step,index)=>{
     const facts=(step.canonical_facts??[]).filter(fact=>
       !fact.startsWith('尝试行动：')&&!fact.startsWith('本次行动经过 '));
@@ -518,9 +518,9 @@ export function canonicalCompoundNarrative(save:SavePackage,hidden:boolean,steps
       itemActionTypes.has(step.semantic_action)?canonicalResolutionNarrative(step,hidden):
       activityActionNarrative(step,hidden)??
       (facts.length?facts.join(' '):canonicalResolutionNarrative(step,hidden));
-    return `${index+1}、${text}`;
+    return presentation==='receipt_list'?`${index+1}、${text}`:text;
   });
-  return lines.join('\n');
+  return lines.join(presentation==='receipt_list'?'\n':'\n\n');
 }
 
 export function canonicalResolutionNarrative(receipt:Receipt,hidden:boolean,perception=false){
