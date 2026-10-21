@@ -1,0 +1,323 @@
+{
+  "version": 1,
+  "status": "offline_capture_baseline_not_quality_acceptance",
+  "replaces_draft_scope": "The earlier18case draft included unrealized two-person voice/memory contrasts. This runnable baseline uses18actual existing Core fixtures; it explicitly leaves those missing contrasts open.",
+  "scope": "Controlled offline provider failures through actual GameService/Core, including trade/map, social/physical and calendar/activity/background structures. Not real model understanding, voice quality, three unrelated production worlds or independent/human acceptance.",
+  "dimensions": [
+    {
+      "id": "voice",
+      "label": "人物声音",
+      "anchors": {
+        "0": "无来源的发言、身份或记忆冲突",
+        "1": "来源正确但人物之间完全同腔",
+        "2": "有一处合乎人格和当时关系的措辞差异",
+        "3": "身份、记忆、关系共同影响表达，且不复读人设词"
+      }
+    },
+    {
+      "id": "rhythm",
+      "label": "节奏",
+      "anchors": {
+        "0": "遗漏关键行动或用机械摘要替代",
+        "1": "结果齐全但所有场景同一节奏",
+        "2": "紧急与安静场景的句长、停顿有区别",
+        "3": "节奏与真实行动顺序、停顿和中断吻合"
+      }
+    },
+    {
+      "id": "perception",
+      "label": "感知",
+      "anchors": {
+        "0": "越过当时身体、位置或知识边界",
+        "1": "合法但只复述抽象结果",
+        "2": "使用一项有来源的当时可见/可听/可触细节",
+        "3": "细节与注意方向、感官限制及来源吻合，不补造世界事实"
+      }
+    },
+    {
+      "id": "naturalness",
+      "label": "自然度",
+      "anchors": {
+        "0": "工具文案、内部ID或无法理解的句子",
+        "1": "可理解但重复模板或标签",
+        "2": "句子连贯，动作与结果相接",
+        "3": "朴素自然且场景有辨识度，没有多余解释或刻意修辞"
+      }
+    },
+    {
+      "id": "continuity",
+      "label": "连续性",
+      "anchors": {
+        "0": "更改此前位置、承诺、事件或已结算结果",
+        "1": "没有冲突但不承接相关前文",
+        "2": "承接一项仍有效的公开事实",
+        "3": "准确区分已发生、未发生、被打断及角色本人所知"
+      }
+    }
+  ],
+  "hard_gates": [
+    "Every claimed action/result has an authoritative Core receipt or an actual sourced NPC decision",
+    "No private/offscreen knowledge disclosure; no invented NPC reaction",
+    "No altered identity, current position, resources or time",
+    "No replayed settlement"
+  ],
+  "review": {
+    "scale": "0-3 anchored ordinal judgments; no percentage conversion into the 160-condition score",
+    "not_applicable": "Use N/A with reason; never treat lack of speech as a voice pass",
+    "pass": "All hard gates pass and every applicable dimension >=2; pair comparisons explicitly reviewed",
+    "sampling": "One fixed normal-model candidate when authorized and the actual same-source offline fallback; preserve all raw outputs, failures and source hashes",
+    "independence": "Developer self-review is not independent/human acceptance. Unreviewed cells remain blank."
+  },
+  "cases": [
+    {
+      "id": "T01",
+      "world": "trade",
+      "test_file": "tests/item-action-degraded-prose.test.ts",
+      "test_name": "describes actual 'BUY' item facts without a generic summary after 'refusal'",
+      "title": "购买已登记装备",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "normal_provider_output": null,
+      "quality_review_status": "unreviewed"
+    },
+    {
+      "id": "T02",
+      "world": "trade",
+      "test_file": "tests/item-action-degraded-prose.test.ts",
+      "test_name": "describes actual 'SELL' item facts without a generic summary after 'refusal'",
+      "title": "出售已登记装备",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "normal_provider_output": null,
+      "quality_review_status": "unreviewed"
+    },
+    {
+      "id": "T03",
+      "world": "trade",
+      "test_file": "tests/item-action-degraded-prose.test.ts",
+      "test_name": "describes actual 'EQUIP' item facts without a generic summary after 'refusal'",
+      "title": "装备已有物品",
+      "dimensions": [
+        "perception",
+        "naturalness"
+      ],
+      "normal_provider_output": null,
+      "quality_review_status": "unreviewed"
+    },
+    {
+      "id": "T04",
+      "world": "trade",
+      "test_file": "tests/item-action-degraded-prose.test.ts",
+      "test_name": "describes actual 'UNEQUIP' item facts without a generic summary after 'refusal'",
+      "title": "卸下已有物品",
+      "dimensions": [
+        "perception",
+        "naturalness"
+      ],
+      "normal_provider_output": null,
+      "quality_review_status": "unreviewed"
+    },
+    {
+      "id": "T05",
+      "world": "trade",
+      "test_file": "tests/item-action-degraded-prose.test.ts",
+      "test_name": "keeps ordered item stages readable after a real compound purchase and equip",
+      "title": "购买后装备顺序",
+      "dimensions": [
+        "rhythm",
+        "continuity",
+        "naturalness"
+      ],
+      "normal_provider_output": null,
+      "quality_review_status": "unreviewed"
+    },
+    {
+      "id": "T06",
+      "world": "trade",
+      "test_file": "tests/degraded-prose-grounding.test.ts",
+      "test_name": "keeps 'move' degradation factual and readable after 'refusal'",
+      "title": "实际路线与时间",
+      "dimensions": [
+        "rhythm",
+        "perception",
+        "continuity"
+      ],
+      "normal_provider_output": null,
+      "quality_review_status": "unreviewed"
+    },
+    {
+      "id": "R01",
+      "world": "relations",
+      "test_file": "tests/degraded-prose-grounding.test.ts",
+      "test_name": "keeps 'talk' degradation factual and readable after 'refusal'",
+      "title": "发言尝试不编造回答",
+      "dimensions": [
+        "voice",
+        "naturalness"
+      ],
+      "normal_provider_output": null,
+      "quality_review_status": "unreviewed"
+    },
+    {
+      "id": "R02",
+      "world": "relations",
+      "test_file": "tests/degraded-prose-grounding.test.ts",
+      "test_name": "keeps 'physical_failure' degradation factual and readable after 'refusal'",
+      "title": "身体尝试失败与已决定原话",
+      "dimensions": [
+        "voice",
+        "perception",
+        "rhythm"
+      ],
+      "normal_provider_output": null,
+      "quality_review_status": "unreviewed"
+    },
+    {
+      "id": "R03",
+      "world": "relations",
+      "test_file": "tests/degraded-prose-grounding.test.ts",
+      "test_name": "keeps 'physical_success' degradation factual and readable after 'refusal'",
+      "title": "身体尝试成功与已决定原话",
+      "dimensions": [
+        "voice",
+        "perception",
+        "rhythm"
+      ],
+      "normal_provider_output": null,
+      "quality_review_status": "unreviewed"
+    },
+    {
+      "id": "R04",
+      "world": "relations",
+      "test_file": "tests/degraded-prose-grounding.test.ts",
+      "test_name": "keeps 'observe' degradation factual and readable after 'refusal'",
+      "title": "观察与公开感知范围",
+      "dimensions": [
+        "perception",
+        "naturalness"
+      ],
+      "normal_provider_output": null,
+      "quality_review_status": "unreviewed"
+    },
+    {
+      "id": "R05",
+      "world": "relations",
+      "test_file": "tests/compound-degraded-prose.test.ts",
+      "test_name": "retains ordered speech and physical steps after 'refusal' (physical last: true)",
+      "title": "发言在先身体尝试在后",
+      "dimensions": [
+        "voice",
+        "rhythm",
+        "continuity"
+      ],
+      "normal_provider_output": null,
+      "quality_review_status": "unreviewed"
+    },
+    {
+      "id": "R06",
+      "world": "relations",
+      "test_file": "tests/compound-degraded-prose.test.ts",
+      "test_name": "retains ordered speech and physical steps after 'refusal' (physical last: false)",
+      "title": "身体尝试在先发言在后",
+      "dimensions": [
+        "voice",
+        "rhythm",
+        "continuity"
+      ],
+      "normal_provider_output": null,
+      "quality_review_status": "unreviewed"
+    },
+    {
+      "id": "C01",
+      "world": "continuity",
+      "test_file": "tests/hold-activity-fallback.test.ts",
+      "test_name": "describes the actual full activity interval without certifying a larger goal",
+      "title": "完整活动与未完成大目标",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "normal_provider_output": null,
+      "quality_review_status": "unreviewed"
+    },
+    {
+      "id": "C02",
+      "world": "continuity",
+      "test_file": "tests/hold-activity-fallback.test.ts",
+      "test_name": "describes actual HOLD activity and unfinished handoff after +0 minutes/'refusal'",
+      "title": "开始前中断",
+      "dimensions": [
+        "rhythm",
+        "continuity"
+      ],
+      "normal_provider_output": null,
+      "quality_review_status": "unreviewed"
+    },
+    {
+      "id": "C03",
+      "world": "continuity",
+      "test_file": "tests/hold-activity-fallback.test.ts",
+      "test_name": "describes actual HOLD activity and unfinished handoff after 1 minutes/'refusal'",
+      "title": "一分钟后中断",
+      "dimensions": [
+        "rhythm",
+        "continuity"
+      ],
+      "normal_provider_output": null,
+      "quality_review_status": "unreviewed"
+    },
+    {
+      "id": "C04",
+      "world": "continuity",
+      "test_file": "tests/hold-activity-fallback.test.ts",
+      "test_name": "retains the actual interrupt event and sixty elapsed minutes rather than requested120",
+      "title": "背景事件中断",
+      "dimensions": [
+        "rhythm",
+        "continuity"
+      ],
+      "normal_provider_output": null,
+      "quality_review_status": "unreviewed"
+    },
+    {
+      "id": "C05",
+      "world": "continuity",
+      "test_file": "tests/hold-activity-fallback.test.ts",
+      "test_name": "replays the exact interrupted activity prose after actual disk/service recreation",
+      "title": "磁盘重启重放",
+      "dimensions": [
+        "continuity",
+        "naturalness"
+      ],
+      "normal_provider_output": null,
+      "quality_review_status": "unreviewed"
+    },
+    {
+      "id": "C06",
+      "world": "continuity",
+      "test_file": "tests/degraded-prose-grounding.test.ts",
+      "test_name": "keeps 'wait' degradation factual and readable after 'refusal'",
+      "title": "实际等待时长",
+      "dimensions": [
+        "rhythm",
+        "naturalness"
+      ],
+      "normal_provider_output": null,
+      "quality_review_status": "unreviewed"
+    }
+  ],
+  "open": [
+    "Different people in identical context with actual model speech",
+    "Same person with changed sourced memory/relationship",
+    "Authorized normal-model candidates and manual independent quality judgments",
+    "72hour prose quality continuity and broad multiworld false acceptance/rejection",
+    "The originalN9.1-4 remain unchanged until reviewed evidence meets each fixed condition"
+  ]
+}
