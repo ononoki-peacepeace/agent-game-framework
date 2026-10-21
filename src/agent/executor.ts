@@ -30,7 +30,7 @@ import {verifyGoalAlignment} from './goal-alignment.js';
 import {failureReason,SceneSchemaError} from '../ai/failures.js';
 import {agentSkills} from './skills/index.js';
 import type {exploreLocation} from './location-exploration.js';
-import {engineOutcome,gameOutcome,gameNarrative,engineMessage,safeEngineMessage,WorldBlockedError} from './outcome.js';
+import {engineOutcome,gameOutcome,gameNarrative,engineMessage,safeEngineMessage,WorldBlockedError,incompleteInspectionOutcome} from './outcome.js';
 import {resolveTemporalWait} from './temporal-wait.js';
 import {interruptedActivity} from '../core/completion-evidence.js';
 import {applyNpcDecision,applyNpcProposedAction,recordSceneObservation} from './npc-agent.js';
@@ -519,6 +519,12 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
       undefined,undefined,undefined,false,undefined,undefined,Boolean(semanticAction||repetition||body.choice_offer_id&&goal.type==='WORLD_ACTION'),undefined,repeatedPerception,repetition,{target_ids:goal.target_entities,physical_intent:physicalIntent});
     save=await service.current();message=result.last_turn?.narrative??'行动已处理。';
     const settled=save.resolution_receipts?.find(receipt=>receipt.request_id===childId(body.request_id,id)&&receipt.commit_status==='committed');
+    const inspection=settled&&incompleteInspectionOutcome(settled,'plan_step',save.state_revision,changes);
+    if(inspection){
+      goal.status=inspection.type==='engine_failure'?'failed':inspection.kind==='blocked_by_world'?'blocked':'unresolved';
+      goal.result={summary:message};partialNarrative=message;partialChanges.push('world_action:'+id);
+      calls.push({tool_id:goal.type,ok:inspection.type==='game'});stepOutcome=inspection;break;
+    }
     if(settled&&interruptedActivity(settled)){
       goal.status='blocked';goal.result={summary:'这段活动因需要处理的事情而暂停，原目标尚未完成。'};
       partialNarrative=message;
@@ -677,17 +683,15 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
           recovery:recoveryContext(body.original_input??body.input,failure),view:service.project(after)});
       }
       const narrative=result.last_turn?.narrative??'';
-      const inspection=receipt.inspection_status;
-      if(inspection&&inspection!=='complete'){
-        if(inspection==='technical_failure'){
-          const failure=engineOutcome('invariant_failure','perception_evidence',after.state_revision,false,[],[receipt.request_id]);
+      const inspection=incompleteInspectionOutcome(receipt,'perception',after.state_revision);
+      if(inspection){
+        if(inspection.type==='engine_failure'){
+          const failure={...inspection,stage:'perception_evidence'};
           return agentResult('WORLD_ACTION',engineMessage(failure),{outcome:failure,presentation:'failure',
             recovery:recoveryContext(body.original_input??body.input,failure),view:service.project(after)});
         }
-        const kind=inspection==='partial'?'partial_progress':inspection==='world_blocked'?'blocked_by_world':'unresolved_goal';
         return agentResult('WORLD_ACTION',narrative,{presentation:'story',story:narrative,
-          outcome:gameOutcome(kind,'perception',after.state_revision,[],[receipt.request_id],
-            inspection==='partial'?'partial':'unresolved'),
+          outcome:inspection,
           time_advanced:after.runtime.time.day*after.definition.ruleset.minutes_per_day+after.runtime.time.minute-
             (save.runtime.time.day*save.definition.ruleset.minutes_per_day+save.runtime.time.minute),
           view:service.project(after)});

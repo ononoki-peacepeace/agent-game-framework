@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：f798823 + reviewed per-item perception completion。整体 **64.38%**（103/160 个固定条件满足）。未满足 24，待验证 33。
+计分版本 v1；评估源代码：9ebbcff + reviewed ordinary-plan inspection completion。整体 **64.38%**（103/160 个固定条件满足）。未满足 24，待验证 33。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：68 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：69 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -176,6 +176,8 @@
 | perception-commit-evidence | repair | R5.3: Baseline7fail1control4.014s;initial5files37pass12.208s;finalhistory2files13pass7.069s and expanded11direct6.024s/strict28.927sexit0. Selected5files40distinctpassingunion acrossinitial/final source,notoneallgreenrun; fullmatrixopen.；完整条件保持开放 | +0.000 pp |
 | perception-inspection-completion-withdrawal | evidence_correction | A4.2: met → unmet | -0.625 pp |
 | perception-inspection-completion-repair | repair | A4.2: unmet → met | +0.625 pp |
+| plan-inspection-completion-withdrawal | evidence_correction | A4.2: met → unmet | -0.625 pp |
+| plan-inspection-completion-repair | repair | A4.2: unmet → met | +0.625 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -219,7 +221,7 @@
 |---|---|---|---|
 | R5.1 | 已有故障矩阵区分技术失败与游戏内失败，保留已提交步骤 | 满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md), [routine-world-block-outcome.test.ts](../tests/routine-world-block-outcome.test.ts), [routine-world-block-outcome.md](../docs/routine-world-block-outcome.md) |
 | R5.2 | 已有分层修复与安全停止测试验证不重复 Core 副作用 | 满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md) |
-| R5.3 | 逐条关闭矩阵中仍未核验的嵌套故障出口 | 未满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md), [partial-plan-visible-status.test.ts](../tests/partial-plan-visible-status.test.ts), [partial-plan-visible-status.md](../docs/partial-plan-visible-status.md), [plan-handoff-failure.test.ts](../tests/plan-handoff-failure.test.ts), [plan-handoff-failure.md](../docs/plan-handoff-failure.md), [plan-unreadable-state.test.ts](../tests/plan-unreadable-state.test.ts), [plan-unreadable-state.md](../docs/plan-unreadable-state.md), [plan-committed-failure-summary.test.ts](../tests/plan-committed-failure-summary.test.ts), [plan-committed-failure-summary.md](../docs/plan-committed-failure-summary.md), [open-goal-unreadable-state.md](../docs/open-goal-unreadable-state.md), [open-goal-unreadable-state.test.ts](../tests/open-goal-unreadable-state.test.ts), [scene-unreadable-commit.md](../docs/scene-unreadable-commit.md), [scene-unreadable-commit.test.ts](../tests/scene-unreadable-commit.test.ts), [scene-generation-read-failure.md](../docs/scene-generation-read-failure.md), [scene-generation-read-failure.test.ts](../tests/scene-generation-read-failure.test.ts), [scene-effect-read-failure.md](../docs/scene-effect-read-failure.md), [scene-effect-read-failure.test.ts](../tests/scene-effect-read-failure.test.ts), [arrival-scene-commit-recovery.md](../docs/arrival-scene-commit-recovery.md), [arrival-scene-commit-recovery.test.ts](../tests/arrival-scene-commit-recovery.test.ts), [perception-commit-evidence.md](../docs/perception-commit-evidence.md), [perception-commit-evidence.test.ts](../tests/perception-commit-evidence.test.ts) |
+| R5.3 | 逐条关闭矩阵中仍未核验的嵌套故障出口 | 未满足 | [qa-ai-recovery-coverage.md](../docs/qa-ai-recovery-coverage.md), [partial-plan-visible-status.test.ts](../tests/partial-plan-visible-status.test.ts), [partial-plan-visible-status.md](../docs/partial-plan-visible-status.md), [plan-handoff-failure.test.ts](../tests/plan-handoff-failure.test.ts), [plan-handoff-failure.md](../docs/plan-handoff-failure.md), [plan-unreadable-state.test.ts](../tests/plan-unreadable-state.test.ts), [plan-unreadable-state.md](../docs/plan-unreadable-state.md), [plan-committed-failure-summary.test.ts](../tests/plan-committed-failure-summary.test.ts), [plan-committed-failure-summary.md](../docs/plan-committed-failure-summary.md), [open-goal-unreadable-state.md](../docs/open-goal-unreadable-state.md), [open-goal-unreadable-state.test.ts](../tests/open-goal-unreadable-state.test.ts), [scene-unreadable-commit.md](../docs/scene-unreadable-commit.md), [scene-unreadable-commit.test.ts](../tests/scene-unreadable-commit.test.ts), [scene-generation-read-failure.md](../docs/scene-generation-read-failure.md), [scene-generation-read-failure.test.ts](../tests/scene-generation-read-failure.test.ts), [scene-effect-read-failure.md](../docs/scene-effect-read-failure.md), [scene-effect-read-failure.test.ts](../tests/scene-effect-read-failure.test.ts), [arrival-scene-commit-recovery.md](../docs/arrival-scene-commit-recovery.md), [arrival-scene-commit-recovery.test.ts](../tests/arrival-scene-commit-recovery.test.ts), [perception-commit-evidence.md](../docs/perception-commit-evidence.md), [perception-commit-evidence.test.ts](../tests/perception-commit-evidence.test.ts), [plan-inspection-completion.md](../docs/plan-inspection-completion.md), [plan-inspection-completion.test.ts](../tests/plan-inspection-completion.test.ts) |
 | R5.4 | 最新完整离线代码快照全套通过，旧失败不得改写为通过 | 满足 | [current-offline-snapshot.md](../docs/current-offline-snapshot.md), [post-reaction-offline-snapshot.md](../docs/post-reaction-offline-snapshot.md), [agent-workspace.mjs](../scripts/agent-workspace.mjs), [post-context-offline-snapshot.md](../docs/post-context-offline-snapshot.md), [post-subject-offline-snapshot.md](../docs/post-subject-offline-snapshot.md), [post-routine-offline-snapshot.md](../docs/post-routine-offline-snapshot.md), [post-control-offline-snapshot.md](../docs/post-control-offline-snapshot.md), [post-item-offline-snapshot.md](../docs/post-item-offline-snapshot.md), [post-corpus-offline-snapshot.md](../docs/post-corpus-offline-snapshot.md), [post-long-route-offline-snapshot.md](../docs/post-long-route-offline-snapshot.md), [post-process-offline-snapshot.md](../docs/post-process-offline-snapshot.md), [post-migration-offline-snapshot.md](../docs/post-migration-offline-snapshot.md), [fetchable-loopback-fixture.md](../docs/fetchable-loopback-fixture.md), [post-presence-offline-snapshot.md](../docs/post-presence-offline-snapshot.md) |
 
 ## R6 Pending/background jobs and asynchronous restart continuation
@@ -299,7 +301,7 @@
 | 条件 | 具体通过条件 | 状态 | 依据 |
 |---|---|---|---|
 | A4.1 | 已有 Semantic 对齐和目标契约拒绝替换最终目标 | 满足 | [goal-contract-batch1.test.ts](../tests/goal-contract-batch1.test.ts) |
-| A4.2 | 已实现完成证据核验，准备动作不冒充目标完成 | 满足 | [goal-contract-batch1.test.ts](../tests/goal-contract-batch1.test.ts), [open-goal-completion-evidence.test.ts](../tests/open-goal-completion-evidence.test.ts), [open-goal-completion-evidence.md](../docs/open-goal-completion-evidence.md), [declared-activity-interruption.test.ts](../tests/declared-activity-interruption.test.ts), [declared-activity-interruption.md](../docs/declared-activity-interruption.md), [perception-inspection-completion.md](../docs/perception-inspection-completion.md), [perception-inspection-completion.test.ts](../tests/perception-inspection-completion.test.ts) |
+| A4.2 | 已实现完成证据核验，准备动作不冒充目标完成 | 满足 | [goal-contract-batch1.test.ts](../tests/goal-contract-batch1.test.ts), [open-goal-completion-evidence.test.ts](../tests/open-goal-completion-evidence.test.ts), [open-goal-completion-evidence.md](../docs/open-goal-completion-evidence.md), [declared-activity-interruption.test.ts](../tests/declared-activity-interruption.test.ts), [declared-activity-interruption.md](../docs/declared-activity-interruption.md), [perception-inspection-completion.md](../docs/perception-inspection-completion.md), [perception-inspection-completion.test.ts](../tests/perception-inspection-completion.test.ts), [plan-inspection-completion.md](../docs/plan-inspection-completion.md), [plan-inspection-completion.test.ts](../tests/plan-inspection-completion.test.ts) |
 | A4.3 | 开放表达的意图、边界、原目标完成有代表性离线覆盖 | 未满足 | [goal-contract-batch1.test.ts](../tests/goal-contract-batch1.test.ts) |
 | A4.4 | 当前模型在代表性多世界原始语句上通过目标完成验收 | 待验证 | [goal-contract-batch1.test.ts](../tests/goal-contract-batch1.test.ts) |
 

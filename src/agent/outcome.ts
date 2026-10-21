@@ -1,4 +1,5 @@
 import {GameError} from '../core/schema.js';
+import type {SavePackage} from '../core/schema.js';
 
 /** A resolved world result may be disappointing without being an execution error. */
 export type GameOutcomeKind='completed'|'feedback'|'completed_no_result'|'blocked_by_world'|'condition_false'|
@@ -17,6 +18,16 @@ export function gameOutcome(kind:GameOutcomeKind,stage:string,revision:number|nu
 export function engineOutcome(code:Extract<FrameworkOutcome,{type:'engine_failure'}>['code'],stage:string,
   revision:number|null=null,state_certain=false,committed_steps:string[]=[],receipt_ids:string[]=[]):Extract<FrameworkOutcome,{type:'engine_failure'}>{
   return {type:'engine_failure',code,stage,committed_steps,receipt_ids,revision,state_certain};
+}
+
+/** A committed inspection is an attempt; only Core's per-item status can complete the requested list. */
+export function incompleteInspectionOutcome(receipt:NonNullable<SavePackage['resolution_receipts']>[number],
+ stage:string,revision:number,completedSteps:string[]=[]):FrameworkOutcome|null{
+ const status=receipt.inspection_status;
+ if(!status||status==='complete')return null;
+ if(status==='technical_failure')return engineOutcome('invariant_failure',stage,revision,false,completedSteps,[receipt.request_id]);
+ return gameOutcome(status==='partial'?'partial_progress':status==='world_blocked'?'blocked_by_world':'unresolved_goal',
+  stage,revision,completedSteps,[receipt.request_id],status==='partial'?'partial':'unresolved');
 }
 
 /** Canonical rules can refuse an action without indicating a broken engine. */

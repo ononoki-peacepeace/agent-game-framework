@@ -1,0 +1,27 @@
+# Remaining fixed-condition evidence inventory
+
+Read-only audit baseline: `9ebbcff`, 103/160 (64.375%), 24 unmet and 33 unverified. This inventory does not change the frozen definitions or award credit. Existing local reports are historical evidence at their recorded source, not a current full-suite claim.
+
+| Fixed condition | Classification | Reusable evidence | Exact remaining requirement / next bounded action |
+| --- | --- | --- | --- |
+| A8.3 | Known coverage and implementation gaps | `freeform-live-item-contract.md`, route prerequisite, sealed storage and live-resource regressions recorded in the existing progress JSON | Inventory body, distance, capability, terrain, containers/temporary objects and consumption positive/negative pairs. Recheck after time hooks and before result RNG; assert time/resources/receipts and truthful refusal. No additional adjacency search until this list is mapped. |
+| R5.3 | Known implementation gaps plus unreviewed exits | Existing failure-exit/recovery matrices; arrival, scene-read, single-perception and plan-read fault regressions | Every original exit needs location, classification, side effects and continue/stop evidence. Review one bounded ordinary-plan completion boundary now; do not call the whole matrix closed after that repair. |
+| N4.3 | Existing grammar/corpus breadth gap; additional bugs not presumed | Typed speech occurrence, inventory denial, sensory simile, joined-subject and presence regressions | Fix a finite lawful/unsafe corpus for metaphor, retelling, sensory restrictions, absent actors and item state. Classify existing coverage before adding cases. |
+| N4.4 | Missing acceptance evidence | N4.3 local pairs, existing three-world fixtures | Run the same fixed pair set in three structurally different worlds (trade/movement, dialogue/relationships, autonomous/background), including normal, ambiguity, refusal, technical fault and replay. Renamed identical worlds are insufficient. |
+| R7.4 | Missing process-level evidence | Actual TypeScript compiler kill and bounded nested/install substitute-tool kill in `development-process-kill.md` | Real npm/Vite/install pipeline, service-owner crash and descendant cleanup remain. Use isolated workspaces, offline providers and owned process handles; no production service. |
+| A7.3 / N3.3 | Incomplete combined-action matrices | Interrupted WAIT, conditional and compound-action tests | Mixed if/else, dependency failure, changed intent, and success/failure/unexecuted steps must be mapped before closure. |
+| R6.3 / R6.4 | Missing lifecycle/process evidence and incomplete recovery breadth | Routine journal and input process-kill regressions | Pending/background/async boundaries before preparation, after commit and before terminal state; independent process restart and no duplicate resource use. |
+| R8.3 | Real remaining product work | Immutable media retention and late-avatar ownership regressions | Durable Provider identity, GC reference authority and external save writers; cannot close by rerunning existing media tests. |
+| R10.4 | Real remaining product work | Existing scoped-guidance identity/replay regressions | Cross-scope, cross-file ownership protocol and boundary faults remain; no claim of multi-file atomicity. |
+
+R7.1/R7.3 and R9.3/R9.4 are already met at their documented bounds. Do not repeat Git rollback experiments or process tests merely to re-establish their existing credit. Current subprocess access must be observed from actual command results; previous EPERM/review outages are not evidence of a present blocker.
+
+## Selected batch: ordinary-plan inspection completion
+
+Quality priority: prevent dependent actions after a Core inspection that was only partial, blocked or not executed. The single-perception shortcut was repaired in `9ebbcff`; ordinary `executePlan` still only checks interruption/repetition before marking the goal completed. This is a code observation until the baseline runs.
+
+Freeze eight variants before repair: Core `complete`, `partial`, `world_blocked`, `not_executed`, each with normal acknowledgement or actual JsonStore write-then-throw. A following WAIT may run only after acknowledged complete inspection. Assert exact time/revision, item results, goal and dependent statuses, receipts, committed/completed step distinction, saved story, fresh-service bytes and explicit same-child retry without another write/generation. Use real Core and temporary JsonStore; no fabricated resolution receipt.
+
+Commands: direct `node scripts/agent-workspace.mjs codex test tests/plan-inspection-completion.test.ts --reporter=json --outputFile=.agent-runtime/codex/plan-inspection-completion-baseline.json`; after minimal repair run the direct file, then one selected adjacent regression set and final strict TypeScript. Retain every failed report.
+
+This batch is tied to A4.2 (Core-backed completion) and R5.3 (failure classification/committed side effects); it cannot close broad R5.3. Receiptless/unrelated-turn substitution is a separately identified R5.3 boundary, not proof that the production Core writer omits receipts. Do not expand this batch to all receipt attribution paths. After at most two repair batches without closing the selected broad condition, review the obstruction and switch to a finite corpus/evidence closure task rather than indefinitely expanding adjacent counterexamples.
