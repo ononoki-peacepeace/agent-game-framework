@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "9ebbcff + reviewed ordinary-plan inspection completion",
+  "assessed_source": "2398495 + reviewed fixed N4 corpus and canonical item condition guard",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -1202,9 +1202,12 @@
         "docs/scene-presence-temporal-pronoun.md",
         "tests/scene-presence-temporal-pronoun.test.ts",
         "docs/typed-speech-occurrence-scope.md",
-        "tests/typed-speech-occurrence-scope.test.ts"
+        "tests/typed-speech-occurrence-scope.test.ts",
+        "docs/narrative-fixed-corpus.md",
+        "tests/narrative-fixed-corpus.test.ts",
+        "tests/item-condition-narrative.test.ts"
       ],
-      "basis": "Sourcee9ea62a audited251files2538selectedpasses/zero skip/exactinventory/566hashes/build18453. Initial12/16native0xC0000409 retained;24freshsinglefilepasses complete coverage, native root cause unresolved. Actual Core/HTTP/disk/replay counterexamples and lawful/unsafe controls repaired; only original bounded existing authority/legal-regression condition restored. Full three-structure prose breadth and human quality remain open. cd51062 counterexample: pre-time-hook check discovers evidence whose authoritative placement moved away; N4.1 withdrawn pending repair. Verified settlement-state check refresh removes remote evidence discovery and public facts; paired accessible/newly-accessible controls, actual disk replay and7files87distinctpassunion; final6pass8.452s/strict51.222sexit0 restore N4.1. No new complete-suite claim. c2ef1d8 counterexample: external departure continuation after ASCII quoted speech escapes presence guard;withdrawn pending repair. AttributedASCIIquotes preserve claims while externaltail implicit/joined departures remainguarded;7files85distinctpassingunion/strict47.224sexit0/twoactualdiskWAITdegradedreplay restoreN4.1. c6c7449 actual4fail4controls3.439s: leading joined pronoun loses sightless antecedent; N4.1 withdrawn pending repair. Leading joined pronoun retains unique antecedent;6files56distinctpassingunion/final12direct5.563s/HTTP1pass5.875s/strict final documented in evidence restoreN4.1. Direct turn replay publicView contract preserves exact committed bytes; transient first-call notice difference explicitly checked, not called exact response replay. Actual6fail5controls3.898s: temporal prefix drops local joined-pronoun antecedent;N4.1 withdrawn pending repair. Leading temporal joined pronoun retains unique local antecedent;4files51pass11.045s/twoactualdiskWAITreplay/strict34.815sexit0 restoreN4.1. Typed-speech occurrence counterexample:7fail5controls3.483s;global same-quote masking lets later uncommitted player pickup escape INSPECT validation,including actualdisknormalprose. Credit withdrawn pending repair. Ordered per-event quote masking verified final6files68pass12.665s/strict27.806sexit0; explicit quote membership preserves unquoted tail actions. Actual disk INSPECT rejects uncommitted pickup, retains legal speech, exact replay without extra calls. Restores bounded N4.1 only; N4.3 remains open."
+      "basis": "Sourcee9ea62a audited251files2538selectedpasses/zero skip/exactinventory/566hashes/build18453. Initial12/16native0xC0000409 retained;24freshsinglefilepasses complete coverage, native root cause unresolved. Actual Core/HTTP/disk/replay counterexamples and lawful/unsafe controls repaired; only original bounded existing authority/legal-regression condition restored. Full three-structure prose breadth and human quality remain open. cd51062 counterexample: pre-time-hook check discovers evidence whose authoritative placement moved away; N4.1 withdrawn pending repair. Verified settlement-state check refresh removes remote evidence discovery and public facts; paired accessible/newly-accessible controls, actual disk replay and7files87distinctpassunion; final6pass8.452s/strict51.222sexit0 restore N4.1. No new complete-suite claim. c2ef1d8 counterexample: external departure continuation after ASCII quoted speech escapes presence guard;withdrawn pending repair. AttributedASCIIquotes preserve claims while externaltail implicit/joined departures remainguarded;7files85distinctpassingunion/strict47.224sexit0/twoactualdiskWAITdegradedreplay restoreN4.1. c6c7449 actual4fail4controls3.439s: leading joined pronoun loses sightless antecedent; N4.1 withdrawn pending repair. Leading joined pronoun retains unique antecedent;6files56distinctpassingunion/final12direct5.563s/HTTP1pass5.875s/strict final documented in evidence restoreN4.1. Direct turn replay publicView contract preserves exact committed bytes; transient first-call notice difference explicitly checked, not called exact response replay. Actual6fail5controls3.898s: temporal prefix drops local joined-pronoun antecedent;N4.1 withdrawn pending repair. Leading temporal joined pronoun retains unique local antecedent;4files51pass11.045s/twoactualdiskWAITreplay/strict34.815sexit0 restoreN4.1. Typed-speech occurrence counterexample:7fail5controls3.483s;global same-quote masking lets later uncommitted player pickup escape INSPECT validation,including actualdisknormalprose. Credit withdrawn pending repair. Ordered per-event quote masking verified final6files68pass12.665s/strict27.806sexit0; explicit quote membership preserves unquoted tail actions. Actual disk INSPECT rejects uncommitted pickup, retains legal speech, exact replay without extra calls. Restores bounded N4.1 only; N4.3 remains open. Fixedcorpus3fail19pass3.349s and actualdisk3fail3controls5.545s: nameditemintact/damaged/destroyed prose contradicts Core and is saved normal. Creditwithdrawn pending repair. Explicitnameditemcondition now checked against public Core state after existing ordered speech masking; preserved denials/doublenegatives/otheritemsubject. Fixed22rowcorpus and final8files108pass17.341s/strict29.023sexit0 restore boundedN4.1. Actualdisk6cases/restart/exactreplay."
     },
     "N4.2": {
       "status": "met",
@@ -1218,7 +1221,7 @@
       "basis": "Sourcee9ea62a audited251files2538selectedpasses/zero skip/exactinventory/566hashes/build18453. Initial12/16native0xC0000409 retained;24freshsinglefilepasses complete coverage, native root cause unresolved. Actual Core/HTTP/disk/replay counterexamples and lawful/unsafe controls repaired; only original bounded existing authority/legal-regression condition restored. Full three-structure prose breadth and human quality remain open."
     },
     "N4.3": {
-      "status": "unmet",
+      "status": "met",
       "evidence": [
         "tests/narrative-firewall-observability.test.ts",
         "tests/scene-presence-negation.test.ts",
@@ -1240,14 +1243,18 @@
         "docs/perception-simile-authority.md",
         "tests/perception-simile-authority.test.ts",
         "docs/inventory-denial-prose.md",
-        "tests/inventory-denial-prose.test.ts"
+        "tests/inventory-denial-prose.test.ts",
+        "docs/narrative-fixed-corpus.md",
+        "tests/narrative-fixed-corpus.test.ts",
+        "tests/item-condition-narrative.test.ts"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 1246a49: occurrence-scoped departure negation, truthful no-receipt degradation marker; initial5fail/7controls, final6files80pass/build. N4.1 withdrawal/restoration net0; broader subject/multi-world scope remains open. 1bad19e: independently named/player clauses retain presence checks;7fail/5controls, intermediate63/66 overly broad split corrected, final7files92pass/build. Explicit N4.1 withdrawal/restoration net0; rich subject/multi-world matrices open. ae4f469: bounded literal joint-subject presence/travel guard checks each named member; baseline7fail/6legal controls, first3files42pass, expanded final8files94pass/build. Real service degrades unsupported group departure and replays WAIT once. N4.1 withdrawal/restoration net0; broad grammar/multi-world matrix remains open. f9f93f0: explicit visual joint subjects and independent named/player clauses preserve event-time sight receipt checks;6fail/4controls, final9files85pass/build including HTTP/compound-child continuity. Actual physical turn rejects invented observation and replays once. N4.1 withdrawn/restored net0; broader attribution/quoted/multi-world grammar remains open. Local Chinese step forms几步/数步/半步/一小步 no longer falsely imply departure; later actualdeparture still rejected.5fail6controls repaired,5files65distinctpasses/actualWAIT normalprose exactreplay/strict68.187s. Broad metaphor/retelling/multi-world matrix remains open. AttributedASCIIquoteddeparture/headcount claims no longer false positive; emphasis/malformedquotes and outsideassertions retained. Broader metaphor/retelling/multi-world corpus open. Bounded joined-pronoun perception scope fixed; full grammar/multi-world criterion stays open. Sensory similes: baseline5fail5controls3.548s repaired with bounded sensory-subject simile recognition, joined literal actors and later world changes still rejected.5files67pass15.379s/strict33.298sexit0; twoactualdiskINSPECT normal/degraded/replaycases. Full metaphor/retelling/item-state/multi-world matrix open. Inventory denial: correctedbaseline7fail8controls3.607s; simple wholeclause single denials preserved, double negatives/otheractors/latertransfers still require evidence. First5files66pass16.029s; finalnarrow2files20pass5.830s/strict29.303sexit0. Selected5files68distinctpassingunion across pre/finalnarrow implementations,notonegreenfinalsource run. Full corpus stays open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 1246a49: occurrence-scoped departure negation, truthful no-receipt degradation marker; initial5fail/7controls, final6files80pass/build. N4.1 withdrawal/restoration net0; broader subject/multi-world scope remains open. 1bad19e: independently named/player clauses retain presence checks;7fail/5controls, intermediate63/66 overly broad split corrected, final7files92pass/build. Explicit N4.1 withdrawal/restoration net0; rich subject/multi-world matrices open. ae4f469: bounded literal joint-subject presence/travel guard checks each named member; baseline7fail/6legal controls, first3files42pass, expanded final8files94pass/build. Real service degrades unsupported group departure and replays WAIT once. N4.1 withdrawal/restoration net0; broad grammar/multi-world matrix remains open. f9f93f0: explicit visual joint subjects and independent named/player clauses preserve event-time sight receipt checks;6fail/4controls, final9files85pass/build including HTTP/compound-child continuity. Actual physical turn rejects invented observation and replays once. N4.1 withdrawn/restored net0; broader attribution/quoted/multi-world grammar remains open. Local Chinese step forms几步/数步/半步/一小步 no longer falsely imply departure; later actualdeparture still rejected.5fail6controls repaired,5files65distinctpasses/actualWAIT normalprose exactreplay/strict68.187s. Broad metaphor/retelling/multi-world matrix remains open. AttributedASCIIquoteddeparture/headcount claims no longer false positive; emphasis/malformedquotes and outsideassertions retained. Broader metaphor/retelling/multi-world corpus open. Bounded joined-pronoun perception scope fixed; full grammar/multi-world criterion stays open. Sensory similes: baseline5fail5controls3.548s repaired with bounded sensory-subject simile recognition, joined literal actors and later world changes still rejected.5files67pass15.379s/strict33.298sexit0; twoactualdiskINSPECT normal/degraded/replaycases. Full metaphor/retelling/item-state/multi-world matrix open. Inventory denial: correctedbaseline7fail8controls3.607s; simple wholeclause single denials preserved, double negatives/otheractors/latertransfers still require evidence. First5files66pass16.029s; finalnarrow2files20pass5.830s/strict29.303sexit0. Selected5files68distinctpassingunion across pre/finalnarrow implementations,notonegreenfinalsource run. Full corpus stays open. Closure: frozenbeforeexecution22rowfivecategorycorpus covers lawful/unsafe metaphor,typedretelling,eventtimesensoryrestriction,absentactors,itemstate. Missing canonicalitemstate comparison repaired,actualdisk6positive/negativecontrols+replay;current8files108pass17.341s/strict29.023sexit0. OriginalN4.3fivecategoryminimum established;no arbitrarygrammar or three-worldN4.4 claim."
     },
     "N4.4": {
       "status": "unverified",
       "evidence": [
-        "tests/narrative-firewall-observability.test.ts"
+        "tests/narrative-firewall-observability.test.ts",
+        "docs/narrative-fixed-corpus.md"
       ],
       "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
     },
@@ -4741,6 +4748,64 @@
         }
       ],
       "note": "103/16064.375%;restore1/+0.625pp,wholebatchnet0. Initial7fail1pass6.411s/corrected6fail2pass6.015s retained;direct8pass7.506s/final6files39pass19.199s/strict29.430sexit0."
+    },
+    {
+      "batch": "narrative-item-condition-withdrawal",
+      "type": "evidence_correction",
+      "source": "2398495",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "before": "met",
+          "after": "unmet",
+          "reason": "Actual disk INSPECT saves explicit item condition contradictory to canonical intact/damaged/destroyed state.",
+          "evidence": [
+            "docs/narrative-fixed-corpus.md",
+            "tests/narrative-fixed-corpus.test.ts",
+            "tests/item-condition-narrative.test.ts"
+          ]
+        }
+      ],
+      "note": "102/16063.75%;withdraw1/-0.625pp pending repair. Fixed N4.3 corpus has exactly22rows; no three-world N4.4 credit."
+    },
+    {
+      "batch": "narrative-fixed-corpus-closure",
+      "type": "repair",
+      "source": "2398495+reviewed-worktree",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "before": "unmet",
+          "after": "met",
+          "reason": "Core item condition consistency restored; lawful descriptions, typed speech and negatives preserved.",
+          "evidence": [
+            "docs/narrative-fixed-corpus.md",
+            "tests/narrative-fixed-corpus.test.ts",
+            "tests/item-condition-narrative.test.ts"
+          ]
+        },
+        {
+          "id": "N4.3",
+          "before": "unmet",
+          "after": "met",
+          "reason": "Fixed22row corpus and original adjacent regressions establish all five frozen lawful/unsafe categories including actual item-state service/replay proof.",
+          "evidence": [
+            "docs/narrative-fixed-corpus.md",
+            "tests/narrative-fixed-corpus.test.ts",
+            "tests/item-condition-narrative.test.ts"
+          ]
+        }
+      ],
+      "condition_checks": [
+        {
+          "id": "N4.4",
+          "result": "No three-structure same-corpus run yet; remains unverified.",
+          "evidence": [
+            "docs/narrative-fixed-corpus.md"
+          ]
+        }
+      ],
+      "note": "104/16065.00%;wholebatchnet+1/+0.625pp from103. Final8files108pass17.341s/strict29.023sexit0;direct28pass7.459s and intermediate8files108pass16.758s/strict29.236s retained,not a full-suite claim."
     }
   ],
   "new_risks": [],
@@ -5972,6 +6037,19 @@
         "tests/plan-inspection-completion.test.ts"
       ],
       "summary": "Ordinary executePlan ignores Core per-item inspection completion and authorizes a dependent action after partial/blocked/not-executed checks."
+    },
+    {
+      "id": "narrative-item-condition",
+      "scope": "original",
+      "condition": "N4.1",
+      "status": "resolved",
+      "source": "2398495",
+      "evidence": [
+        "docs/narrative-fixed-corpus.md",
+        "tests/narrative-fixed-corpus.test.ts",
+        "tests/item-condition-narrative.test.ts"
+      ],
+      "summary": "Narrator prose can destroy intact named item or repair damaged/destroyed item without Core settlement."
     }
   ]
 }

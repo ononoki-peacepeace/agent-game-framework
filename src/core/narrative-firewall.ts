@@ -94,6 +94,29 @@ function jointNarrativeSubjects<T extends {components:{identity?:{name?:unknown}
   return joined?people.filter(person=>presenceAliases(String(person.components.identity?.name??'')).some(alias=>joined.includes(alias))):[];
 }
 
+/** Check explicit current condition of a named item against Core, never materialize a prose claim. */
+function validateItemConditionNarrative(save:SavePackage,prose:string){
+  const visible=new Set(publicView(save).entities.map(entity=>entity.id));
+  const items=save.entities.filter(entity=>visible.has(entity.id)&&entity.components.item&&entity.components.identity?.name);
+  const names=[...new Set(items.map(entity=>String(entity.components.identity!.name)))].sort((a,b)=>b.length-a.length);
+  if(!names.length)return;
+  const escape=(text:string)=>text.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const pattern=new RegExp(`(${names.map(escape).join('|')})((?:现在|此刻|已经|已|仍然|仍|依然|还是|变得|变成|恢复|保持|处于|是|没有|并未|尚未|并非|不是|不再|未|不)*)(完好无损|完整无损|完好|受损|损坏|破损|损毁|毁坏|毁掉)`,'g');
+  for(const match of prose.matchAll(pattern)){
+    const condition=/完好|完整/.test(match[3])?'intact':/损毁|毁坏|毁掉/.test(match[3])?'destroyed':'damaged';
+    const negative=((match[2].match(/没有|并未|尚未|并非|不是|不再|未|不/g)??[]).length%2)===1;
+    const matching=items.filter(item=>String(item.components.identity!.name)===match[1]);
+    // A duplicate name cannot let one compatible item authorize an incompatible sibling.
+    if(matching.some(item=>{
+      const actual=item.components.item!.condition??'intact';
+      const supported=condition==='damaged'?actual!=='intact':actual===condition;
+      return supported===negative;
+    }))
+      throw new NarrativePatternError('item_condition',match.index,matchedSnippet(prose,match.index,match[0].length),
+        '旁白物品状态与Core权威记录不一致，描写不能损毁或修复物品');
+  }
+}
+
 /** Current-scene prose cannot turn a player's presupposition or an old paragraph into an NPC MOVE. */
 export function validateScenePresenceNarrative(save:SavePackage,prose:string,claims:readonly {entity_id:string;location_id:string}[]=[],movements:readonly Receipt[]=[],departureScene?:SavePackage){
   for(const claim of claims){
@@ -219,6 +242,7 @@ export function validateResolvedNarrative(receipt:Receipt,result:Narrative,hidde
     }
   }
   const prose=[body,...(result.scene_beats??[]).filter(beat=>beat.kind==='narration').map(beat=>beat.text)].join('\n');
+  if(scene)validateItemConditionNarrative(scene,prose);
   // The aggregate inherits its final child type; earlier physical results still
   // constrain injuries and event-time perception when the last child is TALK.
   const physicalCandidates=(compoundReceipts??[receipt]).filter(step=>step.physical_outcome);

@@ -2,6 +2,8 @@
 
 Read-only audit baseline: `9ebbcff`, 103/160 (64.375%), 24 unmet and 33 unverified. This inventory does not change the frozen definitions or award credit. Existing local reports are historical evidence at their recorded source, not a current full-suite claim.
 
+Subsequent verified update: ordinary-plan inspection checkpoint `2398495` restores A4.2 with no net score. The fixed five-category N4 corpus plus minimal canonical item-condition repair now closes N4.3 and restores N4.1: **104/160 (65.00%), 23 unmet / 33 unverified**; see `narrative-fixed-corpus.md`. The table below retains the initial gap inventory; N4.3's identified corpus gap is now closed, while N4.4's three-world gap remains. Next priority is the same frozen corpus in genuinely different world structures, without expanding new grammar.
+
 | Fixed condition | Classification | Reusable evidence | Exact remaining requirement / next bounded action |
 | --- | --- | --- | --- |
 | A8.3 | Known coverage and implementation gaps | `freeform-live-item-contract.md`, route prerequisite, sealed storage and live-resource regressions recorded in the existing progress JSON | Inventory body, distance, capability, terrain, containers/temporary objects and consumption positive/negative pairs. Recheck after time hooks and before result RNG; assert time/resources/receipts and truthful refusal. No additional adjacency search until this list is mapped. |
