@@ -508,15 +508,14 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
         if(segment.interrupted){activityInterrupted=elapsed<minutes;break;}
       }
     }else if(minutes)c.advance(minutes);
-    if(physical){
-      // Time hooks may execute NPC plans or change bodily conditions. The
-      // candidate is still isolated: abort it before contact RNG if its actual
-      // settlement prerequisites no longer hold, and leak none of its effects.
-      const live=livePrerequisites(c.save);
-      if(live.status!=='EXECUTABLE')throw new WorldBlockedError('prerequisite',
-        `这次行动的时间推进会使前置条件失效（${live.reason??'现场条件变化'}）；本次行动未提交。`);
-      check=prepareCheck(c.save,requestId,checkInput);
-    }
+    // Time hooks can move people/items, seal containers or destroy resources.
+    // Validate against the isolated settlement state before any action result;
+    // a failed candidate must not pull a remote item back or report an activity.
+    const live=livePrerequisites(c.save);
+    if(live.status!=='EXECUTABLE'||!activityRequirement(c.save,input).available)
+      throw new WorldBlockedError('prerequisite',
+        `这次行动的时间推进会使前置条件失效（${live.reason??'现场资源不可用'}）；本次行动未提交。`);
+    if(physical)check=prepareCheck(c.save,requestId,checkInput);
     if(seconds!==undefined)c.save.runtime.scene_seconds=carried%60;
     if(localQuery){
       const present=resolveLocalSceneAnchor(c.save,localQuery,localAssessment,requestId);
