@@ -33,6 +33,12 @@ const secretKey = /^(?:api[_-]?key|authorization|auth|secret|client[_-]?secret|p
 const secretText = /\b(?:sk-[A-Za-z0-9_-]{6,}|Bearer\s+[A-Za-z0-9._-]{6,})\b/g;
 const maxString = 512, maxDepth = 4, maxKeys = 40, maxItems = 30;
 
+/** Redact the complete diagnostic before selecting its bounded final output.
+ * Truncating first can cut off a credential prefix and leave its body visible. */
+export function redactTextTail(value:unknown,limit=2000){
+  return String(value??'').replace(secretText,'[redacted]').trim().slice(-limit);
+}
+
 export function redactValue(value: unknown, depth = 0): unknown {
   if (depth > maxDepth) return '[truncated]';
   if (typeof value === 'string') { const masked = value.replace(secretText, '[redacted]'); return masked.length > maxString ? `${masked.slice(0, maxString)}…` : masked; }

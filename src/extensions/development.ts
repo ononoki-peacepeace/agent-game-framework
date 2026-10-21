@@ -6,7 +6,7 @@ import {join,resolve,relative,isAbsolute} from 'node:path';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {z} from 'zod';
-import {redactValue} from '../observability/logger.js';
+import {redactValue,redactTextTail} from '../observability/logger.js';
 import {CodexAdapter} from '../ai/codex.js';
 import type {AIAdapter} from '../ai/contracts.js';
 import {assert,safeParse} from '../core/schema.js';
@@ -77,7 +77,8 @@ export class ExtensionDevelopment {
  private async build(job:DevelopmentJob,input:z.infer<typeof requestSchema>,controller:AbortController,versionOverride?:string){
  const signal=controller.signal,phase=async(name:string,message:string)=>{signal.throwIfAborted();job.status='running';job.phase=name;job.message=message;job.logs.push(message);await this.persist();};
  try{
-   await phase('generating','在独立扩展目录生成声明式配置，核心源文件不参与生成。');for(const dir of ['src','dist','tests','assets'])await mkdir(join(job.workspace,dir),{recursive:true});
+   await phase('creating_workspace','准备独立扩展工作区。');for(const dir of ['src','dist','tests','assets'])await mkdir(join(job.workspace,dir),{recursive:true});
+   await phase('generating','在独立扩展目录生成声明式配置，核心源文件不参与生成。');
    const declarativeDefaults={fields:[{key:'count',type:'number' as const,initial:0}],declarative_actions:[{id:'plus_one',label:'+1',op:'increment' as const,field:'count',value:1},{id:'reset',label:'重置',op:'set' as const,field:'count',value:0}],surfaces:[{id:`${input.extension_id}_panel`,kind:'contextual_panel' as const,title:'小工具',visibility:'always' as const}]};
    let spec:ExtensionSpec=input.spec
      ?safeParse(specSchema,{...input.spec,extension_id:input.extension_id,template:input.template})
@@ -87,17 +88,25 @@ export class ExtensionDevelopment {
    if(input.use_codex){const adapter=this.adapterFactory(job.workspace);const result=await new AIRuntime(adapter).generateValidated({role:'gm_reasoning',signal,maxOutputTokens:2500,prompt:'只为扩展输出 JSON Spec。禁止代码、工具、shell、文件修改和世界事实写入。template、extension_id 必须与请求相同。声明式（declarative）扩展只能声明自己的状态字段、受限动作（increment/decrement/set/toggle）和 UI surface。人物独立属性必须使用 field.scope=entity、可读 label，并声明 contextual_panel.host=character_detail 或 character_card；extension-global 字段不能冒充人物属性。不能声明对世界正史的写入；允许的写入只有 extension-owned state。请求：'+JSON.stringify({...input,spec:undefined})},specSchema);spec=safeParse(specSchema,normalizeProviderOptionals(result.data,structuredInputSchema(specSchema)));assert(spec.template===input.template&&spec.extension_id===input.extension_id,'生成结果改变了玩家确认的模板或 ID');if(input.template==='declarative')assert(spec.fields.length>0&&spec.declarative_actions.length>0&&spec.surfaces.length>0,'声明式扩展缺少状态、动作或界面');}
 
    await phase('static_validation','校验 manifest、权限白名单与状态命名空间。');spec=safeParse(specSchema,spec);const save=await this.host.service.current();assert(save.game_id===job.game_id,'世界已切换，候选未继续构建');const existing=save.extensions?.[spec.extension_id],oldVersion=existing?.version;const version=versionOverride??await this.host.nextVersion(spec.extension_id,oldVersion);const manifest=manifestFrom(spec,version,input.use_codex?'Codex / declarative spec':'参考模板');job.manifest=manifest;
+   await phase('writing_files','保存候选扩展的声明文件。');
    const json=JSON.stringify(manifest,null,2);await writeFile(join(job.workspace,'extension.json'),json);await writeFile(join(job.workspace,'src','profile.ts'),'export const profile: {framework_api_version:"1";[key:string]:unknown} = '+json+';\n');
    await phase('building','TypeScript 检查独立 profile，构建 JSON 入口。');
    await run(process.execPath,[resolve('node_modules/typescript/lib/tsc.js'),'--noEmit','--strict','--skipLibCheck','--target','ES2023','--module','NodeNext','--moduleResolution','NodeNext',join(job.workspace,'src','profile.ts')],{signal,timeout:30000,maxBuffer:1024*1024,windowsHide:true});
    await writeFile(join(job.workspace,'dist','profile.json'),json);
    await phase('testing','执行参考规则单元测试及 Framework API 兼容检查。');job.logs.push(...verifyReference(spec));await writeFile(join(job.workspace,'tests','results.json'),JSON.stringify({passed:true,checks:job.logs.slice(-3)},null,2));
    signal.throwIfAborted();job.hash=createHash('sha256').update(json).digest('hex');job.status='ready';job.phase='preview';job.message='构建和规则测试通过。请查看权限与规则，然后确认安装。';
- }catch(e){job.status=signal.aborted?'cancelled':'failed';job.phase='idle';
-   const detail=String((e as {stderr?:string}).stderr??'').trim().split('\n').slice(0,3).join(' ');
-   job.message=signal.aborted?'生成已取消；当前工作版本未改变。':`${String(redactValue((e as Error).message))}${detail?`：${detail}`:''}`;
+ }catch(e){job.status=signal.aborted?'cancelled':'failed';
+   if(signal.aborted){job.phase='idle';job.message='生成已取消；当前工作版本未改变。';}
+   else{
+     const error=e as {code?:unknown;signal?:unknown;stdout?:unknown;stderr?:unknown};
+     const tail=(value:unknown)=>redactTextTail(value);
+     const stdout=tail(error?.stdout),stderr=tail(error?.stderr);
+     job.message=[`[${job.phase}] ${String(redactValue(e instanceof Error?e.message:String(e))).slice(0,4000)}`,
+       typeof error?.code==='number'?`exit=${error.code}`:typeof error?.code==='string'?`code=${tail(error.code)}`:'',
+       typeof error?.signal==='string'?`signal=${tail(error.signal)}`:'',stdout?`stdout:\n${stdout}`:'',stderr?`stderr:\n${stderr}`:''].filter(Boolean).join('\n').slice(0,12000);
+   }
    job.logs.push(job.message);}
- finally{this.controllers.delete(job.job_id);await this.persist();this.host.service.logger.info('extension.development.finished',{module:'extension',job_id:job.job_id,metadata:{status:job.status,message:job.message}});}
+ finally{this.controllers.delete(job.job_id);await this.persist();this.host.service.logger.info('extension.development.finished',{module:'extension',job_id:job.job_id,metadata:{status:job.status,phase:job.phase,message:job.message}});}
  }
  async install(id:string,raw:unknown,migrationConfirmed=false){
   const operation=this.installs.then(()=>this.installJob(id,raw,migrationConfirmed));this.installs=operation.then(()=>undefined,()=>undefined);return operation;

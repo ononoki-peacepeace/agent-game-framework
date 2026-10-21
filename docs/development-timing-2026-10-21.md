@@ -60,3 +60,17 @@ This evidence-only batch tests29.455s/typecheck31.885s/build0s. Official continu
 Batch tests824.511s/typecheck28.833s/build0s. Official totals: **tests1002.443s/builds104.872s/additional strict noEmit60.718s**. The repeated long run followed an actual failed fixture expectation and short classification; the third long run was limited to the calendar branch whose scope changed. No complete framework regression ran. `repeated_selection` in the raw recorder means the same file list; test-name filters and excluded cases remain explicit command arguments and report statuses.
 
 Observed calls: budget-aware long357 substitutes, extended calendar119, boundary pairs9 =485 observed test substitutes (includes119 superseded calendar calls). The final used case selection observes366. Other failed/short calls lacking counters remain unobserved. Paid game Provider calls0; developer-model per-call count/inference time is not exposed. No call costs or inference latency are inferred from test/process wall time.
+
+## Extension failure diagnostics
+
+| Run | Result | Wall seconds | Why run/repeat |
+|---|---|---:|---|
+| Create/write/compiler identity baseline | 1 passed,3 failed | 4.120 | Actual filesystem faults and controlled compiler error; no live compiler/model |
+| First identity fix | 4 passed | 3.958 | Minimal stage/output repair |
+| Long output boundary | 4 passed,1 failed | 4.234 | Final output omitted; secret can cross a truncation boundary |
+| Correct redaction/tail order | 5 passed | 4.081 | Full-text redaction precedes tail selection |
+| Affected lifecycle/logger selection | 7 files,45 passed,1 old exact-message expectation failed | 45.987 | Existing approval/install/task/core-registration/logger paths |
+| Richer phase-journal expectation | 1 selected passed,17 excluded | 3.859 | Assertion-only update, original fault and safety assertions retained |
+| Final stable-source standard build | Exit0 | 49.043 | Once, strict checks unchanged; no self-extension nested full build |
+
+Batch tests66.239s/build49.043s. Official totals **tests1068.682s/builds153.915s/additional noEmit60.718s**. Latest passing case reports cover46 assertions/7 files on unchanged product source; this is an explicit selection union, not a synthetic all-green full-suite report. Live game Provider calls0; developer-model call count/inference time unavailable. R7.3 remains open, score delta0.

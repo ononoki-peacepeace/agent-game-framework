@@ -192,7 +192,7 @@ describe('P0-A extension background lifecycle',()=>{
       });
       const job=await dev.start(f.input());expect((await dev.wait(job.job_id)).status).toBe('failed');
       expect(JSON.parse(await readFile(join(f.directory,'development.json'),'utf8'))[0]).toMatchObject({
-        job_id:job.job_id,status:'failed',message:'phase journal failure'});
+        job_id:job.job_id,status:'failed',phase:'creating_workspace',message:'[creating_workspace] phase journal failure'});
       expect(generate).not.toHaveBeenCalled();expect(await f.service.current()).toEqual(f.baseline);
     }finally{await f.close();}
   });
