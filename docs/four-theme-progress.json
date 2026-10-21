@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "b98a1fd + verified open-goal WAIT receipt completion",
+  "assessed_source": "c358768 + actual full-project TypeScript kill evidence",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -250,9 +250,10 @@
         "docs/development-process-kill.md",
         "tests/development-process-kill.test.ts",
         "tests/fixtures/development-kill-worker.ts",
-        "tests/fixtures/development-kill-tool.mjs"
+        "tests/fixtures/development-kill-tool.mjs",
+        "tests/fixtures/development-compiler-deadline.mjs"
       ],
-      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required. 989d4c6 product: bounded two-process-tool strong-kill and independent-worker restart evidence added; actual full compiler/install child and service-owner crash matrix remains open. No credit."
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required. 989d4c6 product: bounded two-process-tool strong-kill and independent-worker restart evidence added; actual full compiler/install child and service-owner crash matrix remains open. No credit. Actual current full-project TypeScript noEmit watch compiler now SIGKILLs via owned handle after its own startup, durable failed gate/stdout/signal and independent task restart with zero tool/Provider calls pass. Selected5distinctcaseunion:expanded4pass1loaderfail26.273s plus corrected1pass4excluded6.526s, strictfinal28.118sexit0. Complete npm/Vite/install pipeline and service-owner crash/descendant cleanup still open; no credit."
     },
     "R8.1": {
       "status": "met",
@@ -4519,6 +4520,25 @@
         }
       ],
       "note": "103/16064.375%delta0. Initial5fail3.985s retained;2controls mistakenly took standalone temporalWAIT. No fullsuite/build claim."
+    },
+    {
+      "batch": "development-actual-compiler-kill",
+      "type": "repair",
+      "source": "c358768+reviewed-test-evidence",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R7.4",
+          "result": "Actual full-project TypeScript component kill and independent terminal replay verified; selected5distinctcaseunion/strict28.118sexit0. Complete npm/install pipeline/service-owner crash/descendant matrix stays unverified.",
+          "evidence": [
+            "docs/development-process-kill.md",
+            "tests/development-process-kill.test.ts",
+            "tests/fixtures/development-kill-worker.ts",
+            "tests/fixtures/development-compiler-deadline.mjs"
+          ]
+        }
+      ],
+      "note": "103/16064.375%delta0;actualcompilerfirst1pass6.727s;expanded4pass1Windowsloaderfail26.273s preserved;onlyaffectedcorrected1pass6.526s. No productsource/fullbuild/fullsuite change."
     }
   ],
   "new_risks": [],

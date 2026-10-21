@@ -53,6 +53,31 @@ it.each(['package','framework_build'] as const)('actual owned %s process kill pr
   await rm(directory,{recursive:true,force:true});
  }
 },60000);
+it('actual full-project TypeScript compiler kill preserves the build failure across independent workers',async()=>{
+ const directory=await mkdtemp(join(tmpdir(),'agf-typescript-process-kill-')),nonce=randomUUID(),requestId=randomUUID(),
+  store=new JsonStore(join(directory,'save')),initial=fresh();
+ await store.write(initial);await new GameService(store,new AIRuntime({name:'no-provider',generate:async()=>{throw Error('Unexpected Provider');}}),initial.definition).current();
+ const before=await readFile(join(directory,'save','current.json'));let worker:ReturnType<typeof start>|undefined;
+ try{
+  worker=start(directory,'run','typescript',nonce,requestId);const ready=await worker.wait('tool_ready');
+  expect(ready).toMatchObject({stage:'typescript',nonce,compiler:resolve('node_modules/typescript/lib/tsc.js'),project:resolve('tsconfig.json')});
+  expect(ready.pid).toBeGreaterThan(0);worker.child.send({kind:'kill',nonce});
+  const terminal=await worker.wait('terminal');expect(await worker.exit).toEqual([0,null]);
+  const failed=terminal.task as DevelopmentTask;
+  expect(failed.status).toBe('failed');expect(failed.installed_version).toBeNull();expect(failed.capability_artifacts).toEqual([]);
+  expect(failed.test_results.at(-1)).toMatchObject({milestone:'framework_build',passed:false});
+  expect(failed.history.at(-1)!.detail).toContain('Starting compilation in watch mode');
+  expect(terminal).toMatchObject({registered:false,provider_calls:0,calls:2,tool_exit:{signal:'SIGKILL'}});
+  const patch=await readFile(join(failed.workspace,'capability-package.json')),journal=await readFile(join(directory,'development','tasks.json'));
+  worker=start(directory,'recover','typescript',nonce,requestId);const restored=await worker.wait('terminal');expect(await worker.exit).toEqual([0,null]);
+  expect(restored).toMatchObject({calls:0,registered:false,provider_calls:0});expect(restored.task).toEqual(failed);
+  expect(await readFile(join(failed.workspace,'capability-package.json'))).toEqual(patch);
+  expect(await readFile(join(directory,'development','tasks.json'))).toEqual(journal);expect(await readFile(join(directory,'save','current.json'))).toEqual(before);
+ }finally{
+  if(worker&&worker.child.exitCode===null&&worker.child.signalCode===null){worker.child.kill('SIGKILL');await worker.exit;}
+  await rm(directory,{recursive:true,force:true});
+ }
+},60000);
 it.each(['core_install','runtime_build'] as const)('actual owned %s kill leaves a durable stopped installation across independent workers',async boundary=>{
  const directory=await mkdtemp(join(tmpdir(),'agf-install-process-kill-')),repository=join(directory,'repository'),workspace=join(directory,'candidate'),
   nonce=randomUUID(),requestId=randomUUID(),exec=promisify(execFile);

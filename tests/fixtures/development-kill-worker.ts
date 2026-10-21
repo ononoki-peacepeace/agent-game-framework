@@ -3,13 +3,14 @@ import {syncBuiltinESMExports} from 'node:module';
 import {promisify} from 'node:util';
 import {readFile} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
 import {JsonStore} from '../../src/storage/json-store.js';
 import {GameService} from '../../src/server/service.js';
 import {AIRuntime} from '../../src/ai/runtime.js';
 import {capabilityRegistry} from '../../src/system/capabilities.js';
 
 const [directory,mode,boundary,nonce,requestId]=process.argv.slice(2);
-if(!directory||!['run','recover'].includes(mode)||!['package','framework_build','core_install','runtime_build'].includes(boundary)||!nonce||!requestId||!process.send)
+if(!directory||!['run','recover'].includes(mode)||!['package','framework_build','core_install','runtime_build','typescript'].includes(boundary)||!nonce||!requestId||!process.send)
  throw Error('Owned development worker requires explicit fixture identity');
 const original=promisify(execFile);
 let calls=0,active:ChildProcess|undefined,toolIdentity:{pid:number;inner_pid?:number;nonce:string}|undefined;
@@ -19,17 +20,31 @@ async function ownedTool(options:object){
  if(mode==='recover')throw Error('Recovery unexpectedly launched an external tool');
  // A failed runtime validation uses the existing explicit rollback build next.
  if(core&&calls>1)return {stdout:'controlled rollback build success',stderr:''};
- const task=original(process.execPath,[resolve('tests/fixtures/development-kill-tool.mjs'),
-  boundary==='package'||boundary==='core_install'?'leaf':'nested',nonce],
-  {...options,cwd:directory,timeout:25000,windowsHide:true}) as Promise<{stdout:string;stderr:string}>&{child:ChildProcess};
+ const args=boundary==='typescript'?['--import',pathToFileURL(resolve('tests/fixtures/development-compiler-deadline.mjs')).href,
+  resolve('node_modules/typescript/lib/tsc.js'),'--noEmit','--watch',
+  '--preserveWatchOutput','--pretty','false','--project',resolve('tsconfig.json')]:
+  [resolve('tests/fixtures/development-kill-tool.mjs'),boundary==='package'||boundary==='core_install'?'leaf':'nested',nonce];
+ const task=original(process.execPath,args,
+  {...options,cwd:directory,timeout:25000,windowsHide:true,
+   ...(boundary==='typescript'?{env:{...process.env,AGF_TEST_COMPILER_NONCE:nonce}}:{})}) as Promise<{stdout:string;stderr:string}>&{child:ChildProcess};
  active=task.child;let output='';
- active.stdout!.on('data',data=>{output+=String(data);const line=output.split(/\r?\n/).find(line=>line.startsWith('{'));
+ active.stdout!.on('data',data=>{output+=String(data);
+  if(boundary==='typescript'){
+   if(!toolIdentity&&output.includes('Starting compilation in watch mode')){
+    toolIdentity={pid:active!.pid!,nonce};process.send!({kind:'tool_ready',stage:boundary,...toolIdentity,
+     compiler:resolve('node_modules/typescript/lib/tsc.js'),project:resolve('tsconfig.json')});
+   }
+   return;
+  }
+  const line=output.split(/\r?\n/).find(line=>line.startsWith('{'));
   if(!line||toolIdentity)return;try{const identity=JSON.parse(line);if(identity.nonce!==nonce||identity.pid!==active!.pid)throw Error('Tool identity mismatch');
    toolIdentity=identity;process.send!({kind:'tool_ready',stage:boundary,...identity});}catch(error){if(!(error instanceof SyntaxError))throw error;}
  });
  return task;
 }
 // Replace only the executable command with a bounded local OS process fixture.
+// The typescript boundary instead starts the actual full-project compiler in
+// noEmit watch mode, waits for its own startup line, and kills its held handle.
 // The task lifecycle, durable files, gate failure and independent restart use
 // the real implementation. No coding agent, provider or full build is launched.
 const originalExecFile=execFile;
@@ -37,13 +52,13 @@ const replacement=(...args:unknown[])=>Reflect.apply(originalExecFile,childProce
 Object.defineProperty(replacement,promisify.custom,{value:async(file:string,args:string[],options:Parameters<typeof execFile>[2])=>{
  if(file==='git')return original(file,args,options as object);
  const stage=args.includes('scripts/verify-capability-package.ts')?'package':'framework_build';
- if(stage!==boundary&&!core){calls++;return {stdout:'controlled preceding gate success',stderr:''};}
+ if(stage!==boundary&&!(boundary==='typescript'&&stage==='framework_build')&&!core){calls++;return {stdout:'controlled preceding gate success',stderr:''};}
  return ownedTool(options as object);
 }});
 childProcess.execFile=replacement as typeof execFile;syncBuiltinESMExports();
 process.on('message',message=>{
  const data=message as {kind:string;nonce:string};if(data.kind!=='kill'||data.nonce!==nonce||!active||active.exitCode!==null||!toolIdentity)return;
- if(boundary==='package'||boundary==='core_install')active.kill('SIGKILL');else active.stdin!.write('kill-inner:'+nonce+'\n');
+ if(boundary==='package'||boundary==='core_install'||boundary==='typescript')active.kill('SIGKILL');else active.stdin!.write('kill-inner:'+nonce+'\n');
 });
 const {ExtensionHost}=await import('../../src/extensions/host.js');
 const {ExtensionDevelopment}=await import('../../src/extensions/development.js');

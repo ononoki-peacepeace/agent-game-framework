@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：b98a1fd + verified open-goal WAIT receipt completion。整体 **64.38%**（103/160 个固定条件满足）。未满足 24，待验证 33。
+计分版本 v1；评估源代码：c358768 + actual full-project TypeScript kill evidence。整体 **64.38%**（103/160 个固定条件满足）。未满足 24，待验证 33。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -167,6 +167,7 @@
 | scene-effect-read-failure | repair | R5.3: Baseline7fail1control4.155s; final5files67pass15.799s/strict28.916sexit0.11directcases with actual JsonStore effects, lost response, cached request and fresh-service bytes. Every-exit matrix remains open.；完整条件保持开放 | +0.000 pp |
 | scene-wait-completion | repair | A7.3: Actual2interruptedfails2completecontrols4.186s; minimal existing Core receipt check.4files67pass20.382s/strict30.581sexit0, sameID no reexecution and actual disk recreation. Full matrix remains open.；完整条件保持开放; N3.3: Actual2interruptedfails2completecontrols4.186s; minimal existing Core receipt check.4files67pass20.382s/strict30.581sexit0, sameID no reexecution and actual disk recreation. Full matrix remains open.；完整条件保持开放 | +0.000 pp |
 | open-goal-wait-completion | repair | A7.3: Correctedbaseline3fail2controls4.016s;6files32pass14.150s/strict27.892sexit0. Five direct JsonStore cases; full mixedgoal/prose matrix open.；完整条件保持开放; N3.3: Correctedbaseline3fail2controls4.016s;6files32pass14.150s/strict27.892sexit0. Five direct JsonStore cases; full mixedgoal/prose matrix open.；完整条件保持开放 | +0.000 pp |
+| development-actual-compiler-kill | repair | R7.4: Actual full-project TypeScript component kill and independent terminal replay verified; selected5distinctcaseunion/strict28.118sexit0. Complete npm/install pipeline/service-owner crash/descendant matrix stays unverified.；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -229,7 +230,7 @@
 | R7.1 | 开发安装失败保留明确阶段、退出码及构建输出 | 满足 | [core-install-worktree-protection.md](../docs/core-install-worktree-protection.md), [core-install-worktree-protection.test.ts](../tests/core-install-worktree-protection.test.ts), [core-install-failure-diagnostics.test.ts](../tests/core-install-failure-diagnostics.test.ts), [coding-agent-failure-diagnostics.test.ts](../tests/coding-agent-failure-diagnostics.test.ts), [development-side-effect-matrix.v1.json](../docs/development-side-effect-matrix.v1.json) |
 | R7.2 | 注册和安装受影响回归及真实本地自扩展重新验收通过 | 满足 | [build-performance-diagnosis-2026-10-20.md](../docs/build-performance-diagnosis-2026-10-20.md) |
 | R7.3 | 外部工作区每类副作用具有恢复身份及安全撤回或停止 | 满足 | [core-install-worktree-protection.md](../docs/core-install-worktree-protection.md), [development-side-effect-matrix.v1.json](../docs/development-side-effect-matrix.v1.json), [core-install-worktree-protection.test.ts](../tests/core-install-worktree-protection.test.ts), [extension-development-failure-identity.test.ts](../tests/extension-development-failure-identity.test.ts), [core-install-lifecycle.test.ts](../tests/core-install-lifecycle.test.ts) |
-| R7.4 | 强杀外部工具与嵌套构建后重启验收通过 | 待验证 | [build-performance-diagnosis-2026-10-20.md](../docs/build-performance-diagnosis-2026-10-20.md), [development-process-kill.md](../docs/development-process-kill.md), [development-process-kill.test.ts](../tests/development-process-kill.test.ts), [development-kill-worker.ts](../tests/fixtures/development-kill-worker.ts), [development-kill-tool.mjs](../tests/fixtures/development-kill-tool.mjs) |
+| R7.4 | 强杀外部工具与嵌套构建后重启验收通过 | 待验证 | [build-performance-diagnosis-2026-10-20.md](../docs/build-performance-diagnosis-2026-10-20.md), [development-process-kill.md](../docs/development-process-kill.md), [development-process-kill.test.ts](../tests/development-process-kill.test.ts), [development-kill-worker.ts](../tests/fixtures/development-kill-worker.ts), [development-kill-tool.mjs](../tests/fixtures/development-kill-tool.mjs), [development-compiler-deadline.mjs](../tests/fixtures/development-compiler-deadline.mjs) |
 
 ## R8 Frontend synchronization and all System/media mutation paths
 
