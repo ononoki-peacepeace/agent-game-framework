@@ -3922,6 +3922,24 @@
         }
       ],
       "note": "No product change;103/16064.375%delta0;bothoriginalfixturefailuresretained."
+    },
+    {
+      "batch": "owned-core-install-kill-evidence",
+      "type": "repair",
+      "source": "b02bd04+test-only-evidence",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R7.4",
+          "result": "FouractualOStoolkill/independentworkerrestartcasespass25.136s;addedrealtempGitinstallfailurepreservationandnewbootruntimefailure/auditablerevert.Noactualfullcompilerorserviceownercrashcleanupclaim.Strict51.098sexit0.",
+          "evidence": [
+            "docs/development-process-kill.md",
+            "tests/development-process-kill.test.ts",
+            "tests/fixtures/development-kill-worker.ts"
+          ]
+        }
+      ],
+      "note": "Product989d4c6unchanged;103/16064.375%delta0.Originalfixturefailuresremain."
     }
   ],
   "new_risks": [],
@@ -4790,13 +4808,15 @@
       "id": "core-build-diagnostic-coverage",
       "scope": "original",
       "condition": "R7.1",
-      "status": "open",
-      "source": "a82afe2",
+      "status": "resolved",
+      "source": "29ef84f",
       "evidence": [
+        "docs/core-install-worktree-protection.md",
+        "docs/core-install-failure-diagnostics.md",
         "tests/core-install-failure-diagnostics.test.ts",
-        "docs/core-install-failure-diagnostics.md"
+        "tests/coding-agent-failure-diagnostics.test.ts"
       ],
-      "summary": "Frozen R7.1 also covers additional core-candidate install/runtime failures: two formal counterexamples lose stage/output or leave diagnostic null. Initial narrow fix6selectedpasses remains uncommitted/untyped; separate worker test/build gate catches visibly discard diagnostics and await formal reproduction. Earlier partial entries underR7.3 did not justify the broader met condition. Original wording/weight unchanged; withdraw pending complete affected validation."
+      "summary": "Broader core-candidate diagnostic counterexamples repaired in29ef84f:exactstage/exit/output retained through worker gates/install/runtime. R7.1 restored only after affected evidence and strict checks; original withdrawal remains in transition history."
     },
     {
       "id": "core-install-destructive-restoration",

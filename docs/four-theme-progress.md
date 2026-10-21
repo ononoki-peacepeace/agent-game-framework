@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：41 已修复，19 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：42 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -139,6 +139,7 @@
 | core-install-checkout-preservation | repair | R7.1: unmet → met | +0.625 pp |
 | core-install-immutable-tree-ownership | repair | R7.3: unmet → met | +0.625 pp |
 | owned-development-tool-kill-evidence | repair | R7.4: TwoactualOSstrongkill/independentworkerrestartcasespass10.820s;precisegates,zeroautomaticreexecution/registration,preservedartifacts.Onlylocalexecutablefixtures;actualfullcompiler/installchild/serviceownercrashmatrixstillopen.Strict34.218sexit0.；完整条件保持开放 | +0.000 pp |
+| owned-core-install-kill-evidence | repair | R7.4: FouractualOStoolkill/independentworkerrestartcasespass25.136s;addedrealtempGitinstallfailurepreservationandnewbootruntimefailure/auditablerevert.Noactualfullcompilerorserviceownercrashcleanupclaim.Strict51.098sexit0.；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
