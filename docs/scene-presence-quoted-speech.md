@@ -1,0 +1,11 @@
+# Attributed ASCII speech and external presence assertions
+
+Parent `c2ef1d8`. Actual baseline `scene-presence-quoted-speech-baseline.json`: **6 failures/6 controls, 4.394s**. Four failures reject ordinary attributed ASCII quotes as current departure/headcount facts; two allow external departure continuations after quoted punctuation. Existing Chinese-quote controls and emphasized/malformed quote negative controls remain.
+
+N4.1 is withdrawn pending repair/verification because external assertions escape the existing authority guard: 102/160 (63.75%). N4.3 remains unmet for broad lawful expression acceptance. Direct validator fixtures classify supplied text; they do not generate or commit NPC utterances.
+
+The guard now masks complete ASCII quotes only after explicit speech attribution. It preserves ordinary quoted claims as claims, while malformed/unattributed emphasis remains external text. Colon-delimited external clauses retain speaker context, including an unambiguous preceding speaker in a joined pronoun subject; joined subjects also recognize existing temporal words such as 随后. Each resulting external departure still needs canonical movement.
+
+Actual verification in `.agent-runtime/codex/`: `scene-presence-quoted-speech-first-fix.json` **4 files/56 passed**, zero skips, **11.478s**. Expanded `scene-presence-quoted-speech-expanded.json` **4 files/41 passed**, zero skips, **14.896s**, includes perception/subject/local-step/diagnostic controls and fourteen direct/real-service cases. Two synthetic JsonStore/service-recreation cases present invalid candidate prose, require degraded output without any NPC move, one WAIT receipt/minute, three bounded narration attempts and exact saved response/file-byte replay without new generation. The candidates are rejected, not established as NPC speech or world results. Live Provider calls remain zero.
+
+Selected union: seven files/85 distinct passes across reports, not one complete full-suite/build. Strict TypeScript exit 0, **47.224s** (`scene-presence-quoted-speech-typecheck.json`). N4.1 restored: 103/160 (64.375%), +1 from withdrawal/net zero from parent. N4.3 broader metaphor/retelling/multi-world quality remains unmet. No schema/API/Core commit changes; formal/frozen/3100/original dirty work preserved.

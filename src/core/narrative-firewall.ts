@@ -82,7 +82,7 @@ function jointNarrativeSubjects<T extends {components:{identity?:{name?:unknown}
   const aliases=people.flatMap(person=>presenceAliases(String(person.components.identity?.name??'')))
     .sort((a,b)=>b.length-a.length).map(name=>name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
   const name=`(?:${aliases.join('|')})`;
-  const joined=new RegExp(`^(?:随后|随即|接着|然后|这时|同时)?(${name}(?:(?:以及|和|与|、|跟)${name})+)(?=(?:两人|二人|三人|四人|一行人|一起|一同|都|也|仍然|仍|依然|早已|已经|没有|尚未|还没|不曾|未曾|并未|没能|不愿|不想|不肯|不能|不会|不要|不再|打算|准备|想要|真正|实际|立即|直接|曾经|成功|能够|继续|主动|将要|迈步|再|就|被|去|要|会)*${predicate.source})`).exec(text)?.[1];
+  const joined=new RegExp(`^(?:随后|随即|接着|然后|这时|同时)?(${name}(?:(?:以及|和|与|、|跟)${name})+)(?=(?:两人|二人|三人|四人|一行人|一起|一同|随后|随即|接着|然后|都|也|仍然|仍|依然|早已|已经|没有|尚未|还没|不曾|未曾|并未|没能|不愿|不想|不肯|不能|不会|不要|不再|打算|准备|想要|真正|实际|立即|直接|曾经|成功|能够|继续|主动|将要|迈步|再|就|被|去|要|会)*${predicate.source})`).exec(text)?.[1];
   return joined?people.filter(person=>presenceAliases(String(person.components.identity?.name??'')).some(alias=>joined.includes(alias))):[];
 }
 
@@ -99,6 +99,9 @@ export function validateScenePresenceNarrative(save:SavePackage,prose:string,cla
   // Quoted speech can recall another time or make a character's own claim;
   // only the unquoted narration asserts the current authoritative scene.
   let unquoted=prose.replace(/[“「『][^”」』]*[”」』]/g,'');
+  // Only complete, explicitly attributed ASCII speech gets quote semantics.
+  // Emphasis such as 林舟"离开"了这里 remains an external assertion.
+  unquoted=unquoted.replace(/((?:说|问|答|喊|回答|低语|嘀咕)(?:道)?[：:])"[^"\r\n]*"/g,'$1');
   if(departureScene){
     const origin=departureScene.entities.find(entity=>entity.id===departureScene.player_state.entity_id)?.components.location?.location_id;
     if(origin&&origin!==here)unquoted=unquoted.split(/(?<=[。！？\n])/).filter(sentence=>{
@@ -115,7 +118,11 @@ export function validateScenePresenceNarrative(save:SavePackage,prose:string,cla
   const sentences=unquoted.split(/[。！？\n]/);
   for(let index=0;index<sentences.length;index++){
     const sentence=sentences[index];
-    const compact=sentence.replace(/\s/g,'');
+    let compact=sentence.replace(/\s/g,'');
+    // A single preceding speaker can remain a member of a joined subject
+    // (他和乔宁). Do not infer this when the preceding subject was ambiguous.
+    if(subjects.length===1&&/^[他她](?=以及|和|与|、|跟)/.test(compact))
+      compact=String(subjects[0].components.identity?.name??'').replace(/\s/g,'')+compact.slice(1);
     const named=people.filter(entity=>{
       const name=String(entity.components.identity?.name??'');
       return presenceAliases(name).some(alias=>compact.includes(alias));
@@ -124,8 +131,8 @@ export function validateScenePresenceNarrative(save:SavePackage,prose:string,cla
     // Independently named clauses must not disappear just because the whole
     // sentence has multiple people. Keep single-subject implicit continuations
     // together; a player clause must not inherit the preceding NPC's identity.
-    if((named.length>1&&joint.length!==named.length||/[，,；;](?:你|玩家)/.test(compact))&&/[，,；;]/.test(sentence)){
-      sentences.splice(index+1,0,...sentence.split(/[，,；;]/));subjects=[];continue;
+    if((named.length>1&&joint.length!==named.length||/[，,；;](?:你|玩家)/.test(compact))&&/[，,；;：:]/.test(sentence)){
+      sentences.splice(index+1,0,...sentence.split(/[，,；;：:]/));subjects=[];continue;
     }
     if(named.length===1)subjects=named;else if(named.length>1)subjects=joint;
     else if(!/^(?:随后|随即|接着|然后)?(?:她|他)/.test(compact))continue;
