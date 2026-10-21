@@ -1131,7 +1131,23 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
               plan_id:body.request_id,canonical_changes:trail.map(entry=>'goal_step:'+entry),view:service.project(latest)});}
           const outcome=executionFailure(error,'open_goal_step',latest,save,trail);
           return partialFailure(outcome,latest);}
-        if((await readState()).state_revision===beforeRevision)break;
+        const completed=await readState();
+        if(completed.state_revision===beforeRevision)break;
+        if(step.kind==='wait'){
+          const receipt=completed.resolution_receipts?.find(receipt=>
+            receipt.request_id===childId(body.request_id,'goal'+stepIndex)&&receipt.commit_status==='committed');
+          if(!receipt)return partialFailure(engineOutcome('invariant_failure','open_goal_step',completed.state_revision,
+            false,trail,committedSince(save,completed)),completed);
+          if(interruptedActivity(receipt)||receipt.time_cost<Number(step.minutes??5)){
+            const outcome=gameOutcome(trail.length||receipt.time_cost>0?'partial_progress':'interrupted',
+              'open_goal_wait',completed.state_revision,trail,committedSince(save,completed),
+              trail.length||receipt.time_cost>0?'partial':'unresolved');
+            const story=[...new Set(storyLines)].join('\n');
+            return agentResult('WORLD_GOAL',story||'等待因需要处理的事情而暂停，原目标尚未完成。',{
+              outcome,presentation:'story',...(story?{story}:{}),plan_id:body.request_id,
+              canonical_changes:trail.map(entry=>'goal_step:'+entry),view:service.project(completed)});
+          }
+        }
         executedMarkers.add(marker);
         trail.push(step.kind==='move'?`到达 ${String(step.destination)}`:
           step.kind==='expand'?`到达 ${expandedEntryName}`:`等待 ${Number(step.minutes??5)} 分钟`);
