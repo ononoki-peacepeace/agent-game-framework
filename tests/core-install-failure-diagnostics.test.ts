@@ -15,8 +15,11 @@ async function fixture(){
   if(file==='git'){
    if(args[0]==='status')return {stdout:state.applied?' M src/runtime.ts\n':'',stderr:''};
    if(args[0]==='rev-parse')return {stdout:state.installed?'installed':'base',stderr:''};
+   if(args[0]==='write-tree')return {stdout:'candidate-tree',stderr:''};
+   if(args[0]==='diff')return {stdout:args.includes('--binary')?'controlled fixture patch bytes':'',stderr:''};
    if(args[0]==='apply'){if(!args.includes('--check'))state.applied=true;return {stdout:'',stderr:''};}
-   if(args.includes('commit')){state.installed=true;state.applied=false;return {stdout:'',stderr:''};}
+   if(args.includes('commit-tree'))return {stdout:'installed',stderr:''};
+   if(args[0]==='update-ref'){state.installed=true;state.applied=false;return {stdout:'',stderr:''};}
    if(args[0]==='reset'){state.applied=false;return {stdout:'',stderr:''};}
    throw Error('Unexpected fake Git operation '+args.join(' '));
   }

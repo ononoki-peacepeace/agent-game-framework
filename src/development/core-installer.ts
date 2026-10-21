@@ -69,14 +69,33 @@ export class CoreCandidateInstaller {
       if (status.stdout.trim()) throw new Error('UNOWNED_DIRTY_WORKTREE: live repository contains changes not owned by this candidate.');
       operation='install_base';const head = (await this.run('git', ['rev-parse', 'HEAD'], this.repository, signal)).stdout.trim();
       if (head !== record.base_revision) throw new Error('CANDIDATE_BASE_MISMATCH: live HEAD no longer matches the validated candidate base.');
+      operation='patch_identity';const expectedPatch=await readFile(record.patch_path);
+      if(createHash('sha256').update(expectedPatch).digest('hex')!==record.patch_sha256)
+        throw new Error('CANDIDATE_PATCH_CHANGED: candidate patch changed after preparation.');
       operation='patch_check';await this.run('git', ['apply', '--check', '--index', record.patch_path], this.repository, signal);
       operation='patch_apply';await this.run('git', ['apply', '--index', record.patch_path], this.repository, signal);
       operation='patch_paths';const applied = statusPaths((await this.run('git', ['status', '--porcelain'], this.repository, signal)).stdout);
       if (!samePaths(applied, record.changed_files)) throw new Error('CANDIDATE_FILE_MISMATCH: applied paths differ from validated candidate metadata.');
+      operation='patch_tree';const candidateTree=(await this.run('git',['write-tree'],this.repository,signal)).stdout.trim();
+      const treePatch=(await this.run('git',['diff','--binary',record.base_revision,candidateTree],this.repository,signal)).stdout;
+      if(treePatch.trimEnd()!==expectedPatch.toString('utf8').trimEnd())
+        throw new Error('CANDIDATE_TREE_MISMATCH: staged candidate tree differs from the validated patch; all current edits are preserved.');
       operation='install_build';await this.build(signal);
+      operation='install_ownership';
+      const currentHead=(await this.run('git',['rev-parse','HEAD'],this.repository,signal)).stdout.trim();
+      const currentTree=(await this.run('git',['write-tree'],this.repository,signal)).stdout.trim();
+      const unstaged=(await this.run('git',['diff','--name-only'],this.repository,signal)).stdout.trim();
+      const currentPaths=statusPaths((await this.run('git',['status','--porcelain'],this.repository,signal)).stdout);
+      if(currentHead!==record.base_revision||currentTree!==candidateTree||unstaged||!samePaths(currentPaths,record.changed_files))
+        throw new Error('CANDIDATE_OWNERSHIP_CHANGED: repository changed during candidate validation; all current edits are preserved.');
       operation='install_commit';
-      await this.run('git', ['-c', 'user.name=Agent Game Framework', '-c', 'user.email=framework@local.invalid', 'commit', '-m', `core: install managed candidate ${record.candidate_id}`], this.repository, signal);
-      operation='installed_revision';record.installed_revision = (await this.run('git', ['rev-parse', 'HEAD'], this.repository, signal)).stdout.trim();
+      // Commit the validated tree, never a later writer's mutable index. The
+      // compare-and-swap updates HEAD only if the original base is still live;
+      // neither command checks out files or rewrites the index.
+      const revision=(await this.run('git', ['-c', 'user.name=Agent Game Framework', '-c', 'user.email=framework@local.invalid',
+        'commit-tree',candidateTree,'-p',record.base_revision,'-m',`core: install managed candidate ${record.candidate_id}`], this.repository, signal)).stdout.trim();
+      operation='install_head';await this.run('git',['update-ref','-m',`install managed candidate ${record.candidate_id}`,'HEAD',revision,record.base_revision],this.repository,signal);
+      record.installed_revision=revision;
       record.installed_at = new Date().toISOString();
       record.stage = 'installed_pending_reload';
       return record;

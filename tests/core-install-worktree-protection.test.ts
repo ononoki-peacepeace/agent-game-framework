@@ -59,11 +59,65 @@ it('preserves an actual install commit when its command response is lost',async(
   const run=async(file:string,args:string[],cwd:string,signal?:AbortSignal)=>{
    if(file!=='git')return {stdout:'controlled build success',stderr:''};
    const result=await exec(file,args,{cwd,signal,windowsHide:true});
-   if(args.includes('commit')){installed=(await f.git(['rev-parse','HEAD'])).trim();throw Error('commit response lost');}
+   if(args[0]==='update-ref'){installed=(await f.git(['rev-parse','HEAD'])).trim();throw Error('commit response lost');}
    return result;
   };
-  await expect(new CoreCandidateInstaller(f.repository,run).install('task',f.report)).rejects.toThrow('[install_commit]');
+  await expect(new CoreCandidateInstaller(f.repository,run).install('task',f.report)).rejects.toThrow('[install_head]');
   expect(installed).not.toBe(f.base);expect((await f.git(['rev-parse','HEAD'])).trim()).toBe(installed);
   expect(await readFile(join(f.repository,'src','runtime.ts'),'utf8')).toBe(f.candidate);expect((await f.git(['status','--porcelain'])).trim()).toBe('');
+ }finally{await rm(f.root,{recursive:true,force:true});}
+});
+it.each(['worktree','index','head'] as const)('stops before commit if a passing build changes the external %s',async point=>{
+ const f=await fixture();let headAfterBuild=f.base,indexAfterBuild='',sourceAfterBuild='';try{
+  const run=async(file:string,args:string[],cwd:string,signal?:AbortSignal)=>{
+   if(file==='git')return exec(file,args,{cwd,signal,windowsHide:true});
+   await writeFile(join(f.repository,'src','runtime.ts'),'// external successful build change\n');
+   if(point!=='worktree')await f.git(['add','src/runtime.ts']);
+   if(point==='head')await f.git(['-c','user.name=external','-c','user.email=external@local.invalid','commit','-m','external writer']);
+   headAfterBuild=(await f.git(['rev-parse','HEAD'])).trim();indexAfterBuild=await f.git(['diff','--cached','--binary']);sourceAfterBuild=await readFile(join(f.repository,'src','runtime.ts'),'utf8');
+   return {stdout:'controlled successful build',stderr:''};
+  };
+  await expect(new CoreCandidateInstaller(f.repository,run).install('task',f.report)).rejects.toThrow(/CANDIDATE_OWNERSHIP_CHANGED/);
+  expect((await f.git(['rev-parse','HEAD'])).trim()).toBe(headAfterBuild);
+  expect(await f.git(['diff','--cached','--binary'])).toBe(indexAfterBuild);expect(await readFile(join(f.repository,'src','runtime.ts'),'utf8')).toBe(sourceAfterBuild);
+ }finally{await rm(f.root,{recursive:true,force:true});}
+});
+it.each(['index','head'] as const)('cannot absorb or overwrite an external %s update after the final ownership check',async point=>{
+ const f=await fixture();let externalHead=f.base,externalIndex='',externalSource='';try{
+  const run=async(file:string,args:string[],cwd:string,signal?:AbortSignal)=>{
+   if(file!=='git')return {stdout:'controlled build success',stderr:''};
+   if(args.includes('commit-tree')){
+    await writeFile(join(f.repository,'src','runtime.ts'),'// late external staged source\n');await f.git(['add','src/runtime.ts']);
+    if(point==='head')await f.git(['-c','user.name=external','-c','user.email=external@local.invalid','commit','-m','external head']);
+    externalHead=(await f.git(['rev-parse','HEAD'])).trim();externalIndex=await f.git(['diff','--cached','--binary']);externalSource=await readFile(join(f.repository,'src','runtime.ts'),'utf8');
+   }
+   return exec(file,args,{cwd,signal,windowsHide:true});
+  };
+  const installer=new CoreCandidateInstaller(f.repository,run,'before');
+  if(point==='head'){
+   await expect(installer.install('task',f.report)).rejects.toThrow('[install_head]');
+   expect((await f.git(['rev-parse','HEAD'])).trim()).toBe(externalHead);expect(await f.git(['diff','--cached','--binary'])).toBe(externalIndex);
+  }else{
+   const record=await installer.install('task',f.report);
+   expect(await f.git(['show',`${record.installed_revision}:src/runtime.ts`])).toBe(f.candidate);
+   expect(await f.git(['show',':src/runtime.ts'])).toBe(externalSource);
+   expect((await new CoreCandidateInstaller(f.repository,run,'after').validateReload(record)).ready).toBe(false);
+   expect(record.stage).not.toBe('registered');
+  }
+  expect(await readFile(join(f.repository,'src','runtime.ts'),'utf8')).toBe(externalSource);
+ }finally{await rm(f.root,{recursive:true,force:true});}
+});
+it('refuses an unowned index replacement before the candidate tree is captured',async()=>{
+ const f=await fixture();let source='',index='';try{
+  let injected=false;
+  const run=async(file:string,args:string[],cwd:string,signal?:AbortSignal)=>{
+   if(file!=='git')return {stdout:'controlled build',stderr:''};
+   if(args[0]==='write-tree'&&!injected){injected=true;await writeFile(join(f.repository,'src','runtime.ts'),'// unowned early staged replacement\n');
+    await f.git(['add','src/runtime.ts']);source=await readFile(join(f.repository,'src','runtime.ts'),'utf8');index=await f.git(['diff','--cached','--binary']);}
+   return exec(file,args,{cwd,signal,windowsHide:true});
+  };
+  await expect(new CoreCandidateInstaller(f.repository,run).install('task',f.report)).rejects.toThrow('CANDIDATE_TREE_MISMATCH');
+  expect((await f.git(['rev-parse','HEAD'])).trim()).toBe(f.base);expect(await f.git(['diff','--cached','--binary'])).toBe(index);
+  expect(await readFile(join(f.repository,'src','runtime.ts'),'utf8')).toBe(source);
  }finally{await rm(f.root,{recursive:true,force:true});}
 });
