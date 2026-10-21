@@ -105,3 +105,61 @@ Shared conflict surfaces additionally include the `narrationFallback` return
 branch in `src/server/service.ts` and the bounded projection in
 `src/narrative/character-cognition.ts`. Windows should review those exact hunks;
 the registered actions, schema, transaction protocol and N3 executor are untouched.
+
+## Subsequent review and baseline refresh
+
+Remote main advanced to `dc3ac77725c88903972dc75a1b37aeb4faa92533` by merging
+the separate N4 PR #1. The program checkpoint was rebased onto that inspected
+main; N4 was inherited, not reimplemented. Stable checkpoints were pushed as
+`c1b77a3` (presentation/history fixes) and `4aeaefb` (frozen benchmark/review
+infrastructure). First full capture on `4aeaefb`: 56/56 cases, 103 assertions,
+zero failures/skips, 564 unchanged hashes, zero ratings/provider calls. This is
+retained at `2026-10-21T14-57-42-850Z`, not retroactively called the final run.
+
+Developer text inspection identified two remaining offline preparation gaps:
+the initial long-readback table showed only WAIT text, and the captured fallback
+fixtures did not retain a usable ordinary-model request. The same three long
+cases now include actual daily exchanges, Core moves with alternating readback
+locations, commerce purchases, and declared contact-relationship changes.
+The original high-importance statement remains a memory of words, not a claim
+of fulfilled promises. All three run exactly 72h and recreate/replay three times.
+
+The read-only capture hook now copies the exact arguments at the application's
+Narrator boundary, then uses a separate offline adapter on that copy solely to
+construct a request envelope. The probe's text is discarded. Direct voice
+controls retain their actual request too. Queue selection excludes world setup
+witnesses and uses the selected case's actual receipt identities. No thread,
+credential, callback or live game-state handle enters the request handoff.
+
+`narrator-candidate-queue.ts` defaults to dry-run and binds an execution plan to
+the exact queue hash, explicit call/output budgets and an authorization reference.
+Its tested execution path uses only injected offline adapters here; a reference
+is not proof of actual user permission. Every returned or failed candidate stays
+unreviewed. Actual human authorization and provider selection are still required.
+
+```sh
+npx --no-install tsx scripts/narrator-candidate-plan.ts <capture/candidate-queue.json>
+node scripts/narrator-review-template.mjs <capture/review.json> <new-reviewer-file.json>
+```
+
+The template contains null identity, gates, dimensions and pair judgments; it
+fails review validation until a person actually fills them. Never populate it
+with fabricated human ratings or infer a model pass from scripted voice controls.
+
+## N8 compound presentation review
+
+The first capture's T05/R05/R06 prose was a numbered receipt-style list. A real
+compound Core/service baseline fails the explicit non-list prose check (one
+failure, preserved in `narrator-program-compound-style-baseline.json`). The
+shared Narrator renderer now has an additive presentation option: internal
+callers retain the original receipt list by default; the application's fallback
+selects prose paragraphs. No string-stripping heuristic changes quoted content.
+All facts and order are identical. The service-level format expectation in two
+existing tests changes accordingly; positive fact/order, time, resource,
+degradation, retry and replay assertions remain. No N3 execution/status rule or
+executor source changed. The resulting five-file regression passes 49 tests.
+
+Conflict surface for Windows additionally includes the optional fourth argument
+to `canonicalCompoundNarrative`, its one service call, and the two display-format
+expectations. Review these presentation-only hunks against any unmerged N3 work;
+do not overwrite that work. This program does not claim N3 or N4 condition credit.

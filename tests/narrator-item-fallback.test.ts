@@ -49,7 +49,7 @@ it.each(cases)('N8 item prose $kind / $mode / $boundary',async({kind,mode,bounda
    mode==='transfer'?'你把纸片交给了林舟。':'你把纸片放进了布包。';
   const output=process.env.NARRATOR_BENCHMARK_OUTPUT;
   if(output&&boundary==='normal')await writeFile(join(output,`D-${kind}-${mode}.json`),JSON.stringify({case_id:`D-${kind}-${mode}`,
-   provenance:'actual_offline_fallback',rendered:text,expected,request,receipts:after.resolution_receipts!.filter(r=>r.request_id===request.request_id),
+   test_name:expect.getState().currentTestName,provenance:'actual_offline_fallback',rendered:text,expected,request,receipts:after.resolution_receipts!.filter(r=>r.request_id===request.request_id),
    quality_ratings:null,independent_review:null},null,2));
   expect(text).toBe(expected);expect(text).not.toMatch(/登记|更新|结算|系统|qa_paper|prose_bag/);
   expect(after.last_turn!.presentation!.status).toBe('degraded');expect(after.runtime.time.minute-before.runtime.time.minute).toBe(1);

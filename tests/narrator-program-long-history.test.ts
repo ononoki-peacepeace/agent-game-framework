@@ -29,12 +29,24 @@ it.each(narrativeWorldKinds)('72h Narrator evidence / %s',async kind=>{
   let store=new JsonStore(directory);await store.write(seed);let service=new GameService(store,ai,seed.definition);
   const start=at(seed),checkpoints:unknown[]=[];let replays=0;
   for(let day=1;day<=3;day++){
+   const sequence:unknown[]=[];
+   const act=async(action:{type:string;target_id?:string;parameters?:Record<string,string|number>})=>{
+    const now=await service.current(),body={request_id:randomUUID(),game_id:now.game_id,expected_revision:now.state_revision,action};
+    await service.turn(body);const next=await service.current();
+    sequence.push({action,rendered:next.last_turn,receipts:next.resolution_receipts!.filter(r=>r.request_id===body.request_id)});
+   };
+   const current=await service.current();
+   if(current.entities.find(e=>e.id===player)!.components.location!.location_id!=='square')await act({type:'MOVE',target_id:'square'});
+   if(kind==='commerce'){
+    await act({type:'MOVE',target_id:'market'});await act({type:'BUY',target_id:'corner_shop',parameters:{item_id:'water',quantity:1}});
+    await act({type:'MOVE',target_id:'square'});
+   }
    // Real daily exchanges create ordinary new experiences, rather than merely
    // jumping a clock around an otherwise untouched one-memory fixture.
    for(let exchange=0;exchange<2;exchange++){
-    const now=await service.current();await service.turn({request_id:randomUUID(),game_id:now.game_id,expected_revision:now.state_revision,
-     action:{type:'TALK',target_id:'npc_lin',parameters:{topic:`第${day}天的日常核对，记录${exchange+1}。`}}});
+    await act({type:'TALK',target_id:'npc_lin',parameters:{topic:`第${day}天的日常核对，记录${exchange+1}。`}});
    }
+   if(day!==2)await act({type:'MOVE',target_id:'station'});
    const before=await service.current(),duration=start+day*1440-at(before);
    const request={request_id:randomUUID(),game_id:before.game_id,expected_revision:before.state_revision,
     action:{type:'WAIT',parameters:{minutes:duration}}};
@@ -51,13 +63,15 @@ it.each(narrativeWorldKinds)('72h Narrator evidence / %s',async kind=>{
    expect(await service.turn(request)).toEqual(response);expect(await service.current()).toEqual(after);
    expect(await readFile(join(directory,'current.json'))).toEqual(bytes);expect(calls).toBe(count);replays++;
    const here=after.entities.find(e=>e.id===player)!.components.location!.location_id;
-   checkpoints.push({hours:day*24,rendered:after.last_turn,own_cognition:cognition,history:narratorHistory(after,here,false),
+   expect(here).toBe(day===2?'square':'station');
+   if(kind==='relationships')expect(cognition.own_relationships.find(r=>r.target_id===player)?.dimensions.familiarity).toBeGreaterThan(0);
+   checkpoints.push({hours:day*24,sequence,rendered:after.last_turn,own_cognition:cognition,history:narratorHistory(after,here,false),
     prior_statement:source,goal_still_open:true,player_position:here,
     receipts:after.resolution_receipts!.filter(r=>r.request_id===request.request_id)});
   }
   expect(replays).toBe(3);
   if(process.env.NARRATOR_BENCHMARK_OUTPUT)await writeFile(join(process.env.NARRATOR_BENCHMARK_OUTPUT,`L-${kind}.json`),JSON.stringify({
-   case_id:`L-${kind}`,provenance:'actual_72h_offline_fallback_not_long_model_prose',hours:72,restarts:3,checkpoints,
+   case_id:`L-${kind}`,test_name:expect.getState().currentTestName,provenance:'actual_72h_offline_fallback_not_long_model_prose',hours:72,restarts:3,checkpoints,
    structure_witness:prepared.evidence,real_provider_output:null,quality_ratings:null,independent_review:null},null,2));
  }finally{await rm(directory,{recursive:true,force:true});}
 },180000);
