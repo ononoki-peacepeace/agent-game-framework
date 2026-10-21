@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -45,3 +45,55 @@ it('DevelopmentTask survives the core install restart boundary, registers, and i
   expect(resumed).toHaveBeenCalledOnce();
  }finally{await rm(developmentDirectory,{recursive:true,force:true});await rm(candidate.root,{recursive:true,force:true});}
 },30_000);
+
+it('retains the exact post-registration resume failure and never retries the resumed goal after rollback',async()=>{
+ const f=await sparseSetup(),developmentDirectory=await mkdtemp(join(tmpdir(),'agf-core-resume-failure-')),candidate=await candidateFixture();
+ try{
+  const before=await f.service.current(),host=new ExtensionHost(f.service,developmentDirectory),builder=new ExtensionDevelopment(host);
+  const plan={normalized_requirements:['提供一个 fixture runtime capability'],complexity:'HIGH',clarification:null,milestones:[{id:'runtime',title:'实现运行时能力',kind:'integration',acceptance:['能力可注册']},{id:'resume',title:'恢复原目标',kind:'integration',acceptance:['目标继续执行']}],
+   capability_gaps:[{required_capability:'fixture.runtime',why_needed:'测试运行时需要该能力',affected_modules:['core'],current_limitation:'当前运行时未注册',proposed_generic_capability:'可注册的 fixture runtime capability',risk:'启动失败'}],affected_milestone_ids:[]};
+  const adapter={name:'core-resume-failure-fixture',generate:async()=>({data:plan})};
+  const executor:CodingAgentExecutor={availability:async()=>({available:true,provider:'fixture',reason:null}),execute:async()=>structuredClone(candidate.report)};
+  const tasks=new DevelopmentTasks(builder,()=>adapter,executor,undefined,new CoreCandidateInstaller(candidate.repository,undefined,'before-boot'));
+  const started=await tasks.start({request:'增加一个需要核心注册的通用 fixture 能力',request_id:randomUUID()});expect((await tasks.wait(started.id)).status).toBe('waiting_for_core_approval');
+  await tasks.approveCore(started.id,true);await tasks.wait(started.id);await tasks.installCore(started.id,true);
+  const resume=vi.fn(async()=>{throw Error('controlled original-goal resume failure');});
+  const restarted=new DevelopmentTasks(builder,()=>adapter,executor,resume,new CoreCandidateInstaller(candidate.repository,undefined,'after-boot'));
+  await restarted.ready;const failed=await restarted.get(started.id);
+  expect(failed).toMatchObject({status:'failed',core_install:{stage:'rolled_back'},core_execution:{registered:false,restart_required:true}});
+  expect(resume).toHaveBeenCalledOnce();expect(await readFile(join(candidate.repository,'src','runtime.ts'),'utf8')).toContain('false');
+  expect(failed.core_install?.error).toContain('[resuming]');expect(failed.core_install?.error).toContain('controlled original-goal resume failure');
+  const again=new DevelopmentTasks(builder,()=>adapter,executor,resume,new CoreCandidateInstaller(candidate.repository,undefined,'third-boot'));await again.ready;
+  expect((await again.get(started.id)).status).toBe('failed');expect(resume).toHaveBeenCalledOnce();expect(await f.service.current()).toEqual(before);
+ }finally{await rm(developmentDirectory,{recursive:true,force:true});await rm(candidate.root,{recursive:true,force:true});}
+},30000);
+
+it.each(['dirty','build'] as const)('persists a safe stopped core-install %s failure without claiming restoration or retrying on restart',async point=>{
+ const f=await sparseSetup(),directory=await mkdtemp(join(tmpdir(),'agf-core-install-stop-')),candidate=await candidateFixture();
+ try{
+  const host=new ExtensionHost(f.service,directory),builder=new ExtensionDevelopment(host);
+  const plan={normalized_requirements:['fixture capability'],complexity:'HIGH',clarification:null,
+   milestones:[{id:'runtime',title:'fixture runtime',kind:'integration',acceptance:['fixture runtime']},{id:'resume',title:'fixture resume',kind:'integration',acceptance:['fixture resume']}],
+   capability_gaps:[{required_capability:'fixture.runtime',why_needed:'fixture',affected_modules:['core'],current_limitation:'fixture',proposed_generic_capability:'fixture runtime',risk:'fixture'}],affected_milestone_ids:[]};
+  const adapter={name:'offline-plan',generate:async()=>({data:plan})};
+  const executor:CodingAgentExecutor={availability:async()=>({available:true,provider:'fixture',reason:null}),execute:async()=>structuredClone(candidate.report)};
+  let builds=0;
+  const run=async(file:string,args:string[],cwd:string,signal?:AbortSignal)=>{
+   if(file==='git')return exec(file,args,{cwd,signal,windowsHide:true});
+   builds++;throw Error('controlled install build failure');
+  };
+  const tasks=new DevelopmentTasks(builder,()=>adapter,executor,undefined,new CoreCandidateInstaller(candidate.repository,run));
+  const started=await tasks.start({request:'增加核心 fixture 能力',request_id:randomUUID()});
+  expect((await tasks.wait(started.id)).status).toBe('waiting_for_core_approval');await tasks.approveCore(started.id,true);await tasks.wait(started.id);
+  if(point==='dirty')await writeFile(join(candidate.repository,'src','runtime.ts'),'// preexisting human source\n');
+  await expect(tasks.installCore(started.id,true)).rejects.toThrow(point==='dirty'?'UNOWNED_DIRTY_WORKTREE':'controlled install build failure');
+  const failed=await tasks.get(started.id),source=await readFile(join(candidate.repository,'src','runtime.ts')),
+   status=await git(candidate.repository,['status','--porcelain']);
+  expect(failed).toMatchObject({status:'failed',core_install:{stage:'install_failed'},core_execution:{installed:false,registered:false}});
+  expect(failed.message).toContain('保留');expect(failed.message).not.toMatch(/已恢复|已回滚/);
+  expect(builds).toBe(point==='dirty'?0:1);
+  const restarted=new DevelopmentTasks(builder,()=>adapter,executor,undefined,new CoreCandidateInstaller(candidate.repository,run));await restarted.ready;
+  expect(await restarted.get(started.id)).toEqual(failed);expect(await readFile(join(candidate.repository,'src','runtime.ts'))).toEqual(source);
+  expect(await git(candidate.repository,['status','--porcelain'])).toBe(status);expect(builds).toBe(point==='dirty'?0:1);
+ }finally{await rm(directory,{recursive:true,force:true});await rm(candidate.root,{recursive:true,force:true});}
+},30000);

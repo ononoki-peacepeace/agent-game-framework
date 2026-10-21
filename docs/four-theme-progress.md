@@ -1,16 +1,16 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：a82afe2。整体 **63.13%**（101/160 个固定条件满足）。未满足 26，待验证 33。
+计分版本 v1；评估源代码：546a5ff plus reviewed diagnostic and checkout-protection changes。整体 **63.75%**（102/160 个固定条件满足）。未满足 25，待验证 33。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
 | 主题 | 满足 | 未满足 | 待验证 | 完成/部分/未完成项 | 主题进度 |
 |---|---:|---:|---:|---|---:|
-| ① 可靠性 | 31 | 6 | 3 | 5/5/0 | 77.5% |
+| ① 可靠性 | 32 | 5 | 3 | 5/5/0 | 80.0% |
 | ② 自然语言行动 | 22 | 7 | 11 | 3/5/2 | 55.0% |
 | ③ 自主持续世界 | 28 | 5 | 7 | 4/6/0 | 70.0% |
 | ④ Narrator 与体验 | 20 | 8 | 12 | 2/6/2 | 50.0% |
-| 合计 | 101 | 26 | 33 | 14/22/4 | 63.13% |
+| 合计 | 102 | 25 | 33 | 14/22/4 | 63.75% |
 
 旧台账的12/21/7是工作包人工分类，保留作历史。这里的完成/部分/未完成由4个条件满足数推导，不能与旧分类混用。旧46%为退役估计；首次建立口径不是产品进展，不计算相对46%的提升。
 
@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：39 已修复，19 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：40 已修复，19 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -136,6 +136,7 @@
 | extension-development-failure-identity | repair | R7.3: 5166f52: creation/file-write/compiler failures retain precise phases, durable terminal identity and bounded stdout/stderr/exit/signal; full text redacted before tail to preserve final diagnostics and avoid credential-prefix truncation. Baseline3fail1control plus long-output1fail; latest passing46assertions/7files selected union and one standard build49.043s. Old exact journal-message expectation updated to assert precise phase/prefix with all safety checks retained. Full install/registration before/after matrix and R7.4 kill boundaries remain open; no condition closure.；完整条件保持开放 | +0.000 pp |
 | extension-installation-failure-identity | repair | R7.3: a82afe2: four before/after approval/canonical-install diagnostic counterexamples repaired. Preparation failure restores preview intent and logs exact stage; unconfirmed results retain stage across restart and stop; actual committed receipts alone reconcile installed, original installing failure retained in logs.9direct pass and3files35pass/zero skip, strict root noEmit27.845s; no redundant Vite/server build, no changed receipt/Core/required-schema semantics. Wider core-candidate runtime registration and before/after workspace matrix still open; R7.4 kill tests separate.；完整条件保持开放 | +0.000 pp |
 | core-build-diagnostic-coverage-correction | evidence_correction | R7.1: met → unmet | -0.625 pp |
+| core-install-checkout-preservation | repair | R7.1: unmet → met | +0.625 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -195,7 +196,7 @@
 
 | 条件 | 具体通过条件 | 状态 | 依据 |
 |---|---|---|---|
-| R7.1 | 开发安装失败保留明确阶段、退出码及构建输出 | 未满足 | [core-install-failure-diagnostics.test.ts](../tests/core-install-failure-diagnostics.test.ts), [core-install-failure-diagnostics.md](../docs/core-install-failure-diagnostics.md) |
+| R7.1 | 开发安装失败保留明确阶段、退出码及构建输出 | 满足 | [core-install-worktree-protection.md](../docs/core-install-worktree-protection.md), [core-install-worktree-protection.test.ts](../tests/core-install-worktree-protection.test.ts), [core-install-failure-diagnostics.test.ts](../tests/core-install-failure-diagnostics.test.ts), [coding-agent-failure-diagnostics.test.ts](../tests/coding-agent-failure-diagnostics.test.ts), [development-side-effect-matrix.v1.json](../docs/development-side-effect-matrix.v1.json) |
 | R7.2 | 注册和安装受影响回归及真实本地自扩展重新验收通过 | 满足 | [build-performance-diagnosis-2026-10-20.md](../docs/build-performance-diagnosis-2026-10-20.md) |
 | R7.3 | 外部工作区每类副作用具有恢复身份及安全撤回或停止 | 未满足 | [build-performance-diagnosis-2026-10-20.md](../docs/build-performance-diagnosis-2026-10-20.md), [extension-development-failure-identity.test.ts](../tests/extension-development-failure-identity.test.ts), [p0a-extension-lifecycle.test.ts](../tests/p0a-extension-lifecycle.test.ts), [extension-development-failure-identity.md](../docs/extension-development-failure-identity.md) |
 | R7.4 | 强杀外部工具与嵌套构建后重启验收通过 | 待验证 | [build-performance-diagnosis-2026-10-20.md](../docs/build-performance-diagnosis-2026-10-20.md) |

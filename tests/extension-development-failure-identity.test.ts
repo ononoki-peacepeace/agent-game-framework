@@ -1,6 +1,6 @@
 import {afterEach,expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
-import {mkdir,mkdtemp,readFile,rm,writeFile} from 'node:fs/promises';
+import {mkdir,mkdtemp,readFile,rm,stat,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {MemoryStore,fresh} from './helpers.js';
@@ -86,5 +86,28 @@ it.each(['approval_before','approval_after','world_before','world_after'] as con
   else await expect(restored.install(job.job_id,tx)).rejects.toThrow();
   expect(installed).toHaveBeenCalledTimes(point.startsWith('approval')?0:1);expect(approved).toHaveBeenCalledOnce();
   expect(await f.service.current()).toEqual(current);expect(compiler.calls).toBe(1);
+ }finally{await rm(f.directory,{recursive:true,force:true});}
+});
+it.each(['after_input_write','after_build'] as const)('retains partial artifacts after %s but never grants installation permission',async point=>{
+ const f=await fixture();try{
+  await mkdir(join(f.workspace,point==='after_input_write'?'src':'dist',point==='after_input_write'?'profile.ts':'profile.json'),{recursive:true});
+  const job=await f.dev.start(f.input,{workspace:f.workspace,version:'1.0.0'}),failed=await f.dev.wait(job.job_id);
+  expect(failed).toMatchObject({status:'failed',phase:point==='after_input_write'?'writing_files':'building',hash:null});
+  expect(JSON.parse(await readFile(join(f.workspace,'extension.json'),'utf8')).extension_id).toBe('failure_identity');
+  expect(compiler.calls).toBe(point==='after_build'?1:0);
+  const restored=new ExtensionDevelopment(f.host);await restored.ready;expect(await restored.get()).toEqual(failed);
+  await expect(restored.install(job.job_id,{game_id:f.before.game_id,expected_revision:f.before.state_revision,request_id:randomUUID(),confirmed:true})).rejects.toThrow();
+  expect(await f.service.current()).toEqual(f.before);
+ }finally{await rm(f.directory,{recursive:true,force:true});}
+});
+it('retains created workspace and precise generation failure without advancing to a compiler',async()=>{
+ const f=await fixture();try{
+  const generate=vi.fn(async()=>{throw Error('controlled offline generation stop');});
+  const builder=new ExtensionDevelopment(f.host,()=>({name:'offline-generation-substitute',generate}));
+  const job=await builder.start({...f.input,use_codex:true},{workspace:f.workspace,version:'1.0.0'}),failed=await builder.wait(job.job_id);
+  expect(failed).toMatchObject({status:'failed',phase:'generating',hash:null});
+  for(const directory of ['src','dist','tests','assets'])expect((await stat(join(f.workspace,directory))).isDirectory()).toBe(true);
+  expect(generate).toHaveBeenCalledOnce();expect(compiler.calls).toBe(0);expect(await f.service.current()).toEqual(f.before);
+  const restored=new ExtensionDevelopment(f.host);await restored.ready;expect(await restored.get()).toEqual(failed);
  }finally{await rm(f.directory,{recursive:true,force:true});}
 });

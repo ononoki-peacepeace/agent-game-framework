@@ -1,0 +1,24 @@
+{
+ "version":1,
+ "conditions":["R7.1","R7.3"],
+ "not_scored_separately":true,
+ "scope":"Original external development side-effect types and precise diagnostic evidence. Rows are checks within the existing fixed160 conditions, not new weights. No real model, process-kill or production deployment claim.",
+ "boundary_rows":[
+  {"id":"workspace_before","file":"tests/extension-development-failure-identity.test.ts","name_contains":["retains exact creating_workspace"],"expect":"Actual occupied path refuses; failed stage/ID persists, no compiler/install/canonical mutation."},
+  {"id":"workspace_after","file":"tests/extension-development-failure-identity.test.ts","name_contains":["retains created workspace"],"expect":"Created directories remain after offline generation failure; precise phase and safe stop survive reload."},
+  {"id":"files_before","file":"tests/extension-development-failure-identity.test.ts","name_contains":["retains exact writing_files"],"expect":"Input artifact path collision fails before usable candidate, no registration."},
+  {"id":"files_after_partial_write","file":"tests/extension-development-failure-identity.test.ts","name_contains":["after_input_write"],"expect":"Written first manifest remains identifiable; failed next write cannot grant installation permission."},
+  {"id":"build_failure","file":"tests/extension-development-failure-identity.test.ts","name_contains":["retains exact building"],"expect":"Controlled compiler error retains code/signal/stdout/stderr, no install and no repeated build."},
+  {"id":"build_after_output","file":"tests/extension-development-failure-identity.test.ts","name_contains":["after_build"],"expect":"Post-compiler artifact-write failure retains partial inputs and safe terminal identity, hash stays null."},
+  {"id":"approval_before","file":"tests/extension-development-failure-identity.test.ts","name_contains":["retains approval_before"],"expect":"No approval/canonical write; precise stage and no automatic retry after recreation."},
+  {"id":"approval_after","file":"tests/extension-development-failure-identity.test.ts","name_contains":["retains approval_after"],"expect":"Durable approval alone cannot prove install; exact failed phase remains and no canonical effect is invented."},
+  {"id":"install_before","file":"tests/extension-development-failure-identity.test.ts","name_contains":["retains world_before"],"expect":"Approved local metadata does not count as canonical installation; safe stop, no duplicate call."},
+  {"id":"install_after","file":"tests/extension-development-failure-identity.test.ts","name_contains":["retains world_after"],"expect":"Actual canonical receipt reconciles installed after thrown error; no approval/install replay, original phase retained."},
+  {"id":"registration_before","file":"tests/core-install-failure-diagnostics.test.ts","name_contains":["retains runtime-validation diagnostics"],"expect":"Failed new-boot build cannot claim registration; exact diagnostic remains until verified retry, no reapply/commit."},
+  {"id":"registration_after","file":"tests/core-install-lifecycle.test.ts","name_contains":["exact post-registration resume failure"],"expect":"Actual tiny temporary-repository install validates then resume fails; auditable rollback, registered=false and no repeated goal after third boot."}
+ ],
+ "additional_core_workspace_failures":["workspace_create","workspace_clone","patch_write","dependencies","package_read","test","build"],
+ "additional_controls":["unchanged real tiny-repository coding patch/test/build without install","unowned dirty repository refusal","new-boot registration and auditable rollback","long output final diagnostics and full-text redaction before truncation","failed local gate quoting schema-error text remains implementation failure within existing repair budget","normal candidate preview with unchanged canonical world"],
+ "pending_ownership_boundaries":["tracked dirty worktree refusal before candidate apply must preserve existing bytes","tracked external writer after candidate apply must not be erased by failure restoration"],
+ "remaining_separate":"R7.3 stays open until the ownership boundaries are proved; passing these12rows alone does not close it. R7.4 owned external-tool and nested-build process-kill/restart boundaries are not established by this matrix. Real local self-extension verifies the actual Framework build/registration/resume separately."
+}

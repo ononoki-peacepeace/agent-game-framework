@@ -21,6 +21,7 @@ import {writeAtomicJson} from '../storage/atomic-json.js';
 import {withoutInputRecovery} from '../recovery/request-context.js';
 import {withoutRequestBudget,withRequestBudget} from '../ai/request-budget.js';
 import {startTrace,runWithTrace} from '../observability/index.js';
+import {redactTextTail} from '../observability/logger.js';
 const runCommand=promisify(execFile);
 /** execFile keeps compiler diagnostics outside Error.message. Persist bounded tails so a failed gate remains diagnosable. */
 function commandFailureDetail(error:unknown){
@@ -323,6 +324,9 @@ export class DevelopmentTasks {
  private async runCore(t:DevelopmentTask,signal:AbortSignal){
   const recovery=t.core_recovery??={classification:null,attempts:0,max_attempts:3,replans:0,max_replans:1,providers_tried:[],last_error:null};
   const classify=(message:string,report?:CoreDevelopmentReport):NonNullable<DevelopmentTask['core_recovery']>['classification']=>{
+   // Framework gate evidence owns this classification. A failed unit test can
+   // quote request-schema errors without being a malformed backend request.
+   if(report?.status==='failed'&&(!report.tests_passed||!report.build_passed||!report.acceptance_passed)&&/^\[(?:test|build|diff_check|acceptance)\]/.test(message))return 'IMPLEMENTATION_FAILURE';
    if(/尚未保存|uncommitted|dirty worktree|credential|凭证|not available|provider unavailable|unsupported|不支持/i.test(message)||report?.status==='blocked')return 'CAPABILITY_EXTERNAL_BLOCK';
    if(/invalid[_ -]?json[_ -]?schema|invalid schema for response_format|malformed request|unsupported parameter|INVALID_PROVIDER_SCHEMA/i.test(message))return 'DETERMINISTIC_REQUEST_FAILURE';
    if(/aborted|timeout|timed out|temporary|temporar|network|unexpected stop|ECONNRESET|socket hang up|destination path.*already exists|not an empty directory|workspace collision/i.test(message))return 'TRANSIENT_EXECUTION_FAILURE';
@@ -373,7 +377,7 @@ export class DevelopmentTasks {
    await this.persist();return structuredClone(t);
   }catch(error){
    const record=(error as Error&{install_record?:CoreInstallRecord}).install_record;if(record)t.core_install=record;
-   t.status='failed';t.message='核心候选安装失败，live repository 已恢复或进入明确的回滚状态。';this.history(t,'core_install_failed',String((error as Error).message).slice(0,1500));await this.persist();throw error;
+   t.status='failed';t.message='核心候选安装未能确认完成，已停止。当前源码、暂存区与候选工作区保留；请核对实际状态后再处理。';this.history(t,'core_install_failed',String((error as Error).message).slice(0,1500));await this.persist();throw error;
   }
  }
  private async recoverCoreInstalls(){
@@ -389,7 +393,7 @@ export class DevelopmentTasks {
     if(this.onInstalled)await this.onInstalled(structuredClone(t));
     record.stage='completed';t.status='installed';t.installed_version=t.current_version;t.message='核心候选已安装、重载、注册，并已恢复关联目标。';this.history(t,'core_runtime_completed',record.installed_revision??'');await this.persist();
    }catch(error){
-    record.error=String((error as Error).message).slice(0,1500);
+    record.error=`[${record.stage}] ${redactTextTail(error instanceof Error?error.message:String(error))}`.slice(0,1500);
     try{await this.coreInstaller.rollback(record);t.message='新核心运行时验证失败，已回滚到上一稳定源码版本；需要再次重启。';}
     catch(rollback){record.stage='install_failed';record.error+='; rollback failed: '+String((rollback as Error).message);t.message='新核心运行时验证失败且自动回滚未完成，请查看高级开发详情。';}
     t.status='failed';t.core_execution={...t.core_execution!,registered:false,restart_required:true,message:t.message};this.history(t,'core_runtime_failed',record.error);await this.persist();

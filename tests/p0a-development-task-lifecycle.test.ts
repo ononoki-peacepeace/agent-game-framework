@@ -25,6 +25,24 @@ async function fixture(adapter:AIAdapter={name:'offline-task',generate:async()=>
   return {...f,directory,builder,tasks,baseline:await f.service.current(),
     input:()=>({request_id:randomUUID(),request:'开发一个展示面板'}),close:()=>rm(directory,{recursive:true,force:true})};
 }
+
+it.each(['test','build'])('does not treat schema-error text inside a failed %s gate as a backend request failure',async stage=>{
+ let calls=0;
+ const gap={required_capability:'input.subscription',why_needed:'需要连续输入',affected_modules:['core'],current_limitation:'仅离散动作',proposed_generic_capability:'可取消输入订阅',risk:'并发事务'};
+ const executor:CodingAgentExecutor={availability:async()=>({available:true,provider:'controlled-local',reason:null}),execute:async request=>{
+  calls++;return {status:'failed',provider:'controlled-local',workspace:request.workspace,base_revision:'fixture-base',changed_files:['src/fixture.ts'],commands:[{command:stage==='test'?'npm test':'npm run build',exit_code:17}],patch_path:null,
+   tests_passed:stage==='build',build_passed:false,acceptance_passed:false,installed:false,registered:false,restart_required:false,
+   message:`[${stage}] local gate failed\nstdout: negative fixture mentions invalid_json_schema malformed request`};
+ }};
+ const f=await fixture({name:'controlled-plan',generate:async()=>({data:{...plan,clarification:null,capability_gaps:[gap]}})},executor);
+ try{
+  const task=await f.tasks.start(f.input());expect((await f.tasks.wait(task.id)).status).toBe('waiting_for_core_approval');
+  await f.tasks.approveCore(task.id,true);const failed=await f.tasks.wait(task.id);
+  expect(failed.core_recovery?.classification).toBe('IMPLEMENTATION_FAILURE');expect(failed.status).toBe('failed');
+  expect(calls).toBe(failed.core_recovery!.max_replans+1);expect(failed.core_execution?.installed).toBe(false);expect(failed.core_execution?.registered).toBe(false);
+  expect(await f.service.current()).toEqual(f.baseline);
+ }finally{await f.close();}
+});
 describe('P0-A development task lifecycle',()=>{
   it.each(['approval','resume','restart'] as const)('isolates approved core work launched by %s',async(mode)=>{
     const gap={required_capability:'input.subscription',why_needed:'需要连续输入',affected_modules:['extension host'],

@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { relative, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
 import type { CoreDevelopmentReport } from './coding-agent.js';
+import {developmentFailure} from './diagnostics.js';
 
 const exec = promisify(execFile);
 export type CoreInstallStage =
@@ -62,25 +63,30 @@ export class CoreCandidateInstaller {
   async install(taskId: string, report: CoreDevelopmentReport, signal?: AbortSignal): Promise<CoreInstallRecord> {
     const record = await this.prepare(taskId, report);
     record.stage = 'installing';
+    let operation='install_worktree';
     try {
       const status = await this.run('git', ['status', '--porcelain'], this.repository, signal);
       if (status.stdout.trim()) throw new Error('UNOWNED_DIRTY_WORKTREE: live repository contains changes not owned by this candidate.');
-      const head = (await this.run('git', ['rev-parse', 'HEAD'], this.repository, signal)).stdout.trim();
+      operation='install_base';const head = (await this.run('git', ['rev-parse', 'HEAD'], this.repository, signal)).stdout.trim();
       if (head !== record.base_revision) throw new Error('CANDIDATE_BASE_MISMATCH: live HEAD no longer matches the validated candidate base.');
-      await this.run('git', ['apply', '--check', '--index', record.patch_path], this.repository, signal);
-      await this.run('git', ['apply', '--index', record.patch_path], this.repository, signal);
-      const applied = statusPaths((await this.run('git', ['status', '--porcelain'], this.repository, signal)).stdout);
+      operation='patch_check';await this.run('git', ['apply', '--check', '--index', record.patch_path], this.repository, signal);
+      operation='patch_apply';await this.run('git', ['apply', '--index', record.patch_path], this.repository, signal);
+      operation='patch_paths';const applied = statusPaths((await this.run('git', ['status', '--porcelain'], this.repository, signal)).stdout);
       if (!samePaths(applied, record.changed_files)) throw new Error('CANDIDATE_FILE_MISMATCH: applied paths differ from validated candidate metadata.');
-      await this.build(signal);
+      operation='install_build';await this.build(signal);
+      operation='install_commit';
       await this.run('git', ['-c', 'user.name=Agent Game Framework', '-c', 'user.email=framework@local.invalid', 'commit', '-m', `core: install managed candidate ${record.candidate_id}`], this.repository, signal);
-      record.installed_revision = (await this.run('git', ['rev-parse', 'HEAD'], this.repository, signal)).stdout.trim();
+      operation='installed_revision';record.installed_revision = (await this.run('git', ['rev-parse', 'HEAD'], this.repository, signal)).stdout.trim();
       record.installed_at = new Date().toISOString();
       record.stage = 'installed_pending_reload';
       return record;
     } catch (error) {
-      record.error = String((error as Error).message).slice(0, 1500);
+      record.error = developmentFailure(operation,error);
       record.stage = 'install_failed';
-      await this.restoreBase(record, signal).catch(rollback => { record.error += `; rollback failed: ${String((rollback as Error).message)}`; });
+      // A failed admission did not acquire ownership of existing work. Even
+      // after apply, a build or another writer may have changed tracked bytes
+      // or the index. Preserve that state for inspection instead of resetting
+      // the repository or reverse-applying a patch over unowned changes.
       throw Object.assign(new Error(record.error), { install_record: record });
     }
   }
@@ -89,15 +95,18 @@ export class CoreCandidateInstaller {
     if (record.stage !== 'installed_pending_reload' && record.stage !== 'reloading' && record.stage !== 'validating_runtime') throw new Error('Core candidate is not awaiting runtime validation.');
     if (record.installed_by_boot_id === this.bootId) return { ready: false, reason: 'Runtime restart is still required.' };
     record.stage = 'validating_runtime';
+    let operation='runtime_head';
+    try{
     const head = (await this.run('git', ['rev-parse', 'HEAD'], this.repository, signal)).stdout.trim();
     if (head !== record.installed_revision) return { ready: false, reason: 'Installed revision is not the runtime repository HEAD.' };
-    const status = await this.run('git', ['status', '--porcelain'], this.repository, signal);
+    operation='runtime_worktree';const status = await this.run('git', ['status', '--porcelain'], this.repository, signal);
     if (status.stdout.trim()) return { ready: false, reason: 'Runtime repository is dirty after managed candidate installation.' };
-    await this.build(signal);
+    operation='runtime_build';await this.build(signal);
     record.validated_at = new Date().toISOString();
     record.stage = 'registered';
     record.error = null;
     return { ready: true, reason: null };
+    }catch(error){record.error=developmentFailure(operation,error);throw new Error(record.error,{cause:error});}
   }
 
   async rollback(record: CoreInstallRecord, signal?: AbortSignal) {
@@ -132,13 +141,5 @@ export class CoreCandidateInstaller {
   private async build(signal?: AbortSignal) {
     if (process.platform === 'win32') await this.run(process.env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', 'npm run build'], this.repository, signal);
     else await this.run('npm', ['run', 'build'], this.repository, signal);
-  }
-  private async restoreBase(record: CoreInstallRecord, signal?: AbortSignal) {
-    const head = (await this.run('git', ['rev-parse', 'HEAD'], this.repository, signal)).stdout.trim();
-    if (head === record.base_revision) {
-      await this.run('git', ['reset', '--hard', record.base_revision], this.repository, signal);
-      return;
-    }
-    if (record.installed_revision && head === record.installed_revision) await this.rollback(record, signal);
   }
 }

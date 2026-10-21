@@ -29,12 +29,13 @@ async function fixture(){
   patch_path:patch,tests_passed:true,build_passed:true,acceptance_passed:true,installed:false,registered:false,restart_required:true,message:'fixture candidate'};
  return {root,repository,patch,state,run,report};
 }
-it('retains install build stage, exit and output tails while retaining the existing base restoration',async()=>{
+it('retains install build stage, exit and output tails while preserving the failed candidate for inspection',async()=>{
  const f=await fixture();try{
   const installer=new CoreCandidateInstaller(f.repository,f.run,'first-boot');
   const failure=await installer.install('fixture-task',f.report).then(()=>{throw Error('expected controlled build failure');},error=>error as Error&{install_record:CoreInstallRecord});
   expect(failure).toBeInstanceOf(Error);const record=failure.install_record;
-  expect(record.stage).toBe('install_failed');expect(f.state).toMatchObject({applied:false,installed:false,builds:1});
+  expect(record.stage).toBe('install_failed');expect(f.state).toMatchObject({applied:true,installed:false,builds:1});
+  expect(f.run.mock.calls.some(([file,args])=>file==='git'&&['reset','restore','revert','clean'].includes(args[0]))).toBe(false);
   expect(record.error).toContain('[install_build]');expect(record.error).toContain('exit=2');expect(record.error).toContain('signal=SIGTERM');
   expect(record.error).toContain('FINAL_CORE_STDOUT');expect(record.error).toContain('FINAL_CORE_STDERR');expect(record.error).not.toContain('sk-privatecredential');
   expect(record.error!.length).toBeLessThanOrEqual(1500);

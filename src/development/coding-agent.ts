@@ -4,6 +4,8 @@ import { mkdir, readFile, symlink, writeFile } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
 import { observe } from '../observability/index.js';
+import {redactTextTail,redactValue} from '../observability/logger.js';
+import {developmentFailure} from './diagnostics.js';
 
 const exec = promisify(execFile);
 
@@ -72,19 +74,19 @@ export class CodexCodingAgentExecutor implements CodingAgentExecutor {
   async execute(request: CoreDevelopmentRequest, signal?: AbortSignal): Promise<CoreDevelopmentReport> {
     const repository = resolve(request.repository), workspace = resolve(request.workspace), candidate = join(workspace, 'repository');
     if (inside(repository, workspace) && relative(repository, workspace).split(sep)[0] === 'data') throw new Error('核心开发工作区不能位于真实 data 目录');
-    await mkdir(workspace, { recursive: true });
+    await this.step('workspace_create',()=>mkdir(workspace, { recursive: true }));
     const available = await this.availability();
     if (!available.available) return this.report(request, null, [], [], null, false, false, false, available.reason!);
-    const status = await this.run('git', ['status', '--porcelain'], repository, signal);
+    const status = await this.step('repository_status',()=>this.run('git', ['status', '--porcelain'], repository, signal));
     if (status.stdout.trim()) {
       // The safety gate stays exactly as strict; only the player-facing wording changes. The raw reason goes to
       // the log (visible in 高级 / 开发详情) so operators still see the real Git state.
       observe('warn', 'core.development.dirty_worktree', { module: 'development', metadata: { reason: 'Live repository has uncommitted changes; refusing to build a core patch against a moving checkout.', paths: status.stdout.trim().split('\n').slice(0, 8) } });
       return this.report(request, null, [], [], null, false, false, false, '当前框架有尚未保存的开发修改，为避免覆盖代码，这次核心开发暂时没有开始。请先完成或保存当前开发版本后再继续。');
     }
-    const base = (await this.run('git', ['rev-parse', 'HEAD'], repository, signal)).stdout.trim();
+    const base = (await this.step('repository_revision',()=>this.run('git', ['rev-parse', 'HEAD'], repository, signal))).stdout.trim();
 
-    await this.run('git', ['clone', '--no-local', '--no-hardlinks', '--quiet', repository, candidate], workspace, signal);
+    await this.step('workspace_clone',()=>this.run('git', ['clone', '--no-local', '--no-hardlinks', '--quiet', repository, candidate], workspace, signal));
     const prompt = [
       'You are the bounded core development worker for Agent Game Framework.',
       'Work only in this isolated repository. Never read or write data/, .env files, credentials, user saves, or paths outside the repository.',
@@ -95,42 +97,51 @@ export class CodexCodingAgentExecutor implements CodingAgentExecutor {
       `Targeted validation run later by the framework: ${JSON.stringify(request.targeted_tests)}`,
       'Finish with a concise report. The framework will independently inspect the diff and run every gate.',
     ].join('\n');
-    const thread = this.codex.startThread({ workingDirectory: candidate, sandboxMode: 'workspace-write', approvalPolicy: 'never', networkAccessEnabled: false, webSearchMode: 'disabled', skipGitRepoCheck: false });
+    const thread = await this.step('coding_setup',async()=>this.codex.startThread({ workingDirectory: candidate, sandboxMode: 'workspace-write', approvalPolicy: 'never', networkAccessEnabled: false, webSearchMode: 'disabled', skipGitRepoCheck: false }));
     let turn;
-    try { turn = await thread.run(prompt, { signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(10 * 60_000)]) : AbortSignal.timeout(10 * 60_000) }); }
+    try { turn = await this.step('coding',()=>thread.run(prompt, { signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(10 * 60_000)]) : AbortSignal.timeout(10 * 60_000) })); }
     catch (error) { return this.report(request, base, [], [], null, false, false, false, `Coding backend failed: ${(error as Error).message}`); }
     const commands = turn.items.filter((item): item is Extract<ThreadItem, { type: 'command_execution' }> => item.type === 'command_execution').map(item => ({ command: item.command, exit_code: item.exit_code ?? null }));
-    const changed = (await this.run('git', ['diff', '--name-only', 'HEAD'], candidate, signal)).stdout.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
-    const untracked = (await this.run('git', ['ls-files', '--others', '--exclude-standard'], candidate, signal)).stdout.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
+    const changed = (await this.step('candidate_diff',()=>this.run('git', ['diff', '--name-only', 'HEAD'], candidate, signal))).stdout.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
+    const untracked = (await this.step('candidate_untracked',()=>this.run('git', ['ls-files', '--others', '--exclude-standard'], candidate, signal))).stdout.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
     const changedFiles = [...new Set([...changed, ...untracked])];
     if (!changedFiles.length) return this.report(request, base, [], commands, null, false, false, false, 'Coding backend produced no implementation.');
     if (changedFiles.some(path => !allowedChangedFile(path))) return this.report(request, base, changedFiles, commands, null, false, false, false, 'Candidate touched a forbidden path.');
-    await this.run('git', ['add', '--all'], candidate, signal);
-    const diffCheck = await this.run('git', ['diff', '--cached', '--check'], candidate, signal).catch(error => ({ stdout: '', stderr: String(error) }));
-    if (diffCheck.stderr.trim()) return this.report(request, base, changedFiles, commands, null, false, false, false, 'Candidate failed git diff --check.');
-    const patchOutput = (await this.run('git', ['diff', '--cached', '--binary', 'HEAD'], candidate, signal)).stdout;
+    await this.step('candidate_stage',()=>this.run('git', ['add', '--all'], candidate, signal));
+    const diffCheck = await this.step('diff_check',()=>this.run('git', ['diff', '--cached', '--check'], candidate, signal)).catch(error => ({ stdout: '', stderr: String(error) }));
+    if (diffCheck.stderr.trim()) return this.report(request, base, changedFiles, commands, null, false, false, false, '[diff_check] Candidate failed git diff --check.\n'+redactTextTail(diffCheck.stderr).slice(-1200));
+    const patchOutput = (await this.step('patch_diff',()=>this.run('git', ['diff', '--cached', '--binary', 'HEAD'], candidate, signal))).stdout;
     const patch = patchOutput.endsWith('\n') ? patchOutput : patchOutput + '\n';
-    const patchPath = join(workspace, 'candidate.patch'); await writeFile(patchPath, patch, 'utf8');
+    const patchPath = join(workspace, 'candidate.patch'); await this.step('patch_write',()=>writeFile(patchPath, patch, 'utf8'));
     // Add dependencies only after the coding turn, so the agent cannot mutate the live installation through the junction.
-    await symlink(join(repository, 'node_modules'), join(candidate, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
-    const packageJson = JSON.parse(await readFile(join(candidate, 'package.json'), 'utf8')) as { scripts?: Record<string, string> };
-    let testsPassed = true;
+    await this.step('dependencies',()=>symlink(join(repository, 'node_modules'), join(candidate, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir'));
+    const packageJson = await this.step('package_read',async()=>JSON.parse(await readFile(join(candidate, 'package.json'), 'utf8')) as { scripts?: Record<string, string> });
+    let testsPassed = true,gateDiagnostic:string|null=null;
     for (const command of request.targeted_tests) {
-      const parts = command.trim().split(/\s+/); if (parts[0] !== 'npm' && parts[0] !== 'npx') throw new Error('Only npm/npx targeted tests are allowed');
-      try { await this.run(process.platform === 'win32' ? `${parts[0]}.cmd` : parts[0], parts.slice(1), candidate, signal); }
-      catch { testsPassed = false; break; }
+      const parts = command.trim().split(/\s+/); if (parts[0] !== 'npm' && parts[0] !== 'npx') throw new Error('[test_validation] Only npm/npx targeted tests are allowed');
+      try { await this.step('test',()=>this.run(process.platform === 'win32' ? `${parts[0]}.cmd` : parts[0], parts.slice(1), candidate, signal));commands.push({command:String(redactValue(command)),exit_code:0}); }
+      catch(error) { testsPassed = false;gateDiagnostic=error instanceof Error?error.message:String(error);commands.push({command:String(redactValue(command)),exit_code:typeof (error as {code?:unknown})?.code==='number'?(error as {code:number}).code:null});break; }
     }
     let buildPassed = false;
     if (testsPassed && packageJson.scripts?.build) {
-      try { await this.run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build'], candidate, signal); buildPassed = true; } catch { buildPassed = false; }
+      try { await this.step('build',()=>this.run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build'], candidate, signal));buildPassed = true;commands.push({command:'npm run build',exit_code:0}); }
+      catch(error) { buildPassed = false;gateDiagnostic=error instanceof Error?error.message:String(error);commands.push({command:'npm run build',exit_code:typeof (error as {code?:unknown})?.code==='number'?(error as {code:number}).code:null}); }
     }
     const acceptancePassed = buildPassed && request.required_acceptance.length === 0;
     return {
       status: testsPassed && buildPassed && acceptancePassed ? 'candidate_ready' : 'failed', provider: 'codex', workspace, base_revision: base,
       changed_files: changedFiles, commands, patch_path: patchPath, tests_passed: testsPassed, build_passed: buildPassed,
       acceptance_passed: acceptancePassed, installed: false, registered: false, restart_required: true,
-      message: acceptancePassed ? 'Core candidate passed isolated tests and build; it is not installed or registered.' : 'Core candidate did not pass every required gate.',
+      message: acceptancePassed ? 'Core candidate passed isolated tests and build; it is not installed or registered.' : gateDiagnostic??(testsPassed&&!packageJson.scripts?.build?'[build] Candidate has no build script.': '[acceptance] Core candidate did not pass every required gate.'),
     };
+  }
+
+  private async step<T>(stage:string,action:()=>Promise<T>):Promise<T>{
+    try{return await action();}catch(error){
+      const message=developmentFailure(stage,error);
+      if(error instanceof Error){error.message=message;throw error;}
+      throw new Error(message);
+    }
   }
 
   private report(request: CoreDevelopmentRequest, base: string | null, changed: string[], commands: { command: string; exit_code: number | null }[], patch: string | null, tests: boolean, build: boolean, acceptance: boolean, message: string): CoreDevelopmentReport {
