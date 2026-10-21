@@ -1,0 +1,9 @@
+# Receipt-safe sensory similes
+
+Parent `68a00ce`. Offline baseline: **5 failures / 5 controls passed, 3.548s** (`perception-simile-authority-baseline.json`). Four sensory similes such as `你的目光像一条细线一样穿过门口` are incorrectly classified as literal entity travel. A real temporary JsonStore INSPECT consequently discards valid prose after three attempts. Literal action controls remain rejected.
+
+The existing attention-subject predicate now also recognizes bounded, complete similes anchored to a sensory subject. Its optional pronoun possessor cannot admit a joined literal player. Every subsequent mechanical match is still checked, including literal travel or inventory changes inside/after the metaphor. Prose is preserved; Core state, receipts and factual checks are unchanged. This does not exempt arbitrary metaphors, attributed claims or new NPC/world results.
+
+Final directed run: **5 files / 67 passed / zero failed or skipped, 15.379s** (`perception-simile-authority-fixed.json`). Includes 11 direct paired cases plus perception audit, firewall diagnostics, bounded retry and quoted scene-presence regression. The two temporary-disk INSPECT cases assert unchanged entities, one Core minute and receipt, normal exact legal prose with one narration/audit, invalid prose degraded after three narrations without audit, and exact response/state/bytes replay after service recreation with zero additional generation. Strict TypeScript exit 0, **33.298s**; `git diff --check` passed.
+
+N4.3 stays unmet: **103/160 (64.375%), delta zero**. Full metaphor/retelling/item-state and three-world corpora remain open. No full build/full suite, real Provider or human review claim. Formal save, 3100, frozen criteria, original dirty files and public/Core interfaces remain unchanged. Next: inspect other actual lawful expression/retelling boundaries while retaining paired literal-world refusals.

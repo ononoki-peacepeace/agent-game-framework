@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "c358768 + actual full-project TypeScript kill evidence",
+  "assessed_source": "68a00ce + verified sensory-simile authority repair",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -1224,9 +1224,11 @@
         "docs/perception-joined-pronoun.md",
         "tests/perception-joined-pronoun.test.ts",
         "docs/scene-presence-temporal-pronoun.md",
-        "tests/scene-presence-temporal-pronoun.test.ts"
+        "tests/scene-presence-temporal-pronoun.test.ts",
+        "docs/perception-simile-authority.md",
+        "tests/perception-simile-authority.test.ts"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 1246a49: occurrence-scoped departure negation, truthful no-receipt degradation marker; initial5fail/7controls, final6files80pass/build. N4.1 withdrawal/restoration net0; broader subject/multi-world scope remains open. 1bad19e: independently named/player clauses retain presence checks;7fail/5controls, intermediate63/66 overly broad split corrected, final7files92pass/build. Explicit N4.1 withdrawal/restoration net0; rich subject/multi-world matrices open. ae4f469: bounded literal joint-subject presence/travel guard checks each named member; baseline7fail/6legal controls, first3files42pass, expanded final8files94pass/build. Real service degrades unsupported group departure and replays WAIT once. N4.1 withdrawal/restoration net0; broad grammar/multi-world matrix remains open. f9f93f0: explicit visual joint subjects and independent named/player clauses preserve event-time sight receipt checks;6fail/4controls, final9files85pass/build including HTTP/compound-child continuity. Actual physical turn rejects invented observation and replays once. N4.1 withdrawn/restored net0; broader attribution/quoted/multi-world grammar remains open. Local Chinese step forms几步/数步/半步/一小步 no longer falsely imply departure; later actualdeparture still rejected.5fail6controls repaired,5files65distinctpasses/actualWAIT normalprose exactreplay/strict68.187s. Broad metaphor/retelling/multi-world matrix remains open. AttributedASCIIquoteddeparture/headcount claims no longer false positive; emphasis/malformedquotes and outsideassertions retained. Broader metaphor/retelling/multi-world corpus open. Bounded joined-pronoun perception scope fixed; full grammar/multi-world criterion stays open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 1246a49: occurrence-scoped departure negation, truthful no-receipt degradation marker; initial5fail/7controls, final6files80pass/build. N4.1 withdrawal/restoration net0; broader subject/multi-world scope remains open. 1bad19e: independently named/player clauses retain presence checks;7fail/5controls, intermediate63/66 overly broad split corrected, final7files92pass/build. Explicit N4.1 withdrawal/restoration net0; rich subject/multi-world matrices open. ae4f469: bounded literal joint-subject presence/travel guard checks each named member; baseline7fail/6legal controls, first3files42pass, expanded final8files94pass/build. Real service degrades unsupported group departure and replays WAIT once. N4.1 withdrawal/restoration net0; broad grammar/multi-world matrix remains open. f9f93f0: explicit visual joint subjects and independent named/player clauses preserve event-time sight receipt checks;6fail/4controls, final9files85pass/build including HTTP/compound-child continuity. Actual physical turn rejects invented observation and replays once. N4.1 withdrawn/restored net0; broader attribution/quoted/multi-world grammar remains open. Local Chinese step forms几步/数步/半步/一小步 no longer falsely imply departure; later actualdeparture still rejected.5fail6controls repaired,5files65distinctpasses/actualWAIT normalprose exactreplay/strict68.187s. Broad metaphor/retelling/multi-world matrix remains open. AttributedASCIIquoteddeparture/headcount claims no longer false positive; emphasis/malformedquotes and outsideassertions retained. Broader metaphor/retelling/multi-world corpus open. Bounded joined-pronoun perception scope fixed; full grammar/multi-world criterion stays open. Sensory similes: baseline5fail5controls3.548s repaired with bounded sensory-subject simile recognition, joined literal actors and later world changes still rejected.5files67pass15.379s/strict33.298sexit0; twoactualdiskINSPECT normal/degraded/replaycases. Full metaphor/retelling/item-state/multi-world matrix open."
     },
     "N4.4": {
       "status": "unverified",
@@ -4539,6 +4541,23 @@
         }
       ],
       "note": "103/16064.375%delta0;actualcompilerfirst1pass6.727s;expanded4pass1Windowsloaderfail26.273s preserved;onlyaffectedcorrected1pass6.526s. No productsource/fullbuild/fullsuite change."
+    },
+    {
+      "batch": "perception-simile-authority",
+      "type": "repair",
+      "source": "68a00ce+reviewed-worktree",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "N4.3",
+          "result": "Baseline5fail5controls3.548s; final5files67pass15.379s/strict33.298sexit0.11directpairedcases,actualdisknormal/degradedINSPECTandfreshserviceexactreplay. Broad corpus remains open.",
+          "evidence": [
+            "docs/perception-simile-authority.md",
+            "tests/perception-simile-authority.test.ts"
+          ]
+        }
+      ],
+      "note": "103/16064.375%delta0; no new fullbuild/suite or factual-world-authority change."
     }
   ],
   "new_risks": [],
@@ -5686,6 +5705,18 @@
         "tests/open-goal-wait-completion.test.ts"
       ],
       "summary": "Open-goal WAIT treated interruption or unrelated revision increase as completion; now requires own committed receipt, stops dependent continuation and retains actual progress."
+    },
+    {
+      "id": "perception-simile-authority",
+      "scope": "original",
+      "condition": "N4.3",
+      "status": "resolved",
+      "source": "68a00ce",
+      "evidence": [
+        "docs/perception-simile-authority.md",
+        "tests/perception-simile-authority.test.ts"
+      ],
+      "summary": "Complete sensory-subject similes falsely treated as literal movement and degraded; narrow subject-anchored recognition preserves lawful prose while checking each literal predicate."
     }
   ]
 }

@@ -24,7 +24,10 @@ const mechanicalPatterns:[string,RegExp][]=[
 
 /** Attention leaving a person is expressive behavior, not an entity MOVE. */
 function attentionMovement(prefix:string){
-  return /(?:视线|目光|注意力)(?:(?:一直|始终|仍然|仍|也|还|却|并|都|早已|已经|曾|暂时|从未|没有|没|未曾|尚未|不曾|不再|不|又|才|稍稍|完全|片刻|短暂|持续|悄悄|轻轻))*$/.test(prefix);
+  return /(?:视线|目光|注意力)(?:(?:一直|始终|仍然|仍|也|还|却|并|都|早已|已经|曾|暂时|从未|没有|没|未曾|尚未|不曾|不再|不|又|才|稍稍|完全|片刻|短暂|持续|悄悄|轻轻))*$/.test(prefix)||
+    // Anchor this simile to the sensory subject: a joined player is still a
+    // literal mover, and every later mechanical predicate is checked separately.
+    /^(?:(?:你|玩家|他|她)的?)?(?:视线|目光|注意力)(?:像|仿佛|好似|如同)[^，,。；;！？!?\n“”「」]{1,20}?(?:一般|一样|般)地?(?:轻轻|缓缓|慢慢|悄悄)?$/.test(prefix);
 }
 
 /** Validation only: a denial or future intention is not evidence of completed travel.
