@@ -64,7 +64,7 @@ Do not reuse the historical 46% as a current estimate. The first reproducible co
 | N1 | Ordinary/refine Narrator share private cognition projection | Completed | narrator-character-cognition/runtime integration |
 | N2 | Technical narration repair does not replay committed world effects | Completed | narrative-bounded-retry, turn-failure-progress and request recovery |
 | N3 | Multi-step physical/speech presentation retains settled steps | Partial | compound aggregation and physical receipts; broad prose acceptance remains |
-| N4 | Facts, presence, perception and legal-description false rejection balance | Partial | firewall/perception tests; wider legal prose cases open |
+| N4 | Facts, presence, perception and legal-description false rejection balance | Partial | e9ea62a fixes typed/built-in receipt selection, positive-audit authority, visible NPC travel and MOVE presence; audited251files2538selectedpasses/build, initial native exits retained/root cause unresolved. N4.1/2 restored; expanded three-structure legal prose N4.3/4 stay open. See post-presence-offline-snapshot.md |
 | N5 | NPC speech reflects personality, memory and relationships | Partial | cognition integration exists; voice distinction not broadly accepted |
 | N6 | Inventory/object grounding and no invented usable assets | Partial | possession/materialization/firewall tests; open-world breadth remains |
 | N7 | Long-term continuity and contradictory expression prevention | Partial | continuity/cognition tests; long-duration experience unaccepted |

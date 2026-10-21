@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "a2c768b",
+  "assessed_source": "e9ea62a",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -165,9 +165,10 @@
         "docs/post-long-route-offline-snapshot.md",
         "docs/post-process-offline-snapshot.md",
         "docs/post-migration-offline-snapshot.md",
-        "docs/fetchable-loopback-fixture.md"
+        "docs/fetchable-loopback-fixture.md",
+        "docs/post-presence-offline-snapshot.md"
       ],
-      "basis": "Product9917459/ledger6be22bb fixed195-file494-hash complete offline snapshot1957/1957pass, exact coverage once, build pass; original shard5 native0xC0000409 retained, exact halves passed. Native stability and later source edits need new evidence. Fresh source29e6a5f/ledgerc351367:199files1992/1992pass,502pinned hashes unchanged, exact coverage once,16shards; isolated build passed. Old native crash retained. Fresh product1bad19e/ledger5c083d8 full snapshot207files2064/2064pass,515pinned hashes unchanged, exact coverage once,16shards exit0. Identical-product complete isolated build passed. Historical native crash retained; no later-source or process-stability claim. Fresh productf9f93f0/ledger264dcf4 full snapshot212files2118/2118pass,521pinned hashes unchanged, exact coverage once,16shards exit0; identical-product complete isolated build passed. Earlier native/network/assertion failures retained; no later-source or universal stability claim. Product6f4a300/ledger52c96ad: pinned215files2149pass on524unchanged hashes, exact selected coverage once. Initial16shards had native0xC0000409 at10, preserved;15passed shards plus14fresh single-file passes form29-process audited coverage. Identical-source build passed; no native root-cause fix claim. Current product8b5d2df/ledgerff24471:222files2192/2192pass,20fresh processes all exit0,zero skip,531pinned hashes unchanged,exact coverage once; same-product full isolated build passed. Old native failure retained/cause unresolved. Product80f9084/evidence starting362b3cb:228files2252/2252pass,zero skip,538unchanged hashes,exact selected coverage once. Initial20process attempt had native0xC0000409 at19/no report,retained;19passed original reports+11fresh single-file reports form30passing-report coverage(31total attempts). Identical-product complete isolated build/session68456 passed. Original QA/27frozen/formal SHA match;native cause unresolved. Product7647121: complete241files2403pass/zero skip,553unchanged hashes,exact coverage once,20fresh processes exit0/build88392; independent-process migration failure retained outside passing inventory. Sourcee2d7d80/product8affb2f:243files2424pass/zero skip,557hashes unchanged/exactinventoryonce/20processexit0/build15279;separate scene-count counterexamples retained. Source8bf6d9e/product19c8108:245files 2470pass/zero skip,559 pinned hashes/exact selected inventory once/build65969. Original20-process attempt had shard4:3bad-port fixture failures and shard12:native0xC0000409/no report. Retained originals plus26 fresh single-file passing reports form44 selected passing reports; native cause unresolved. Testcheckpoint3929878 leaves product19c8108 unchanged; reproduced environmentHTTP bad-port fixture uses bounded pre-request listener selection,38focusedpass/build19092. Latest full selected coverage remains8bf6d9e245files2470pass;native root cause unresolved."
+      "basis": "Product9917459/ledger6be22bb fixed195-file494-hash complete offline snapshot1957/1957pass, exact coverage once, build pass; original shard5 native0xC0000409 retained, exact halves passed. Native stability and later source edits need new evidence. Fresh source29e6a5f/ledgerc351367:199files1992/1992pass,502pinned hashes unchanged, exact coverage once,16shards; isolated build passed. Old native crash retained. Fresh product1bad19e/ledger5c083d8 full snapshot207files2064/2064pass,515pinned hashes unchanged, exact coverage once,16shards exit0. Identical-product complete isolated build passed. Historical native crash retained; no later-source or process-stability claim. Fresh productf9f93f0/ledger264dcf4 full snapshot212files2118/2118pass,521pinned hashes unchanged, exact coverage once,16shards exit0; identical-product complete isolated build passed. Earlier native/network/assertion failures retained; no later-source or universal stability claim. Product6f4a300/ledger52c96ad: pinned215files2149pass on524unchanged hashes, exact selected coverage once. Initial16shards had native0xC0000409 at10, preserved;15passed shards plus14fresh single-file passes form29-process audited coverage. Identical-source build passed; no native root-cause fix claim. Current product8b5d2df/ledgerff24471:222files2192/2192pass,20fresh processes all exit0,zero skip,531pinned hashes unchanged,exact coverage once; same-product full isolated build passed. Old native failure retained/cause unresolved. Product80f9084/evidence starting362b3cb:228files2252/2252pass,zero skip,538unchanged hashes,exact selected coverage once. Initial20process attempt had native0xC0000409 at19/no report,retained;19passed original reports+11fresh single-file reports form30passing-report coverage(31total attempts). Identical-product complete isolated build/session68456 passed. Original QA/27frozen/formal SHA match;native cause unresolved. Product7647121: complete241files2403pass/zero skip,553unchanged hashes,exact coverage once,20fresh processes exit0/build88392; independent-process migration failure retained outside passing inventory. Sourcee2d7d80/product8affb2f:243files2424pass/zero skip,557hashes unchanged/exactinventoryonce/20processexit0/build15279;separate scene-count counterexamples retained. Source8bf6d9e/product19c8108:245files 2470pass/zero skip,559 pinned hashes/exact selected inventory once/build65969. Original20-process attempt had shard4:3bad-port fixture failures and shard12:native0xC0000409/no report. Retained originals plus26 fresh single-file passing reports form44 selected passing reports; native cause unresolved. Testcheckpoint3929878 leaves product19c8108 unchanged; reproduced environmentHTTP bad-port fixture uses bounded pre-request listener selection,38focusedpass/build19092. Latest full selected coverage remains8bf6d9e245files2470pass;native root cause unresolved. e9ea62a:251files2538selectedpasses/zeroskip/566hashes exactinventory;initial12/16nativeexitsnotpassing,24freshsinglefileprocessescompletecoverage. Rootcauseunresolved;42selectedreports/build18453/safetyaudit."
     },
     "R6.1": {
       "status": "met",
@@ -1058,19 +1059,28 @@
       "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
     },
     "N4.1": {
-      "status": "unmet",
+      "status": "met",
       "evidence": [
+        "docs/post-presence-offline-snapshot.md",
         "docs/perception-audit-authority.md",
-        "tests/perception-audit-authority.test.ts"
+        "docs/builtin-narration-authority.md",
+        "docs/movement-presence-authority.md",
+        "tests/perception-audit-authority.test.ts",
+        "tests/builtin-narration-authority.test.ts",
+        "tests/movement-presence-authority.test.ts"
       ],
-      "basis": "Typed INSPECT omitted from receipt-based narration validation; five actual service/HTTP assertions accept uncommitted player travel. Baseline eight failures include three probe audit-assumption failures, not eight distinct product defects."
+      "basis": "Sourcee9ea62a audited251files2538selectedpasses/zero skip/exactinventory/566hashes/build18453. Initial12/16native0xC0000409 retained;24freshsinglefilepasses complete coverage, native root cause unresolved. Actual Core/HTTP/disk/replay counterexamples and lawful/unsafe controls repaired; only original bounded existing authority/legal-regression condition restored. Full three-structure prose breadth and human quality remain open."
     },
     "N4.2": {
-      "status": "unmet",
+      "status": "met",
       "evidence": [
-        "docs/npc-movement-narration-authority.md"
+        "docs/post-presence-offline-snapshot.md",
+        "docs/npc-movement-narration-authority.md",
+        "docs/movement-presence-authority.md",
+        "tests/npc-movement-narration-authority.test.ts",
+        "tests/movement-presence-authority.test.ts"
       ],
-      "basis": "Actual NPC movement during player WAIT has a Core receipt but its truthful prose is rejected after expanded built-in validation. Independent preflight1fail; partial complete snapshot stopped, build22952 passed."
+      "basis": "Sourcee9ea62a audited251files2538selectedpasses/zero skip/exactinventory/566hashes/build18453. Initial12/16native0xC0000409 retained;24freshsinglefilepasses complete coverage, native root cause unresolved. Actual Core/HTTP/disk/replay counterexamples and lawful/unsafe controls repaired; only original bounded existing authority/legal-regression condition restored. Full three-structure prose breadth and human quality remain open."
     },
     "N4.3": {
       "status": "unmet",
@@ -3384,6 +3394,65 @@
           "reason": "Known legitimate concurrent NPC movement falsely rejected; actual destination/player position/oneMOVE confirmed before prose assertion."
         }
       ]
+    },
+    {
+      "batch": "complete-narration-authority-snapshot",
+      "type": "repair",
+      "source": "e9ea62a",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "docs/post-presence-offline-snapshot.md",
+            "docs/perception-audit-authority.md",
+            "docs/builtin-narration-authority.md",
+            "docs/movement-presence-authority.md",
+            "tests/perception-audit-authority.test.ts",
+            "tests/builtin-narration-authority.test.ts",
+            "tests/movement-presence-authority.test.ts"
+          ],
+          "reason": "Original counterexamples repaired and current-source complete selected test inventory/safety audit pass; all negative and positive controls retained. No broader prose/human acceptance inferred."
+        },
+        {
+          "id": "N4.2",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "docs/post-presence-offline-snapshot.md",
+            "docs/npc-movement-narration-authority.md",
+            "docs/movement-presence-authority.md",
+            "tests/npc-movement-narration-authority.test.ts",
+            "tests/movement-presence-authority.test.ts"
+          ],
+          "reason": "Original counterexamples repaired and current-source complete selected test inventory/safety audit pass; all negative and positive controls retained. No broader prose/human acceptance inferred."
+        }
+      ],
+      "condition_checks": [
+        {
+          "id": "R5.4",
+          "result": "Refreshed complete selected offline coverage; original12/16nativefailures retained and unresolved, not initial-all-pass.",
+          "evidence": [
+            "docs/post-presence-offline-snapshot.md"
+          ]
+        },
+        {
+          "id": "N4.3",
+          "result": "Known controls pass; complete original expanded metaphor/retelling/sensory/absent/item three-structure corpus remains open.",
+          "evidence": [
+            "docs/post-presence-offline-snapshot.md"
+          ]
+        },
+        {
+          "id": "N4.4",
+          "result": "Full original three-structure false-acceptance/false-rejection corpus remains open.",
+          "evidence": [
+            "docs/post-presence-offline-snapshot.md"
+          ]
+        }
+      ],
+      "note": "+2conditions/+1.25pp restores prior withdrawal,net0fromresumed100baseline. No new denominator or broader acceptance.42selectedreports18originalpassing+24recovery;native0xC0000409unresolved."
     }
   ],
   "new_risks": [],
@@ -4144,24 +4213,52 @@
       "id": "perception-inspect-authority",
       "scope": "original",
       "condition": "N4.1",
-      "status": "open",
+      "status": "resolved",
       "source": "f67402f",
       "evidence": [
         "docs/perception-audit-authority.md",
-        "tests/perception-audit-authority.test.ts"
+        "tests/perception-audit-authority.test.ts",
+        "docs/post-presence-offline-snapshot.md"
       ],
-      "summary": "Typed INSPECT receipt excluded from narrator firewall; literal player travel survives response and persistent replay without Core movement. Generic positive-audit hypothesis not yet independently confirmed."
+      "summary": "Typed INSPECT receipt excluded from narrator firewall; literal player travel survives response and persistent replay without Core movement. Generic positive-audit hypothesis not yet independently confirmed.",
+      "repaired_source": "e9ea62a"
     },
     {
       "id": "actual-npc-movement-prose",
       "scope": "original",
       "condition": "N4.2",
-      "status": "open",
+      "status": "resolved",
       "source": "a2c768b",
       "evidence": [
-        "docs/npc-movement-narration-authority.md"
+        "docs/npc-movement-narration-authority.md",
+        "docs/post-presence-offline-snapshot.md"
       ],
-      "summary": "Visible NPC movement receipts omitted from nonphysical/noncompound narrator validation, rejecting truthful travel during WAIT."
+      "summary": "Visible NPC movement receipts omitted from nonphysical/noncompound narrator validation, rejecting truthful travel during WAIT.",
+      "repaired_source": "e9ea62a"
+    },
+    {
+      "id": "builtin-prose-authority",
+      "scope": "original",
+      "condition": "N4.1",
+      "status": "resolved",
+      "source": "e9ea62a",
+      "evidence": [
+        "docs/builtin-narration-authority.md",
+        "docs/post-presence-offline-snapshot.md"
+      ],
+      "summary": "WAIT/HOLD/TALK prose ignored Core effects; existing request receipt now constrains prose, preserves optional enrichment validators and original Provider failure semantics."
+    },
+    {
+      "id": "move-presence-bypass",
+      "scope": "original",
+      "condition": "N4.1",
+      "status": "resolved",
+      "source": "e9ea62a",
+      "evidence": [
+        "docs/movement-presence-authority.md",
+        "docs/post-presence-offline-snapshot.md"
+      ],
+      "summary": "Movement skipped scene presence; always current validation now rejects absent prose/structured claims and checks explicit departure context against prior actual scene."
     }
   ]
 }
