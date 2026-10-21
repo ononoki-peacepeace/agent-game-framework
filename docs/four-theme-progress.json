@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "bbba90c + reviewed real npm/Vite process-boundary evidence",
+  "assessed_source": "50ccb02 + reviewed turn-qualified denial and fixed three-world Freeform corpus",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -705,11 +705,16 @@
       "basis": "Known remaining implementation or acceptance gap in the existing ledger. 5f29a42 repairs sealed ancestry for source/destination movement/transfer and Freeform prerequisites;baseline8fail/3controls,expanded destination/Freeform counterexamples retained,7files99pass/build,actual disk no-write refusals. Full condition remains open. f537de7 repairs registered/shared sealed-contained damage before RNG/mutation;baseline4fail/2controls,6files111pass/build,actual disk service no-write/no-generation refusal. Full matrix stays open. 132de1c repairs tracked sale placement/owner cleanup and sealed/filled-container refusal;baseline4fail/1control,6files105pass/build,real disk/service replay with one payment/receipt and no extra generation. Equipped/consumption/full matrix stays open. 857a42c replaces equipped SELL invariant failure with pre-settlement world refusal;baseline2fail/1explicit-UNEQUIP control,5files77pass/build,real disk/service repeated refusal no writes/generation. Full condition remains open. d1721f4 guards player/NPC EQUIP through sealed ancestors;baseline5fail/4open/exterior controls,7files98pass/build,actual disk/service refusal no-write/no-generation. Full condition remains open. Registered destroyed/sealed activity resources now block actual execution and disk/service recreation without mutation/generation; final8directpass/strict40.891s. Broader dynamic matrix remains open. Time-hook destroyed/remote resources, sealed ancestry and departed NPCs now recheck before action results; final7directpass/strict54.467s, actual disk recreation unchanged. Full body/terrain/capability/multi-world matrix remains open. Paired fatigue/recovery now affects actual nonphysical result using current settlement state; broad dynamic matrix remains open. Live local destinations rebind after time hooks: moved non-item/absent environment anchors refuse before position effects; actual disk restart,4files55distinctpassingunion/strict47.785s. Full dynamic matrix remains open. Destination prerequisites now match registeredMOVE route flags/known endpoints/closed lifecycle;5actualcounterexamples repaired, alternative/hierarchy/disk controls,6files96distinctpassingunion/strict48.420s. Other dynamic object/capability breadth remains open. Live item damage/storage contracts recheck destroyedtarget/containerrole/ownseal before RNG with structured worldrefusal;capability pair already passed.4files52distinctpassingunion/finalstrict47.923s/actualdisk bytesrefusal. Consumption/broader matrix remains open. Shared storage binding now filters sealed source ancestry/destination ownseal for offered choices as well as execution;4actualfail6controls repaired,5files65distinctpassingunion/finalstrict49.386s/real diskreadrecreation. Full breadth open. Actualbaseline6fail5controls4.950s: tracked eating/drinking saved as activity without quantity mutation. Source-bound public-item guard now stops unsupported canonical consumption before time/RNG/write/Narrator, independent of upstream person-only binding (4failed variants4.053s retained). Final5files63pass13.999s/strict35.396sexit0;generic breakfast/observation/nonconsumption controls preserved. No canonical consumption operation or arbitrarygrammar claim;wholeA8.3 remainsunmet."
     },
     "A8.4": {
-      "status": "unverified",
+      "status": "met",
       "evidence": [
-        "tests/low-stakes-open-goal.test.ts"
+        "tests/low-stakes-open-goal.test.ts",
+        "docs/freeform-three-world-corpus.md",
+        "tests/freeform-three-world-corpus.test.ts",
+        "tests/fixtures/freeform-fixed-corpus.ts",
+        "tests/fixtures/narrative-worlds.ts",
+        "tests/inventory-turn-denial.test.ts"
       ],
-      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required. Closure: same6samplefreeformcorpus in actualcommerce/movement,relationships,autonomy/background structures;normal+offlineNarratortimeout36JsonStore/servicecases plus15ambiguity/missing/route/write/replay boundaries. Physicalsuccess/miss/partial,actualHP/stamina/time/rollcounts,itempickupsuccess/failure,exactfreshservice response/bytes/noextraRNGorGeneration verified. Full51 passes within5files109pass45.791s;type/default-only followup15selectedpass15.737s/strict30.917sexit0. Baseline48pass3realfalse-rejectionfail33.078s retained;minimalsharednegationfix. Boundedcorpus only;A8.3 actualconsumption and broadgrammar/realProvider remainopen."
     },
     "A9.1": {
       "status": "unmet",
@@ -1221,9 +1226,12 @@
         "docs/npc-movement-narration-authority.md",
         "docs/movement-presence-authority.md",
         "tests/npc-movement-narration-authority.test.ts",
-        "tests/movement-presence-authority.test.ts"
+        "tests/movement-presence-authority.test.ts",
+        "docs/freeform-three-world-corpus.md",
+        "tests/freeform-three-world-corpus.test.ts",
+        "tests/inventory-turn-denial.test.ts"
       ],
-      "basis": "Sourcee9ea62a audited251files2538selectedpasses/zero skip/exactinventory/566hashes/build18453. Initial12/16native0xC0000409 retained;24freshsinglefilepasses complete coverage, native root cause unresolved. Actual Core/HTTP/disk/replay counterexamples and lawful/unsafe controls repaired; only original bounded existing authority/legal-regression condition restored. Full three-structure prose breadth and human quality remain open."
+      "basis": "Sourcee9ea62a audited251files2538selectedpasses/zero skip/exactinventory/566hashes/build18453. Initial12/16native0xC0000409 retained;24freshsinglefilepasses complete coverage, native root cause unresolved. Actual Core/HTTP/disk/replay counterexamples and lawful/unsafe controls repaired; only original bounded existing authority/legal-regression condition restored. Full three-structure prose breadth and human quality remain open. Withdrawal: actual three-world failed pickup cannot commit lawful turn-qualified denial;fixed51baseline48pass3fail33.078s, directscope2fail3controls. Generic inventory prefix rejects 这次/本次-qualified single negation. Restored: existing inventory whole-clause single-negation accepts turnqualifier only;double negative/other actor/laterpositive stillchecked. Direct5pass3.076s;5files109pass45.791s including complete51threeworld matrix. After testtypes/default-only correction,15selectedpass15.737s/finalstrict30.917sexit0;no productchange after109run."
     },
     "N4.3": {
       "status": "met",
@@ -4872,6 +4880,59 @@
         }
       ],
       "note": "105/16065.625%;net0. First2pass96.744s preceded raw-result export;final2pass79.459s with rawlogs,2adjacent selectedpass13.862s/3excluded,strict33.268sexit0. No successful fullbuild or product cleanup mechanism claim."
+    },
+    {
+      "batch": "inventory-turn-denial-withdrawal",
+      "type": "evidence_correction",
+      "source": "50ccb02",
+      "transitions": [
+        {
+          "id": "N4.2",
+          "before": "met",
+          "after": "unmet",
+          "reason": "Actual failed pickup across three structures rejects lawful 这次没有拿起纸片 prose;shared inventory whole-clause denial lacks turn qualifier.",
+          "evidence": [
+            "docs/freeform-three-world-corpus.md",
+            "tests/freeform-three-world-corpus.test.ts",
+            "tests/inventory-turn-denial.test.ts"
+          ]
+        }
+      ],
+      "note": "104/16065.00%;withdraw1/-0.625pp pending repair;A8.4 remainsunverified."
+    },
+    {
+      "batch": "freeform-three-world-corpus",
+      "type": "repair",
+      "source": "50ccb02 + reviewed shared denial fix",
+      "transitions": [
+        {
+          "id": "N4.2",
+          "before": "unmet",
+          "after": "met",
+          "reason": "Turn-qualified single inventory denial accepted;double negatives/other actors/later uncommitted pickup remain rejected.",
+          "evidence": [
+            "docs/freeform-three-world-corpus.md",
+            "tests/freeform-three-world-corpus.test.ts",
+            "tests/fixtures/freeform-fixed-corpus.ts",
+            "tests/fixtures/narrative-worlds.ts",
+            "tests/inventory-turn-denial.test.ts"
+          ]
+        },
+        {
+          "id": "A8.4",
+          "before": "unverified",
+          "after": "met",
+          "reason": "Fixed51 actual three-structure service/disk corpus preserves Core success/partial/failure,time/resources,refusal,technical and replay evidence.",
+          "evidence": [
+            "docs/freeform-three-world-corpus.md",
+            "tests/freeform-three-world-corpus.test.ts",
+            "tests/fixtures/freeform-fixed-corpus.ts",
+            "tests/fixtures/narrative-worlds.ts",
+            "tests/inventory-turn-denial.test.ts"
+          ]
+        }
+      ],
+      "note": "106/16066.25%,23unmet31unverified;wholebatchnet+1/+0.625pp from105 after N4.2withdraw/restore. 5files109pass45.791s precedes testtype/default-only correction;15selectedpass36excluded15.737s/finalstrict30.917s. Sourcefixone regex;no Coreeffect/API/fullsuite/build claim."
     }
   ],
   "new_risks": [],
@@ -6128,6 +6189,19 @@
         "tests/freeform-consumption-authority.test.ts"
       ],
       "summary": "Activity evidence falsely completed fixed explicit consumption of canonical assets without quantity mutation. Missing capability now safely stops before effects;actual consumption capability remains absent."
+    },
+    {
+      "id": "inventory-turn-denial",
+      "scope": "original",
+      "condition": "N4.2",
+      "status": "resolved",
+      "source": "50ccb02",
+      "evidence": [
+        "docs/freeform-three-world-corpus.md",
+        "tests/freeform-three-world-corpus.test.ts",
+        "tests/inventory-turn-denial.test.ts"
+      ],
+      "summary": "Turn-qualified lawful pickup denial is treated as unsupported positive inventory claim after real failed Core check."
     }
   ]
 }

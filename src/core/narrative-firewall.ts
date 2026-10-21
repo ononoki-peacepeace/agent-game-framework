@@ -40,7 +40,7 @@ function assertedPatternMatch(kind:string,pattern:RegExp,text:string,expressiveP
     if(kind==='inventory'){
       // Keep the whole clause prefix narrow: extra predicates, other actors
       // and double negatives cannot suppress this mechanical occurrence.
-      if(/^(?:(?:你|玩家|他|她)(?:仍然|仍|也|却|只是)?)?(?:没有|并未|尚未|还没)$/.test(prefix))continue;
+      if(/^(?:这次|本次)?(?:(?:你|玩家|他|她)(?:仍然|仍|也|却|只是)?)?(?:没有|并未|尚未|还没)$/.test(prefix))continue;
     }
     if(kind==='inventory'&&match[0]==='放下'&&/^(?:了|自己的|双|两只|一只)*(?:手臂|胳膊|双手|手|肩膀|头|腿)(?=[，,。；;！？!?]|$)/.test(text.slice(match.index+match[0].length)))continue;
     if(kind==='injury'&&/(?:没有|并未|尚未|未曾|未|不曾)$/.test(text.slice(Math.max(0,match.index-4),match.index)))continue;
