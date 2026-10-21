@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "6770048 + reviewed three-structure fixed corpus evidence",
+  "assessed_source": "1b69824 + reviewed canonical consumption authority guard",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -695,9 +695,11 @@
         "docs/freeform-live-item-contract.md",
         "tests/freeform-live-item-contract.test.ts",
         "docs/sealed-storage-binding.md",
-        "tests/sealed-storage-binding.test.ts"
+        "tests/sealed-storage-binding.test.ts",
+        "docs/freeform-consumption-authority.md",
+        "tests/freeform-consumption-authority.test.ts"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 5f29a42 repairs sealed ancestry for source/destination movement/transfer and Freeform prerequisites;baseline8fail/3controls,expanded destination/Freeform counterexamples retained,7files99pass/build,actual disk no-write refusals. Full condition remains open. f537de7 repairs registered/shared sealed-contained damage before RNG/mutation;baseline4fail/2controls,6files111pass/build,actual disk service no-write/no-generation refusal. Full matrix stays open. 132de1c repairs tracked sale placement/owner cleanup and sealed/filled-container refusal;baseline4fail/1control,6files105pass/build,real disk/service replay with one payment/receipt and no extra generation. Equipped/consumption/full matrix stays open. 857a42c replaces equipped SELL invariant failure with pre-settlement world refusal;baseline2fail/1explicit-UNEQUIP control,5files77pass/build,real disk/service repeated refusal no writes/generation. Full condition remains open. d1721f4 guards player/NPC EQUIP through sealed ancestors;baseline5fail/4open/exterior controls,7files98pass/build,actual disk/service refusal no-write/no-generation. Full condition remains open. Registered destroyed/sealed activity resources now block actual execution and disk/service recreation without mutation/generation; final8directpass/strict40.891s. Broader dynamic matrix remains open. Time-hook destroyed/remote resources, sealed ancestry and departed NPCs now recheck before action results; final7directpass/strict54.467s, actual disk recreation unchanged. Full body/terrain/capability/multi-world matrix remains open. Paired fatigue/recovery now affects actual nonphysical result using current settlement state; broad dynamic matrix remains open. Live local destinations rebind after time hooks: moved non-item/absent environment anchors refuse before position effects; actual disk restart,4files55distinctpassingunion/strict47.785s. Full dynamic matrix remains open. Destination prerequisites now match registeredMOVE route flags/known endpoints/closed lifecycle;5actualcounterexamples repaired, alternative/hierarchy/disk controls,6files96distinctpassingunion/strict48.420s. Other dynamic object/capability breadth remains open. Live item damage/storage contracts recheck destroyedtarget/containerrole/ownseal before RNG with structured worldrefusal;capability pair already passed.4files52distinctpassingunion/finalstrict47.923s/actualdisk bytesrefusal. Consumption/broader matrix remains open. Shared storage binding now filters sealed source ancestry/destination ownseal for offered choices as well as execution;4actualfail6controls repaired,5files65distinctpassingunion/finalstrict49.386s/real diskreadrecreation. Full breadth open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 5f29a42 repairs sealed ancestry for source/destination movement/transfer and Freeform prerequisites;baseline8fail/3controls,expanded destination/Freeform counterexamples retained,7files99pass/build,actual disk no-write refusals. Full condition remains open. f537de7 repairs registered/shared sealed-contained damage before RNG/mutation;baseline4fail/2controls,6files111pass/build,actual disk service no-write/no-generation refusal. Full matrix stays open. 132de1c repairs tracked sale placement/owner cleanup and sealed/filled-container refusal;baseline4fail/1control,6files105pass/build,real disk/service replay with one payment/receipt and no extra generation. Equipped/consumption/full matrix stays open. 857a42c replaces equipped SELL invariant failure with pre-settlement world refusal;baseline2fail/1explicit-UNEQUIP control,5files77pass/build,real disk/service repeated refusal no writes/generation. Full condition remains open. d1721f4 guards player/NPC EQUIP through sealed ancestors;baseline5fail/4open/exterior controls,7files98pass/build,actual disk/service refusal no-write/no-generation. Full condition remains open. Registered destroyed/sealed activity resources now block actual execution and disk/service recreation without mutation/generation; final8directpass/strict40.891s. Broader dynamic matrix remains open. Time-hook destroyed/remote resources, sealed ancestry and departed NPCs now recheck before action results; final7directpass/strict54.467s, actual disk recreation unchanged. Full body/terrain/capability/multi-world matrix remains open. Paired fatigue/recovery now affects actual nonphysical result using current settlement state; broad dynamic matrix remains open. Live local destinations rebind after time hooks: moved non-item/absent environment anchors refuse before position effects; actual disk restart,4files55distinctpassingunion/strict47.785s. Full dynamic matrix remains open. Destination prerequisites now match registeredMOVE route flags/known endpoints/closed lifecycle;5actualcounterexamples repaired, alternative/hierarchy/disk controls,6files96distinctpassingunion/strict48.420s. Other dynamic object/capability breadth remains open. Live item damage/storage contracts recheck destroyedtarget/containerrole/ownseal before RNG with structured worldrefusal;capability pair already passed.4files52distinctpassingunion/finalstrict47.923s/actualdisk bytesrefusal. Consumption/broader matrix remains open. Shared storage binding now filters sealed source ancestry/destination ownseal for offered choices as well as execution;4actualfail6controls repaired,5files65distinctpassingunion/finalstrict49.386s/real diskreadrecreation. Full breadth open. Actualbaseline6fail5controls4.950s: tracked eating/drinking saved as activity without quantity mutation. Source-bound public-item guard now stops unsupported canonical consumption before time/RNG/write/Narrator, independent of upstream person-only binding (4failed variants4.053s retained). Final5files63pass13.999s/strict35.396sexit0;generic breakfast/observation/nonconsumption controls preserved. No canonical consumption operation or arbitrarygrammar claim;wholeA8.3 remainsunmet."
     },
     "A8.4": {
       "status": "unverified",
@@ -4832,6 +4834,23 @@
         }
       ],
       "note": "105/16065.625%;net+1/+0.625pp. No product change; fixed102matrix plus43original/adjacent cases.145pass43.075s precedes type-only witness declarations;3witnesses rerun7.046s,finalstrict44.082s. Failed fixture and strict reports preserved."
+    },
+    {
+      "batch": "freeform-consumption-authority",
+      "type": "repair",
+      "source": "1b69824 + reviewed source",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "A8.3",
+          "result": "Concrete false consumption completion repaired through existing structured unavailable result;canonical quantity operation and complete dynamic prerequisite evidence remain open.",
+          "evidence": [
+            "docs/freeform-consumption-authority.md",
+            "tests/freeform-consumption-authority.test.ts"
+          ]
+        }
+      ],
+      "note": "105/16065.625%;net0. Final5files63pass13.999s,strict35.396sexit0. Baseline6fail5pass4.950s,sourcebinding4fail4.053s,initialstrictmissingtestfields35.552s retained. Fixed15case boundary;switch R7.4 after checkpoint."
     }
   ],
   "new_risks": [],
@@ -6076,6 +6095,18 @@
         "tests/item-condition-narrative.test.ts"
       ],
       "summary": "Narrator prose can destroy intact named item or repair damaged/destroyed item without Core settlement."
+    },
+    {
+      "id": "freeform-consumption-activity-authority",
+      "scope": "original",
+      "condition": "A8.3",
+      "status": "resolved",
+      "source": "1b69824",
+      "evidence": [
+        "docs/freeform-consumption-authority.md",
+        "tests/freeform-consumption-authority.test.ts"
+      ],
+      "summary": "Activity evidence falsely completed fixed explicit consumption of canonical assets without quantity mutation. Missing capability now safely stops before effects;actual consumption capability remains absent."
     }
   ]
 }

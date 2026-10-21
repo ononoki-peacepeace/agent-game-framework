@@ -144,6 +144,15 @@ export const requestsItemRelocation=(input:string)=>/(?:收|放|装|塞)(?:进|�
 export const requiresCanonicalItemMutation=(input:string)=>requestsItemRelocation(input)||
   /(?:交给|递给|卖掉|出售|拿走|取走|拿起|取出|拾起|捡起|丢弃|扔掉|买下)/.test(input);
 
+/** An activity receipt cannot consume a named canonical asset. Match an actual
+ * command on that item, leaving observation, negation and generic meals alone. */
+function requestsNamedItemConsumption(input:string,name:string){
+  if(!name)return false;
+  const escaped=name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const command=new RegExp(`^(?:我)?(?:现在|直接|尝试)?(?:[吃喝](?:掉|完|下)?(?:这|那)?(?:[一二两三四五六七八九十\\d]+(?:块|口|瓶|份))?${escaped}|(?:把|将)${escaped}[吃喝](?:掉|完|下))`);
+  return input.split(/[，,。；;！？!?]/).some(clause=>command.test(clause.trim())&&!/吗|是否|有没有|能否/.test(clause));
+}
+
 /** Resource-dependent activities use public scene facts, not an invented inventory entity. */
 export function activityRequirement(save:SavePackage,input:string){
   if(requiresCanonicalItemMutation(input)||requiresPersistentProgress(input)||localDestination(input)||isPhysicalAction(input))
@@ -347,6 +356,8 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
   if(people.length===1&&proposal.target_id===null)proposal.target_id=people[0].id;
   const mentionedItem=named.find(entity=>entity.components.item&&entity.id===proposal.item_move?.item_id)
     ??named.find(entity=>entity.components.item&&entity.components.identity?.name&&input.includes(String(entity.components.identity.name)));
+  if(view.entities.some(entity=>entity.components.item&&requestsNamedItemConsumption(input,String(entity.components.identity?.name??''))))
+    throw new WorldBlockedError('unavailable','当前世界尚无已登记物品的消耗结算能力；这次没有消耗物品，也没有完成该行动。');
   const activityContract=activityRequirement(current,input);
   if(proposal.item_change&&(!mentionedItem||mentionedItem.id!==proposal.item_change.item_id||
     !input.includes(proposal.item_change.source_quote)||proposal.physical_action))
