@@ -1,0 +1,11 @@
+# Scene-generation failure with unreadable canonical refresh
+
+Parent `25b6add`. Actual baseline `scene-generation-read-failure-baseline.json`: **two failures / one readable control passed, 3.698s**. An offline scene Provider refuses; either the first recovery read or the final failure-summary read stays unavailable. Both throw out of the scene failure boundary. No scene candidate/commit exists and no write is attempted.
+
+The two reads now share a local observation helper. An unavailable refresh returns uncertain `transaction_failure/natural_scene_refresh`, known revision/receipts only, no cached view and no speech. Readable storage retains the original bounded repair/refusal classification. No Provider call or replay is added to recover storage.
+
+Verification is incomplete. The permitted fixed-test command was not executed: automatic approval review first timed out, then the allowed retry failed because the review stream disconnected under server overload. This is a review-service failure, not a determination that the action is unsafe. The sandbox retry could not start esbuild (`spawn EPERM`); it executed zero tests and generated no JSON test report. Do not count any fixed tests as passing. Strict root TypeScript alone passed, **27.023s**, in `scene-generation-read-failure-typecheck-sandbox.json`; `git diff --check` passed. Baseline failures remain preserved. No current full build/suite claim.
+
+After the user's explicit authorization to resume, the permitted test process completed with exit 0: **4 files / 56 tests passed, 11.235s**, zero failed/skipped (`scene-generation-read-failure-authorized.json`). This includes the three new cases plus `scene-unreadable-commit`, `p0a-scene-cross-stage-recovery`, and `scene-interaction`. The earlier interruption and baseline reports are preserved; the preceding paragraph describes that historical interruption, superseded by this actual result.
+
+R5.3 stays unmet; **103/160 (64.375%), delta zero**. Next: reproduce scene-effect and finalizer read failures, checking receipt authority before claiming completed effects. No formal save, 3100, frozen criteria, Provider configuration or original dirty files changed. No full build or full-suite claim.

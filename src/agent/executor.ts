@@ -1183,6 +1183,16 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
       let outcome:Awaited<ReturnType<typeof runSceneInteraction>>=null;
       let sceneError:unknown=null;
       let sceneNeedsPlan=false;
+      let lastSceneState=save;
+      const refreshSceneCandidate=async()=>{
+        try{lastSceneState=await service.current();return lastSceneState;}catch{return null;}
+      };
+      const unreadableSceneCandidate=()=>{
+        const failure=engineOutcome('transaction_failure','natural_scene_refresh',lastSceneState.state_revision,
+          false,[],committedSince(save,lastSceneState));
+        return agentResult('WORLD_ACTION',engineMessage(failure),{outcome:failure,
+          recovery:recoveryContext(body.original_input??body.input,failure),presentation:'failure'});
+      };
       let repair:SceneRepair|undefined;
       let previousCode:string|null=null;
       let sceneAttempts=0;
@@ -1196,7 +1206,8 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
           if(outcome)break;
           sceneError=new SceneInteractionError('PROVIDER_SCHEMA_INVALID','provider_response','场景提案没有通过结构校验');
         }catch(error){sceneError=error;}
-        const latest=await service.current(),failure=sceneFailureInfo(sceneError);
+        const latest=await refreshSceneCandidate();if(!latest)return unreadableSceneCandidate();
+        const failure=sceneFailureInfo(sceneError);
         const safe=latest.game_id===save.game_id&&latest.state_revision===save.state_revision&&
           !committedSince(save,latest).length;
         // No action was committed. A scene which invents departures may have
@@ -1223,7 +1234,8 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
         previousCode=failure.code;
         repair=sceneRepairFeedback(sceneError,latest.state_revision);
       }
-      if(!outcome&&!sceneNeedsPlan){const latest=await service.current(),failure=sceneFailureInfo(sceneError);
+      if(!outcome&&!sceneNeedsPlan){const latest=await refreshSceneCandidate();if(!latest)return unreadableSceneCandidate();
+        const failure=sceneFailureInfo(sceneError);
         (currentTrace()??service.logger).warn('agent.scene.failed',{module:'agent',metadata:{code:failure.code,stage:failure.stage,
           revision:latest.state_revision,
           detail:sceneError instanceof Error?sceneError.message.slice(0,300):String(sceneError).slice(0,300)}});
