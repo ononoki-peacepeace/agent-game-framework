@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：490c423 + reviewed compound failure presentation repair。整体 **68.13%**（109/160 个固定条件满足）。未满足 21，待验证 30。
+计分版本 v1；评估源代码：14c2d14 + reviewed long-stage identity and narration-beat presentation repair。整体 **68.13%**（109/160 个固定条件满足）。未满足 22，待验证 29。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -9,8 +9,8 @@
 | ① 可靠性 | 33 | 4 | 3 | 5/5/0 | 82.5% |
 | ② 自然语言行动 | 25 | 6 | 9 | 4/4/2 | 62.5% |
 | ③ 自主持续世界 | 28 | 5 | 7 | 4/6/0 | 70.0% |
-| ④ Narrator 与体验 | 23 | 6 | 11 | 3/5/2 | 57.5% |
-| 合计 | 109 | 21 | 30 | 16/20/4 | 68.13% |
+| ④ Narrator 与体验 | 23 | 7 | 10 | 3/5/2 | 57.5% |
+| 合计 | 109 | 22 | 29 | 16/20/4 | 68.13% |
 
 旧台账的12/21/7是工作包人工分类，保留作历史。这里的完成/部分/未完成由4个条件满足数推导，不能与旧分类混用。旧46%为退役估计；首次建立口径不是产品进展，不计算相对46%的提升。
 
@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：74 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：76 已修复，19 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -188,6 +188,8 @@
 | mixed-condition-category-closure | evidence_correction | A7.3: unmet → met | +0.625 pp |
 | mixed-condition-parent-http-closure | evidence_correction | A7.4: unverified → met | +0.625 pp |
 | compound-failed-unexecuted-closure | repair | N3.3: unmet → met | +0.625 pp |
+| long-compound-stage-omission-counterexample | evidence_correction | N3.1: met → unmet; N3.3: met → unmet | -1.250 pp |
+| long-compound-stage-identity-repair | repair | N3.1: unmet → met; N3.3: unmet → met; N3.4: unverified → unmet | +1.250 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -481,10 +483,10 @@
 
 | 条件 | 具体通过条件 | 状态 | 依据 |
 |---|---|---|---|
-| N3.1 | 复合行动叙述聚合已结算步骤 | 满足 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts) |
+| N3.1 | 复合行动叙述聚合已结算步骤 | 满足 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts), [compound-three-world-prose.md](../docs/compound-three-world-prose.md), [compound-three-world-prose-review.json](../docs/compound-three-world-prose-review.json), [compound-three-world-prose.test.ts](../tests/compound-three-world-prose.test.ts), [agent-presentation.test.ts](../tests/agent-presentation.test.ts) |
 | N3.2 | 身体和发言结果以凭据为准不重演 | 满足 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts) |
-| N3.3 | 多步叙述完整表达成功、失败与未执行的区别 | 满足 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts), [compound-degraded-prose.test.ts](../tests/compound-degraded-prose.test.ts), [compound-degraded-prose.md](../docs/compound-degraded-prose.md), [partial-plan-visible-status.test.ts](../tests/partial-plan-visible-status.test.ts), [partial-plan-visible-status.md](../docs/partial-plan-visible-status.md), [compound-reaction-budget.test.ts](../tests/compound-reaction-budget.test.ts), [compound-reaction-ownership.md](../docs/compound-reaction-ownership.md), [item-action-degraded-prose.test.ts](../tests/item-action-degraded-prose.test.ts), [item-action-degraded-prose.md](../docs/item-action-degraded-prose.md), [hold-activity-fallback.test.ts](../tests/hold-activity-fallback.test.ts), [hold-activity-fallback.md](../docs/hold-activity-fallback.md), [scene-wait-completion.md](../docs/scene-wait-completion.md), [scene-wait-completion.test.ts](../tests/scene-wait-completion.test.ts), [open-goal-wait-completion.md](../docs/open-goal-wait-completion.md), [open-goal-wait-completion.test.ts](../tests/open-goal-wait-completion.test.ts), [compound-failure-corpus.md](../docs/compound-failure-corpus.md), [compound-failure-corpus.test.ts](../tests/compound-failure-corpus.test.ts), [plan-inspection-completion.test.ts](../tests/plan-inspection-completion.test.ts), [conditional-speech-http-recovery.test.ts](../tests/conditional-speech-http-recovery.test.ts), [conditional-activity-interruption.md](../docs/conditional-activity-interruption.md) |
-| N3.4 | 多世界长复合动作描写自然且不漏步骤 | 待验证 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts) |
+| N3.3 | 多步叙述完整表达成功、失败与未执行的区别 | 满足 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts), [compound-degraded-prose.test.ts](../tests/compound-degraded-prose.test.ts), [compound-degraded-prose.md](../docs/compound-degraded-prose.md), [partial-plan-visible-status.test.ts](../tests/partial-plan-visible-status.test.ts), [partial-plan-visible-status.md](../docs/partial-plan-visible-status.md), [compound-reaction-budget.test.ts](../tests/compound-reaction-budget.test.ts), [compound-reaction-ownership.md](../docs/compound-reaction-ownership.md), [item-action-degraded-prose.test.ts](../tests/item-action-degraded-prose.test.ts), [item-action-degraded-prose.md](../docs/item-action-degraded-prose.md), [hold-activity-fallback.test.ts](../tests/hold-activity-fallback.test.ts), [hold-activity-fallback.md](../docs/hold-activity-fallback.md), [scene-wait-completion.md](../docs/scene-wait-completion.md), [scene-wait-completion.test.ts](../tests/scene-wait-completion.test.ts), [open-goal-wait-completion.md](../docs/open-goal-wait-completion.md), [open-goal-wait-completion.test.ts](../tests/open-goal-wait-completion.test.ts), [compound-failure-corpus.md](../docs/compound-failure-corpus.md), [compound-failure-corpus.test.ts](../tests/compound-failure-corpus.test.ts), [plan-inspection-completion.test.ts](../tests/plan-inspection-completion.test.ts), [conditional-speech-http-recovery.test.ts](../tests/conditional-speech-http-recovery.test.ts), [conditional-activity-interruption.md](../docs/conditional-activity-interruption.md), [compound-three-world-prose.md](../docs/compound-three-world-prose.md), [compound-three-world-prose-review.json](../docs/compound-three-world-prose-review.json), [compound-three-world-prose.test.ts](../tests/compound-three-world-prose.test.ts), [agent-presentation.test.ts](../tests/agent-presentation.test.ts) |
+| N3.4 | 多世界长复合动作描写自然且不漏步骤 | 未满足 | [compound-three-world-prose.md](../docs/compound-three-world-prose.md), [compound-three-world-prose-review.json](../docs/compound-three-world-prose-review.json), [compound-three-world-prose.test.ts](../tests/compound-three-world-prose.test.ts), [agent-presentation.test.ts](../tests/agent-presentation.test.ts) |
 
 ## N4 Facts, presence, perception and legal-description false rejection balance
 

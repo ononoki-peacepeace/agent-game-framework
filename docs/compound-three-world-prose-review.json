@@ -1,0 +1,1156 @@
+{
+  "version": 1,
+  "parent": "14c2d14",
+  "reviewer": "Codex developer self-review; not independent/human acceptance",
+  "rubric": "docs/narrator-prose-benchmark.v1.json",
+  "capture_run": "b7754503-207a-4abc-a3a4-611e54a32cb8",
+  "all30_read": true,
+  "exact_text_groups": 10,
+  "text_identical_within_each_three_world_variant": true,
+  "condition": "N3.4",
+  "condition_closed": false,
+  "quality_summary": "Factual completeness repaired. Rhythm/perception do not reach2; authored physical candidates contain explicit tool language. No acceptance credit.",
+  "open_attributed_speech_boundary": "Existing UI protects latest actual speech instead of replacing it with plain assembled story. This batch only proves narration-only beats; preserving all earlier turns plus all attributed utterances needs separate bounded evidence and a compatible presentation design.",
+  "rows": [
+    {
+      "world": "autonomy",
+      "mode": "fallback",
+      "boundary": "after",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-autonomy-fallback-after.json",
+      "capture_sha256": "3ce0bd15af29e7dfaef630c6b1158b3a932cdddac06f0dc41bfb3ed35cc6a1aa",
+      "story": "你等了1分钟。\n你向林舟开了口。\n你对林舟发起了尝试，这一次未能建立接触。",
+      "message": "前面已经结算的行动保持有效；后续步骤未能可靠完成。请查看当前世界状态后再决定下一步。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "autonomy",
+      "mode": "fallback",
+      "boundary": "missing",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-autonomy-fallback-missing.json",
+      "capture_sha256": "7616688f0de6852ac16fe0172e10a7249373352d17f2c472248dd4c14251609b",
+      "story": "你等了1分钟。\n你向林舟开了口。",
+      "message": "“尝试打击林舟”尚未完成：角色没有持有所需物品\n尚未执行：整理已有记录两分钟；向林舟问好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "autonomy",
+      "mode": "fallback",
+      "boundary": "normal",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-autonomy-fallback-normal.json",
+      "capture_sha256": "e5d63862a2b7f862bf2b20b7616016d5c64b99260ba6f6e8b06593b4188bdb5b",
+      "story": "你等了1分钟。\n你向林舟开了口。\n你对林舟发起了尝试，这一次未能建立接触。\n你留在原处继续「整理已有记录」，这段活动持续了2分钟。\n你向林舟开了口。",
+      "message": "你等了1分钟。\n你向林舟开了口。\n你对林舟发起了尝试，这一次未能建立接触。\n你留在原处继续「整理已有记录」，这段活动持续了2分钟。\n你向林舟开了口。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "autonomy",
+      "mode": "fallback",
+      "boundary": "partial",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-autonomy-fallback-partial.json",
+      "capture_sha256": "d8989480af9dd41707f7fc479ade07075b87db112e501a7763fa507d0a33a786",
+      "story": "你等了1分钟。\n你向林舟开了口。\n你对林舟发起了尝试，这一次未能建立接触。\n你留在原处继续「整理已有记录」，过了1分钟便停了下来。\n已到安排时间：已接受的会面",
+      "message": "“整理已有记录两分钟”尚未完成：这段活动因需要处理的事情而暂停，原目标尚未完成。\n尚未执行：向林舟问好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "autonomy",
+      "mode": "fallback",
+      "boundary": "world",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-autonomy-fallback-world.json",
+      "capture_sha256": "4e18d988e28b3216f4c16e216e0b845792324510519c19071a5c5d698a8a3802",
+      "story": "你等了1分钟。\n你向林舟开了口。",
+      "message": "“尝试打击林舟”尚未完成：目标地点当前不可到达\n尚未执行：整理已有记录两分钟；向林舟问好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "autonomy",
+      "mode": "authored_normal",
+      "boundary": "after",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-autonomy-normal-after.json",
+      "capture_sha256": "d29b5230615c676d90c4dc69675b060ba1aedd4274c8836178883a1cc81a7821",
+      "story": "你在原地等了一分钟。\n你向林舟问了好。\n本次没能建立接触，没有结算伤害。",
+      "message": "前面已经结算的行动保持有效；后续步骤未能可靠完成。请查看当前世界状态后再决定下一步。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 0,
+          "reason": "The actual authored offline candidate says 没有结算伤害, explicit tool wording; factual correctness is not style acceptance."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "autonomy",
+      "mode": "authored_normal",
+      "boundary": "missing",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-autonomy-normal-missing.json",
+      "capture_sha256": "2014bb1d94dfcf574d59fa850127ebf297d9d15d5f2548503fcc8af27b22be5c",
+      "story": "你在原地等了一分钟。\n你向林舟问了好。",
+      "message": "“尝试打击林舟”尚未完成：角色没有持有所需物品\n尚未执行：整理已有记录两分钟；向林舟问好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "autonomy",
+      "mode": "authored_normal",
+      "boundary": "normal",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-autonomy-normal-normal.json",
+      "capture_sha256": "3fd457f8ff49a93487b04347c114b74500dff217bcba03610fbb718b861faca8",
+      "story": "你在原地等了一分钟。\n你向林舟问了好。\n本次没能建立接触，没有结算伤害。\n你整理了两分钟已有记录。\n你向林舟问了好。",
+      "message": "你在原地等了一分钟。\n你向林舟问了好。\n本次没能建立接触，没有结算伤害。\n你整理了两分钟已有记录。\n你向林舟问了好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 0,
+          "reason": "The actual authored offline candidate says 没有结算伤害, explicit tool wording; factual correctness is not style acceptance."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "autonomy",
+      "mode": "authored_normal",
+      "boundary": "partial",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-autonomy-normal-partial.json",
+      "capture_sha256": "0eb78bdb3de4169c03b6e6e7bf9101cf2e73e5e3e8f89d5137794f6894092f52",
+      "story": "你在原地等了一分钟。\n你向林舟问了好。\n本次没能建立接触，没有结算伤害。\n你整理了一分钟已有记录。",
+      "message": "“整理已有记录两分钟”尚未完成：这段活动因需要处理的事情而暂停，原目标尚未完成。\n尚未执行：向林舟问好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 0,
+          "reason": "The actual authored offline candidate says 没有结算伤害, explicit tool wording; factual correctness is not style acceptance."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "autonomy",
+      "mode": "authored_normal",
+      "boundary": "world",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-autonomy-normal-world.json",
+      "capture_sha256": "95c5ec259c80634deeb70df543a4ab1366c808a6d098fe0b541e72e731caa962",
+      "story": "你在原地等了一分钟。\n你向林舟问了好。",
+      "message": "“尝试打击林舟”尚未完成：目标地点当前不可到达\n尚未执行：整理已有记录两分钟；向林舟问好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "commerce",
+      "mode": "fallback",
+      "boundary": "after",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-commerce-fallback-after.json",
+      "capture_sha256": "179c582ced87a30fdc7b56403c1244276cf2323cc74aeb6ea88a001338a7c3a8",
+      "story": "你等了1分钟。\n你向林舟开了口。\n你对林舟发起了尝试，这一次未能建立接触。",
+      "message": "前面已经结算的行动保持有效；后续步骤未能可靠完成。请查看当前世界状态后再决定下一步。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "commerce",
+      "mode": "fallback",
+      "boundary": "missing",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-commerce-fallback-missing.json",
+      "capture_sha256": "711ee82a16b60aaf0e69168427d22ee71669b6ed60f138a101ca22b4a32e0227",
+      "story": "你等了1分钟。\n你向林舟开了口。",
+      "message": "“尝试打击林舟”尚未完成：角色没有持有所需物品\n尚未执行：整理已有记录两分钟；向林舟问好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "commerce",
+      "mode": "fallback",
+      "boundary": "normal",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-commerce-fallback-normal.json",
+      "capture_sha256": "b46978d99be61a867be605c0c9b75e49b95c1a0f495039ff9d72af39b9cdd74f",
+      "story": "你等了1分钟。\n你向林舟开了口。\n你对林舟发起了尝试，这一次未能建立接触。\n你留在原处继续「整理已有记录」，这段活动持续了2分钟。\n你向林舟开了口。",
+      "message": "你等了1分钟。\n你向林舟开了口。\n你对林舟发起了尝试，这一次未能建立接触。\n你留在原处继续「整理已有记录」，这段活动持续了2分钟。\n你向林舟开了口。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "commerce",
+      "mode": "fallback",
+      "boundary": "partial",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-commerce-fallback-partial.json",
+      "capture_sha256": "e2a7961019e27c17973deb8b39463764d1c56f50b433788d98461c403417e6ca",
+      "story": "你等了1分钟。\n你向林舟开了口。\n你对林舟发起了尝试，这一次未能建立接触。\n你留在原处继续「整理已有记录」，过了1分钟便停了下来。\n已到安排时间：已接受的会面",
+      "message": "“整理已有记录两分钟”尚未完成：这段活动因需要处理的事情而暂停，原目标尚未完成。\n尚未执行：向林舟问好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "commerce",
+      "mode": "fallback",
+      "boundary": "world",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-commerce-fallback-world.json",
+      "capture_sha256": "eb57751db9939eea921c3a11512b4edb75807588d0dcdeff1bd07d0f9df99188",
+      "story": "你等了1分钟。\n你向林舟开了口。",
+      "message": "“尝试打击林舟”尚未完成：目标地点当前不可到达\n尚未执行：整理已有记录两分钟；向林舟问好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "commerce",
+      "mode": "authored_normal",
+      "boundary": "after",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-commerce-normal-after.json",
+      "capture_sha256": "c7701cade6ac18e718d61b8ad5c3772166f21d7f58371704e70f62386c8a9b42",
+      "story": "你在原地等了一分钟。\n你向林舟问了好。\n本次没能建立接触，没有结算伤害。",
+      "message": "前面已经结算的行动保持有效；后续步骤未能可靠完成。请查看当前世界状态后再决定下一步。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 0,
+          "reason": "The actual authored offline candidate says 没有结算伤害, explicit tool wording; factual correctness is not style acceptance."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "commerce",
+      "mode": "authored_normal",
+      "boundary": "missing",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-commerce-normal-missing.json",
+      "capture_sha256": "feac2af8ff6496222d43fab41dfd7a9afec4263a5be4fab1f3324bf456159894",
+      "story": "你在原地等了一分钟。\n你向林舟问了好。",
+      "message": "“尝试打击林舟”尚未完成：角色没有持有所需物品\n尚未执行：整理已有记录两分钟；向林舟问好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "commerce",
+      "mode": "authored_normal",
+      "boundary": "normal",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-commerce-normal-normal.json",
+      "capture_sha256": "9f1bdc342db4e96e9594e1bbbf0246bb7ef9c654e03465c6a456ceb214c2b10e",
+      "story": "你在原地等了一分钟。\n你向林舟问了好。\n本次没能建立接触，没有结算伤害。\n你整理了两分钟已有记录。\n你向林舟问了好。",
+      "message": "你在原地等了一分钟。\n你向林舟问了好。\n本次没能建立接触，没有结算伤害。\n你整理了两分钟已有记录。\n你向林舟问了好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 0,
+          "reason": "The actual authored offline candidate says 没有结算伤害, explicit tool wording; factual correctness is not style acceptance."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "commerce",
+      "mode": "authored_normal",
+      "boundary": "partial",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-commerce-normal-partial.json",
+      "capture_sha256": "d2d810022bf3e70b848023b4fa74d44373cd16427d4ef01e1773ec7178f99733",
+      "story": "你在原地等了一分钟。\n你向林舟问了好。\n本次没能建立接触，没有结算伤害。\n你整理了一分钟已有记录。",
+      "message": "“整理已有记录两分钟”尚未完成：这段活动因需要处理的事情而暂停，原目标尚未完成。\n尚未执行：向林舟问好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 0,
+          "reason": "The actual authored offline candidate says 没有结算伤害, explicit tool wording; factual correctness is not style acceptance."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "commerce",
+      "mode": "authored_normal",
+      "boundary": "world",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-commerce-normal-world.json",
+      "capture_sha256": "0876be75678a031b748be016ed3d5e6ec2afb1ca0914a3c951347012bcfee4b7",
+      "story": "你在原地等了一分钟。\n你向林舟问了好。",
+      "message": "“尝试打击林舟”尚未完成：目标地点当前不可到达\n尚未执行：整理已有记录两分钟；向林舟问好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "relationships",
+      "mode": "fallback",
+      "boundary": "after",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-relationships-fallback-after.json",
+      "capture_sha256": "c7a10329fcbd2f920eca8b580db0fa97d0db4124f84da6641fc5a8f9981427ae",
+      "story": "你等了1分钟。\n你向林舟开了口。\n你对林舟发起了尝试，这一次未能建立接触。",
+      "message": "前面已经结算的行动保持有效；后续步骤未能可靠完成。请查看当前世界状态后再决定下一步。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "relationships",
+      "mode": "fallback",
+      "boundary": "missing",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-relationships-fallback-missing.json",
+      "capture_sha256": "3c03b17ff3f8e22d676a6c0faa204b0a31b5475f1d64215af0ad0df2fa49045d",
+      "story": "你等了1分钟。\n你向林舟开了口。",
+      "message": "“尝试打击林舟”尚未完成：角色没有持有所需物品\n尚未执行：整理已有记录两分钟；向林舟问好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "relationships",
+      "mode": "fallback",
+      "boundary": "normal",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-relationships-fallback-normal.json",
+      "capture_sha256": "e1c77773249ec985d815462a1b03b63971204098c8bec5b1a2df845d30dc0f3b",
+      "story": "你等了1分钟。\n你向林舟开了口。\n你对林舟发起了尝试，这一次未能建立接触。\n你留在原处继续「整理已有记录」，这段活动持续了2分钟。\n你向林舟开了口。",
+      "message": "你等了1分钟。\n你向林舟开了口。\n你对林舟发起了尝试，这一次未能建立接触。\n你留在原处继续「整理已有记录」，这段活动持续了2分钟。\n你向林舟开了口。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "relationships",
+      "mode": "fallback",
+      "boundary": "partial",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-relationships-fallback-partial.json",
+      "capture_sha256": "23c62a5ba494e97bbaf830da597a948752ea0a56f032804b59e030b1e808205c",
+      "story": "你等了1分钟。\n你向林舟开了口。\n你对林舟发起了尝试，这一次未能建立接触。\n你留在原处继续「整理已有记录」，过了1分钟便停了下来。\n已到安排时间：已接受的会面",
+      "message": "“整理已有记录两分钟”尚未完成：这段活动因需要处理的事情而暂停，原目标尚未完成。\n尚未执行：向林舟问好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "relationships",
+      "mode": "fallback",
+      "boundary": "world",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-relationships-fallback-world.json",
+      "capture_sha256": "b41c790fa9137e91bad2b95a10292bdc27c79b115f7cc6ac815a7bf1dace7dfb",
+      "story": "你等了1分钟。\n你向林舟开了口。",
+      "message": "“尝试打击林舟”尚未完成：目标地点当前不可到达\n尚未执行：整理已有记录两分钟；向林舟问好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "relationships",
+      "mode": "authored_normal",
+      "boundary": "after",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-relationships-normal-after.json",
+      "capture_sha256": "d8c4a837cd6da6a971c79f032ff07d8ad9bc84c6061d664eef35927d37eaf2b3",
+      "story": "你在原地等了一分钟。\n你向林舟问了好。\n本次没能建立接触，没有结算伤害。",
+      "message": "前面已经结算的行动保持有效；后续步骤未能可靠完成。请查看当前世界状态后再决定下一步。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 0,
+          "reason": "The actual authored offline candidate says 没有结算伤害, explicit tool wording; factual correctness is not style acceptance."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "relationships",
+      "mode": "authored_normal",
+      "boundary": "missing",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-relationships-normal-missing.json",
+      "capture_sha256": "1d3afe38237fbfc0a0ac96a9f4820c28c8629447a2147ccc8ae10ff20bdd10e8",
+      "story": "你在原地等了一分钟。\n你向林舟问了好。",
+      "message": "“尝试打击林舟”尚未完成：角色没有持有所需物品\n尚未执行：整理已有记录两分钟；向林舟问好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "relationships",
+      "mode": "authored_normal",
+      "boundary": "normal",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-relationships-normal-normal.json",
+      "capture_sha256": "b259c3163a97b8b05771954b1ce036b73900358f2d260d0a0f4d4da1cc7ea057",
+      "story": "你在原地等了一分钟。\n你向林舟问了好。\n本次没能建立接触，没有结算伤害。\n你整理了两分钟已有记录。\n你向林舟问了好。",
+      "message": "你在原地等了一分钟。\n你向林舟问了好。\n本次没能建立接触，没有结算伤害。\n你整理了两分钟已有记录。\n你向林舟问了好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 0,
+          "reason": "The actual authored offline candidate says 没有结算伤害, explicit tool wording; factual correctness is not style acceptance."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "relationships",
+      "mode": "authored_normal",
+      "boundary": "partial",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-relationships-normal-partial.json",
+      "capture_sha256": "4184ae1f416d7ed154a92728be877fd4c56610e31800acb71e43744ef53288ce",
+      "story": "你在原地等了一分钟。\n你向林舟问了好。\n本次没能建立接触，没有结算伤害。\n你整理了一分钟已有记录。",
+      "message": "“整理已有记录两分钟”尚未完成：这段活动因需要处理的事情而暂停，原目标尚未完成。\n尚未执行：向林舟问好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 0,
+          "reason": "The actual authored offline candidate says 没有结算伤害, explicit tool wording; factual correctness is not style acceptance."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    },
+    {
+      "world": "relationships",
+      "mode": "authored_normal",
+      "boundary": "world",
+      "capture": ".agent-runtime/codex/long-prose-b7754503-207a-4abc-a3a4-611e54a32cb8-relationships-normal-world.json",
+      "capture_sha256": "b370e352dbd3b6e466913026f6fdcdb66f176d5955f4fa1ceece35cffa80e263",
+      "story": "你在原地等了一分钟。\n你向林舟问了好。",
+      "message": "“尝试打击林舟”尚未完成：目标地点当前不可到达\n尚未执行：整理已有记录两分钟；向林舟问好。",
+      "hard_gates": {
+        "receipt_stage_count": true,
+        "no_invented_NPC_speech": true,
+        "no_hidden_result": true,
+        "replay_immutable": true
+      },
+      "review": {
+        "voice": {
+          "score": null,
+          "reason": "N/A: no actual NPC speech; a player greeting cannot establish NPC voice."
+        },
+        "rhythm": {
+          "score": 1,
+          "reason": "Short independent clauses retain order, but the long scene is a repeated sequence with no contextual pacing beyond time statements."
+        },
+        "perception": {
+          "score": 1,
+          "reason": "The text stays within known facts but expresses abstract contact/time results; no sourced scene-specific sensory detail is supplied."
+        },
+        "naturalness": {
+          "score": 2,
+          "reason": "Plain readable sentences connect actions and outcomes; this bounded sample does not establish differentiated long-scene rhythm."
+        },
+        "continuity": {
+          "score": 3,
+          "reason": "Committed steps, failed attempts, partial intervals and skipped remainder are distinguished by own receipts and explicit stop feedback."
+        }
+      },
+      "quality_pass": false
+    }
+  ]
+}

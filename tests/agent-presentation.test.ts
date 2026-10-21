@@ -69,6 +69,17 @@ describe('Agent feedback display contract',()=>{
     expect(agentPresentation(before,result).storyOverride?.text).toBe('第一段故事\n第二段故事');
   });
 
+  it.each(['narration','speech','legacy'] as const)('keeps assembled earlier turns without dropping latest %s evidence',mode=>{
+    const before=view(8),after=view(10,'第二段故事');
+    if(mode==='legacy')after.last_turn={...after.last_turn!,speaker:'npc_lin',dialogue:'本人原话。'};
+    else after.last_turn={...after.last_turn!,scene_beats:mode==='speech'?
+      [{kind:'narration',text:'第二段故事'},{kind:'speech',speaker_id:'npc_lin',utterance:'本人原话。'}]:[{kind:'narration',text:'第二段故事'}]};
+    const result=agentResult('MULTI_GOAL','第一段故事\n第二段故事',{
+      presentation:'story',story:'第一段故事\n第二段故事',view:after,
+      outcome:gameOutcome('completed','plan_execution',10,['first','second'],['a','b'],'completed')});
+    expect(agentPresentation(before,result).storyOverride).toEqual(mode==='narration'?{revision:10,text:'第一段故事\n第二段故事'}:null);
+  });
+
   it('keeps a partial goal outside the committed story',()=>{
     const before=view(4),after=view(5,'你沿着走廊走出房间，停在宿舍区。');
     const plan={goals:[

@@ -399,7 +399,7 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
  }
  const initialTime=save.runtime.time.day*save.definition.ruleset.minutes_per_day+save.runtime.time.minute;
  const initialSave=save;let stateReadable=true;
- plan.plan_id=body.request_id;plan.status='running';let clarification:string|null=null,awarenessStatus:AgentResult['awareness_status'];let stepOutcome:AgentResult['outcome']|null=null;let partialNarrative:string|null=null;const ui:UIAction[]=[],changes:string[]=[],partialChanges:string[]=[],calls:AgentResult['tool_calls']=[],futures:FutureIntent[]=[];
+ plan.plan_id=body.request_id;plan.status='running';let clarification:string|null=null,awarenessStatus:AgentResult['awareness_status'];let stepOutcome:AgentResult['outcome']|null=null;let partialNarrative:string|null=null,partialNarrativeGoal:string|null=null;const ui:UIAction[]=[],changes:string[]=[],partialChanges:string[]=[],calls:AgentResult['tool_calls']=[],futures:FutureIntent[]=[];
  for(const id of plan.execution_order){const goal=plan.goals.find(g=>g.goal_id===id)!;
   const compoundWorldGoals=plan.goals.filter(goal=>goal.side_effect_level==='world');
   if(plan.contract?.execution_mode==='staged'&&
@@ -522,12 +522,12 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
     const inspection=settled&&incompleteInspectionOutcome(settled,'plan_step',save.state_revision,changes);
     if(inspection){
       goal.status=inspection.type==='engine_failure'?'failed':inspection.kind==='blocked_by_world'?'blocked':'unresolved';
-      goal.result={summary:message};partialNarrative=message;partialChanges.push('world_action:'+id);
+      goal.result={summary:message};partialNarrative=message;partialNarrativeGoal=id;partialChanges.push('world_action:'+id);
       calls.push({tool_id:goal.type,ok:inspection.type==='game'});stepOutcome=inspection;break;
     }
     if(settled&&interruptedActivity(settled)){
       goal.status='blocked';goal.result={summary:'这段活动因需要处理的事情而暂停，原目标尚未完成。'};
-      partialNarrative=message;
+      partialNarrative=message;partialNarrativeGoal=id;
       partialChanges.push('world_action:'+id);calls.push({tool_id:goal.type,ok:true});
       stepOutcome=gameOutcome(settled.time_cost>0?'partial_progress':'interrupted','plan_step',save.state_revision,
         changes,[settled.request_id],settled.time_cost>0?'partial':'unresolved');break;
@@ -586,6 +586,7 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
   const goal=plan.goals.find(entry=>entry.goal_id===id)!;
   if(!['WORLD_ACTION','WORLD_SPEECH'].includes(goal.type))return null;
   if(goal.status==='completed')return goal.result?.summary?.trim();
+  if(goal.goal_id===partialNarrativeGoal)return partialNarrative;
   // A lost acknowledgement does not erase a settled stage. Only this child's
   // new authoritative receipt and saved narrative may supply its story; this
   // does not complete the failed goal or authorize dependent work.
@@ -597,7 +598,8 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
   return own?save.narrative_history?.find(entry=>entry.request_id===requestId)?.narrative.trim():null;
  }).filter((text):text is string=>Boolean(text));
  const committedNarrative=committedSince(initialSave,save).length?
-   [...new Set(narratedSteps.length?[...narratedSteps,...(partialNarrative?[partialNarrative]:[])]:[save.last_turn?.narrative?.trim()].filter((text):text is string=>Boolean(text)))].join('\n'):'';
+   (narratedSteps.length?(plan.local_compound?narratedSteps.slice(0,1):narratedSteps):
+    [save.last_turn?.narrative?.trim()].filter((text):text is string=>Boolean(text))).join('\n'):'';
  const stopped=plan.goals.filter(goal=>['blocked','unresolved','failed','waiting_for_player'].includes(goal.status))
    .map(goal=>`“${goal.normalized_goal}”尚未完成${goal.result?.summary?`：${goal.result.summary}`:'。'}`);
  const skipped=plan.goals.filter(goal=>goal.status==='skipped').map(goal=>goal.normalized_goal);
