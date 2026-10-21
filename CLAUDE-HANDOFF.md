@@ -751,3 +751,35 @@ Latest development base is `96133cc1d862bc62606a482be7991b7b986b9111`, fixed sco
 ## v0.1.20 release candidate — 2026-10-21 (supersedes initial privacy hold)
 
 Owner authorized reviewed ordinary-path exceptions. Full document and GitHub object/commit review found an ordinary local attachment path already in public integration history, with no credentials/attachment contents/personal records in the path; the initial sensitive-data classification was too broad. Exact-object home-path exception only, current document sanitized, no history rewrite/force push. Candidate source checkpoint on `codex/release-v0.1.20` includes the stream audit, six audit regressions, three shipped-example reader tests, README/notes and 0.1.20 metadata. Final isolated build exit0 84.438s; final strict exit0 42.207s; related schema/world71pass18.40s; API/Core/card/audit/provenance/age/gender64pass27.59s. Critical selection initial171pass1timeout217.431s; unchanged-timeout isolated retry also failed; bounded diagnostic completed all assertions7.346s. Four multi-request disk/restart/replay cases now declare20s functional-test deadlines, no product timeout/assertion/acceptance relaxation. Final full affected HTTP+audit+examples27pass0skip49.981s. Final built desktop/mobile smoke12.742s and real partial-commit browser-refresh recovery14.214s passed offline. Cloud failures not reproduced; exact original cause unproved; no full current-suite claim. See `docs/releases/v0.1.20.md` for commands/scope/failure history. Generated QA JSONs remain uncommitted only in isolated release worktree; original six dirty files remain protected. Score109/160=68.125%,22unmet29unverified, net0. After final reachable audit and remote recheck, synchronize integration/main by fast-forward and publish a new tag/Release per owner authorization. Preserve original checkout and continue the four-theme Goal afterward; next prior development candidate is W6.3 evidence inventory.
+
+
+## Independent cloud N4.3 / N4.4 item assertion scope — 2026-10-21
+
+Branch: `codex/cloud-narrator-n4-fact-validation`. Base main v0.1.20:
+`23083b3a8cb0a9ddb4c66d9a24b2b4a8798fdf7b`. Reviewed implementation/tests/evidence
+commit: `2bb31ecac9b54a874b9071378fe8645c5b247550`; this follow-up only records the
+handoff. See `docs/cloud-n4-item-assertion-scope.md` for exact corpus, commands,
+failed reports, declared runner deadlines and limitations.
+
+Only `validateItemConditionNarrative` in `src/core/narrative-firewall.ts` changes:
+clause-initial item hypotheses are not current-state assertions, passive item
+state predicates still compare to Core, and later independent/quoted-tail
+assertions remain checked. No exports, schemas, Core settlement, Planner,
+storage, dependencies, frozen criteria or shared progress ledger changed.
+
+Unchanged-code baseline: 14 passed / 14 product failures / 56 intentionally
+excluded (Commerce only), after isolating two default-runner timeout controls.
+Final extension: 84 passed, zero failed/skipped, across three existing world
+structures and actual temporary JsonStore/service replay. Adjacent original
+seven files: 173 passed, zero failed/skipped. Isolated strict TypeScript + Vite
++ server build passed. Deadline-only declarations were then verified by the
+two formerly timed-out disk controls, both passed / 82 intentionally excluded;
+that overlap is not added to the 257 distinct selected tests. Full project
+suite, real Provider, human prose and production acceptance were not run.
+
+Score remains 109/160 (68.125%), 22 unmet / 29 unverified; N4.3/N4.4 were already
+met, so this repairs reproduced original-scope gaps without awarding credit.
+No deployment, Release, port 3100, formal save or paid game model operation.
+Windows owner should inspect this tiny firewall hunk against current main at a
+safe checkpoint and integrate only after explicit review; do not auto-merge.
+Broader paraphrase/historical-state semantics remain outside this bounded corpus.
