@@ -185,3 +185,68 @@ unchanged, and no attendance or fulfilment is claimed. Unknown/natural event
 reasons are preserved. Directed HOLD/WAIT/long-HOLD/format regression: four
 files / 24 passed. Raw failure/fixed reports are retained. This is N8
 presentation work, not a change to time, scheduling or interruption rules.
+
+## Next external breakpoint, by condition
+
+The fixed ledger is left unchanged. These are evidence/readiness assessments,
+not new acceptance conditions and not a claim of ten completed items.
+
+| Condition / existing ledger | Delivered independent work | What is still needed |
+|---|---|---|
+| N5.3 unmet | Twelve reproducible same-question controls, nine pair comparisons, current persona/own-memory/directional-relationship inputs, raw requests and no literal sample copying | Actual generated voice/relationship contrasts; authored response controls do not establish them. Authorize the selected real Provider, then review outputs |
+| N5.4 unverified | Fixed multi-character cases, source-bound review packet and explicit dimensions | Authorized actual-model dialogue plus the specified personality/memory/relationship/naturalness judgments |
+| N7.3 unmet | Repaired history attribution and salient-memory retention; real daily exchanges, moves, commerce and relationship before/after evidence; memories stay memories, pending goals stay pending | Current-model long expression/recall samples and their evaluation; clock/field correctness alone is not narrative consistency |
+| N7.4 unverified | Three structural worlds ×72h, fixed 24/48/72h readbacks, nine fresh JsonStore/GameService recreations and exact original-request replay | Actual multi-world long-text experience/readback evaluation; these are service/store recreations, not OS process-kill evidence |
+| N8.2 unmet | Exact item/unfinished interval facts, paragraph-form compound prose and clock-label rendering; original partial-failure stories, Agent status and receipts retained together | Textual naturalness/unfinished-expression verdict on the published samples, coordinated with Windows' parent-status/body boundary; no N3 execution change is proposed. Offline samples can be reviewed without a Provider call |
+| N8.4 unverified | Actual offline fallback cases and raw same-source ordinary-request envelopes | Authorized current-model half of the contrast and a textual verdict on both; no current-model pass is claimed |
+| N9.1 unmet | Fixed56 benchmark, five anchored dimensions, nine pair judgments, blank usable review template, immutable inputs/outputs and complete per-case table | Windows can review this as a benchmark/readiness candidate under the original wording; no self-awarded score or claim that blank ratings are completed reviews |
+| N9.2 unmet | Explicit coverage of voice, rhythm, perception, naturalness and continuity with factual hard gates | Voice controls still need generated counterparts and actual anchored judgments; N/A must be justified |
+| N9.3 unverified | Full current-source offline execution and every failed/missing/unreviewed result, plus a dry-run candidate plan | Full authorized normal-model counterpart and publication of its actual failures/unmet ratings; offline completeness is not that run |
+| N9.4 unverified | Hash/identity/inventory/budget checks and an intentionally invalid unfilled review template | An actual independent/human reviewer; validator unit fixtures are not real human judgments |
+
+No additional known reproducible implementation counterexample in this fixed
+offline corpus is left knowingly unresolved. The remaining generated-text and
+review gates above cannot be manufactured by adding more deterministic passing
+assertions. This statement does not assert that arbitrary language is bug-free.
+
+The next execution needs a chosen Provider/model, actual authorization, explicit
+call/output or monetary bounds, and a reviewer. Existing bindings may be used
+after authorization; no API/credential configuration was changed here. No secret
+values belong in this handoff. All outputs, including refusals/truncations and
+low ratings, must be retained. Independent identity/authorization remains an
+external verification even when a JSON file declares a reviewer role.
+
+
+## Final current-source evidence before external quality gates
+
+Source `80e2ac91a68a6e4e61b791632c004ba7e0573bd0`, capture `2026-10-21T15-36-56-589Z`: 56/56 cases, 103 passed,
+zero failures/skips, 649 unchanged hashes, zero cross-case identities.
+Strict root/client/server build exit0 (133.954s; concurrent capture).
+Dry-run queue: 100 calls, 2596716 input characters,
+maximum 600000 output tokens. Actual calls/ratings/condition credit are all zero.
+The generated blank human review was actually rejected by the review CLI as expected.
+Full primary texts and separate partial-plan statuses are published in
+`narrator-program-offline-results.md`; raw manifests, JSON/logs and failures
+remain in the evidence bundle/ignored runtime directory. The final docs commit
+does not change the tested product, fixtures or scripts.
+
+Reproduce from `/workspace/game` with Node.js 24.19.0 / npm 11.9.0:
+
+```sh
+node scripts/narrator-quality-program.mjs
+node scripts/agent-workspace.mjs codex build
+node scripts/four-theme-progress.mjs --check
+```
+
+No GitHub PR API permission was available (`Forbidden` on GraphQL); stable
+checkpoints are pushed to `codex/cloud-narrator-quality-program`. Create/review
+the PR in GitHub and let Windows integrate only at a safe checkpoint. Do not
+merge automatically. This handoff is an external authorization/review breakpoint,
+not a claim that the ten-condition program has passed.
+
+
+Evidence archive supplied with this handoff: `narrator-quality-evidence-80e2ac9.zip`
+(23,861,390 bytes; includes retained raw failures, old attribution probes and final
+capture). SHA-256: `2051eceae3ea57cdfd02f1b67c19cd0c23efc5b65ac0d142a1835c23565af7b1`.
+The archive has been CRC-checked. It contains only the program's synthetic test
+artifacts and documentation, not production data or credential files.

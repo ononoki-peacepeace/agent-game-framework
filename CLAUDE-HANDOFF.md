@@ -783,3 +783,46 @@ No deployment, Release, port 3100, formal save or paid game model operation.
 Windows owner should inspect this tiny firewall hunk against current main at a
 safe checkpoint and integrate only after explicit review; do not auto-merge.
 Broader paraphrase/historical-state semantics remain outside this bounded corpus.
+
+
+## Independent cloud Narrator program — N5 / N7 / N8 / N9 — 2026-10-21
+
+Branch `codex/cloud-narrator-quality-program`; inspected/rebased main
+`dc3ac77725c88903972dc75a1b37aeb4faa92533`. Tested product/fixture/tool source:
+`80e2ac91a68a6e4e61b791632c004ba7e0573bd0`. Final follow-up is documentation/evidence only.
+Scope: N5.3/4, N7.3/4, N8.2/4, N9.1–4. N4 PR #1 is inherited; R/A/W/N3/N6/N10
+conditions are not claimed. Frozen criteria/protocol/ledger, dependency files,
+Core rules/transactions and N3 executor are unchanged.
+
+Five reproduced presentation/context defects repaired: remote/unattributed
+history returning during refinement; salient old own-memory disappearing from
+Narrator projection; generic item relocation/handoff prose; numbered compound
+fallback narration; raw scheduled-clock labels leaking into prose. Capture-hook
+cross-case identity leakage was separately diagnosed and repaired; its original
+95-identity failure audit is retained. See `docs/narrator-cloud-program.md` for
+all original fixture/compile failures, test boundaries and shared-file conflicts.
+
+Current-source full offline run: 56/56 cases, 103 passed, zero failed/skipped,
+649 unchanged hashes, zero cross-case identities; three distinct structures,
+72h each, nine new store/service readbacks/replays, actual before/after item and
+partial-plan/write-boundary evidence. Strict root/client/server build exit0,
+133.954s. Additional targeted reports overlap; no whole-project suite claim.
+Public per-case prose/status results: `docs/narrator-program-offline-results.md`.
+Raw final run: `.agent-runtime/codex/narrator-program/2026-10-21T15-36-56-589Z/`.
+
+No real Provider call, fake human rating, production deployment/save edit or
+Release. All quality cells remain unreviewed and no condition credit is awarded;
+ledger remains109/160. Dry-run queue:100 actual-context candidate requests,
+2,596,716 input characters, up to600,000 output tokens, not actual use/cost.
+A chosen Provider/model, explicit call/output or fee authorization, real outputs
+and real textual/independent review are the remaining external breakpoint.
+The ten-condition matrix distinguishes implementation candidates from those
+unexecuted gates. Do not treat scripted voice controls as real model evidence.
+
+Stable checkpoints are pushed. GitHub GraphQL PR creation returned Forbidden;
+manual PR: https://github.com/ononoki-peacepeace/agent-game-framework/pull/new/codex/cloud-narrator-quality-program
+Windows must inspect the Narrator context/projection, two fallback call sites,
+optional compound presentation argument and display-test changes before safe
+integration. Do not overwrite unmerged work or auto-merge; uniform scoring stays
+with Windows/user review. Resume from the source-hash-bound queue after actual
+authorization, retaining refusals, truncations, raw failures and low judgments.
