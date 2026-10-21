@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "25b6add + verified scene-generation read recovery",
+  "assessed_source": "62fed34 + verified scene-effect read recovery",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -152,9 +152,11 @@
         "docs/scene-unreadable-commit.md",
         "tests/scene-unreadable-commit.test.ts",
         "docs/scene-generation-read-failure.md",
-        "tests/scene-generation-read-failure.test.ts"
+        "tests/scene-generation-read-failure.test.ts",
+        "docs/scene-effect-read-failure.md",
+        "tests/scene-effect-read-failure.test.ts"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 8e2a0f6: between-step handoff failures retain settled prefix/receipt and skipped guards do not pause read-only alternatives;3fail/1control,7distinctfiles57pass/build. Full fixed matrix remains open. 92b86cd: persistent staged-plan recovery/final reads return uncertain outcomes with confirmed receipts and no cached view; initial2fail, final8files61pass/build. Other exits remain open. 975f705: after actual WAIT commit, contract/provider response failures no longer claim unchanged state or suggest blind retry; baseline2fail, final6files27pass/build. Every-exit matrix remains open. Actual3fail8.380s rawerrors when open-goal recovery reads stayunavailable;26reads now retain lastobserved authority and return uncertain failure without staleview.6files47pass16.118s/strict44.237sexit0; natural_scene and remaining nested exits stayopen. Natural-scene3fail1control3.346s repaired: unknowncommit/no read returns uncertainty without candidate speech/view;acknowledged/readconfirmedscene retains ownreceipt.6files98distinctpassingunion/strictfinal27.410sexit0;incomplete6fileprocess exit1 noJSON causeunknown retained,notgreen.Other scene recovery exits remainopen. Scene-generation baseline2fail1control3.698s; minimal read WIP preserved but fixedtests NOT executed due approvalreview timeout/overload and sandbox esbuildEPERM. Strictonly27.023sexit0;no repair acceptance. After explicit user authorization, permitted fixed regression completed: 4files56pass11.235s/zero failed or skipped. Three new fault/control cases pass; every-exit matrix remains open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 8e2a0f6: between-step handoff failures retain settled prefix/receipt and skipped guards do not pause read-only alternatives;3fail/1control,7distinctfiles57pass/build. Full fixed matrix remains open. 92b86cd: persistent staged-plan recovery/final reads return uncertain outcomes with confirmed receipts and no cached view; initial2fail, final8files61pass/build. Other exits remain open. 975f705: after actual WAIT commit, contract/provider response failures no longer claim unchanged state or suggest blind retry; baseline2fail, final6files27pass/build. Every-exit matrix remains open. Actual3fail8.380s rawerrors when open-goal recovery reads stayunavailable;26reads now retain lastobserved authority and return uncertain failure without staleview.6files47pass16.118s/strict44.237sexit0; natural_scene and remaining nested exits stayopen. Natural-scene3fail1control3.346s repaired: unknowncommit/no read returns uncertainty without candidate speech/view;acknowledged/readconfirmedscene retains ownreceipt.6files98distinctpassingunion/strictfinal27.410sexit0;incomplete6fileprocess exit1 noJSON causeunknown retained,notgreen.Other scene recovery exits remainopen. Scene-generation baseline2fail1control3.698s; minimal read WIP preserved but fixedtests NOT executed due approvalreview timeout/overload and sandbox esbuildEPERM. Strictonly27.023sexit0;no repair acceptance. After explicit user authorization, permitted fixed regression completed: 4files56pass11.235s/zero failed or skipped. Three new fault/control cases pass; every-exit matrix remains open. Scene effects/finalizer: baseline7fail1control4.155s, narrow read boundary and receipt-confirmed effect summaries; final5files67pass15.799s/strict28.916sexit0. Full failure-exit matrix remains open."
     },
     "R5.4": {
       "status": "met",
@@ -4442,6 +4444,23 @@
         }
       ],
       "note": "103/16064.375%delta0; baseline2fail1control3.698s and approval interruption preserved. No fullbuild/suite claim."
+    },
+    {
+      "batch": "scene-effect-read-failure",
+      "type": "repair",
+      "source": "62fed34+reviewed-worktree",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R5.3",
+          "result": "Baseline7fail1control4.155s; final5files67pass15.799s/strict28.916sexit0.11directcases with actual JsonStore effects, lost response, cached request and fresh-service bytes. Every-exit matrix remains open.",
+          "evidence": [
+            "docs/scene-effect-read-failure.md",
+            "tests/scene-effect-read-failure.test.ts"
+          ]
+        }
+      ],
+      "note": "103/16064.375%delta0; firstfixed13pass3optional-arrayassertionfail7.885s retained, notgreen. No fullsuite/build claim."
     }
   ],
   "new_risks": [],
@@ -5553,6 +5572,18 @@
         "tests/scene-generation-read-failure.test.ts"
       ],
       "summary": "Two scene-generation recovery reads now return uncertain structured failure without stale view or uncommitted speech; actual authorized4files56pass11.235s. Earlier approval interruption retained."
+    },
+    {
+      "id": "scene-effect-read-failure",
+      "scope": "original",
+      "condition": "R5.3",
+      "status": "resolved",
+      "source": "62fed34",
+      "evidence": [
+        "docs/scene-effect-read-failure.md",
+        "tests/scene-effect-read-failure.test.ts"
+      ],
+      "summary": "Effect preparation/recovery/finalization raw read errors and receiptless completion repaired; only observed committed receipts authorize effect summaries, no stale view on unreadable state."
     }
   ]
 }

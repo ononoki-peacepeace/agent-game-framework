@@ -1367,9 +1367,28 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
           scene_seconds_carry:committedScene.runtime.scene_seconds??0}});
         const sceneStory=sceneMessage({...outcome,settled:[]},view);
         const effectStories:string[]=[];
+        class SceneRefreshError extends Error{}
+        let lastEffectState=committedScene;
+        const readEffectState=async()=>{
+          try{const latest=await service.current();
+            if(latest.game_id!==save.game_id)throw new Error('Scene game changed');
+            lastEffectState=latest;return latest;
+          }catch{throw new SceneRefreshError();}
+        };
+        const sceneReceipts=(latest:SavePackage)=>[...new Set([sceneRequestId,...committedSince(save,latest)])];
+        try{
         for(const [index,effect] of outcome.authorizedEffects.entries()){
-          const beforeEffect=await service.current();
+          const beforeEffect=await readEffectState();
           const effectRequestId=childId(body.request_id,`scene-effect-${index}`);
+          let recorded=false;
+          const recordEffect=(latest:SavePackage)=>{
+            const receipt=latest.resolution_receipts?.find(receipt=>receipt.request_id===effectRequestId&&
+              receipt.commit_status==='committed');
+            if(!receipt)return false;
+            if(!recorded){outcome.settled.push(effect.kind==='inspect'?'完成现场检查':
+              effect.kind==='move'?`移动到${effect.destination}`:`等待${receipt.time_cost}分钟`);recorded=true;}
+            return true;
+          };
           const arrivalPending=effect.kind==='move'&&index===0&&beforeEffect.entities.some(entity=>
             entity.id!==beforeEffect.player_state.entity_id&&entity.components.character&&
             entity.components.location?.location_id===effect.target_id);
@@ -1378,12 +1397,6 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
               await service.turn({game_id:beforeEffect.game_id,expected_revision:beforeEffect.state_revision,
                 request_id:effectRequestId,input:effect.source_quote},
                 undefined,undefined,undefined,false,undefined,undefined,true,undefined,true);
-              const inspected=await service.current();
-              if(!inspected.resolution_receipts?.some(receipt=>receipt.request_id===effectRequestId&&
-                receipt.commit_status==='committed')){
-                outcome.gaps.push('本次调查没有完成权威结算');continue;
-              }
-              outcome.settled.push('完成现场检查');
             }else{
               await service.turn({game_id:beforeEffect.game_id,expected_revision:beforeEffect.state_revision,
                 request_id:effectRequestId,
@@ -1392,37 +1405,41 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
                 player_input:body.input,player_request_id:body.request_id,
                 ...(index===0&&effect.kind==='move'?{preceding_scene_request_id:body.request_id}:{}),
                 ...(arrivalPending?{arrival_scene_pending:true}:{})});
-              outcome.settled.push(effect.kind==='move'?`移动到${effect.destination}`:`等待${effect.minutes}分钟`);
             }
-            const completed=await service.current();
+            const completed=await readEffectState();
+            if(!recordEffect(completed)){
+              outcome.gaps.push('这项后续行动没有完成权威结算');break;
+            }
             if(completed.last_turn?.narrative)effectStories.push(completed.last_turn.narrative);
             if(arrivalPending){
               const arrival=await continueArrivalScene(service,body,beforeEffect,completed,effectRequestId);
               if(arrival.kind==='unavailable'){
-                const latest=await service.current();
+                const latest=await readEffectState();
                 const failure=engineOutcome('provider_failure','arrival_scene',latest.state_revision,false,
-                  ['scene_interaction',...outcome.settled],committedSince(save,latest));
+                  ['scene_interaction',...outcome.settled],sceneReceipts(latest));
                 return agentResult('WORLD_ACTION',engineMessage(failure),{outcome:failure,
                   presentation:'failure',story:latest.last_turn?.narrative??sceneStory,
                   view:service.project(latest)});
               }
               if(arrival.kind==='committed')effectStories[effectStories.length-1]=
-                (await service.current()).last_turn?.narrative??effectStories.at(-1)??'';
+                (await readEffectState()).last_turn?.narrative??effectStories.at(-1)??'';
             }
           }catch(error){
+            if(error instanceof SceneRefreshError)throw error;
             if(error instanceof WorldBlockedError){outcome.gaps.push(error.message);break;}
-            const latest=await service.current();
+            const latest=await readEffectState();
+            recordEffect(latest);
             service.logger.warn('agent.scene.effect_failed',{module:'agent',metadata:{
               detail:(error as Error).message,revision:latest.state_revision,effect_index:index}});
             const failure=engineOutcome('transaction_failure','natural_scene_effect',latest.state_revision,
               latest.state_revision===beforeEffect.state_revision, ['scene_interaction',...outcome.settled],
-              committedSince(save,latest));
+              sceneReceipts(latest));
             return agentResult('WORLD_ACTION',engineMessage(failure),{outcome:failure,
               presentation:'failure',story:[sceneStory,...effectStories].filter(Boolean).join('\n'),
               view:service.project(latest)});
           }
         }
-        const after=await service.current();
+        const after=await readEffectState();
         if(outcome.npcDecision)service.logger.info('npc_agent.action_committed',{module:'agent',request_id:body.request_id,
           revision:after.state_revision,metadata:{npc_id:partner.id,trigger:'direct_scene',kind:outcome.npcDecision.kind,
             receipt_ids:[childId(body.request_id,'scene'),
@@ -1436,6 +1453,16 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
           {outcome:sceneOutcome,presentation:'story',time_advanced:delta,view:service.project(after),
             ...(outcome.authorizedEffects.length?{story:[sceneStory,...effectStories].filter(Boolean).join('\n')}:{}),
           });
+        }catch(error){
+          if(!(error instanceof SceneRefreshError))throw error;
+          // Only observed committed receipts authorize effect summaries. A turn
+          // response or mutated candidate alone cannot prove a durable effect.
+          const failure=engineOutcome('transaction_failure','natural_scene_effect_refresh',lastEffectState.state_revision,false,
+            ['scene_interaction',...outcome.settled],sceneReceipts(lastEffectState));
+          return agentResult('WORLD_ACTION',engineMessage(failure),{outcome:failure,
+            recovery:recoveryContext(body.original_input??body.input,failure),presentation:'failure',
+            story:[sceneStory,...effectStories].filter(Boolean).join('\n')});
+        }
       }
     }
     const recentForPlan={semantic_goal:semantic?.goal_spec??null,recent_referent:recentReferent(save),recent_turns:(save.narrative_history??[]).slice(-2).map(entry=>({narrative:String(entry.narrative??'').slice(0,240),dialogue:entry.dialogue??null,speaker:entry.speaker??null})),recent_actions:(save.action_facts??[]).slice(-3).map(entry=>({input:String(entry.input??'').slice(0,160),facts:entry.facts,target_id:entry.target_id}))};
