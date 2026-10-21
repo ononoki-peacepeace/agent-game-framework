@@ -25,6 +25,7 @@ import {environmentQuerySchema,type EnvironmentAssessment} from './environment-s
 import {executeEnvironmentQuery,resolveLocalSceneAnchor,validateEnvironmentQuery} from './environment.js';
 import {currentMap} from './map.js';
 import {settleRelationshipOutcomes} from '../agent/npc-relations.js';
+import {unsealedContainerAncestors} from './item-access.js';
 
 /** An outcome proposal, never a save patch. Numeric mechanics remain owned by modules. */
 export const freeformSchema = z.strictObject({
@@ -154,11 +155,17 @@ export function activityRequirement(save:SavePackage,input:string){
   const view=publicView(save),actor=view.entities.find(entity=>entity.id===view.player_id);
   const here=actor?.components.location?.location_id;
   const location=view.locations.find(place=>place.id===here);
-  const nearby=view.entities.some(entity=>entity.components.item&&
+  const nearby=view.entities.filter(entity=>entity.components.item&&
     (entity.components.location?.location_id===here||
       ((actor?.components.inventory as Inventory|undefined)?.items[entity.id]??0)>0)&&
     String(entity.components.identity?.name??'').includes(resource));
-  return {kind:'environmental' as const,available:Boolean(location?.description.includes(resource)||nearby),resource};
+  // A static scene description cannot restore a known broken or sealed tool.
+  // A described resource without a registered item remains valid scenery.
+  const available=nearby.length?nearby.some(entity=>{
+    const canonical=save.entities.find(item=>item.id===entity.id);
+    return Boolean(canonical&&canonical.components.item?.condition!=='destroyed'&&unsealedContainerAncestors(save,canonical));
+  }):Boolean(location?.description.includes(resource));
+  return {kind:'environmental' as const,available,resource};
 }
 export function assertFreeformGoalEvidence(save:SavePackage,input:string,requestId:string){
   const receipt=save.resolution_receipts?.find(entry=>entry.request_id===requestId);

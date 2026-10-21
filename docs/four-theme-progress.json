@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "29ef84f plus reviewed immutable-tree installation",
+  "assessed_source": "39fb322 + reviewed activity resource validity repair",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -652,9 +652,11 @@
         "tests/equipped-item-sale.test.ts",
         "docs/equipped-item-sale.md",
         "tests/sealed-equipment-access.test.ts",
-        "docs/sealed-equipment-access.md"
+        "docs/sealed-equipment-access.md",
+        "docs/destroyed-activity-resource.md",
+        "tests/destroyed-activity-resource.test.ts"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 5f29a42 repairs sealed ancestry for source/destination movement/transfer and Freeform prerequisites;baseline8fail/3controls,expanded destination/Freeform counterexamples retained,7files99pass/build,actual disk no-write refusals. Full condition remains open. f537de7 repairs registered/shared sealed-contained damage before RNG/mutation;baseline4fail/2controls,6files111pass/build,actual disk service no-write/no-generation refusal. Full matrix stays open. 132de1c repairs tracked sale placement/owner cleanup and sealed/filled-container refusal;baseline4fail/1control,6files105pass/build,real disk/service replay with one payment/receipt and no extra generation. Equipped/consumption/full matrix stays open. 857a42c replaces equipped SELL invariant failure with pre-settlement world refusal;baseline2fail/1explicit-UNEQUIP control,5files77pass/build,real disk/service repeated refusal no writes/generation. Full condition remains open. d1721f4 guards player/NPC EQUIP through sealed ancestors;baseline5fail/4open/exterior controls,7files98pass/build,actual disk/service refusal no-write/no-generation. Full condition remains open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 5f29a42 repairs sealed ancestry for source/destination movement/transfer and Freeform prerequisites;baseline8fail/3controls,expanded destination/Freeform counterexamples retained,7files99pass/build,actual disk no-write refusals. Full condition remains open. f537de7 repairs registered/shared sealed-contained damage before RNG/mutation;baseline4fail/2controls,6files111pass/build,actual disk service no-write/no-generation refusal. Full matrix stays open. 132de1c repairs tracked sale placement/owner cleanup and sealed/filled-container refusal;baseline4fail/1control,6files105pass/build,real disk/service replay with one payment/receipt and no extra generation. Equipped/consumption/full matrix stays open. 857a42c replaces equipped SELL invariant failure with pre-settlement world refusal;baseline2fail/1explicit-UNEQUIP control,5files77pass/build,real disk/service repeated refusal no writes/generation. Full condition remains open. d1721f4 guards player/NPC EQUIP through sealed ancestors;baseline5fail/4open/exterior controls,7files98pass/build,actual disk/service refusal no-write/no-generation. Full condition remains open. Registered destroyed/sealed activity resources now block actual execution and disk/service recreation without mutation/generation; final8directpass/strict40.891s. Broader dynamic matrix remains open."
     },
     "A8.4": {
       "status": "unverified",
@@ -3940,6 +3942,23 @@
         }
       ],
       "note": "Product989d4c6unchanged;103/16064.375%delta0.Originalfixturefailuresremain."
+    },
+    {
+      "batch": "registered-activity-resource-validity",
+      "type": "repair",
+      "source": "39fb322+reviewed-worktree",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "A8.3",
+          "result": "Destroyed/sealed registered instrument refusal and intact/damaged/scenery controls verified; final8directpass4.520s,strict40.891sexit0. Earlier3files26pass and adjacent5files77pass precede canonical lookup type fix; full dynamic matrix open.",
+          "evidence": [
+            "docs/destroyed-activity-resource.md",
+            "tests/destroyed-activity-resource.test.ts"
+          ]
+        }
+      ],
+      "note": "103/16064.375%,delta0; initial two real failures and strict type failure retained."
     }
   ],
   "new_risks": [],
@@ -4847,6 +4866,18 @@
         "tests/core-install-lifecycle.test.ts"
       ],
       "summary": "Successful build accepted later mutable index and HEAD; pin patch-matching tree, recheck ownership, commit only immutable tree and compare-and-swap HEAD without modifying index/worktree."
+    },
+    {
+      "id": "destroyed-or-sealed-activity-resource",
+      "scope": "original",
+      "condition": "A8.3",
+      "status": "resolved",
+      "source": "reviewed-worktree",
+      "evidence": [
+        "docs/destroyed-activity-resource.md",
+        "tests/destroyed-activity-resource.test.ts"
+      ],
+      "summary": "Activity resource name alone authorized destroyed/sealed instruments; canonical condition/access now gates registered resources while ordinary described scenery remains usable."
     }
   ]
 }
