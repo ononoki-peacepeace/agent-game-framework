@@ -87,7 +87,7 @@ function jointNarrativeSubjects<T extends {components:{identity?:{name?:unknown}
 }
 
 /** Current-scene prose cannot turn a player's presupposition or an old paragraph into an NPC MOVE. */
-export function validateScenePresenceNarrative(save:SavePackage,prose:string,claims:readonly {entity_id:string;location_id:string}[]=[]){
+export function validateScenePresenceNarrative(save:SavePackage,prose:string,claims:readonly {entity_id:string;location_id:string}[]=[],movements:readonly Receipt[]=[]){
   for(const claim of claims){
     const entity=save.entities.find(entity=>entity.id===claim.entity_id&&entity.components.character);
     if(!entity||entity.components.location?.location_id!==claim.location_id)
@@ -117,11 +117,20 @@ export function validateScenePresenceNarrative(save:SavePackage,prose:string,cla
     if(named.length===1)subjects=named;else if(named.length>1)subjects=joint;
     else if(!/^(?:随后|随即|接着|然后)?(?:她|他)/.test(compact))continue;
     if(!subjects.length)continue;
-    const departed=[...compact.matchAll(/(?:离开|离去|走出|走了|上去了|跨过门槛|跨出门|退出房间)/g)].some(match=>{
+    const departed=(subject:typeof people[number])=>[...compact.matchAll(/(?:离开|离去|走出|走了|上去了|跨过门槛|跨出门|退出房间)/g)].some(match=>{
       const token=match[0];
       if(token==='离开'&&attentionMovement(compact.slice(0,match.index).split(/[，,；;]/).at(-1)??''))return false;
       // "走了两步/几步" is local stepping, never evidence of leaving the scene.
       if(token==='走了'&&/^[一二两三四五六七八九十百\d]+步/.test(compact.slice(match.index+token.length)))return false;
+      // An arrival may truthfully name the origin just left. Only this actor's
+      // actual visible route can explain that occurrence; "left here" still fails.
+      if(token==='离开'&&movements.some(step=>{
+        const route=step.movement_route;
+        if(step.actor_id!==subject.id||!route||route.destination_id!==here||route.origin_id===here)return false;
+        const origin=currentMap(save).locations.find(location=>location.id===route.origin_id)?.name.replace(/\s/g,'');
+        if(!origin||!new RegExp(`^(?:了)?${origin.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}(?=[，,；;]|$)`).test(compact.slice(match.index+token.length)))return false;
+        try{validateMovementNarrative(step,{narrative:sentence,dialogue:null},save);return true;}catch{return false;}
+      }))return false;
       // A denial/intention belongs to this occurrence, not every later verb in
       // the sentence. Contrast and clause boundaries may introduce real travel.
       const prefix=compact.slice(0,match.index).split(/[，,；;]|但是|可是|随后|然后|接着|却|但/).at(-1)??'';
@@ -129,7 +138,7 @@ export function validateScenePresenceNarrative(save:SavePackage,prose:string,cla
         /(?:如果|要是).{0,16}$/.test(prefix);
       return !guarded;
     });
-    if(subjects.some(subject=>subject.components.location?.location_id===here)&&departed)throw new GameError('旁白声称在场人物已经离场，但没有权威位置变更',503);
+    if(subjects.some(subject=>subject.components.location?.location_id===here&&departed(subject)))throw new GameError('旁白声称在场人物已经离场，但没有权威位置变更',503);
     if(subjects.some(subject=>subject.components.location?.location_id!==here)&&/(?:站在|坐在|就在|留在)(?:这里|眼前|你身旁|你面前|原地)/.test(compact))
       throw new GameError('旁白把不在当前地点的人物描写为在场',503);
   }
@@ -220,11 +229,20 @@ export function validateResolvedNarrative(receipt:Receipt,result:Narrative,hidde
     if(kind==='position'&&scene&&compoundReceipts){
       // Only an explicitly identified NPC's actual route can explain their movement.
       // A player movement, anonymous movement, or an unexecuted NPC plan still fails.
-      text=text.split(/(?<=[。！？\n])/).filter(sentence=>!compoundReceipts.some(step=>{
+      text=text.split(/(?<=[。！？\n])|(?<=[，,；;])(?=(?:(?:随后|然后|接着|同时))*(?:你|玩家))/).filter(sentence=>!compoundReceipts.some(step=>{
         if(!step.movement_route||step.actor_id===receipt.actor_id)return false;
+        const here=scene.entities.find(entity=>entity.id===receipt.actor_id)?.components.location?.location_id;
+        const route=step.movement_route;
+        if(route.origin_id!==here&&route.destination_id!==here)return false;
+        // Seeing a departure does not establish seeing a remote arrival, even if
+        // Core has settled the whole route. Only the local endpoint is observable.
+        if(route.destination_id!==here&&/(?:到达|抵达|进入|走到|来到|翻过|跨过|穿过|站在|坐在|就在|留在)/.test(sentence))return false;
         const person=scene.entities.find(e=>e.id===step.actor_id),name=String(person?.components.identity?.name??'');
+        const clause=sentence.replace(/\s/g,'').replace(/^(?:随后|然后|接着|同时)*/,'');
+        const observed=presenceAliases(name).some(alias=>['你看见','你看到','你目送','你看着','玩家看见','玩家看到'].some(prefix=>clause.startsWith(prefix+alias)));
+        if(/^(?:你|玩家)(?!的(?:目光|视线|注意力))/.test(clause)&&!observed)return false;
         if(!name||!sentence.replace(/\s/g,'').includes(name.replace(/\s/g,''))||
-          /(?:你|玩家)(?:自己|也|随后|接着|又|先|便|就)?(?:走|到达|进入|离开|跨|穿过)/.test(sentence))return false;
+          /(?:你|玩家)(?:自己|也|随后|接着|又|先|便|就)*(?:走|到达|进入|离开|跨|穿过)/.test(sentence))return false;
         try{validateMovementNarrative(step,{...result,narrative:sentence,dialogue:null},scene);return true;}catch{return false;}
       })).join('');
     }
@@ -306,7 +324,7 @@ function scopedPhysicalDenial(receipt:Receipt,prefix:string,kind:'contact'|'inju
 }
 
 /** Route assertions are checked against the route actually executed, never a newly planned path. */
-export function validateMovementNarrative(receipt:Receipt,result:Narrative,save:SavePackage){
+export function validateMovementNarrative(receipt:Receipt,result:Pick<Narrative,'narrative'|'dialogue'>,save:SavePackage){
   const route=receipt.movement_route;if(!route)return;
   const locations=currentMap(save).locations;
   const names=new Map(locations.map(location=>[location.id,location.name]));

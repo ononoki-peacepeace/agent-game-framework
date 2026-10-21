@@ -807,7 +807,8 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
         const playerPlace=next.entities.find(e=>e.id===next.player_state.entity_id)?.components.location?.location_id;
         const visibleSteps=next.resolution_receipts?.filter(r=>!current.resolution_receipts?.some(old=>old.request_id===r.request_id)&&
           (r.actor_id===next.player_state.entity_id||r.movement_route?.location_ids[0]===playerPlace||r.movement_route?.location_ids.at(-1)===playerPlace));
-        const narrativeSteps=compoundReceipts??(receipt?.physical_outcome?visibleSteps:undefined);
+        const narrativeSteps=compoundReceipts?
+          [...compoundReceipts,...(visibleSteps??[]).filter(step=>step.actor_id!==next.player_state.entity_id)]:visibleSteps;
         if(receipt?.physical_outcome)for(const step of visibleSteps??[]){
           if(step.actor_id===receipt.actor_id||!step.movement_route)continue;
           const person=next.entities.find(e=>e.id===step.actor_id);
@@ -889,7 +890,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
                   throw new GameError('场景描写不能替玩家新增未授权的台词。',503);
               }
               if(!receipt.movement_route&&!compoundReceipts?.some(step=>step?.movement_route))
-                validateScenePresenceNarrative(next,[result.narrative,...(result.scene_beats??[]).filter(beat=>beat.kind==='narration').map(beat=>beat.text)].join('\n'),result.presence_claims);
+                validateScenePresenceNarrative(next,[result.narrative,...(result.scene_beats??[]).filter(beat=>beat.kind==='narration').map(beat=>beat.text)].join('\n'),result.presence_claims,visibleSteps);
               if(req.arrival_scene_pending===true&&turn.action.type==='MOVE'&&
                 (result.speaker!==null||result.dialogue!==null||result.scene_beats?.some(beat=>beat.kind==='speech')||/[：:]\s*[“\"]/.test(result.narrative)))
                 throw new GameError('抵达后的直接对话应由到达场景生成，不能提前写入移动旁白',503);
