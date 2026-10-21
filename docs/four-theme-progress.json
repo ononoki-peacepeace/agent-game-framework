@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "cd51062 + reviewed live Freeform check repair",
+  "assessed_source": "eb550f6 + reviewed live actor availability guard",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -635,9 +635,11 @@
     "A8.2": {
       "status": "met",
       "evidence": [
-        "tests/low-stakes-open-goal.test.ts"
+        "tests/low-stakes-open-goal.test.ts",
+        "docs/freeform-live-actor.md",
+        "tests/freeform-live-actor.test.ts"
       ],
-      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim. eb550f6 counterexample: HP drops to0 during time hooks but ordinary and physical actions still settle; withdrawn pending live actor guard. Verified positive-HP guard at settlement restores ordinary/physical refusal before RNG with original save untouched; HP1controls, actual disk recreation bytes/zero narration,6files73distinctpassunion/finalstrict47.738sexit0 restore condition."
     },
     "A8.3": {
       "status": "unmet",
@@ -4028,6 +4030,42 @@
         }
       ],
       "note": "103/16064.375%;+1fromwithdrawal/net0fromparent; originalfailures retained, nofullsuite/build claim."
+    },
+    {
+      "batch": "freeform-live-actor-withdrawal",
+      "type": "evidence_correction",
+      "source": "eb550f6",
+      "transitions": [
+        {
+          "id": "A8.2",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "docs/freeform-live-actor.md",
+            "tests/freeform-live-actor.test.ts"
+          ],
+          "reason": "Actual ordinary/physical actions settle after time hook lowers actorHPto0; twoHP1controls pass."
+        }
+      ],
+      "note": "2fail2pass4.303s;102/16063.75%."
+    },
+    {
+      "batch": "freeform-live-actor-repair",
+      "type": "repair",
+      "source": "eb550f6+reviewed-worktree",
+      "transitions": [
+        {
+          "id": "A8.2",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "docs/freeform-live-actor.md",
+            "tests/freeform-live-actor.test.ts"
+          ],
+          "reason": "Post-time actor availability guard rejects actual HP0 before result RNG/effects; pairedHP1controls and disk refusal/recreation verified,6files73distinctpasses/finalstrict47.738sexit0."
+        }
+      ],
+      "note": "103/16064.375%;+1fromwithdrawal/net0fromparent;fullA8.3matrix open."
     }
   ],
   "new_risks": [],
@@ -4971,6 +5009,18 @@
         "tests/freeform-live-check.test.ts"
       ],
       "summary": "Nonphysical Freeform checks retain stale pre-time-hook evidence access and ability modifiers; actual inaccessible evidence discovery and public facts reproduced."
+    },
+    {
+      "id": "freeform-stale-actor-availability",
+      "scope": "original",
+      "condition": "A8.2",
+      "status": "resolved",
+      "source": "eb550f6",
+      "evidence": [
+        "docs/freeform-live-actor.md",
+        "tests/freeform-live-actor.test.ts"
+      ],
+      "summary": "Freeform original HP guard was not repeated after world-time hooks; actor with HP0 still acts."
     }
   ]
 }

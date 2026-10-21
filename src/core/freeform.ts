@@ -511,6 +511,9 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
     // Time hooks can move people/items, seal containers or destroy resources.
     // Validate against the isolated settlement state before any action result;
     // a failed candidate must not pull a remote item back or report an activity.
+    const liveActor=c.save.entities.find(entity=>entity.id===c.action.actor_id);
+    if(!liveActor||Number(liveActor.components.condition?.hp??1)<=0)
+      throw new WorldBlockedError('prerequisite','这次行动的时间推进会使身体状态无法行动；本次行动未提交。');
     const live=livePrerequisites(c.save);
     if(live.status!=='EXECUTABLE'||!activityRequirement(c.save,input).available)
       throw new WorldBlockedError('prerequisite',
