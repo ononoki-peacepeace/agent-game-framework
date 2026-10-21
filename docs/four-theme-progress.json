@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "faea6e4 + reviewed live local anchor guard",
+  "assessed_source": "a1eff81 + reviewed live hazard source repair",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -637,9 +637,11 @@
       "evidence": [
         "tests/low-stakes-open-goal.test.ts",
         "docs/freeform-live-actor.md",
-        "tests/freeform-live-actor.test.ts"
+        "tests/freeform-live-actor.test.ts",
+        "docs/freeform-live-hazard.md",
+        "tests/freeform-live-hazard.test.ts"
       ],
-      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim. eb550f6 counterexample: HP drops to0 during time hooks but ordinary and physical actions still settle; withdrawn pending live actor guard. Verified positive-HP guard at settlement restores ordinary/physical refusal before RNG with original save untouched; HP1controls, actual disk recreation bytes/zero narration,6files73distinctpassunion/finalstrict47.738sexit0 restore condition."
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim. eb550f6 counterexample: HP drops to0 during time hooks but ordinary and physical actions still settle; withdrawn pending live actor guard. Verified positive-HP guard at settlement restores ordinary/physical refusal before RNG with original save untouched; HP1controls, actual disk recreation bytes/zero narration,6files73distinctpassunion/finalstrict47.738sexit0 restore condition. a1eff81 counterexample: physical environmental source disappears or moves away in time hook but initial hazard authority survives; withdrawn pending live-source repair. Live hazard source position/description now checked at settlement; paired actual source removal/relocation vs valid hazard, preserved unknown-source independentcontact controls, disk repeatedrefusal/bytes/state and4files34distinctpassunion/finalstrict42.264sexit0 restore condition."
     },
     "A8.3": {
       "status": "unmet",
@@ -4085,6 +4087,42 @@
         }
       ],
       "note": "103/16064.375%delta0; nofullsuite/build claim."
+    },
+    {
+      "batch": "freeform-live-hazard-withdrawal",
+      "type": "evidence_correction",
+      "source": "a1eff81",
+      "transitions": [
+        {
+          "id": "A8.2",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "docs/freeform-live-hazard.md",
+            "tests/freeform-live-hazard.test.ts"
+          ],
+          "reason": "Actual place/source-entity hazard authority remains after time hooks remove or relocate it."
+        }
+      ],
+      "note": "102/16063.75%; initial two real failures retained; positive-control dice fixture corrected."
+    },
+    {
+      "batch": "freeform-live-hazard-repair",
+      "type": "repair",
+      "source": "a1eff81+reviewed-worktree",
+      "transitions": [
+        {
+          "id": "A8.2",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "docs/freeform-live-hazard.md",
+            "tests/freeform-live-hazard.test.ts"
+          ],
+          "reason": "Live public hazard authority verified before contact/injury RNG; actual source place/entity removal controls and disk no-mutation refusal plus4files34distinctpasses/strict42.264sexit0."
+        }
+      ],
+      "note": "103/16064.375%;+1fromwithdrawal/net0fromparent; firstdicefixturefailures retained."
     }
   ],
   "new_risks": [],
@@ -5052,6 +5090,18 @@
         "tests/freeform-live-anchor.test.ts"
       ],
       "summary": "Prebound local position survived entity departure/environment disappearance during time hooks; settlement rebind now refuses stale anchor."
+    },
+    {
+      "id": "freeform-stale-environment-hazard",
+      "scope": "original",
+      "condition": "A8.2",
+      "status": "resolved",
+      "source": "a1eff81",
+      "evidence": [
+        "docs/freeform-live-hazard.md",
+        "tests/freeform-live-hazard.test.ts"
+      ],
+      "summary": "Environmental harm validates source at preflight only; source removal/relocation during time hooks does not revoke authority."
     }
   ]
 }

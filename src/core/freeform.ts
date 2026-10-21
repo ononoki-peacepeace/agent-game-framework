@@ -468,14 +468,19 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
   if(physical?.kind==='harm'&&!current.definition.enabled_modules.includes('routine'))
     throw new FreeformRepairableError('proposal_contract_invalid','当前世界没有可结算伤势的 condition 能力，不能只靠叙事宣告伤害。');
   let unverifiedEnvironment=false;
+  let environmentSourceValid=(_save:SavePackage)=>true;
   if(physical?.mechanism==='environment'){
     const source=physical.hazard_source;
-    const sourceEntity=view.entities.find(entity=>entity.id===source?.source_id&&
-      entity.components.location?.location_id===player.components.location?.location_id);
-    const sourcePlace=[...(current.definition.map?.locations??[]),...current.map_state.dynamic_locations]
-      .find(place=>place.id===source?.source_id&&place.id===player.components.location?.location_id);
-    const description=sourcePlace?.description??String(sourceEntity?.components.identity?.description??'');
-    if(source&&!description.includes(source.quote))
+    environmentSourceValid=save=>{
+      if(!source)return true;
+      const here=save.entities.find(entity=>entity.id===player.id)?.components.location?.location_id;
+      const sourceEntity=publicView(save).entities.find(entity=>entity.id===source.source_id&&
+        entity.components.location?.location_id===here);
+      const sourcePlace=[...(save.definition.map?.locations??[]),...save.map_state.dynamic_locations]
+        .find(place=>place.id===source.source_id&&place.id===here);
+      return (sourcePlace?.description??String(sourceEntity?.components.identity?.description??'')).includes(source.quote);
+    };
+    if(!environmentSourceValid(current))
       throw new FreeformRepairableError('proposal_contract_invalid','环境伤害需要当前位置或可接触对象已有描述中的危险来源，不能仅引用玩家的假定。');
     unverifiedEnvironment=!source;
     if(unverifiedEnvironment&&physical.kind==='harm'&&physical.injury_stage_id===physical.contact_stage_id)
@@ -520,6 +525,8 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
         `这次行动的时间推进会使前置条件失效（${live.reason??'现场资源不可用'}）；本次行动未提交。`);
     if(destination&&boundLocalDestination(c.save,input)!==destination)
       throw new WorldBlockedError('prerequisite','局部移动所依据的现场位置已经改变；本次行动未提交。');
+    if(!environmentSourceValid(c.save))
+      throw new WorldBlockedError('prerequisite','环境危险来源已经改变或无法接触；本次行动未提交。');
     // Ability, fatigue and discoverable evidence can also change during the
     // interval. Bind every result to the state that will actually be settled.
     check=prepareCheck(c.save,requestId,checkInput);
