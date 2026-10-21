@@ -1,0 +1,32 @@
+{
+  "version":1,
+  "condition":"W5.4",
+  "hours":72,
+  "step_minutes":180,
+  "restart_after_hours":[12,36,60],
+  "worlds":["trade","relations","calendar"],
+  "scope":"Additional offline adaptive-plan integration, not a replacement for fixed-world72-scenarios.v1.json or real-model judgment.",
+  "phases":[
+    {"hour":0,"fact":"Three repeated attempts face a closed destination after one successful INSPECT."},
+    {"hour":9,"fact":"Each owner may abandon the blocked method, retain its long goal and execute a new local method."},
+    {"hour":12,"fact":"A co-present witnessed statement enters owner context before the next method revision."},
+    {"hour":24,"fact":"An explicit authoritative fixture wallet update to zero is persisted before owner resource-aware revision."},
+    {"hour":36,"fact":"Owners choose actual Core travel to station followed by peer TALK; subsequent context must reflect actual locations and relationships."},
+    {"hour":48,"fact":"Owners reconsider with actual new location and sourced relationship facts, preserving their long goals."},
+    {"hour":60,"fact":"A final owner review occurs after restart, with the same goal and no replay of earlier successful prefixes."}
+  ],
+  "mechanics":{
+    "trade":"Finite stock and wallet: actual daily player BUY once; exactly three paid units, no free NPC products.",
+    "relations":"Commerce disabled and authored contact relationship policy; actual cyclic NPC TALK settles relationships.",
+    "calendar":"Commerce disabled, authored calendar and future not_before on replacement methods; no execution before the scheduled time."
+  },
+  "checks":[
+    "Every paid three-hour interval advances the authoritative clock by exactly180 minutes; NPC work cannot charge world time twice.",
+    "Every prior receipt remains byte-equivalent and unique, old INSPECT prefix occurs once per NPC, abandoned method cursors do not regress.",
+    "All three owners retain the exact same active long goal; every replacement has an owned goal and actual committed completion receipts.",
+    "At twelve-hour boundaries, exact canonical request replay must not rerun its mutator, generate, write current.json or change response/bytes.",
+    "At12/36/60 hours recreate JsonStore/AIRuntime/GameService, compare full saved authority and replay the preceding request before continuing.",
+    "Final states require six completed replacement methods per NPC and one abandoned original; pending travel/TALK may not be falsely completed.",
+    "No private peer/world facts enter public view; controlled candidates do not establish real-model adaptive judgment or human narrative quality."
+  ]
+}
