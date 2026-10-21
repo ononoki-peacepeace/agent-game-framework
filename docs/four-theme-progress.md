@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：f350814 + reviewed Freeform time prerequisite repair。整体 **64.38%**（103/160 个固定条件满足）。未满足 24，待验证 33。
+计分版本 v1；评估源代码：cd51062 + reviewed live Freeform check repair。整体 **64.38%**（103/160 个固定条件满足）。未满足 24，待验证 33。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：44 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：45 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -142,6 +142,8 @@
 | owned-core-install-kill-evidence | repair | R7.4: FouractualOStoolkill/independentworkerrestartcasespass25.136s;addedrealtempGitinstallfailurepreservationandnewbootruntimefailure/auditablerevert.Noactualfullcompilerorserviceownercrashcleanupclaim.Strict51.098sexit0.；完整条件保持开放 | +0.000 pp |
 | registered-activity-resource-validity | repair | A8.3: Destroyed/sealed registered instrument refusal and intact/damaged/scenery controls verified; final8directpass4.520s,strict40.891sexit0. Earlier3files26pass and adjacent5files77pass precede canonical lookup type fix; full dynamic matrix open.；完整条件保持开放 | +0.000 pp |
 | freeform-time-prerequisites | repair | A8.3: Actual3counterexamples fixed; final7directpass8.030s/strict54.467sexit0; selected9files119distinctpassingunion, original4HTTPpermissionfailures retained and affected4pass on permission rerun. Full dynamic matrix open.；完整条件保持开放 | +0.000 pp |
+| freeform-live-check-withdrawal | evidence_correction | N4.1: met → unmet | -0.625 pp |
+| freeform-live-check-repair | repair | N4.1: unmet → met | +0.625 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -302,7 +304,7 @@
 |---|---|---|---|
 | A8.1 | 已有 Freeform 身体动作及环境能力可结算 | 满足 | [low-stakes-open-goal.test.ts](../tests/low-stakes-open-goal.test.ts) |
 | A8.2 | 距离、身体和环境前提不能由描写虚构满足 | 满足 | [low-stakes-open-goal.test.ts](../tests/low-stakes-open-goal.test.ts) |
-| A8.3 | 开放交互涵盖各类物品、地形及能力的动态前提 | 未满足 | [low-stakes-open-goal.test.ts](../tests/low-stakes-open-goal.test.ts), [sealed-item-movement.test.ts](../tests/sealed-item-movement.test.ts), [sealed-item-movement.md](../docs/sealed-item-movement.md), [sealed-item-damage.test.ts](../tests/sealed-item-damage.test.ts), [sealed-item-damage.md](../docs/sealed-item-damage.md), [tracked-item-sale.test.ts](../tests/tracked-item-sale.test.ts), [tracked-item-sale.md](../docs/tracked-item-sale.md), [equipped-item-sale.test.ts](../tests/equipped-item-sale.test.ts), [equipped-item-sale.md](../docs/equipped-item-sale.md), [sealed-equipment-access.test.ts](../tests/sealed-equipment-access.test.ts), [sealed-equipment-access.md](../docs/sealed-equipment-access.md), [destroyed-activity-resource.md](../docs/destroyed-activity-resource.md), [destroyed-activity-resource.test.ts](../tests/destroyed-activity-resource.test.ts), [freeform-time-prerequisites.md](../docs/freeform-time-prerequisites.md), [freeform-time-prerequisites.test.ts](../tests/freeform-time-prerequisites.test.ts) |
+| A8.3 | 开放交互涵盖各类物品、地形及能力的动态前提 | 未满足 | [low-stakes-open-goal.test.ts](../tests/low-stakes-open-goal.test.ts), [sealed-item-movement.test.ts](../tests/sealed-item-movement.test.ts), [sealed-item-movement.md](../docs/sealed-item-movement.md), [sealed-item-damage.test.ts](../tests/sealed-item-damage.test.ts), [sealed-item-damage.md](../docs/sealed-item-damage.md), [tracked-item-sale.test.ts](../tests/tracked-item-sale.test.ts), [tracked-item-sale.md](../docs/tracked-item-sale.md), [equipped-item-sale.test.ts](../tests/equipped-item-sale.test.ts), [equipped-item-sale.md](../docs/equipped-item-sale.md), [sealed-equipment-access.test.ts](../tests/sealed-equipment-access.test.ts), [sealed-equipment-access.md](../docs/sealed-equipment-access.md), [destroyed-activity-resource.md](../docs/destroyed-activity-resource.md), [destroyed-activity-resource.test.ts](../tests/destroyed-activity-resource.test.ts), [freeform-time-prerequisites.md](../docs/freeform-time-prerequisites.md), [freeform-time-prerequisites.test.ts](../tests/freeform-time-prerequisites.test.ts), [freeform-live-check.md](../docs/freeform-live-check.md), [freeform-live-check.test.ts](../tests/freeform-live-check.test.ts) |
 | A8.4 | 多世界自由动作语料通过，游戏内失败原样保留 | 待验证 | [low-stakes-open-goal.test.ts](../tests/low-stakes-open-goal.test.ts) |
 
 ## A9 Broad multi-world natural-language acceptance corpus
@@ -444,7 +446,7 @@
 
 | 条件 | 具体通过条件 | 状态 | 依据 |
 |---|---|---|---|
-| N4.1 | 已有事实、在场和感知校验阻止越权描写 | 满足 | [post-presence-offline-snapshot.md](../docs/post-presence-offline-snapshot.md), [perception-audit-authority.md](../docs/perception-audit-authority.md), [builtin-narration-authority.md](../docs/builtin-narration-authority.md), [movement-presence-authority.md](../docs/movement-presence-authority.md), [perception-audit-authority.test.ts](../tests/perception-audit-authority.test.ts), [builtin-narration-authority.test.ts](../tests/builtin-narration-authority.test.ts), [movement-presence-authority.test.ts](../tests/movement-presence-authority.test.ts) |
+| N4.1 | 已有事实、在场和感知校验阻止越权描写 | 满足 | [post-presence-offline-snapshot.md](../docs/post-presence-offline-snapshot.md), [perception-audit-authority.md](../docs/perception-audit-authority.md), [builtin-narration-authority.md](../docs/builtin-narration-authority.md), [movement-presence-authority.md](../docs/movement-presence-authority.md), [perception-audit-authority.test.ts](../tests/perception-audit-authority.test.ts), [builtin-narration-authority.test.ts](../tests/builtin-narration-authority.test.ts), [movement-presence-authority.test.ts](../tests/movement-presence-authority.test.ts), [freeform-live-check.md](../docs/freeform-live-check.md), [freeform-live-check.test.ts](../tests/freeform-live-check.test.ts) |
 | N4.2 | 已知合法描写及误拒边界有回归证据 | 满足 | [post-presence-offline-snapshot.md](../docs/post-presence-offline-snapshot.md), [npc-movement-narration-authority.md](../docs/npc-movement-narration-authority.md), [movement-presence-authority.md](../docs/movement-presence-authority.md), [npc-movement-narration-authority.test.ts](../tests/npc-movement-narration-authority.test.ts), [movement-presence-authority.test.ts](../tests/movement-presence-authority.test.ts) |
 | N4.3 | 扩大合法比喻、转述和场景表述语料降低误拒 | 未满足 | [narrative-firewall-observability.test.ts](../tests/narrative-firewall-observability.test.ts), [scene-presence-negation.test.ts](../tests/scene-presence-negation.test.ts), [scene-presence-negation.md](../docs/scene-presence-negation.md), [scene-presence-subjects.test.ts](../tests/scene-presence-subjects.test.ts), [scene-presence-subjects.md](../docs/scene-presence-subjects.md), [scene-presence-groups.test.ts](../tests/scene-presence-groups.test.ts), [scene-presence-groups.md](../docs/scene-presence-groups.md), [perception-subjects.test.ts](../tests/perception-subjects.test.ts), [perception-subjects.md](../docs/perception-subjects.md) |
 | N4.4 | 多世界误放与误拒均按固定期望验收 | 待验证 | [narrative-firewall-observability.test.ts](../tests/narrative-firewall-observability.test.ts) |

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "f350814 + reviewed Freeform time prerequisite repair",
+  "assessed_source": "cd51062 + reviewed live Freeform check repair",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -656,9 +656,11 @@
         "docs/destroyed-activity-resource.md",
         "tests/destroyed-activity-resource.test.ts",
         "docs/freeform-time-prerequisites.md",
-        "tests/freeform-time-prerequisites.test.ts"
+        "tests/freeform-time-prerequisites.test.ts",
+        "docs/freeform-live-check.md",
+        "tests/freeform-live-check.test.ts"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 5f29a42 repairs sealed ancestry for source/destination movement/transfer and Freeform prerequisites;baseline8fail/3controls,expanded destination/Freeform counterexamples retained,7files99pass/build,actual disk no-write refusals. Full condition remains open. f537de7 repairs registered/shared sealed-contained damage before RNG/mutation;baseline4fail/2controls,6files111pass/build,actual disk service no-write/no-generation refusal. Full matrix stays open. 132de1c repairs tracked sale placement/owner cleanup and sealed/filled-container refusal;baseline4fail/1control,6files105pass/build,real disk/service replay with one payment/receipt and no extra generation. Equipped/consumption/full matrix stays open. 857a42c replaces equipped SELL invariant failure with pre-settlement world refusal;baseline2fail/1explicit-UNEQUIP control,5files77pass/build,real disk/service repeated refusal no writes/generation. Full condition remains open. d1721f4 guards player/NPC EQUIP through sealed ancestors;baseline5fail/4open/exterior controls,7files98pass/build,actual disk/service refusal no-write/no-generation. Full condition remains open. Registered destroyed/sealed activity resources now block actual execution and disk/service recreation without mutation/generation; final8directpass/strict40.891s. Broader dynamic matrix remains open. Time-hook destroyed/remote resources, sealed ancestry and departed NPCs now recheck before action results; final7directpass/strict54.467s, actual disk recreation unchanged. Full body/terrain/capability/multi-world matrix remains open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 5f29a42 repairs sealed ancestry for source/destination movement/transfer and Freeform prerequisites;baseline8fail/3controls,expanded destination/Freeform counterexamples retained,7files99pass/build,actual disk no-write refusals. Full condition remains open. f537de7 repairs registered/shared sealed-contained damage before RNG/mutation;baseline4fail/2controls,6files111pass/build,actual disk service no-write/no-generation refusal. Full matrix stays open. 132de1c repairs tracked sale placement/owner cleanup and sealed/filled-container refusal;baseline4fail/1control,6files105pass/build,real disk/service replay with one payment/receipt and no extra generation. Equipped/consumption/full matrix stays open. 857a42c replaces equipped SELL invariant failure with pre-settlement world refusal;baseline2fail/1explicit-UNEQUIP control,5files77pass/build,real disk/service repeated refusal no writes/generation. Full condition remains open. d1721f4 guards player/NPC EQUIP through sealed ancestors;baseline5fail/4open/exterior controls,7files98pass/build,actual disk/service refusal no-write/no-generation. Full condition remains open. Registered destroyed/sealed activity resources now block actual execution and disk/service recreation without mutation/generation; final8directpass/strict40.891s. Broader dynamic matrix remains open. Time-hook destroyed/remote resources, sealed ancestry and departed NPCs now recheck before action results; final7directpass/strict54.467s, actual disk recreation unchanged. Full body/terrain/capability/multi-world matrix remains open. Paired fatigue/recovery now affects actual nonphysical result using current settlement state; broad dynamic matrix remains open."
     },
     "A8.4": {
       "status": "unverified",
@@ -1149,9 +1151,11 @@
         "docs/movement-presence-authority.md",
         "tests/perception-audit-authority.test.ts",
         "tests/builtin-narration-authority.test.ts",
-        "tests/movement-presence-authority.test.ts"
+        "tests/movement-presence-authority.test.ts",
+        "docs/freeform-live-check.md",
+        "tests/freeform-live-check.test.ts"
       ],
-      "basis": "Sourcee9ea62a audited251files2538selectedpasses/zero skip/exactinventory/566hashes/build18453. Initial12/16native0xC0000409 retained;24freshsinglefilepasses complete coverage, native root cause unresolved. Actual Core/HTTP/disk/replay counterexamples and lawful/unsafe controls repaired; only original bounded existing authority/legal-regression condition restored. Full three-structure prose breadth and human quality remain open."
+      "basis": "Sourcee9ea62a audited251files2538selectedpasses/zero skip/exactinventory/566hashes/build18453. Initial12/16native0xC0000409 retained;24freshsinglefilepasses complete coverage, native root cause unresolved. Actual Core/HTTP/disk/replay counterexamples and lawful/unsafe controls repaired; only original bounded existing authority/legal-regression condition restored. Full three-structure prose breadth and human quality remain open. cd51062 counterexample: pre-time-hook check discovers evidence whose authoritative placement moved away; N4.1 withdrawn pending repair. Verified settlement-state check refresh removes remote evidence discovery and public facts; paired accessible/newly-accessible controls, actual disk replay and7files87distinctpassunion; final6pass8.452s/strict51.222sexit0 restore N4.1. No new complete-suite claim."
     },
     "N4.2": {
       "status": "met",
@@ -3978,6 +3982,52 @@
         }
       ],
       "note": "103/16064.375%delta0; initial fixture error and strict test-type failures retained."
+    },
+    {
+      "batch": "freeform-live-check-withdrawal",
+      "type": "evidence_correction",
+      "source": "cd51062",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "docs/freeform-live-check.md",
+            "tests/freeform-live-check.test.ts"
+          ],
+          "reason": "Actual time-hook relocation still discovers inaccessible evidence; existing fact/perception boundary fails."
+        }
+      ],
+      "note": "3fail1control4.267s, including paired stale fatigue/recovery modifiers;102/16063.75%."
+    },
+    {
+      "batch": "freeform-live-check-repair",
+      "type": "repair",
+      "source": "cd51062+reviewed-worktree",
+      "transitions": [
+        {
+          "id": "N4.1",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "docs/freeform-live-check.md",
+            "tests/freeform-live-check.test.ts"
+          ],
+          "reason": "Settlement-state evidence access and fatigue refreshed; actual inaccessible/reachable/newlyreachable controls and disk narrative/replay verified,7files87distinctpasses/finalstrict51.222sexit0."
+        }
+      ],
+      "condition_checks": [
+        {
+          "id": "A8.3",
+          "result": "Paired fatigue/recovery results fixed, full dynamic object/terrain/capability matrix remains open.",
+          "evidence": [
+            "docs/freeform-live-check.md",
+            "tests/freeform-live-check.test.ts"
+          ]
+        }
+      ],
+      "note": "103/16064.375%;+1fromwithdrawal/net0fromparent; originalfailures retained, nofullsuite/build claim."
     }
   ],
   "new_risks": [],
@@ -4909,6 +4959,18 @@
         "tests/freeform-time-prerequisites.test.ts"
       ],
       "summary": "Nonphysical Freeform actions used pre-time-hook conditions, reporting unavailable-resource activity and pulling remote items back; all attempts now recheck isolated settlement prerequisites before results."
+    },
+    {
+      "id": "freeform-stale-check-evidence",
+      "scope": "original",
+      "condition": "N4.1",
+      "status": "resolved",
+      "source": "cd51062",
+      "evidence": [
+        "docs/freeform-live-check.md",
+        "tests/freeform-live-check.test.ts"
+      ],
+      "summary": "Nonphysical Freeform checks retain stale pre-time-hook evidence access and ability modifiers; actual inaccessible evidence discovery and public facts reproduced."
     }
   ]
 }
