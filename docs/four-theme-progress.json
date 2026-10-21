@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "d93e417",
+  "assessed_source": "acd56ad",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -346,18 +346,22 @@
       "basis": "Known remaining implementation or acceptance gap in the existing ledger."
     },
     "A1.1": {
-      "status": "met",
+      "status": "unmet",
       "evidence": [
-        "tests/goal-stage-person-binding.test.ts"
+        "tests/goal-stage-person-binding.test.ts",
+        "tests/conditional-speech-binding.test.ts",
+        "docs/conditional-speech-binding.md"
       ],
-      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+      "basis": "Actual conditional TALK follows the rewritten Planner recipient instead of the original named listener; repeated name in guard also masks later address frame. Counterexamples retained; bounded repair pending."
     },
     "A1.2": {
-      "status": "met",
+      "status": "unmet",
       "evidence": [
-        "tests/goal-stage-person-binding.test.ts"
+        "tests/goal-stage-person-binding.test.ts",
+        "tests/conditional-speech-binding.test.ts",
+        "docs/conditional-speech-binding.md"
       ],
-      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+      "basis": "Actual conditional TALK follows the rewritten Planner recipient instead of the original named listener; repeated name in guard also masks later address frame. Counterexamples retained; bounded repair pending."
     },
     "A1.3": {
       "status": "met",
@@ -367,11 +371,13 @@
       "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
     },
     "A1.4": {
-      "status": "met",
+      "status": "unmet",
       "evidence": [
-        "tests/goal-stage-person-binding.test.ts"
+        "tests/goal-stage-person-binding.test.ts",
+        "tests/conditional-speech-binding.test.ts",
+        "docs/conditional-speech-binding.md"
       ],
-      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+      "basis": "Actual conditional TALK follows the rewritten Planner recipient instead of the original named listener; repeated name in guard also masks later address frame. Counterexamples retained; bounded repair pending."
     },
     "A2.1": {
       "status": "met",
@@ -469,11 +475,13 @@
       "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
     },
     "A5.2": {
-      "status": "met",
+      "status": "unmet",
       "evidence": [
-        "tests/goal-stage-person-binding.test.ts"
+        "tests/goal-stage-person-binding.test.ts",
+        "tests/conditional-speech-binding.test.ts",
+        "docs/conditional-speech-binding.md"
       ],
-      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
+      "basis": "Actual conditional TALK follows the rewritten Planner recipient instead of the original named listener; repeated name in guard also masks later address frame. Counterexamples retained; bounded repair pending."
     },
     "A5.3": {
       "status": "unmet",
@@ -3504,6 +3512,54 @@
         }
       ],
       "note": "Producte9ea62a unchanged;scriptartifactsnotnewfullframeworksnapshot.Score0;N9statusesunchanged."
+    },
+    {
+      "batch": "conditional-speech-binding-counterexample",
+      "type": "evidence_correction",
+      "source": "acd56ad",
+      "transitions": [
+        {
+          "id": "A1.1",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "tests/conditional-speech-binding.test.ts",
+            "docs/conditional-speech-binding.md"
+          ],
+          "reason": "Actual conditional TALK follows the rewritten Planner recipient instead of the original named listener; repeated name in guard also masks later address frame. Counterexamples retained; bounded repair pending."
+        },
+        {
+          "id": "A1.2",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "tests/conditional-speech-binding.test.ts",
+            "docs/conditional-speech-binding.md"
+          ],
+          "reason": "Actual conditional TALK follows the rewritten Planner recipient instead of the original named listener; repeated name in guard also masks later address frame. Counterexamples retained; bounded repair pending."
+        },
+        {
+          "id": "A1.4",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "tests/conditional-speech-binding.test.ts",
+            "docs/conditional-speech-binding.md"
+          ],
+          "reason": "Actual conditional TALK follows the rewritten Planner recipient instead of the original named listener; repeated name in guard also masks later address frame. Counterexamples retained; bounded repair pending."
+        },
+        {
+          "id": "A5.2",
+          "before": "met",
+          "after": "unmet",
+          "evidence": [
+            "tests/conditional-speech-binding.test.ts",
+            "docs/conditional-speech-binding.md"
+          ],
+          "reason": "Actual conditional TALK follows the rewritten Planner recipient instead of the original named listener; repeated name in guard also masks later address frame. Counterexamples retained; bounded repair pending."
+        }
+      ],
+      "note": "Baseline7cases:4fail3controls; original5case drafts2fail3controls retained. No product edit yet."
     }
   ],
   "new_risks": [],
@@ -4310,6 +4366,18 @@
         "docs/post-presence-offline-snapshot.md"
       ],
       "summary": "Movement skipped scene presence; always current validation now rejects absent prose/structured claims and checks explicit departure context against prior actual scene."
+    },
+    {
+      "id": "conditional-speech-binding",
+      "scope": "original",
+      "condition": "A5.2",
+      "status": "open",
+      "source": "acd56ad",
+      "evidence": [
+        "tests/conditional-speech-binding.test.ts",
+        "docs/conditional-speech-binding.md"
+      ],
+      "summary": "Actual conditional TALK follows the rewritten Planner recipient instead of the original named listener; repeated name in guard also masks later address frame. Counterexamples retained; bounded repair pending."
     }
   ]
 }
