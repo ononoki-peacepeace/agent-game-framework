@@ -238,9 +238,13 @@
     "R7.4": {
       "status": "unverified",
       "evidence": [
-        "docs/build-performance-diagnosis-2026-10-20.md"
+        "docs/build-performance-diagnosis-2026-10-20.md",
+        "docs/development-process-kill.md",
+        "tests/development-process-kill.test.ts",
+        "tests/fixtures/development-kill-worker.ts",
+        "tests/fixtures/development-kill-tool.mjs"
       ],
-      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required. 989d4c6 product: bounded two-process-tool strong-kill and independent-worker restart evidence added; actual full compiler/install child and service-owner crash matrix remains open. No credit."
     },
     "R8.1": {
       "status": "met",
@@ -3899,6 +3903,25 @@
         }
       ],
       "note": "103/16064.375%;+1/+0.625pp;original3latewriter+1precapture failures retained. Fixed Git candidate commit excludes unowned index;no destructive checkout operation."
+    },
+    {
+      "batch": "owned-development-tool-kill-evidence",
+      "type": "repair",
+      "source": "989d4c6+test-only-evidence",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R7.4",
+          "result": "TwoactualOSstrongkill/independentworkerrestartcasespass10.820s;precisegates,zeroautomaticreexecution/registration,preservedartifacts.Onlylocalexecutablefixtures;actualfullcompiler/installchild/serviceownercrashmatrixstillopen.Strict34.218sexit0.",
+          "evidence": [
+            "docs/development-process-kill.md",
+            "tests/development-process-kill.test.ts",
+            "tests/fixtures/development-kill-worker.ts",
+            "tests/fixtures/development-kill-tool.mjs"
+          ]
+        }
+      ],
+      "note": "No product change;103/16064.375%delta0;bothoriginalfixturefailuresretained."
     }
   ],
   "new_risks": [],

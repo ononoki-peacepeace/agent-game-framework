@@ -1,0 +1,11 @@
+# Owned development tool process termination
+
+Product source `989d4c6` is unchanged in this evidence batch. `tests/development-process-kill.test.ts` forks actual independent Node worker processes that execute the real DevelopmentTasks lifecycle and JsonStore against synthetic temporary data. Only the external executable is substituted with a small local Node tool; no coding agent/model, full Framework build, production service or production save is used.
+
+Two boundaries have actual forced termination: a leaf package tool receives SIGKILL through its held ChildProcess handle; a nested build tool kills its held inner child with SIGKILL, reports its exit and itself exits 79. Unique nonces and PID identity bind the tool readiness message to the spawned handle. The fixture processes also self-expire after 20 seconds if assertions/controllers are interrupted. After terminal persistence, the first task worker exits; a fresh independent worker queries/replays the same task request with external calls forbidden. Both cases verify preserved package/journal/save bytes, precise failed gate, no installation/registration, zero Provider calls and zero restart commands.
+
+Initial fixture run: 2 failures, 7.309s, because Node's built-in execFile promisify property is nonconfigurable. Corrected worker export substitution reaches both strong-kill and independent restart boundaries, then fails 2 final save-byte assertions in 12.008s because the fixture captured fresh bytes before the service's normal migration. The test now normalizes its synthetic save before establishing the baseline; no product behavior or safety assertion was relaxed. Both original reports remain.
+
+Final: **2/2 passed**, zero skips, **10.820s**; strict root `tsc --noEmit` exit 0, **34.218s**. Reports: `.agent-runtime/codex/development-process-kill-{first,corrected,normalized}.json` and `development-kill-typecheck.json`.
+
+R7.4 remains unverified. These local tool substitutions prove OS exit plus durable task recovery, not termination of an actual full Framework compiler, every installation child boundary, service-owner crash cleanup or every descendant configuration. Next extend the installation/build boundaries without duplicating an unnecessary full successful build. Fixed denominator and other conditions unchanged: 103/160, 64.375%.

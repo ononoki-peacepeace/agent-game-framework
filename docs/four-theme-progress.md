@@ -138,6 +138,7 @@
 | core-build-diagnostic-coverage-correction | evidence_correction | R7.1: met → unmet | -0.625 pp |
 | core-install-checkout-preservation | repair | R7.1: unmet → met | +0.625 pp |
 | core-install-immutable-tree-ownership | repair | R7.3: unmet → met | +0.625 pp |
+| owned-development-tool-kill-evidence | repair | R7.4: TwoactualOSstrongkill/independentworkerrestartcasespass10.820s;precisegates,zeroautomaticreexecution/registration,preservedartifacts.Onlylocalexecutablefixtures;actualfullcompiler/installchild/serviceownercrashmatrixstillopen.Strict34.218sexit0.；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -200,7 +201,7 @@
 | R7.1 | 开发安装失败保留明确阶段、退出码及构建输出 | 满足 | [core-install-worktree-protection.md](../docs/core-install-worktree-protection.md), [core-install-worktree-protection.test.ts](../tests/core-install-worktree-protection.test.ts), [core-install-failure-diagnostics.test.ts](../tests/core-install-failure-diagnostics.test.ts), [coding-agent-failure-diagnostics.test.ts](../tests/coding-agent-failure-diagnostics.test.ts), [development-side-effect-matrix.v1.json](../docs/development-side-effect-matrix.v1.json) |
 | R7.2 | 注册和安装受影响回归及真实本地自扩展重新验收通过 | 满足 | [build-performance-diagnosis-2026-10-20.md](../docs/build-performance-diagnosis-2026-10-20.md) |
 | R7.3 | 外部工作区每类副作用具有恢复身份及安全撤回或停止 | 满足 | [core-install-worktree-protection.md](../docs/core-install-worktree-protection.md), [development-side-effect-matrix.v1.json](../docs/development-side-effect-matrix.v1.json), [core-install-worktree-protection.test.ts](../tests/core-install-worktree-protection.test.ts), [extension-development-failure-identity.test.ts](../tests/extension-development-failure-identity.test.ts), [core-install-lifecycle.test.ts](../tests/core-install-lifecycle.test.ts) |
-| R7.4 | 强杀外部工具与嵌套构建后重启验收通过 | 待验证 | [build-performance-diagnosis-2026-10-20.md](../docs/build-performance-diagnosis-2026-10-20.md) |
+| R7.4 | 强杀外部工具与嵌套构建后重启验收通过 | 待验证 | [build-performance-diagnosis-2026-10-20.md](../docs/build-performance-diagnosis-2026-10-20.md), [development-process-kill.md](../docs/development-process-kill.md), [development-process-kill.test.ts](../tests/development-process-kill.test.ts), [development-kill-worker.ts](../tests/fixtures/development-kill-worker.ts), [development-kill-tool.mjs](../tests/fixtures/development-kill-tool.mjs) |
 
 ## R8 Frontend synchronization and all System/media mutation paths
 
