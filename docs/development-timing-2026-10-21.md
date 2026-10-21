@@ -74,3 +74,14 @@ Observed calls: budget-aware long357 substitutes, extended calendar119, boundary
 | Final stable-source standard build | Exit0 | 49.043 | Once, strict checks unchanged; no self-extension nested full build |
 
 Batch tests66.239s/build49.043s. Official totals **tests1068.682s/builds153.915s/additional noEmit60.718s**. Latest passing case reports cover46 assertions/7 files on unchanged product source; this is an explicit selection union, not a synthetic all-green full-suite report. Live game Provider calls0; developer-model call count/inference time unavailable. R7.3 remains open, score delta0.
+
+## Declarative install-stage follow-up
+
+| Run | Result | Wall seconds | Why run/repeat |
+|---|---|---:|---|
+| Approval/install before-after baseline | 5 passed,4 failed | 4.663 | Actual external approval/canonical effects, compiler substitute |
+| Accurate install-stage repair | 9 passed | 4.426 | Original four new fault cases unchanged |
+| Stable installation/task recovery | 3 files,35 passed,0 skips | 25.232 | Existing duplicate, durable intent, post-commit response, task and restart controls |
+| Strict root noEmit | Exit0 | 27.845 | Server stage-recording change only; skip redundant client/server emits |
+
+Batch tests34.321s/noEmit27.845s/build0s. Official totals **tests1103.003s/builds153.915s/additional strict noEmit88.563s**. Direct cases make no game-model calls and use a compiler substitute; live Provider calls0 across the continuation. Developer-model calls/inference time remain unobserved. No full-project regression repeated, R7.3 score delta0.

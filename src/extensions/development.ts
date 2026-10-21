@@ -58,7 +58,9 @@ export class ExtensionDevelopment {
   const jobs=safeParse(z.array(jobSchema).max(1000),JSON.parse(await readFile(join(this.host.directory,'development.json'),'utf8')));
   assert(new Set(jobs.map(j=>j.job_id)).size===jobs.length&&new Set(jobs.map(j=>j.request_id)).size===jobs.length,'开发日志身份重复');
   for(const j of jobs){this.workspacePath(j);assert(!j.install_intent||j.install_intent.game_id===j.game_id,'安装意图世界身份不匹配');
-   if(j.install_intent){if(!await this.reconcileInstall(j)){j.status='failed';j.phase='idle';j.message='安装结果无法从当前世界核验，已停止自动重放；请检查世界状态。';}}
+   if(j.install_intent){if(!await this.reconcileInstall(j)){j.status='failed';
+    if(!['install_preparing','approving','installing','recording_install'].includes(j.phase))j.phase='install_recovery';
+    j.message='安装结果无法从当前世界核验，已停止自动重放；请检查世界状态。';}}
    else if(!j.game_id&&['ready','installed'].includes(j.status)){j.status='failed';j.phase='idle';j.message='旧候选缺少世界身份，未自动恢复安装资格；原记录保留。';}
    else if(['queued','running'].includes(j.status)){j.status='cancelled';j.phase='idle';j.message='服务重启，未安装的开发任务已停止。';}
   }this.jobs=jobs;
@@ -132,16 +134,20 @@ export class ExtensionDevelopment {
   assert(job.status==='ready','仅可安装已通过构建测试的候选');await this.checkedArtifact(job);
   const current=await this.host.service.storage.read('current','request_recovery');
   assert(current?.game_id===job.game_id,'世界已切换，未安装');assert(current.state_revision===input.expected_revision,'状态已更新，未安装');
-  job.install_intent=intent;
-  try{await this.persist();}catch(error){delete job.install_intent;throw error;}
+  const preview={phase:job.phase,message:job.message};job.install_intent=intent;job.phase='install_preparing';
+  try{await this.persist();}catch(error){delete job.install_intent;Object.assign(job,preview);
+   this.host.service.logger.error('extension.install.prepare_failed',{module:'extension',job_id:job.job_id,trace_id:job.trace_id,
+    metadata:{phase:'install_preparing',reason:String(redactValue(error instanceof Error?error.message:String(error)))}});throw error;}
+  let installStage='approving';
   try{
-   await this.host.approve(job.manifest);const result=await this.host.install(tx,job.manifest,migrationConfirmed);
-   job.status='installed';job.phase='installed';job.message='扩展已安装；可以在适用场景通过左侧输入打开。';await this.persist();return result;
+   job.phase=installStage;await this.persist();await this.host.approve(job.manifest);
+   installStage='installing';job.phase=installStage;await this.persist();const result=await this.host.install(tx,job.manifest,migrationConfirmed);
+   installStage='recording_install';job.status='installed';job.phase='installed';job.message='扩展已安装；可以在适用场景通过左侧输入打开。';await this.persist();return result;
   }catch(error){
-   try{if(!await this.reconcileInstall(job)){job.status='failed';job.phase='idle';job.message='安装未能确认完成，已停止自动重放；请检查世界状态。';}
-    job.logs.push(String(redactValue((error as Error).message)));await this.persist();
+   try{if(!await this.reconcileInstall(job)){job.status='failed';job.phase=installStage;job.message='安装未能确认完成，已停止自动重放；请检查世界状态。';}
+    job.logs.push(`[${installStage}] ${String(redactValue(error instanceof Error?error.message:String(error)))}`);await this.persist();
    }catch(journalError){this.host.service.logger.error('extension.install.reconciliation_failed',{module:'extension',job_id:job.job_id,
-    trace_id:job.trace_id,metadata:{reason:String(redactValue((journalError as Error).message))}});}
+    trace_id:job.trace_id,metadata:{phase:'install_reconciliation',failed_phase:installStage,reason:String(redactValue(journalError instanceof Error?journalError.message:String(journalError)))}});}
    throw error;
   }
  }

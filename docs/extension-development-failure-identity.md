@@ -13,3 +13,13 @@ Affected7-file regression passed45/46 in45.987s. Its only failure was an exact o
 One final standard isolated build passed in49.043s with unchanged strict noEmit/Vite/server emit. New fault tests use a compiler substitute; surrounding lifecycle tests retain their existing small profile compilers. This batch tests66.239s/build49.043s. Official totals tests1068.682s/builds153.915s/additional noEmit60.718s. Game paid Provider calls0; developer-model per-call timing/count remains unobserved.
 
 Full R7.3 is not credited by this partial repair. In particular install/registration failure identities, before/after effects and safe recovery must still be reviewed; process-kill evidence is separate. Count stays102/16063.75%, macro14/22/4, delta0. Frozen acceptance, formal save/service and prior atomic11-point configuration behavior are not modified.
+
+## Declarative installation phase evidence
+
+The next four fixed cases cover before/after local approval and before/after canonical installation. All four fail on5166f52's missing phase identity, while the earlier five controls pass (4.663s). They execute the actual approved-file write or canonical commit before asserting the diagnostic, so a post-commit error cannot be mistaken for an uncommitted failure.
+
+The minimal follow-up records `install_preparing`, `approving`, `installing` and terminal-journal context. Preparation-write failure restores the original preview/intent state and emits an explicit preparation-failure log. A failed job retains its precise installation phase across loader reconciliation. Actual committed receipts remain the sole authority for installed status; post-world-write errors reconcile installed and retain the original `[installing]` diagnostic. Unconfirmed external effects still stop without automatic reapproval/reinstallation. No new required job field or changed receipt/registration semantics.
+
+All original nine direct cases pass after repair (4.426s), including exact canonical revision, durable stage/logs and no duplicate calls after recreation. The stable three-file installation/task recovery selection passes35/35, no skips (25.232s). One strict root noEmit passes27.845s; final source/test hashes match. No second Vite/server build was repeated for this stage-record-only server change; the preceding49.043s standard build belongs to5166f52 and is not claimed as a new-source complete build.
+
+Follow-up tests34.321s/noEmit27.845s. Official totals tests1103.003s/builds153.915s/additional strict noEmit88.563s. Paid Provider calls0; developer-model inference timing unavailable. R7.3 remains open pending the wider core-candidate registration/runtime-validation diagnostics and full before/after matrix; R7.4 child-kill evidence is still separate. Score delta0.

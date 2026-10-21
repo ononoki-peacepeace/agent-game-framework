@@ -63,3 +63,28 @@ it('retains final compiler diagnostics and redacts complete secrets before bound
   expect(compiler.calls).toBe(1);expect(await f.service.current()).toEqual(f.before);
  }finally{await rm(f.directory,{recursive:true,force:true});}
 });
+it.each(['approval_before','approval_after','world_before','world_after'] as const)('retains %s installation failure identity while reconciling only actual commits',async point=>{
+ const f=await fixture();try{
+  const job=await f.dev.start(f.input,{workspace:f.workspace,version:'1.0.0'});await f.dev.wait(job.job_id);
+  const approve=f.host.approve.bind(f.host),install=f.host.install.bind(f.host);
+  const approved=vi.spyOn(f.host,'approve'),installed=vi.spyOn(f.host,'install');
+  if(point.startsWith('approval'))approved.mockImplementationOnce(async manifest=>{if(point==='approval_after')await approve(manifest);throw Error(point);});
+  else installed.mockImplementationOnce(async(...args)=>{if(point==='world_after')await install(...args);throw Error(point);});
+  const tx={game_id:f.before.game_id,expected_revision:f.before.state_revision,request_id:randomUUID(),confirmed:true};
+  await expect(f.dev.install(job.job_id,tx)).rejects.toThrow(point);
+  const current=await f.service.current(),record=(await f.dev.get())!;
+  if(point==='world_after'){
+   expect(current.state_revision).toBe(f.before.state_revision+1);expect(current.extensions?.failure_identity.installed).toBe(true);
+   expect(record).toMatchObject({status:'installed',phase:'installed'});
+  }else expect(current).toEqual(f.before);
+  const stage=point.startsWith('approval')?'approving':'installing';
+  if(point!=='world_after')expect(record).toMatchObject({status:'failed',phase:stage});
+  expect(record.logs.some(line=>line.includes('['+stage+']')&&line.includes(point))).toBe(true);
+  const restored=new ExtensionDevelopment(f.host);await restored.ready;
+  const durable=(await restored.get())!;expect(durable.status).toBe(record.status);expect(durable.phase).toBe(record.phase);expect(durable.logs).toEqual(record.logs);
+  if(point==='world_after')await restored.install(job.job_id,tx);
+  else await expect(restored.install(job.job_id,tx)).rejects.toThrow();
+  expect(installed).toHaveBeenCalledTimes(point.startsWith('approval')?0:1);expect(approved).toHaveBeenCalledOnce();
+  expect(await f.service.current()).toEqual(current);expect(compiler.calls).toBe(1);
+ }finally{await rm(f.directory,{recursive:true,force:true});}
+});
