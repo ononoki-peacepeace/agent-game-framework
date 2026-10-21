@@ -299,7 +299,11 @@ export function validatePerceptionNarrative(save:SavePackage,receipt:Receipt,res
   const sentences=prose.split(/[。！？\n]/);
   for(let index=0;index<sentences.length;index++){
     const sentence=sentences[index];
-    const compact=sentence.replace(/\s/g,'');
+    let compact=sentence.replace(/\s/g,'');
+    // A uniquely established subject remains part of "他和乔宁". Otherwise
+    // the only literal name would erase the sightless member of the group.
+    if(subjects.length===1)compact=compact.replace(/^(随后|随即|接着|然后|这时|同时)?[他她](?=以及|和|与|、|跟)/,
+      (_match,prefix:string|undefined)=>(prefix??'')+String(subjects[0].components.identity?.name??'').replace(/\s/g,''));
     const named=people.filter(entity=>{
       const name=String(entity.components.identity?.name??'');
       return presenceAliases(name).some(alias=>compact.includes(alias));
