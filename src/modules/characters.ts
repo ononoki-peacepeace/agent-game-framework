@@ -5,6 +5,7 @@ import type { Module } from '../core/registry.js';
 import {prepareCheck,resolveCheck} from '../core/resolution.js';
 import {physicalStateSchema} from '../core/perception-state.js';
 import {nextNpcPlanBoundary,settleNpcPlanWindow} from '../agent/npc-agent.js';
+import {worldAssert} from '../agent/outcome.js';
 export const charactersModule: Module = {
   id: 'characters', version: '0.1.0', requires: ['core'],
   next_time_boundary:nextNpcPlanBoundary,
@@ -86,13 +87,13 @@ export const charactersModule: Module = {
     parameters: z.strictObject({ topic: z.string().min(1).max(2000) }), execute(c) {
     assert(c.action.target_id && c.action.target_id !== c.action.actor_id, '请选择另一位角色');
     c.store.component(c.action.target_id, 'character');
-    assert(c.store.component<{ location_id: string }>(c.action.target_id, 'location').location_id === c.store.component<{ location_id: string }>(c.action.actor_id, 'location').location_id, '角色不在同一地点');
+    worldAssert(c.store.component<{ location_id: string }>(c.action.target_id, 'location').location_id === c.store.component<{ location_id: string }>(c.action.actor_id, 'location').location_id, 'not_present', '角色不在同一地点');
     c.advance(c.save.definition.ruleset.talk_minutes);
     c.facts.push(`与 ${c.store.component<{ name: string }>(c.action.target_id, 'identity').name} 交谈，话题：${c.action.parameters.topic}`);
   } }, SOCIAL_INTERACT: { ui: { label: '互动', visibility: 'internal', target_component: 'character', requires_text: true, text_parameter: 'intent' }, parameters: z.strictObject({ intent: z.string().min(1).max(2000) }), execute(c) {
     assert(c.action.target_id && c.action.target_id !== c.action.actor_id, '请选择另一位角色');
     c.store.component(c.action.target_id, 'character');
-    assert(c.store.component<{ location_id: string }>(c.action.target_id, 'location').location_id === c.store.component<{ location_id: string }>(c.action.actor_id, 'location').location_id, '角色不在同一地点');
+    worldAssert(c.store.component<{ location_id: string }>(c.action.target_id, 'location').location_id === c.store.component<{ location_id: string }>(c.action.actor_id, 'location').location_id, 'not_present', '角色不在同一地点');
     c.advance(c.save.definition.ruleset.talk_minutes);
     c.facts.push(`与 ${c.store.component<{ name: string }>(c.action.target_id, 'identity').name} 进行互动：${c.action.parameters.intent}`);
   } } },

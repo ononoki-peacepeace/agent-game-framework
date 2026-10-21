@@ -582,8 +582,20 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
      plan.status==='completed'?'completed':changes.length?'partial_progress':'unresolved_goal',
    'plan_execution',save.state_revision,changes,committedSince(initialSave,save),
    plan.status==='completed'?'completed':changes.length||stepOutcome?.type==='game'&&stepOutcome.goal_status==='partial'?'partial':'unresolved');
- const narratedSteps=plan.goals.filter(goal=>goal.status==='completed'&&
-   ['WORLD_ACTION','WORLD_SPEECH'].includes(goal.type)).map(goal=>goal.result?.summary?.trim()).filter((text):text is string=>Boolean(text));
+ const narratedSteps=plan.execution_order.map(id=>{
+  const goal=plan.goals.find(entry=>entry.goal_id===id)!;
+  if(!['WORLD_ACTION','WORLD_SPEECH'].includes(goal.type))return null;
+  if(goal.status==='completed')return goal.result?.summary?.trim();
+  // A lost acknowledgement does not erase a settled stage. Only this child's
+  // new authoritative receipt and saved narrative may supply its story; this
+  // does not complete the failed goal or authorize dependent work.
+  const requestId=childId(body.request_id,id);
+  const own=stateReadable&&save.game_id===initialSave.game_id&&
+   !initialSave.resolution_receipts?.some(receipt=>receipt.request_id===requestId)&&
+   save.resolution_receipts?.some(receipt=>receipt.request_id===requestId&&
+    receipt.actor_id===save.player_state.entity_id&&receipt.commit_status==='committed');
+  return own?save.narrative_history?.find(entry=>entry.request_id===requestId)?.narrative.trim():null;
+ }).filter((text):text is string=>Boolean(text));
  const committedNarrative=committedSince(initialSave,save).length?
    [...new Set(narratedSteps.length?[...narratedSteps,...(partialNarrative?[partialNarrative]:[])]:[save.last_turn?.narrative?.trim()].filter((text):text is string=>Boolean(text)))].join('\n'):'';
  const stopped=plan.goals.filter(goal=>['blocked','unresolved','failed','waiting_for_player'].includes(goal.status))

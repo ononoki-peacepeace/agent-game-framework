@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "be5d0cd + reviewed fixed parent HTTP recovery corpus",
+  "assessed_source": "490c423 + reviewed compound failure presentation repair",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -160,9 +160,11 @@
         "docs/perception-commit-evidence.md",
         "tests/perception-commit-evidence.test.ts",
         "docs/plan-inspection-completion.md",
-        "tests/plan-inspection-completion.test.ts"
+        "tests/plan-inspection-completion.test.ts",
+        "docs/compound-failure-corpus.md",
+        "tests/compound-failure-corpus.test.ts"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 8e2a0f6: between-step handoff failures retain settled prefix/receipt and skipped guards do not pause read-only alternatives;3fail/1control,7distinctfiles57pass/build. Full fixed matrix remains open. 92b86cd: persistent staged-plan recovery/final reads return uncertain outcomes with confirmed receipts and no cached view; initial2fail, final8files61pass/build. Other exits remain open. 975f705: after actual WAIT commit, contract/provider response failures no longer claim unchanged state or suggest blind retry; baseline2fail, final6files27pass/build. Every-exit matrix remains open. Actual3fail8.380s rawerrors when open-goal recovery reads stayunavailable;26reads now retain lastobserved authority and return uncertain failure without staleview.6files47pass16.118s/strict44.237sexit0; natural_scene and remaining nested exits stayopen. Natural-scene3fail1control3.346s repaired: unknowncommit/no read returns uncertainty without candidate speech/view;acknowledged/readconfirmedscene retains ownreceipt.6files98distinctpassingunion/strictfinal27.410sexit0;incomplete6fileprocess exit1 noJSON causeunknown retained,notgreen.Other scene recovery exits remainopen. Scene-generation baseline2fail1control3.698s; minimal read WIP preserved but fixedtests NOT executed due approvalreview timeout/overload and sandbox esbuildEPERM. Strictonly27.023sexit0;no repair acceptance. After explicit user authorization, permitted fixed regression completed: 4files56pass11.235s/zero failed or skipped. Three new fault/control cases pass; every-exit matrix remains open. Scene effects/finalizer: baseline7fail1control4.155s, narrow read boundary and receipt-confirmed effect summaries; final5files67pass15.799s/strict28.916sexit0. Full failure-exit matrix remains open. Arrival commit failure classification and matching receipt/history recovery verified in both lanes; final4files44pass22.746s/strict28.871sexit0. Unreadable authority remains uncertain/no staleview; full exit matrix stays open. Single-perception write/read exceptions and receiptless completion repaired; initial5files37pass12.208s;history-narrowed2files13pass7.069s;finaldirect11pass6.024s/strict28.927sexit0. Actual second-service WAIT retains own request story; full matrix open. Ordinaryplan per-iteminspection now shares existing perception status mapping;actualdisk8pairedcases/final6files39pass19.199s/strict29.430sexit0. Everyexitmatrix and ordinaryturnreceiptownership remainopen."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 8e2a0f6: between-step handoff failures retain settled prefix/receipt and skipped guards do not pause read-only alternatives;3fail/1control,7distinctfiles57pass/build. Full fixed matrix remains open. 92b86cd: persistent staged-plan recovery/final reads return uncertain outcomes with confirmed receipts and no cached view; initial2fail, final8files61pass/build. Other exits remain open. 975f705: after actual WAIT commit, contract/provider response failures no longer claim unchanged state or suggest blind retry; baseline2fail, final6files27pass/build. Every-exit matrix remains open. Actual3fail8.380s rawerrors when open-goal recovery reads stayunavailable;26reads now retain lastobserved authority and return uncertain failure without staleview.6files47pass16.118s/strict44.237sexit0; natural_scene and remaining nested exits stayopen. Natural-scene3fail1control3.346s repaired: unknowncommit/no read returns uncertainty without candidate speech/view;acknowledged/readconfirmedscene retains ownreceipt.6files98distinctpassingunion/strictfinal27.410sexit0;incomplete6fileprocess exit1 noJSON causeunknown retained,notgreen.Other scene recovery exits remainopen. Scene-generation baseline2fail1control3.698s; minimal read WIP preserved but fixedtests NOT executed due approvalreview timeout/overload and sandbox esbuildEPERM. Strictonly27.023sexit0;no repair acceptance. After explicit user authorization, permitted fixed regression completed: 4files56pass11.235s/zero failed or skipped. Three new fault/control cases pass; every-exit matrix remains open. Scene effects/finalizer: baseline7fail1control4.155s, narrow read boundary and receipt-confirmed effect summaries; final5files67pass15.799s/strict28.916sexit0. Full failure-exit matrix remains open. Arrival commit failure classification and matching receipt/history recovery verified in both lanes; final4files44pass22.746s/strict28.871sexit0. Unreadable authority remains uncertain/no staleview; full exit matrix stays open. Single-perception write/read exceptions and receiptless completion repaired; initial5files37pass12.208s;history-narrowed2files13pass7.069s;finaldirect11pass6.024s/strict28.927sexit0. Actual second-service WAIT retains own request story; full matrix open. Ordinaryplan per-iteminspection now shares existing perception status mapping;actualdisk8pairedcases/final6files39pass19.199s/strict29.430sexit0. Everyexitmatrix and ordinaryturnreceiptownership remainopen. 490c423 finitecompoundfailure batch repairs actualcommittedsecondstoryomission and missingpersonTALKclassification;5files48pass35.581s/strict41.134s. Complete condition still open."
     },
     "R5.4": {
       "status": "met",
@@ -1180,7 +1182,7 @@
       "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
     },
     "N3.3": {
-      "status": "unmet",
+      "status": "met",
       "evidence": [
         "tests/compound-narration-aggregation.test.ts",
         "tests/compound-degraded-prose.test.ts",
@@ -1196,9 +1198,14 @@
         "docs/scene-wait-completion.md",
         "tests/scene-wait-completion.test.ts",
         "docs/open-goal-wait-completion.md",
-        "tests/open-goal-wait-completion.test.ts"
+        "tests/open-goal-wait-completion.test.ts",
+        "docs/compound-failure-corpus.md",
+        "tests/compound-failure-corpus.test.ts",
+        "tests/plan-inspection-completion.test.ts",
+        "tests/conditional-speech-http-recovery.test.ts",
+        "docs/conditional-activity-interruption.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. Source b4c018f fixes inherited-last-step degradation omission; final11files109pass, isolated build passed, full condition remains open. Source c6a7e84 binds actual compound child reactions with shared durable budget;13distinct files81pass/build; full condition remains open. 80f9084 repairs generic BUY/SELL/EQUIP/UNEQUIP degradation from exact deterministic Core facts,including compound children;baseline8fail,7files56pass/build,actual disk/service replay and reviewed Chinese outputs. Full failed/unexecuted/multi-world naturalness remains open. b21b28d repairs HOLD0/partial/full activity degradation from exact Core fact/actual receipt time,foreground reason and compound children;baseline9fail,6files63pass/build,actual event/disk replay and reviewed outputs. Full naturalness and failed/unexecuted multi-goal matrix remain open. Scene WAIT interruption: actual2fail2controls4.186s; Core receipt interruption/actual cost stops dependent scene effects without claiming completion.4files67pass20.382s/strict30.581sexit0; full matrix remains open. Open-goal WAIT: corrected baseline3fail2controls4.016s; own committed receipt required, interrupted interval cannot complete WAIT or authorize next action.6files32pass14.150s/strict27.892sexit0; full matrix open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. Source b4c018f fixes inherited-last-step degradation omission; final11files109pass, isolated build passed, full condition remains open. Source c6a7e84 binds actual compound child reactions with shared durable budget;13distinct files81pass/build; full condition remains open. 80f9084 repairs generic BUY/SELL/EQUIP/UNEQUIP degradation from exact deterministic Core facts,including compound children;baseline8fail,7files56pass/build,actual disk/service replay and reviewed Chinese outputs. Full failed/unexecuted/multi-world naturalness remains open. b21b28d repairs HOLD0/partial/full activity degradation from exact Core fact/actual receipt time,foreground reason and compound children;baseline9fail,6files63pass/build,actual event/disk replay and reviewed outputs. Full naturalness and failed/unexecuted multi-goal matrix remain open. Scene WAIT interruption: actual2fail2controls4.186s; Core receipt interruption/actual cost stops dependent scene effects without claiming completion.4files67pass20.382s/strict30.581sexit0; full matrix remains open. Open-goal WAIT: corrected baseline3fail2controls4.016s; own committed receipt required, interrupted interval cannot complete WAIT or authorize next action.6files32pass14.150s/strict27.892sexit0; full matrix open. Closure at490c423: fixed20 distinct new cases (8miss/contactonly mixedspeech,8secondworld/provider/pre/postwritefailed+unexecutedtail,4registeredpresence controls) + unchanged successfulcompound14 + partial2/inspection8/HTTPspeech4 =5files48pass35.581s/strict41.134sexit0 concurrent. Real Core/disk receipt/time/HP/bothstamina/order/noinventedNPCspeech/exactchildreplay. Minimal executor restores new exact owncommittedchild savedprose after lostack without completinggoal/authorizingtail; registeredTALK/SOCIAL_INTERACT same co-location predicate now structured world refusal. Initial fixture and real2story+1classification failures, duplicatefixture/typecheckfailure retained. No multiworldnaturalness/fullsuite/build/model/humanclaim;N3.4/N8.2/R5.3open."
     },
     "N3.4": {
       "status": "unverified",
@@ -1415,9 +1422,11 @@
         "tests/item-action-degraded-prose.test.ts",
         "docs/item-action-degraded-prose.md",
         "tests/hold-activity-fallback.test.ts",
-        "docs/hold-activity-fallback.md"
+        "docs/hold-activity-fallback.md",
+        "docs/compound-failure-corpus.md",
+        "tests/compound-failure-corpus.test.ts"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. Source b4c018f fixes inherited-last-step degradation omission; final11files109pass, isolated build passed, full condition remains open. Source c6a7e84 binds actual compound child reactions with shared durable budget;13distinct files81pass/build; full condition remains open. 80f9084 repairs generic BUY/SELL/EQUIP/UNEQUIP degradation from exact deterministic Core facts,including compound children;baseline8fail,7files56pass/build,actual disk/service replay and reviewed Chinese outputs. Full failed/unexecuted/multi-world naturalness remains open. b21b28d repairs HOLD0/partial/full activity degradation from exact Core fact/actual receipt time,foreground reason and compound children;baseline9fail,6files63pass/build,actual event/disk replay and reviewed outputs. Full naturalness and failed/unexecuted multi-goal matrix remain open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. Source b4c018f fixes inherited-last-step degradation omission; final11files109pass, isolated build passed, full condition remains open. Source c6a7e84 binds actual compound child reactions with shared durable budget;13distinct files81pass/build; full condition remains open. 80f9084 repairs generic BUY/SELL/EQUIP/UNEQUIP degradation from exact deterministic Core facts,including compound children;baseline8fail,7files56pass/build,actual disk/service replay and reviewed Chinese outputs. Full failed/unexecuted/multi-world naturalness remains open. b21b28d repairs HOLD0/partial/full activity degradation from exact Core fact/actual receipt time,foreground reason and compound children;baseline9fail,6files63pass/build,actual event/disk replay and reviewed outputs. Full naturalness and failed/unexecuted multi-goal matrix remain open. 490c423 finitecompoundfailure batch repairs actualcommittedsecondstoryomission and missingpersonTALKclassification;5files48pass35.581s/strict41.134s. Complete condition still open."
     },
     "N8.3": {
       "status": "met",
@@ -5003,6 +5012,47 @@
         }
       ],
       "note": "108/16067.5%,22unmet30unverified;net+1/+0.625pp.18new workflows+adjacent activity/futurecontrol=3files45pass43.783s;strict41.457s. Retain fixture failure;no product/fullsuite/build claim."
+    },
+    {
+      "batch": "compound-failed-unexecuted-closure",
+      "type": "repair",
+      "source": "490c423 + reviewed compound failure presentation repair",
+      "transitions": [
+        {
+          "id": "N3.3",
+          "before": "unmet",
+          "after": "met",
+          "reason": "Fixed successful/failed/partial/unexecuted physical and speech category matrix now preserves every own committed stage, truthful failure and skipped remainder.",
+          "evidence": [
+            "docs/compound-failure-corpus.md",
+            "tests/compound-failure-corpus.test.ts",
+            "tests/compound-degraded-prose.test.ts",
+            "tests/partial-plan-visible-status.test.ts",
+            "tests/plan-inspection-completion.test.ts",
+            "tests/conditional-speech-http-recovery.test.ts",
+            "docs/hold-activity-fallback.md",
+            "docs/conditional-activity-interruption.md"
+          ]
+        }
+      ],
+      "condition_checks": [
+        {
+          "id": "R5.3",
+          "result": "Two concrete nested presentation/refusal exits repaired;whole original failure-exit matrix remains open.",
+          "evidence": [
+            "docs/compound-failure-corpus.md",
+            "tests/compound-failure-corpus.test.ts"
+          ]
+        },
+        {
+          "id": "N8.2",
+          "result": "Factual completion corpus does not establish broad naturalness;remainsunmet.",
+          "evidence": [
+            "docs/compound-failure-corpus.md"
+          ]
+        }
+      ],
+      "note": "109/16068.125%,21unmet30unverified;net+1/+0.625pp. Final5files48distinctpass35.581s/strict41.134sexit0;intermediate52 includes4duplicate controls removed. All prior failures preserved;no fullsuite/build claim."
     }
   ],
   "new_risks": [],
@@ -6272,6 +6322,30 @@
         "tests/inventory-turn-denial.test.ts"
       ],
       "summary": "Turn-qualified lawful pickup denial is treated as unsupported positive inventory claim after real failed Core check."
+    },
+    {
+      "id": "compound-committed-stage-story",
+      "scope": "original",
+      "condition": "N3.3",
+      "status": "resolved",
+      "source": "490c423",
+      "evidence": [
+        "docs/compound-failure-corpus.md",
+        "tests/compound-failure-corpus.test.ts"
+      ],
+      "summary": "After actual second-step write-then-throw, completed-only final story hides its own committed child narrative; receipt-backed ordered prose recovery now preserves it without completing the goal."
+    },
+    {
+      "id": "registered-speech-absence-classification",
+      "scope": "original",
+      "condition": "R5.3",
+      "status": "resolved",
+      "source": "490c423",
+      "evidence": [
+        "docs/compound-failure-corpus.md",
+        "tests/compound-failure-corpus.test.ts"
+      ],
+      "summary": "Ordinary registered TALK to an absent person raises generic GameError and is classified as transaction failure. Same Core co-location rule now uses existing structured worldAssert for TALK/SOCIAL_INTERACT before time/effects."
     }
   ]
 }
