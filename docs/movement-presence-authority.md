@@ -1,0 +1,7 @@
+# Movement narration presence boundary
+
+Source `0507836`: an actual player MOVE square→market leaves Lin at square. A controlled narrator returns `你沿路来到街角商店。抵达之后，林舟站在你身旁。`. The service accepts it as normal, despite the absent NPC. The independent ignored preflight confirms both actual locations before its failing prose assertion. Raw `move-absent-person-preflight.test.ts/.config.mjs/.json/.log` remain in the takeover directory. Cause: receipt/compound movement skips the whole scene-presence validator, including structured presence claims.
+
+N4.1 already remains unmet; no additional withdrawal or score. N4.2 also stays unmet. Overall **98/160, 61.25%, 28 unmet / 34 unverified**, batch +0. The previous visible-NPC repair is checkpointed at `0507836`; this counterexample concerns a separate pre-existing blanket skip.
+
+The current pinned 250-file snapshot finished shards1–4 (50 files / 561 pass) and stopped at the requested safe boundary before shard5. Its runner reports `pinned-source-final-match true`; the same-source full build session57871 passed. It is incomplete and is not a replacement for the latest complete selected snapshot (`8bf6d9e`, 245 files / 2470 pass). No old or interrupted results are merged into a future snapshot. Original QA bytes, formal save and frozen acceptance are preserved. Next: promote actual MOVE and compound MOVE absent-person/structured-claim counterexamples, retain true companion and explicit departure-scene controls, apply presence checks without a blanket movement bypass, then validate and pin again.
