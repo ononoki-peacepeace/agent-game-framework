@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：2398495 + reviewed fixed N4 corpus and canonical item condition guard。整体 **65.00%**（104/160 个固定条件满足）。未满足 23，待验证 33。
+计分版本 v1；评估源代码：6770048 + reviewed three-structure fixed corpus evidence。整体 **65.63%**（105/160 个固定条件满足）。未满足 23，待验证 32。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -9,8 +9,8 @@
 | ① 可靠性 | 33 | 4 | 3 | 5/5/0 | 82.5% |
 | ② 自然语言行动 | 22 | 7 | 11 | 3/5/2 | 55.0% |
 | ③ 自主持续世界 | 28 | 5 | 7 | 4/6/0 | 70.0% |
-| ④ Narrator 与体验 | 21 | 7 | 12 | 2/6/2 | 52.5% |
-| 合计 | 104 | 23 | 33 | 14/22/4 | 65.00% |
+| ④ Narrator 与体验 | 22 | 7 | 11 | 3/5/2 | 55.0% |
+| 合计 | 105 | 23 | 32 | 15/21/4 | 65.63% |
 
 旧台账的12/21/7是工作包人工分类，保留作历史。这里的完成/部分/未完成由4个条件满足数推导，不能与旧分类混用。旧46%为退役估计；首次建立口径不是产品进展，不计算相对46%的提升。
 
@@ -180,6 +180,7 @@
 | plan-inspection-completion-repair | repair | A4.2: unmet → met | +0.625 pp |
 | narrative-item-condition-withdrawal | evidence_correction | N4.1: met → unmet | -0.625 pp |
 | narrative-fixed-corpus-closure | repair | N4.1: unmet → met; N4.3: unmet → met | +1.250 pp |
+| narrative-three-structure-corpus | evidence_correction | N4.4: unverified → met | +0.625 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -485,7 +486,7 @@
 | N4.1 | 已有事实、在场和感知校验阻止越权描写 | 满足 | [post-presence-offline-snapshot.md](../docs/post-presence-offline-snapshot.md), [perception-audit-authority.md](../docs/perception-audit-authority.md), [builtin-narration-authority.md](../docs/builtin-narration-authority.md), [movement-presence-authority.md](../docs/movement-presence-authority.md), [perception-audit-authority.test.ts](../tests/perception-audit-authority.test.ts), [builtin-narration-authority.test.ts](../tests/builtin-narration-authority.test.ts), [movement-presence-authority.test.ts](../tests/movement-presence-authority.test.ts), [freeform-live-check.md](../docs/freeform-live-check.md), [freeform-live-check.test.ts](../tests/freeform-live-check.test.ts), [scene-presence-quoted-speech.md](../docs/scene-presence-quoted-speech.md), [scene-presence-quoted-speech.test.ts](../tests/scene-presence-quoted-speech.test.ts), [perception-joined-pronoun.md](../docs/perception-joined-pronoun.md), [perception-joined-pronoun.test.ts](../tests/perception-joined-pronoun.test.ts), [scene-presence-temporal-pronoun.md](../docs/scene-presence-temporal-pronoun.md), [scene-presence-temporal-pronoun.test.ts](../tests/scene-presence-temporal-pronoun.test.ts), [typed-speech-occurrence-scope.md](../docs/typed-speech-occurrence-scope.md), [typed-speech-occurrence-scope.test.ts](../tests/typed-speech-occurrence-scope.test.ts), [narrative-fixed-corpus.md](../docs/narrative-fixed-corpus.md), [narrative-fixed-corpus.test.ts](../tests/narrative-fixed-corpus.test.ts), [item-condition-narrative.test.ts](../tests/item-condition-narrative.test.ts) |
 | N4.2 | 已知合法描写及误拒边界有回归证据 | 满足 | [post-presence-offline-snapshot.md](../docs/post-presence-offline-snapshot.md), [npc-movement-narration-authority.md](../docs/npc-movement-narration-authority.md), [movement-presence-authority.md](../docs/movement-presence-authority.md), [npc-movement-narration-authority.test.ts](../tests/npc-movement-narration-authority.test.ts), [movement-presence-authority.test.ts](../tests/movement-presence-authority.test.ts) |
 | N4.3 | 扩大合法比喻、转述和场景表述语料降低误拒 | 满足 | [narrative-firewall-observability.test.ts](../tests/narrative-firewall-observability.test.ts), [scene-presence-negation.test.ts](../tests/scene-presence-negation.test.ts), [scene-presence-negation.md](../docs/scene-presence-negation.md), [scene-presence-subjects.test.ts](../tests/scene-presence-subjects.test.ts), [scene-presence-subjects.md](../docs/scene-presence-subjects.md), [scene-presence-groups.test.ts](../tests/scene-presence-groups.test.ts), [scene-presence-groups.md](../docs/scene-presence-groups.md), [perception-subjects.test.ts](../tests/perception-subjects.test.ts), [perception-subjects.md](../docs/perception-subjects.md), [scene-presence-local-steps.md](../docs/scene-presence-local-steps.md), [scene-presence-local-steps.test.ts](../tests/scene-presence-local-steps.test.ts), [scene-presence-quoted-speech.md](../docs/scene-presence-quoted-speech.md), [scene-presence-quoted-speech.test.ts](../tests/scene-presence-quoted-speech.test.ts), [perception-joined-pronoun.md](../docs/perception-joined-pronoun.md), [perception-joined-pronoun.test.ts](../tests/perception-joined-pronoun.test.ts), [scene-presence-temporal-pronoun.md](../docs/scene-presence-temporal-pronoun.md), [scene-presence-temporal-pronoun.test.ts](../tests/scene-presence-temporal-pronoun.test.ts), [perception-simile-authority.md](../docs/perception-simile-authority.md), [perception-simile-authority.test.ts](../tests/perception-simile-authority.test.ts), [inventory-denial-prose.md](../docs/inventory-denial-prose.md), [inventory-denial-prose.test.ts](../tests/inventory-denial-prose.test.ts), [narrative-fixed-corpus.md](../docs/narrative-fixed-corpus.md), [narrative-fixed-corpus.test.ts](../tests/narrative-fixed-corpus.test.ts), [item-condition-narrative.test.ts](../tests/item-condition-narrative.test.ts) |
-| N4.4 | 多世界误放与误拒均按固定期望验收 | 待验证 | [narrative-firewall-observability.test.ts](../tests/narrative-firewall-observability.test.ts), [narrative-fixed-corpus.md](../docs/narrative-fixed-corpus.md) |
+| N4.4 | 多世界误放与误拒均按固定期望验收 | 满足 | [narrative-firewall-observability.test.ts](../tests/narrative-firewall-observability.test.ts), [narrative-fixed-corpus.md](../docs/narrative-fixed-corpus.md), [narrative-three-worlds.md](../docs/narrative-three-worlds.md), [narrative-fixed-corpus.ts](../tests/fixtures/narrative-fixed-corpus.ts), [narrative-worlds.ts](../tests/fixtures/narrative-worlds.ts), [narrative-three-worlds.test.ts](../tests/narrative-three-worlds.test.ts), [narrative-three-world-boundaries.test.ts](../tests/narrative-three-world-boundaries.test.ts) |
 
 ## N5 NPC speech reflects personality, memory and relationships
 

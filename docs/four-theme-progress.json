@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "2398495 + reviewed fixed N4 corpus and canonical item condition guard",
+  "assessed_source": "6770048 + reviewed three-structure fixed corpus evidence",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -1251,12 +1251,17 @@
       "basis": "Known remaining implementation or acceptance gap in the existing ledger. 1246a49: occurrence-scoped departure negation, truthful no-receipt degradation marker; initial5fail/7controls, final6files80pass/build. N4.1 withdrawal/restoration net0; broader subject/multi-world scope remains open. 1bad19e: independently named/player clauses retain presence checks;7fail/5controls, intermediate63/66 overly broad split corrected, final7files92pass/build. Explicit N4.1 withdrawal/restoration net0; rich subject/multi-world matrices open. ae4f469: bounded literal joint-subject presence/travel guard checks each named member; baseline7fail/6legal controls, first3files42pass, expanded final8files94pass/build. Real service degrades unsupported group departure and replays WAIT once. N4.1 withdrawal/restoration net0; broad grammar/multi-world matrix remains open. f9f93f0: explicit visual joint subjects and independent named/player clauses preserve event-time sight receipt checks;6fail/4controls, final9files85pass/build including HTTP/compound-child continuity. Actual physical turn rejects invented observation and replays once. N4.1 withdrawn/restored net0; broader attribution/quoted/multi-world grammar remains open. Local Chinese step forms几步/数步/半步/一小步 no longer falsely imply departure; later actualdeparture still rejected.5fail6controls repaired,5files65distinctpasses/actualWAIT normalprose exactreplay/strict68.187s. Broad metaphor/retelling/multi-world matrix remains open. AttributedASCIIquoteddeparture/headcount claims no longer false positive; emphasis/malformedquotes and outsideassertions retained. Broader metaphor/retelling/multi-world corpus open. Bounded joined-pronoun perception scope fixed; full grammar/multi-world criterion stays open. Sensory similes: baseline5fail5controls3.548s repaired with bounded sensory-subject simile recognition, joined literal actors and later world changes still rejected.5files67pass15.379s/strict33.298sexit0; twoactualdiskINSPECT normal/degraded/replaycases. Full metaphor/retelling/item-state/multi-world matrix open. Inventory denial: correctedbaseline7fail8controls3.607s; simple wholeclause single denials preserved, double negatives/otheractors/latertransfers still require evidence. First5files66pass16.029s; finalnarrow2files20pass5.830s/strict29.303sexit0. Selected5files68distinctpassingunion across pre/finalnarrow implementations,notonegreenfinalsource run. Full corpus stays open. Closure: frozenbeforeexecution22rowfivecategorycorpus covers lawful/unsafe metaphor,typedretelling,eventtimesensoryrestriction,absentactors,itemstate. Missing canonicalitemstate comparison repaired,actualdisk6positive/negativecontrols+replay;current8files108pass17.341s/strict29.023sexit0. OriginalN4.3fivecategoryminimum established;no arbitrarygrammar or three-worldN4.4 claim."
     },
     "N4.4": {
-      "status": "unverified",
+      "status": "met",
       "evidence": [
         "tests/narrative-firewall-observability.test.ts",
-        "docs/narrative-fixed-corpus.md"
+        "docs/narrative-fixed-corpus.md",
+        "docs/narrative-three-worlds.md",
+        "tests/fixtures/narrative-fixed-corpus.ts",
+        "tests/fixtures/narrative-worlds.ts",
+        "tests/narrative-three-worlds.test.ts",
+        "tests/narrative-three-world-boundaries.test.ts"
       ],
-      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required. Closure at6770048: exact original22rowfivecategorycorpus in commerce/movement,dialogue/relationships,autonomous/background structures with actual committed causal witnesses.66validator+3structure+33JsonStore/service cases cover lawful/unsafe,ambiguity/missing,worldrefusal,before/afterwrite,restart/exactreplay. Final5files145pass43.075s;type-only declarations corrected after strictfail39.414s,3witnesses rerun7.046s/finalstrict44.082sexit0. Baseline91pass11fixturefail32.449s retained. No product source,paidProvider,human,longhorizon or fullsuite claim."
     },
     "N5.1": {
       "status": "met",
@@ -4806,6 +4811,27 @@
         }
       ],
       "note": "104/16065.00%;wholebatchnet+1/+0.625pp from103. Final8files108pass17.341s/strict29.023sexit0;direct28pass7.459s and intermediate8files108pass16.758s/strict29.236s retained,not a full-suite claim."
+    },
+    {
+      "batch": "narrative-three-structure-corpus",
+      "type": "evidence_correction",
+      "source": "6770048 + reviewed test evidence",
+      "transitions": [
+        {
+          "id": "N4.4",
+          "before": "unverified",
+          "after": "met",
+          "reason": "Same frozen22row corpus passes in three genuinely different world structures with normal,ambiguity/missing,worldrefusal,technicalfault and replay boundaries.",
+          "evidence": [
+            "docs/narrative-three-worlds.md",
+            "tests/fixtures/narrative-fixed-corpus.ts",
+            "tests/fixtures/narrative-worlds.ts",
+            "tests/narrative-three-worlds.test.ts",
+            "tests/narrative-three-world-boundaries.test.ts"
+          ]
+        }
+      ],
+      "note": "105/16065.625%;net+1/+0.625pp. No product change; fixed102matrix plus43original/adjacent cases.145pass43.075s precedes type-only witness declarations;3witnesses rerun7.046s,finalstrict44.082s. Failed fixture and strict reports preserved."
     }
   ],
   "new_risks": [],
