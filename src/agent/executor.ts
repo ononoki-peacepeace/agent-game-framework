@@ -1380,11 +1380,15 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
         for(const [index,effect] of outcome.authorizedEffects.entries()){
           const beforeEffect=await readEffectState();
           const effectRequestId=childId(body.request_id,`scene-effect-${index}`);
-          let recorded=false;
+          let recorded=false,effectInterrupted=false;
           const recordEffect=(latest:SavePackage)=>{
             const receipt=latest.resolution_receipts?.find(receipt=>receipt.request_id===effectRequestId&&
               receipt.commit_status==='committed');
             if(!receipt)return false;
+            if(effect.kind==='wait'&&(interruptedActivity(receipt)||receipt.time_cost<effect.minutes)){
+              if(!effectInterrupted)outcome.gaps.push('等待因需要处理的事情而暂停，原目标尚未完成；后续行动尚未执行');
+              effectInterrupted=true;return true;
+            }
             if(!recorded){outcome.settled.push(effect.kind==='inspect'?'完成现场检查':
               effect.kind==='move'?`移动到${effect.destination}`:`等待${receipt.time_cost}分钟`);recorded=true;}
             return true;
@@ -1411,6 +1415,7 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
               outcome.gaps.push('这项后续行动没有完成权威结算');break;
             }
             if(completed.last_turn?.narrative)effectStories.push(completed.last_turn.narrative);
+            if(effectInterrupted)break;
             if(arrivalPending){
               const arrival=await continueArrivalScene(service,body,beforeEffect,completed,effectRequestId);
               if(arrival.kind==='unavailable'){

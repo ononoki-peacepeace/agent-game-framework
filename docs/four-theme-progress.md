@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：62fed34 + verified scene-effect read recovery。整体 **64.38%**（103/160 个固定条件满足）。未满足 24，待验证 33。
+计分版本 v1；评估源代码：80304f6 + verified scene-WAIT interruption completion。整体 **64.38%**（103/160 个固定条件满足）。未满足 24，待验证 33。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：60 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：61 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -165,6 +165,7 @@
 | scene-generation-read-failure-interrupted | evidence_correction | R5.3: Twoactual baselinefailures remainunverified after WIP repair;fixedtests0executed becauseapprovalreviewfailed/sandboxspawnEPERM.Strictonly27.023sexit0.Not closed.；完整条件保持开放 | +0.000 pp |
 | scene-generation-read-failure-verified | repair | R5.3: Authorized fixed run4files56pass11.235s; strict27.023sexit0. Two reproduced read failures repaired with readable control and cached same-request protection; scene-effect/finalizer matrix remains open.；完整条件保持开放 | +0.000 pp |
 | scene-effect-read-failure | repair | R5.3: Baseline7fail1control4.155s; final5files67pass15.799s/strict28.916sexit0.11directcases with actual JsonStore effects, lost response, cached request and fresh-service bytes. Every-exit matrix remains open.；完整条件保持开放 | +0.000 pp |
+| scene-wait-completion | repair | A7.3: Actual2interruptedfails2completecontrols4.186s; minimal existing Core receipt check.4files67pass20.382s/strict30.581sexit0, sameID no reexecution and actual disk recreation. Full matrix remains open.；完整条件保持开放; N3.3: Actual2interruptedfails2completecontrols4.186s; minimal existing Core receipt check.4files67pass20.382s/strict30.581sexit0, sameID no reexecution and actual disk recreation. Full matrix remains open.；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -316,7 +317,7 @@
 |---|---|---|---|
 | A7.1 | 已有复合与条件契约表达依赖及部分完成 | 满足 | [goal-contract-batch2.test.ts](../tests/goal-contract-batch2.test.ts) |
 | A7.2 | 条件不成立或被世界拒绝不触发技术重试翻盘 | 满足 | [goal-contract-batch2.test.ts](../tests/goal-contract-batch2.test.ts) |
-| A7.3 | 混合条件、动态目标和中途改变意图保留原授权边界 | 未满足 | [goal-contract-batch2.test.ts](../tests/goal-contract-batch2.test.ts), [plan-handoff-failure.test.ts](../tests/plan-handoff-failure.test.ts), [plan-handoff-failure.md](../docs/plan-handoff-failure.md), [future-cancel-window.test.ts](../tests/future-cancel-window.test.ts), [future-cancel-window.md](../docs/future-cancel-window.md), [future-execute-window.test.ts](../tests/future-execute-window.test.ts), [future-execute-window.md](../docs/future-execute-window.md), [future-control-condition.test.ts](../tests/future-control-condition.test.ts), [future-control-condition.md](../docs/future-control-condition.md) |
+| A7.3 | 混合条件、动态目标和中途改变意图保留原授权边界 | 未满足 | [goal-contract-batch2.test.ts](../tests/goal-contract-batch2.test.ts), [plan-handoff-failure.test.ts](../tests/plan-handoff-failure.test.ts), [plan-handoff-failure.md](../docs/plan-handoff-failure.md), [future-cancel-window.test.ts](../tests/future-cancel-window.test.ts), [future-cancel-window.md](../docs/future-cancel-window.md), [future-execute-window.test.ts](../tests/future-execute-window.test.ts), [future-execute-window.md](../docs/future-execute-window.md), [future-control-condition.test.ts](../tests/future-control-condition.test.ts), [future-control-condition.md](../docs/future-control-condition.md), [scene-wait-completion.md](../docs/scene-wait-completion.md), [scene-wait-completion.test.ts](../tests/scene-wait-completion.test.ts) |
 | A7.4 | 固定组合语料及重启后续执行全部通过 | 待验证 | [goal-contract-batch2.test.ts](../tests/goal-contract-batch2.test.ts) |
 
 ## A8 Freeform physical interaction and dynamic body/distance/environment prerequisites
@@ -460,7 +461,7 @@
 |---|---|---|---|
 | N3.1 | 复合行动叙述聚合已结算步骤 | 满足 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts) |
 | N3.2 | 身体和发言结果以凭据为准不重演 | 满足 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts) |
-| N3.3 | 多步叙述完整表达成功、失败与未执行的区别 | 未满足 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts), [compound-degraded-prose.test.ts](../tests/compound-degraded-prose.test.ts), [compound-degraded-prose.md](../docs/compound-degraded-prose.md), [partial-plan-visible-status.test.ts](../tests/partial-plan-visible-status.test.ts), [partial-plan-visible-status.md](../docs/partial-plan-visible-status.md), [compound-reaction-budget.test.ts](../tests/compound-reaction-budget.test.ts), [compound-reaction-ownership.md](../docs/compound-reaction-ownership.md), [item-action-degraded-prose.test.ts](../tests/item-action-degraded-prose.test.ts), [item-action-degraded-prose.md](../docs/item-action-degraded-prose.md), [hold-activity-fallback.test.ts](../tests/hold-activity-fallback.test.ts), [hold-activity-fallback.md](../docs/hold-activity-fallback.md) |
+| N3.3 | 多步叙述完整表达成功、失败与未执行的区别 | 未满足 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts), [compound-degraded-prose.test.ts](../tests/compound-degraded-prose.test.ts), [compound-degraded-prose.md](../docs/compound-degraded-prose.md), [partial-plan-visible-status.test.ts](../tests/partial-plan-visible-status.test.ts), [partial-plan-visible-status.md](../docs/partial-plan-visible-status.md), [compound-reaction-budget.test.ts](../tests/compound-reaction-budget.test.ts), [compound-reaction-ownership.md](../docs/compound-reaction-ownership.md), [item-action-degraded-prose.test.ts](../tests/item-action-degraded-prose.test.ts), [item-action-degraded-prose.md](../docs/item-action-degraded-prose.md), [hold-activity-fallback.test.ts](../tests/hold-activity-fallback.test.ts), [hold-activity-fallback.md](../docs/hold-activity-fallback.md), [scene-wait-completion.md](../docs/scene-wait-completion.md), [scene-wait-completion.test.ts](../tests/scene-wait-completion.test.ts) |
 | N3.4 | 多世界长复合动作描写自然且不漏步骤 | 待验证 | [compound-narration-aggregation.test.ts](../tests/compound-narration-aggregation.test.ts) |
 
 ## N4 Facts, presence, perception and legal-description false rejection balance

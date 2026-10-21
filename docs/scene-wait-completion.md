@@ -1,0 +1,9 @@
+# Scene WAIT interruption completion
+
+Parent `80304f6`. Actual temporary JsonStore baseline: **2 failures / 2 complete-wait controls passed, 4.186s** (`scene-wait-completion-baseline.json`). An accepted appointment due at minute 0 or 1 interrupts a requested two-minute WAIT, but the natural-scene effect runner classifies the request as completed and proceeds into the subsequent effect.
+
+The existing Core `interruptedActivity` receipt evidence and actual WAIT time cost now keep that effect incomplete. The runner preserves its receipt and canonical narrative, reports partial progress for the committed scene, and stops later effects. It adds no new world outcome or NPC response. The two-minute completion controls at no appointment and exactly minute 2 retain normal completion.
+
+Final directed verification: **4 files / 67 passed / zero failed or skipped, 20.382s** (`scene-wait-completion-fixed.json`). Four direct disk cases plus scene-effect read recovery, scene interaction and conditional-WAIT regression (including its actual random-port HTTP restart/replay cases). Both interrupted disk cases assert one WAIT receipt, unchanged position, exact actual minutes, no subsequent MOVE, same-ID cached response with no extra calls/writes, fresh-service state and unchanged bytes. Strict TypeScript exit 0, **30.581s**; `git diff --check` passed. No new full suite/build claim.
+
+A7.3 and N3.3 remain unmet: **103/160 (64.375%), delta zero**. General composite goal and prose matrices remain open. No public interface/Core settlement changes, formal save/3100 changes, real Provider calls or original dirty-file staging. Next: audit open-goal WAIT completion and its dependent continuation using the same actual Core interruption evidence; intermediate MOVE is not established as a defect by this batch.
