@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "6baf819 + reviewed perception commit evidence",
+  "assessed_source": "f798823 + reviewed per-item perception completion",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -512,9 +512,11 @@
         "tests/open-goal-completion-evidence.test.ts",
         "docs/open-goal-completion-evidence.md",
         "tests/declared-activity-interruption.test.ts",
-        "docs/declared-activity-interruption.md"
+        "docs/declared-activity-interruption.md",
+        "docs/perception-inspection-completion.md",
+        "tests/perception-inspection-completion.test.ts"
       ],
-      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim. Counterexample a954b27/productf9f93f0: remote work travel appears in completed affordances, so done certifies earning without work or wage;3fail/2controls. A4.2 withdrawn pending repair. Repaired a253d58: actual fulfilled candidate only, preparation cannot certify done; bounded repair/exhaust and real HTTP JsonStore restart/replay;6files49pass/build. Wider A4.3 remains open. Counterexample218559d/producta253d58: interrupted declared activity receives full effects and open goal certifies done after partial duration;5fail/2controls. Withdrawn pending repair. Repaired7bb13f2: full declared effects require actual full Core duration; interrupted activity stops goal before done. Scheduled/event/exact-end and disk restart/replay,8files115pass/build; broader A4.3 open."
+      "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim. Counterexample a954b27/productf9f93f0: remote work travel appears in completed affordances, so done certifies earning without work or wage;3fail/2controls. A4.2 withdrawn pending repair. Repaired a253d58: actual fulfilled candidate only, preparation cannot certify done; bounded repair/exhaust and real HTTP JsonStore restart/replay;6files49pass/build. Wider A4.3 remains open. Counterexample218559d/producta253d58: interrupted declared activity receives full effects and open goal certifies done after partial duration;5fail/2controls. Withdrawn pending repair. Repaired7bb13f2: full declared effects require actual full Core duration; interrupted activity stops goal before done. Scheduled/event/exact-end and disk restart/replay,8files115pass/build; broader A4.3 open. ActualCoreenumeratedinspection3fail1control3.841s: own committed receipt partial/world_blocked/not_executed is mislabeled full completion by perception shortcut. Credit withdrawn pending verification. Receipt inspection state now maps complete/partial/world_blocked/not_executed to truthful goal status; lostack failures do not claim partial checks completed. Final5files42pass13.471s/strict29.006sexit0/eightactualdiskpairedcases/exactcache+freshbytes restore bounded A4.2; broader A4.3 remains open."
     },
     "A4.3": {
       "status": "unmet",
@@ -4653,6 +4655,42 @@
         }
       ],
       "note": "103/16064.375%delta0. Actualdiskwrite/read and second-serviceWAIT;missing/unrelatedturnresponses are explicit fault controls,not allegedproductionCoremissingreceipt."
+    },
+    {
+      "batch": "perception-inspection-completion-withdrawal",
+      "type": "evidence_correction",
+      "source": "f798823",
+      "transitions": [
+        {
+          "id": "A4.2",
+          "before": "met",
+          "after": "unmet",
+          "reason": "ActualCore3fail1control3.841s,partial/blocked/not-executed enumeratedinspection mislabeled complete.",
+          "evidence": [
+            "docs/perception-inspection-completion.md",
+            "tests/perception-inspection-completion.test.ts"
+          ]
+        }
+      ],
+      "note": "102/16063.75%;withdraw1/-0.625pp pending repair."
+    },
+    {
+      "batch": "perception-inspection-completion-repair",
+      "type": "repair",
+      "source": "f798823+reviewed-worktree",
+      "transitions": [
+        {
+          "id": "A4.2",
+          "before": "unmet",
+          "after": "met",
+          "reason": "ActualCoreper-itemcompletion drives goal state,including lostack progress. Final5files42pass13.471s/strict29.006sexit0; eightactualdiskcontrols.",
+          "evidence": [
+            "docs/perception-inspection-completion.md",
+            "tests/perception-inspection-completion.test.ts"
+          ]
+        }
+      ],
+      "note": "103/16064.375%;restore1/+0.625pp, wholebatchnet0; broadA4.3remainsopen. First38pass12.161s;expanded38pass4fail13.135s and corrected4pass4fail5.094s fixtureassertions retained."
     }
   ],
   "new_risks": [],
@@ -5860,6 +5898,18 @@
         "tests/perception-commit-evidence.test.ts"
       ],
       "summary": "Single perception shortcut leaks actual storage failures and calls receiptless/unrelated revision complete; now canonical own-receipt evidence, precise categories and bounded uncertain refresh preserve actual progress."
+    },
+    {
+      "id": "perception-inspection-completion",
+      "scope": "original",
+      "condition": "A4.2",
+      "status": "resolved",
+      "source": "f798823",
+      "evidence": [
+        "docs/perception-inspection-completion.md",
+        "tests/perception-inspection-completion.test.ts"
+      ],
+      "summary": "Single-perception shortcut ignores actual Core per-item completion state and reports complete for partial, blocked and not-executed named checks."
     }
   ]
 }

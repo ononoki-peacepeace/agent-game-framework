@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：6baf819 + reviewed perception commit evidence。整体 **64.38%**（103/160 个固定条件满足）。未满足 24，待验证 33。
+计分版本 v1；评估源代码：f798823 + reviewed per-item perception completion。整体 **64.38%**（103/160 个固定条件满足）。未满足 24，待验证 33。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：67 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：68 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -174,6 +174,8 @@
 | typed-speech-occurrence-repair | repair | N4.1: unmet → met | +0.625 pp |
 | arrival-scene-commit-recovery | repair | R5.3: Baseline6fail2controls5.794s; final4files44pass22.746s/strict28.871sexit0;14directactualdiskpairedcases incl unreadable/provider/invalid controls and exactcachedreplay. Full exit matrix remains open.；完整条件保持开放 | +0.000 pp |
 | perception-commit-evidence | repair | R5.3: Baseline7fail1control4.014s;initial5files37pass12.208s;finalhistory2files13pass7.069s and expanded11direct6.024s/strict28.927sexit0. Selected5files40distinctpassingunion acrossinitial/final source,notoneallgreenrun; fullmatrixopen.；完整条件保持开放 | +0.000 pp |
+| perception-inspection-completion-withdrawal | evidence_correction | A4.2: met → unmet | -0.625 pp |
+| perception-inspection-completion-repair | repair | A4.2: unmet → met | +0.625 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -297,7 +299,7 @@
 | 条件 | 具体通过条件 | 状态 | 依据 |
 |---|---|---|---|
 | A4.1 | 已有 Semantic 对齐和目标契约拒绝替换最终目标 | 满足 | [goal-contract-batch1.test.ts](../tests/goal-contract-batch1.test.ts) |
-| A4.2 | 已实现完成证据核验，准备动作不冒充目标完成 | 满足 | [goal-contract-batch1.test.ts](../tests/goal-contract-batch1.test.ts), [open-goal-completion-evidence.test.ts](../tests/open-goal-completion-evidence.test.ts), [open-goal-completion-evidence.md](../docs/open-goal-completion-evidence.md), [declared-activity-interruption.test.ts](../tests/declared-activity-interruption.test.ts), [declared-activity-interruption.md](../docs/declared-activity-interruption.md) |
+| A4.2 | 已实现完成证据核验，准备动作不冒充目标完成 | 满足 | [goal-contract-batch1.test.ts](../tests/goal-contract-batch1.test.ts), [open-goal-completion-evidence.test.ts](../tests/open-goal-completion-evidence.test.ts), [open-goal-completion-evidence.md](../docs/open-goal-completion-evidence.md), [declared-activity-interruption.test.ts](../tests/declared-activity-interruption.test.ts), [declared-activity-interruption.md](../docs/declared-activity-interruption.md), [perception-inspection-completion.md](../docs/perception-inspection-completion.md), [perception-inspection-completion.test.ts](../tests/perception-inspection-completion.test.ts) |
 | A4.3 | 开放表达的意图、边界、原目标完成有代表性离线覆盖 | 未满足 | [goal-contract-batch1.test.ts](../tests/goal-contract-batch1.test.ts) |
 | A4.4 | 当前模型在代表性多世界原始语句上通过目标完成验收 | 待验证 | [goal-contract-batch1.test.ts](../tests/goal-contract-batch1.test.ts) |
 

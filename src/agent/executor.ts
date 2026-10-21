@@ -661,7 +661,8 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
           presentation:'story',view:service.project(latest)});
         const failure=engineOutcome(failureReason(error)!=='unknown'?'provider_failure':'transaction_failure',
           'perception_commit',latest.state_revision,latest.state_revision===save.state_revision,
-          receipt?['perception_check']:[],receipt?[receipt.request_id]:[]);
+          receipt&&(!receipt.inspection_status||receipt.inspection_status==='complete')?['perception_check']:[],
+          receipt?[receipt.request_id]:[]);
         const story=receipt?latest.narrative_history?.find(entry=>entry.request_id===body.request_id)?.narrative:undefined;
         return agentResult('WORLD_ACTION',engineMessage(failure),{outcome:failure,presentation:'failure',
           recovery:recoveryContext(body.original_input??body.input,failure),view:service.project(latest),
@@ -676,6 +677,21 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
           recovery:recoveryContext(body.original_input??body.input,failure),view:service.project(after)});
       }
       const narrative=result.last_turn?.narrative??'';
+      const inspection=receipt.inspection_status;
+      if(inspection&&inspection!=='complete'){
+        if(inspection==='technical_failure'){
+          const failure=engineOutcome('invariant_failure','perception_evidence',after.state_revision,false,[],[receipt.request_id]);
+          return agentResult('WORLD_ACTION',engineMessage(failure),{outcome:failure,presentation:'failure',
+            recovery:recoveryContext(body.original_input??body.input,failure),view:service.project(after)});
+        }
+        const kind=inspection==='partial'?'partial_progress':inspection==='world_blocked'?'blocked_by_world':'unresolved_goal';
+        return agentResult('WORLD_ACTION',narrative,{presentation:'story',story:narrative,
+          outcome:gameOutcome(kind,'perception',after.state_revision,[],[receipt.request_id],
+            inspection==='partial'?'partial':'unresolved'),
+          time_advanced:after.runtime.time.day*after.definition.ruleset.minutes_per_day+after.runtime.time.minute-
+            (save.runtime.time.day*save.definition.ruleset.minutes_per_day+save.runtime.time.minute),
+          view:service.project(after)});
+      }
       return agentResult('WORLD_ACTION',narrative,{presentation:'story',story:narrative,
         outcome:gameOutcome('completed','perception',after.state_revision,['perception_check'],[receipt.request_id],'completed'),
         time_advanced:after.runtime.time.day*after.definition.ruleset.minutes_per_day+after.runtime.time.minute-
