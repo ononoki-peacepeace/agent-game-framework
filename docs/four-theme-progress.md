@@ -1,16 +1,16 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：50ccb02 + reviewed turn-qualified denial and fixed three-world Freeform corpus。整体 **66.25%**（106/160 个固定条件满足）。未满足 23，待验证 31。
+计分版本 v1；评估源代码：ec83aec + reviewed fixed mixed-condition category evidence。整体 **66.88%**（107/160 个固定条件满足）。未满足 22，待验证 31。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
 | 主题 | 满足 | 未满足 | 待验证 | 完成/部分/未完成项 | 主题进度 |
 |---|---:|---:|---:|---|---:|
 | ① 可靠性 | 33 | 4 | 3 | 5/5/0 | 82.5% |
-| ② 自然语言行动 | 23 | 7 | 10 | 3/5/2 | 57.5% |
+| ② 自然语言行动 | 24 | 6 | 10 | 3/5/2 | 60.0% |
 | ③ 自主持续世界 | 28 | 5 | 7 | 4/6/0 | 70.0% |
 | ④ Narrator 与体验 | 22 | 7 | 11 | 3/5/2 | 55.0% |
-| 合计 | 106 | 23 | 31 | 15/21/4 | 66.25% |
+| 合计 | 107 | 22 | 31 | 15/21/4 | 66.88% |
 
 旧台账的12/21/7是工作包人工分类，保留作历史。这里的完成/部分/未完成由4个条件满足数推导，不能与旧分类混用。旧46%为退役估计；首次建立口径不是产品进展，不计算相对46%的提升。
 
@@ -185,6 +185,7 @@
 | development-real-pipeline-kill | evidence_correction | R7.4: Real npm/TypeScript/Vite failure propagation and independent query verified in two fixed build/install boundaries;ownercrash and complete descendant configurations remain unverified.；完整条件保持开放 | +0.000 pp |
 | inventory-turn-denial-withdrawal | evidence_correction | N4.2: met → unmet | -0.625 pp |
 | freeform-three-world-corpus | repair | N4.2: unmet → met; A8.4: unverified → met | +1.250 pp |
+| mixed-condition-category-closure | evidence_correction | A7.3: unmet → met | +0.625 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -336,8 +337,8 @@
 |---|---|---|---|
 | A7.1 | 已有复合与条件契约表达依赖及部分完成 | 满足 | [goal-contract-batch2.test.ts](../tests/goal-contract-batch2.test.ts) |
 | A7.2 | 条件不成立或被世界拒绝不触发技术重试翻盘 | 满足 | [goal-contract-batch2.test.ts](../tests/goal-contract-batch2.test.ts) |
-| A7.3 | 混合条件、动态目标和中途改变意图保留原授权边界 | 未满足 | [goal-contract-batch2.test.ts](../tests/goal-contract-batch2.test.ts), [plan-handoff-failure.test.ts](../tests/plan-handoff-failure.test.ts), [plan-handoff-failure.md](../docs/plan-handoff-failure.md), [future-cancel-window.test.ts](../tests/future-cancel-window.test.ts), [future-cancel-window.md](../docs/future-cancel-window.md), [future-execute-window.test.ts](../tests/future-execute-window.test.ts), [future-execute-window.md](../docs/future-execute-window.md), [future-control-condition.test.ts](../tests/future-control-condition.test.ts), [future-control-condition.md](../docs/future-control-condition.md), [scene-wait-completion.md](../docs/scene-wait-completion.md), [scene-wait-completion.test.ts](../tests/scene-wait-completion.test.ts), [open-goal-wait-completion.md](../docs/open-goal-wait-completion.md), [open-goal-wait-completion.test.ts](../tests/open-goal-wait-completion.test.ts) |
-| A7.4 | 固定组合语料及重启后续执行全部通过 | 待验证 | [goal-contract-batch2.test.ts](../tests/goal-contract-batch2.test.ts) |
+| A7.3 | 混合条件、动态目标和中途改变意图保留原授权边界 | 满足 | [goal-contract-batch2.test.ts](../tests/goal-contract-batch2.test.ts), [plan-handoff-failure.test.ts](../tests/plan-handoff-failure.test.ts), [plan-handoff-failure.md](../docs/plan-handoff-failure.md), [future-cancel-window.test.ts](../tests/future-cancel-window.test.ts), [future-cancel-window.md](../docs/future-cancel-window.md), [future-execute-window.test.ts](../tests/future-execute-window.test.ts), [future-execute-window.md](../docs/future-execute-window.md), [future-control-condition.test.ts](../tests/future-control-condition.test.ts), [future-control-condition.md](../docs/future-control-condition.md), [scene-wait-completion.md](../docs/scene-wait-completion.md), [scene-wait-completion.test.ts](../tests/scene-wait-completion.test.ts), [open-goal-wait-completion.md](../docs/open-goal-wait-completion.md), [open-goal-wait-completion.test.ts](../tests/open-goal-wait-completion.test.ts), [mixed-condition-closure.md](../docs/mixed-condition-closure.md), [mixed-condition-closure.test.ts](../tests/mixed-condition-closure.test.ts), [conditional-dependency-authorization.md](../docs/conditional-dependency-authorization.md), [conditional-dependency-authorization.test.ts](../tests/conditional-dependency-authorization.test.ts), [conditional-trade-plan.md](../docs/conditional-trade-plan.md), [conditional-trade-plan.test.ts](../tests/conditional-trade-plan.test.ts), [plan-inspection-completion.md](../docs/plan-inspection-completion.md), [future-condition-authority.md](../docs/future-condition-authority.md), [conditional-wait-interruption.md](../docs/conditional-wait-interruption.md), [conditional-activity-interruption.md](../docs/conditional-activity-interruption.md) |
+| A7.4 | 固定组合语料及重启后续执行全部通过 | 待验证 | [goal-contract-batch2.test.ts](../tests/goal-contract-batch2.test.ts), [mixed-condition-closure.md](../docs/mixed-condition-closure.md) |
 
 ## A8 Freeform physical interaction and dynamic body/distance/environment prerequisites
 
