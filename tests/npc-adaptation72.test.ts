@@ -1,4 +1,4 @@
-import {expect,it} from 'vitest';
+import {expect,it,vi} from 'vitest';
 import {randomUUID} from 'node:crypto';
 import {mkdtemp,readFile,rm} from 'node:fs/promises';
 import {join} from 'node:path';
@@ -29,6 +29,13 @@ function seed(kind:typeof spec.worlds[number]){
  world.map!.locations.push(depot);world.map!.routes.push({from:'square',to:depot.id,travel_minutes:6,conditions:[]});
  if(kind!=='trade'){world.enabled_modules=world.enabled_modules.filter(m=>m!=='commerce');world.entities=world.entities.filter(e=>e.id!=='corner_shop');}
  if(kind==='calendar')world.calendar={version:1,anchor_day:1,anchor_month:1,anchor_date:1,anchor_weekday:1,month_lengths:[31,28,31,30,31,30,31,31,30,31,30,31],source:'明确创作的适应性场景日历'};
+ if(kind==='calendar'){
+  world.background_event_policy={enabled:true,target_active_incidents:2,max_dormant_incidents:2,minimum_gap_minutes:180,replenishment:false};
+  world.background_incidents=['resolved','pending'].map((suffix,index)=>({id:'adaptive_'+suffix,title:'已登记的车站事务',summary:'人物持续事务的既有背景进展',source:'WORLD_PACKAGE' as const,
+   created_at:world.runtime.time,earliest_activation:{day:2,minute:540},latest_activation:null,activation_flags:[],activation_chance:1,participants:['npc_lin'],locations:['station'],
+   stages:[{id:'start',earliest_after_minutes:0,latest_after_minutes:null,required_flags:[],actor_id:'npc_lin',effects:[{kind:'set_flag' as const,flag:'adaptive_'+suffix+'_started'}],exposures:[],terminal:'none' as const},
+    {id:'finish',earliest_after_minutes:1440,latest_after_minutes:null,required_flags:index?['never_authorized']:[],actor_id:'npc_lin',effects:[{kind:'set_flag' as const,flag:'adaptive_'+suffix+'_finished'}],exposures:[],terminal:'resolved' as const}]}));
+ }
  world.ruleset.relationship_dimensions={familiarity:{min:0,max:100,initial:0,event_deltas:{contact:1}}};
  const save=newSave(world);save.npc_agent_state={};
  for(const id of ids){
@@ -119,7 +126,13 @@ it.each(spec.worlds)('adaptive %s world:72 hours, six owner revisions, exact aut
    const originalReceipt=current.resolution_receipts?.filter(r=>r.actor_id===id&&r.semantic_action==='INSPECT'&&r.request_id===prefixes.get(id))??[];
    expect(originalReceipt).toHaveLength(1);
   }
-  if(kind==='trade'){expect(entity(current,'player').components.wallet.balances.credit).toBe(76);expect(entity(current,'player').components.inventory.items.bread).toBe(3);}
+  if(kind==='trade'){expect((entity(current,'player').components.wallet as {balances:Record<string,number>}).balances.credit).toBe(76);expect((entity(current,'player').components.inventory as {items:Record<string,number>}).items.bread).toBe(3);}
+  if(kind==='calendar'){
+   expect(current.background_state?.incidents.find(i=>i.id==='adaptive_resolved')?.status).toBe('resolved');
+   expect(current.background_state?.incidents.find(i=>i.id==='adaptive_pending')?.status).toBe('active');
+   expect(current.gm_state.flags.adaptive_resolved_finished).toBe(true);expect(current.gm_state.flags.adaptive_pending_finished).toBeUndefined();
+   expect(current.background_state?.exposure_log).toHaveLength(0);
+  }
   expect(minute(current)-start).toBe(spec.hours*60);
   completedAssertions=true;
  }finally{
@@ -127,3 +140,35 @@ it.each(spec.worlds)('adaptive %s world:72 hours, six owner revisions, exact aut
   await rm(directory,{recursive:true,force:true});
  }
 },240000);
+
+it.each(spec.worlds)('adaptive boundary %s:missing listener and pre-persistence failure retain exact authority then retry once',async kind=>{
+ const directory=await mkdtemp(join(tmpdir(),'agf-adaptation-boundary-'));
+ try{
+  const store=new JsonStore(directory),initial=seed(kind);await store.write(initial);let calls=0;
+  const bad:NpcDecision={...quiet(),plan_updates:[{plan_id:'original',status:'abandoned'}],plan_proposals:[{id:'unknown_listener',goal_id:'long_goal',intention:'尝试联系不存在的人',
+   steps:[{type:'TALK',target_id:'missing_npc',description:'询问安排',duration_minutes:null,speech:'请问今天有什么安排？'}]}]};
+  const invalid=new GameService(store,new AIRuntime({name:'adaptive-boundary-offline',generate:async()=>{calls++;return {data:bad};}}),initial.definition);
+  const before=await invalid.current(),bytes=await readFile(join(directory,'current.json')),writes=vi.spyOn(store,'write');
+  await expect(decideNpc(invalid,before,'npc_lin',{kind:'world_event',description:'核对缺失对象'})).rejects.toThrow();
+  expect(calls).toBe(2);expect(writes).not.toHaveBeenCalled();expect(await readFile(join(directory,'current.json'))).toEqual(bytes);
+  const good:NpcDecision={...quiet(),plan_updates:[{plan_id:'original',status:'abandoned'}],plan_proposals:[{id:'valid_retry',goal_id:'long_goal',intention:'在原地继续事务',
+   steps:[{type:'HOLD',target_id:null,description:'本人核对准备',duration_minutes:2,speech:null}]}]};
+  const service=new GameService(store,new AIRuntime({name:'adaptive-boundary-offline',generate:async()=>{calls++;return {data:quiet()};}}),initial.definition);
+  const body={game_id:before.game_id,expected_revision:before.state_revision,request_id:randomUUID()},operation={fixture:'owner_revision_retry'};
+  writes.mockRejectedValueOnce(Error('fixture failure before replacement persistence'));
+  await expect(service.agentTransaction(body,operation,save=>applyNpcDecision(save,'npc_lin','valid-owner-retry',good))).rejects.toThrow('fixture failure before replacement persistence');
+  expect(await readFile(join(directory,'current.json'))).toEqual(bytes);expect((await store.read())!.npc_agent_state).toEqual(before.npc_agent_state);
+  const first=await service.agentTransaction(body,operation,save=>applyNpcDecision(save,'npc_lin','valid-owner-retry',good));
+  const saved=await readFile(join(directory,'current.json')),writeCount=writes.mock.calls.length,callCount=calls;
+  expect(await service.agentTransaction(body,operation,()=>{throw Error('retry replay must not mutate');})).toEqual(first);
+  expect(await readFile(join(directory,'current.json'))).toEqual(saved);expect(writes).toHaveBeenCalledTimes(writeCount);expect(calls).toBe(callCount);
+  const current=await service.current();
+  await service.agentTransaction({game_id:current.game_id,expected_revision:current.state_revision,request_id:randomUUID()},{fixture:'paid_retry_execution'},
+   save=>Object.assign(save,executeAction(save,{type:'WAIT',parameters:{minutes:180}},randomUUID()).save));
+  const after=await service.current();expect(after.npc_agent_state!.npc_lin.plans.filter(p=>p.id==='valid_retry')).toHaveLength(1);
+  expect(after.npc_agent_state!.npc_lin.plans.find(p=>p.id==='valid_retry')!.status).toBe('completed');
+  expect(after.npc_agent_state!.npc_lin.goals).toEqual(before.npc_agent_state!.npc_lin.goals);
+  expect(after.resolution_receipts?.filter(r=>r.actor_id==='npc_lin'&&r.semantic_action==='HOLD')).toHaveLength(1);
+  process.stdout.write('ADAPTIVE_BOUNDARY_METRICS '+JSON.stringify({world:kind,offline_calls:calls,real_provider_calls:0})+'\n');
+ }finally{vi.restoreAllMocks();await rm(directory,{recursive:true,force:true});}
+});

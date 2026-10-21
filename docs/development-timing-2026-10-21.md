@@ -43,3 +43,20 @@ This batch tests57.571s/build50.543s; official continuation totals tests148.477s
 | Reviewed follow-up observation | 20 passed | 6.252 | One later speaker/literal correction to avoid assuming remote perception; no source/types change |
 
 This evidence-only batch tests29.455s/typecheck31.885s/build0s. Official continuation running totals: tests177.932s, standard builds104.872s, additional strict noEmit31.885s. Product source remains162ebad; full project regression was not repeated. Final matrix has40 deterministic NPC decision substitutes; live game Provider calls0. Model development calls and inference-only time remain unobserved.
+
+## Sustained NPC adaptation and boundary completion
+
+| Run | Result | Wall seconds | Why run/repeat |
+|---|---|---:|---|
+| First three-world72h run | 3 final expectation failures | 342.384 | Invalid forced replacement before valid3-attempt-budget completion; all raw failures retained |
+| One-owner reduction | 1 passed | 5.278 | Classify before changing product |
+| One/three-owner comparison | 1 passed,1 expectation failure | 4.743 | Shows actual action-budget backpressure, not lost elapsed time |
+| Correct bounded-progress control | 2 passed | 5.005 | Next paid interval finishes without prefix replay |
+| Budget-aware three-world72h | 3 passed | 339.752 | Fixture waits for viable methods, unchanged six-completion requirement |
+| Missing-listener/write-fault boundary pairs | 3 selected passed,3 long cases excluded | 7.180 | New short boundaries only |
+| Calendar/background72h extension | 1 selected passed,5 cases excluded | 120.169 | Only changed world rerun; trade/relations retained |
+| Final strict noEmit | Exit0 | 28.833 | Final files/spec hashes pinned, no Vite/server rebuild |
+
+Batch tests824.511s/typecheck28.833s/build0s. Official totals: **tests1002.443s/builds104.872s/additional strict noEmit60.718s**. The repeated long run followed an actual failed fixture expectation and short classification; the third long run was limited to the calendar branch whose scope changed. No complete framework regression ran. `repeated_selection` in the raw recorder means the same file list; test-name filters and excluded cases remain explicit command arguments and report statuses.
+
+Observed calls: budget-aware long357 substitutes, extended calendar119, boundary pairs9 =485 observed test substitutes (includes119 superseded calendar calls). The final used case selection observes366. Other failed/short calls lacking counters remain unobserved. Paid game Provider calls0; developer-model per-call count/inference time is not exposed. No call costs or inference latency are inferred from test/process wall time.

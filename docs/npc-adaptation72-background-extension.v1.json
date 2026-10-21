@@ -1,0 +1,13 @@
+{
+ "version":1,
+ "extends":"npc-adaptation72-scenarios.v1.json",
+ "condition":"W5.4",
+ "unchanged":"72 hours, three owners, six completed replacements, fixed3-attempt budget, exact replay and12/36/60h restarts",
+ "calendar_background":"Two authored station incidents activate after24h; both start, one resolves after24 further hours and the other requires a flag that never exists. Neither moves an NPC or exposes offscreen text.",
+ "all_structure_boundary_pairs":[
+  "An unknown NPC plan listener is rejected by real decision admission twice, with exact original save bytes and no storage writes.",
+  "A one-shot before-persistence write failure during owner revision leaves old goal/plan/bytes unchanged; same request retries once then replays without mutator/write/generation.",
+  "The retried replacement executes exactly once on a later paid interval; long goal remains identical."
+ ],
+ "execution_policy":"Retain unchanged trade/relations long results from a824e0d; rerun only the extended calendar72h and new short boundary cases. Report case selection/exclusions and fixture-version provenance explicitly. No single current-file all-pass claim."
+}
