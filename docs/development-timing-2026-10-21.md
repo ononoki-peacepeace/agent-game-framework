@@ -31,3 +31,15 @@ These measurements belong to this official continuation. Earlier intermediary wo
 | Stable-source complete build | Exit0 | 50.543 | One standard strict build after the one source-file repair |
 
 This batch tests57.571s/build50.543s; official continuation totals tests148.477s/build104.872s. The two small reruns followed concrete fixture failures; the13 already-passing files were retained with matching source fingerprints. Selected passing coverage171 assertions/14 files is reconstructed from latest passing file reports, not represented as a single all-pass run or full-suite result. Live game Provider calls remain0; developer model per-call timing/count remains unobserved.
+
+## NPC adaptation acceptance evidence
+
+| Run | Result | Wall seconds | Why run/repeat |
+|---|---|---:|---|
+| Fixed20-case trigger matrix | 20 fixture failures | 5.737 | First full trigger/format/choice matrix;18 reached wrong final history field,2 exposed incorrect travel/origin expectations |
+| Corrected fixture matrix | 20 passed | 5.745 | Correct actual history field,24-minute route budget and established stale-origin safeguard |
+| Adjacent owner/context regression | 8 files,69 passed | 11.721 | Existing active/conditional/legacy/ended-goal/resource/prefix cases; excludes already-passing new file |
+| Strict root typecheck | Exit0 | 31.885 | One noEmit with unchanged strict tsconfig and isolated paths, no Vite/server rebuild |
+| Reviewed follow-up observation | 20 passed | 6.252 | One later speaker/literal correction to avoid assuming remote perception; no source/types change |
+
+This evidence-only batch tests29.455s/typecheck31.885s/build0s. Official continuation running totals: tests177.932s, standard builds104.872s, additional strict noEmit31.885s. Product source remains162ebad; full project regression was not repeated. Final matrix has40 deterministic NPC decision substitutes; live game Provider calls0. Model development calls and inference-only time remain unobserved.

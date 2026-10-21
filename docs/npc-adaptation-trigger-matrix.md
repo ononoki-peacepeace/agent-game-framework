@@ -1,0 +1,19 @@
+# Bounded NPC owner adaptation: five fixed trigger pairs
+
+Product source162ebad, ledger checkpoint5837bde. This batch adds acceptance evidence for original W5.3; no product source, contract or build configuration changes.
+
+The frozen W5 minimum matrix requires new facts, insufficient resources, location changes, relationship changes and repeated failures to preserve the long goal or produce a justified method revision. `tests/npc-adaptation-trigger-matrix.test.ts` fixes20 cases in advance: five triggers × modern/legacy plan formats × owner-keeps/owner-revises. Each passes through the real context builder, decision admission, decision application, Core execution and multiple actual JsonStore writes/new-store reads. A second later owner review follows actual settlement. The long goal remains identical throughout, and prior receipts remain exact and unique.
+
+| Trigger | Authoritative test evidence | Owner choices and checked results |
+|---|---|---|
+| New fact | Co-present peer speech recorded as witnessed observation, visible in owner memory | Keep viable travel or explicitly abandon it and execute one local HOLD |
+| Resource shortage | Explicit injected authoritative saved wallet update23→0, no fabricated spending receipt; peer wallet canary excluded | Current zero reaches owner; retain goal and choose method without minting/consuming resources |
+| Location change | Actual actor Core MOVE to station; owner context reflects station | Modern plan follows actual remaining route; obsolete legacy-origin method is abandoned without fake completion; explicit owner replacement is also valid |
+| Relationship change | Actual actor Core TALK creates authored familiarity0→1 | Real new relationship context permits keeping or replacing method; goal survives |
+| Repeated failure | Three actual WAIT attempts with unavailable routes, disk recreation between attempts | Specific recovery blocker survives; retain blocked method or abandon it and settle replacement once, no duplicate prefix |
+
+The fixture first failed18 cases at an incorrectly named final history field, and two at incorrect expectations: station return travel takes24 minutes, exceeding the chosen16-minute interval; a legacy travel plan whose origin was actually left must be abandoned, not falsely completed. Raw failures remain. Correcting the field, allocating40 real minutes and checking the established stale-origin safeguard produced20 passes. Review then replaced later peer speech with the owner's own observation, avoiding assumed remote perception; final20 passed in6.252s. No product logic was changed to satisfy a fixture. An additional8 existing files/69 assertions passed in11.721s, including private-resource context, bounded active-plan/goal pairing, legacy and conditional recovery, ended goals and repeated-prefix controls. These total89 selected passing assertions across9 files on unchanged product source; the already-passing20-case file was not included in the8-file rerun.
+
+One unchanged strict root `tsc --noEmit` passed in31.885s using the existing codex isolated-profile paths. It preceded only the later speech literal/speaker change; no types or program structure changed afterward. Vite/server output was already built on identical product source in the prior batch and was not redundantly rebuilt. This batch tests29.455s; developer model call count/inference latency remains unobserved. Each final20-case matrix makes two deterministic NPC decision substitute calls (40 total), not live Provider requests.
+
+W5.3's bounded original five-trigger acceptance is now evidenced by this matrix and the retained earlier owner/cursor/resource/conditional controls. W5.4 remains unverified: this is one known world, not three structures/72 hours, process-kill recovery, fairness or authorized real-model judgment. Those requirements have not been weakened or moved. All160 frozen conditions/weights remain unchanged.
