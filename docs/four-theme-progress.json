@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "5166f52",
+  "assessed_source": "a82afe2",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -228,7 +228,7 @@
         "tests/p0a-extension-lifecycle.test.ts",
         "docs/extension-development-failure-identity.md"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 5166f52: creation/file-write/compiler failures retain precise phases, durable terminal identity and bounded stdout/stderr/exit/signal; full text redacted before tail to preserve final diagnostics and avoid credential-prefix truncation. Baseline3fail1control plus long-output1fail; latest passing46assertions/7files selected union and one standard build49.043s. Old exact journal-message expectation updated to assert precise phase/prefix with all safety checks retained. Full install/registration before/after matrix and R7.4 kill boundaries remain open; no condition closure."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 5166f52: creation/file-write/compiler failures retain precise phases, durable terminal identity and bounded stdout/stderr/exit/signal; full text redacted before tail to preserve final diagnostics and avoid credential-prefix truncation. Baseline3fail1control plus long-output1fail; latest passing46assertions/7files selected union and one standard build49.043s. Old exact journal-message expectation updated to assert precise phase/prefix with all safety checks retained. Full install/registration before/after matrix and R7.4 kill boundaries remain open; no condition closure. a82afe2: four before/after approval/canonical-install diagnostic counterexamples repaired. Preparation failure restores preview intent and logs exact stage; unconfirmed results retain stage across restart and stop; actual committed receipts alone reconcile installed, original installing failure retained in logs.9direct pass and3files35pass/zero skip, strict root noEmit27.845s; no redundant Vite/server build, no changed receipt/Core/required-schema semantics. Wider core-candidate runtime registration and before/after workspace matrix still open; R7.4 kill tests separate."
     },
     "R7.4": {
       "status": "unverified",
@@ -3792,6 +3792,23 @@
         }
       ],
       "note": "Original-scope partial repair, delta0;102/16063.75%,macro14/22/4. No new denominator/weight."
+    },
+    {
+      "batch": "extension-installation-failure-identity",
+      "type": "repair",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R7.3",
+          "evidence": [
+            "tests/extension-development-failure-identity.test.ts",
+            "tests/p0a-extension-lifecycle.test.ts",
+            "docs/extension-development-failure-identity.md"
+          ],
+          "result": "a82afe2: four before/after approval/canonical-install diagnostic counterexamples repaired. Preparation failure restores preview intent and logs exact stage; unconfirmed results retain stage across restart and stop; actual committed receipts alone reconcile installed, original installing failure retained in logs.9direct pass and3files35pass/zero skip, strict root noEmit27.845s; no redundant Vite/server build, no changed receipt/Core/required-schema semantics. Wider core-candidate runtime registration and before/after workspace matrix still open; R7.4 kill tests separate."
+        }
+      ],
+      "note": "Original-scope partial repair/delta0;102/16063.75%,macro14/22/4. Original failed reports retained."
     }
   ],
   "new_risks": [],
@@ -4642,6 +4659,19 @@
         "docs/extension-development-failure-identity.md"
       ],
       "summary": "5166f52: creation/file-write/compiler failures retain precise phases, durable terminal identity and bounded stdout/stderr/exit/signal; full text redacted before tail to preserve final diagnostics and avoid credential-prefix truncation. Baseline3fail1control plus long-output1fail; latest passing46assertions/7files selected union and one standard build49.043s. Old exact journal-message expectation updated to assert precise phase/prefix with all safety checks retained. Full install/registration before/after matrix and R7.4 kill boundaries remain open; no condition closure."
+    },
+    {
+      "id": "extension-installation-failure-identity",
+      "scope": "original",
+      "condition": "R7.3",
+      "status": "resolved",
+      "source": "a82afe2",
+      "evidence": [
+        "tests/extension-development-failure-identity.test.ts",
+        "tests/p0a-extension-lifecycle.test.ts",
+        "docs/extension-development-failure-identity.md"
+      ],
+      "summary": "a82afe2: four before/after approval/canonical-install diagnostic counterexamples repaired. Preparation failure restores preview intent and logs exact stage; unconfirmed results retain stage across restart and stop; actual committed receipts alone reconcile installed, original installing failure retained in logs.9direct pass and3files35pass/zero skip, strict root noEmit27.845s; no redundant Vite/server build, no changed receipt/Core/required-schema semantics. Wider core-candidate runtime registration and before/after workspace matrix still open; R7.4 kill tests separate."
     }
   ]
 }

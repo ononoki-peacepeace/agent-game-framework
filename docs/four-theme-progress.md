@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：5166f52。整体 **63.75%**（102/160 个固定条件满足）。未满足 25，待验证 33。
+计分版本 v1；评估源代码：a82afe2。整体 **63.75%**（102/160 个固定条件满足）。未满足 25，待验证 33。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -18,7 +18,7 @@
 
 规则：不得通过拆条件、改变分母、降低通过条件抬高分数；若发现原范围缺陷，撤回对应 met 并记录负向变化；新增范围风险单列，不能增加原范围得分。确需变更范围时另建版本，保留旧口径和桥接对照，不能覆盖 v1。各包等权是固定、可复算的管理约定，并不声称复杂度相同。
 
-本口径建立后登记的原范围缺陷：38 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
+本口径建立后登记的原范围缺陷：39 已修复，18 开放；新增范围风险 0。这些记录不增加分母，也不自动获得完整条件分数。
 
 | 批次 | 类型 | 实际条件变化 | 加权变化 |
 |---|---|---|---:|
@@ -134,6 +134,7 @@
 | npc-adaptation-five-trigger-acceptance | repair | W5.3: unmet → met | +0.625 pp |
 | npc-adaptation72-three-structure-acceptance | repair | W5.4: unverified → met | +0.625 pp |
 | extension-development-failure-identity | repair | R7.3: 5166f52: creation/file-write/compiler failures retain precise phases, durable terminal identity and bounded stdout/stderr/exit/signal; full text redacted before tail to preserve final diagnostics and avoid credential-prefix truncation. Baseline3fail1control plus long-output1fail; latest passing46assertions/7files selected union and one standard build49.043s. Old exact journal-message expectation updated to assert precise phase/prefix with all safety checks retained. Full install/registration before/after matrix and R7.4 kill boundaries remain open; no condition closure.；完整条件保持开放 | +0.000 pp |
+| extension-installation-failure-identity | repair | R7.3: a82afe2: four before/after approval/canonical-install diagnostic counterexamples repaired. Preparation failure restores preview intent and logs exact stage; unconfirmed results retain stage across restart and stop; actual committed receipts alone reconcile installed, original installing failure retained in logs.9direct pass and3files35pass/zero skip, strict root noEmit27.845s; no redundant Vite/server build, no changed receipt/Core/required-schema semantics. Wider core-candidate runtime registration and before/after workspace matrix still open; R7.4 kill tests separate.；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
