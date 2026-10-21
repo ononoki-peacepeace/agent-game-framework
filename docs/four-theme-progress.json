@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "43ce66e + reviewed delayed image binding guard",
+  "assessed_source": "10f3bdc + reviewed open-goal unreadable-state recovery",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -146,9 +146,11 @@
         "tests/plan-unreadable-state.test.ts",
         "docs/plan-unreadable-state.md",
         "tests/plan-committed-failure-summary.test.ts",
-        "docs/plan-committed-failure-summary.md"
+        "docs/plan-committed-failure-summary.md",
+        "docs/open-goal-unreadable-state.md",
+        "tests/open-goal-unreadable-state.test.ts"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 8e2a0f6: between-step handoff failures retain settled prefix/receipt and skipped guards do not pause read-only alternatives;3fail/1control,7distinctfiles57pass/build. Full fixed matrix remains open. 92b86cd: persistent staged-plan recovery/final reads return uncertain outcomes with confirmed receipts and no cached view; initial2fail, final8files61pass/build. Other exits remain open. 975f705: after actual WAIT commit, contract/provider response failures no longer claim unchanged state or suggest blind retry; baseline2fail, final6files27pass/build. Every-exit matrix remains open."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. 8e2a0f6: between-step handoff failures retain settled prefix/receipt and skipped guards do not pause read-only alternatives;3fail/1control,7distinctfiles57pass/build. Full fixed matrix remains open. 92b86cd: persistent staged-plan recovery/final reads return uncertain outcomes with confirmed receipts and no cached view; initial2fail, final8files61pass/build. Other exits remain open. 975f705: after actual WAIT commit, contract/provider response failures no longer claim unchanged state or suggest blind retry; baseline2fail, final6files27pass/build. Every-exit matrix remains open. Actual3fail8.380s rawerrors when open-goal recovery reads stayunavailable;26reads now retain lastobserved authority and return uncertain failure without staleview.6files47pass16.118s/strict44.237sexit0; natural_scene and remaining nested exits stayopen."
     },
     "R5.4": {
       "status": "met",
@@ -4368,6 +4370,23 @@
         }
       ],
       "note": "103/16064.375%delta0; no fullbuild/fullsuite/currentProvideracceptance."
+    },
+    {
+      "batch": "open-goal-unreadable-state",
+      "type": "repair",
+      "source": "10f3bdc+reviewed-worktree",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R5.3",
+          "result": "Open-goal persistent recovery reads no longer escape structured failure;knownprefix kept,unseencommit not denied,staleview omitted.6files47pass16.118s/strict44.237sexit0. Other nested exits remainopen.",
+          "evidence": [
+            "docs/open-goal-unreadable-state.md",
+            "tests/open-goal-unreadable-state.test.ts"
+          ]
+        }
+      ],
+      "note": "103/16064.375%delta0;initialesbuildEPERMnotatestresult;baseline3failretained."
     }
   ],
   "new_risks": [],
@@ -5443,6 +5462,18 @@
         "tests/image-late-binding.test.ts"
       ],
       "summary": "Delayed generation overwrites a newer target avatar/clear/crop; target binding compare inside media queue now refuses late assignment and retains immutable output."
+    },
+    {
+      "id": "open-goal-unreadable-state",
+      "scope": "original",
+      "condition": "R5.3",
+      "status": "resolved",
+      "source": "10f3bdc",
+      "evidence": [
+        "docs/open-goal-unreadable-state.md",
+        "tests/open-goal-unreadable-state.test.ts"
+      ],
+      "summary": "Open-goal error recovery rereads failed storage and escapes the structured boundary;last observed authority now supports uncertain failure without stale view or replay."
     }
   ]
 }

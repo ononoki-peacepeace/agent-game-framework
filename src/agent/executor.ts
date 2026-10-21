@@ -730,19 +730,28 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
         index>orderedMove&&event.timing==='after_move')??null;
       const travelSpeech=eventSequence?.find(event=>event.kind==='speech'&&event.timing==='during_move')??null;
       let departureSceneDone=false,travelSceneDone=false;
-      const partialFailure=(outcome:ReturnType<typeof engineOutcome>,after:SavePackage)=>{
+      // Preserve only successfully observed authority if a later refresh fails.
+      // The cached image is evidence of progress, never a fresh public view.
+      let lastObserved=save;
+      class OpenGoalReadError extends Error{}
+      const readState=async()=>{
+        try{const current=await service.current();lastObserved=current;return current;}
+        catch(error){throw new OpenGoalReadError('开放目标状态读取失败',{cause:error});}
+      };
+      const partialFailure=(outcome:ReturnType<typeof engineOutcome>,after:SavePackage,stateReadable=true)=>{
         const receipts=committedSince(save,after);
         const story=receipts.length||storyLines.length?
           [...new Set(storyLines.length?storyLines:[after.last_turn?.narrative?.trim()].filter((line):line is string=>Boolean(line)))].join('\n'):'';
         return agentResult('WORLD_GOAL',engineMessage(outcome),{outcome,
           recovery:recoveryContext(body.original_input??body.input,outcome,{completed_steps:trail}),presentation:'failure',
           ...(story?{story}:{}),plan_id:body.request_id,
-          canonical_changes:trail.map(entry=>'goal_step:'+entry),view:service.project(after)});
+          canonical_changes:trail.map(entry=>'goal_step:'+entry),...(stateReadable?{view:service.project(after)}:{})});
       };
+      try{
       let resolvedDestination=context?.destination??null;
       if(context?.search_query&&!resolvedDestination){
         for(let searchIndex=0;searchIndex<3;searchIndex++){
-          const current=await service.current();
+          const current=await readState();
           try{
             const found=await agentSkills(current).invoke<{query:string;request_id:string;scope?:typeof spatialScope},
               Awaited<ReturnType<typeof exploreLocation>>>('location_exploration',
@@ -775,11 +784,11 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
               `找到了${found.location.name}；它现在已记在你的地图上。`;
             if(found.kind!=='known')trail.push(`发现 ${found.location.name}`);
             if(context.travel_after_discovery===false)return agentResult('WORLD_GOAL',lastMessage,
-              {presentation:'assistant',plan_id:body.request_id,canonical_changes:trail,view:service.project(await service.current())});
+              {presentation:'assistant',plan_id:body.request_id,canonical_changes:trail,view:service.project(await readState())});
             break;
           }catch(error){
             service.logger.warn('agent.location_search.failed',{module:'agent',metadata:{reason:failureReason(error)}});
-            const after=await service.current();
+            const after=await readState();
             const outcome=executionFailure(error,'location_exploration',after,save,trail);
             return partialFailure(outcome,after);
           }
@@ -794,7 +803,7 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
               // The parent runner owns the whole GoalSpec. This child realizes
               // only the already ordered speech at this route stop.
               open_goal_context:null,goal_spec:null,player_speech_mode:mode},phase==='scene-before-move');
-          const after=await service.current();
+          const after=await readState();
           if(phase!=='scene-before-move'&&context?.search_query&&!resolvedDestination&&seen.outcome.type==='game'){
             const outcome=gameOutcome('partial_progress','open_goal_search_inquiry',after.state_revision,
               [...trail,'scene_interaction'],committedSince(save,after),'unresolved');
@@ -804,7 +813,7 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
           }
           return {...seen,plan_id:body.request_id,canonical_changes:[...trail.map(entry=>'goal_step:'+entry),...(seen.canonical_changes??[])]};
         }catch(error){
-          const latest=await service.current();
+          const latest=await readState();
           const beforeReceipts=new Set((current.resolution_receipts??[]).map(receipt=>receipt.request_id));
           const newReceipt=latest.resolution_receipts?.some(receipt=>receipt.commit_status==='committed'&&!beforeReceipts.has(receipt.request_id))??false;
           const revisionProgress=latest.state_revision>current.state_revision;
@@ -819,7 +828,7 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
         }
       };
       for(let stepIndex=0;stepIndex<MAX_OPEN_GOAL_STEPS;stepIndex+=1){
-        const current=await service.current(),currentView=service.project(current);
+        const current=await readState(),currentView=service.project(current);
         const here=String(currentView.entities.find(entity=>entity.id===currentView.player_id)?.components.location?.location_id??'');
         if(departureSpeech&&!departureSceneDone){
           const originPartner=scenePartner(currentView,current,speechTargetId);
@@ -830,7 +839,7 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
             departureSpeech.text!, 'scene-before-move');
           if(result.outcome.type==='engine_failure'||
             (result.outcome.type==='game'&&result.outcome.kind!=='completed'))return result;
-          const after=await service.current();
+          const after=await readState();
           if(after.state_revision<=current.state_revision)return result;
           departureSceneDone=true;trail.push('在出发地交流');
           if(result.message)storyLines.push(result.message);
@@ -846,11 +855,11 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
             await service.turn({game_id:current.game_id,expected_revision:current.state_revision,
               request_id:childId(body.request_id,'location-exploration-'+stepIndex),input:searchText},
               undefined,undefined,undefined,false,undefined,undefined,true);
-          }catch(error){const latest=await service.current();
+          }catch(error){const latest=await readState();
             service.logger.warn('agent.location_search.failed',{module:'agent',metadata:{reason:failureReason(error)}});
             const outcome=executionFailure(error,'location_exploration',latest,save,trail);
             return partialFailure(outcome,latest);}
-          const after=await service.current();
+          const after=await readState();
           if(after.state_revision===current.state_revision)break;
           searchedLocations.add(here);
           trail.push(`在${place}寻找${context.search_query}`);
@@ -949,24 +958,24 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
               });
             trail.push(`到达 ${currentView.locations.find(location=>location.id===nextDestination)?.name??resolvedDestination}`);
             executedMarkers.add('move:'+resolvedDestination);
-            const moved=await service.current();
+            const moved=await readState();
             lastMessage=moved.last_turn?.narrative??'';
             if(lastMessage){if(followsScene)storyLines.splice(0,storyLines.length,lastMessage);
               else storyLines.push(lastMessage);}
             if(arrivalPending){
               const arrival=await continueArrivalScene(service,body,current,moved,moveRequestId);
               if(arrival.kind==='unavailable'){
-                const latest=await service.current();
+                const latest=await readState();
                 return partialFailure(engineOutcome('provider_failure','arrival_scene',latest.state_revision,
                   false,trail,committedSince(save,latest)),latest);
               }
               if(arrival.kind==='committed'){
-                lastMessage=(await service.current()).last_turn?.narrative??lastMessage;
+                lastMessage=(await readState()).last_turn?.narrative??lastMessage;
                 storyLines.splice(0,storyLines.length,lastMessage);
               }
             }
             if(travelSpeech&&!travelSceneDone){
-              const mid=await service.current(),midView=service.project(mid);
+              const mid=await readState(),midView=service.project(mid);
               const companion=scenePartner(midView,mid,speechTargetId);
               if(!companion){
                 const outcome=gameOutcome('partial_progress','open_goal_travel_speech',mid.state_revision,
@@ -979,13 +988,13 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
               if(spoken.outcome.type==='engine_failure'||
                 (spoken.outcome.type==='game'&&spoken.outcome.kind!=='completed'))return spoken;
               travelSceneDone=true;
-              const afterScene=await service.current();
+              const afterScene=await readState();
               if(spoken.message)storyLines.push(spoken.message);
               currentTrace()?.info('agent.compound_event',{metadata:{kind:'speech',phase:'during_move',
                 location_id:nextDestination,revision:afterScene.state_revision}});
             }
             continue;
-          }catch(error){const latest=await service.current();
+          }catch(error){const latest=await readState();
             if(error instanceof WorldBlockedError){const outcome=gameOutcome('blocked_by_world','open_goal_destination',latest.state_revision,
               trail,committedSince(save,latest),'unresolved');
               return agentResult('WORLD_GOAL',gameNarrative(outcome,{completed:trail}),{outcome,presentation:'story',
@@ -1001,10 +1010,10 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
               request_id:childId(body.request_id,'target-search'),input:searchText},
               undefined,undefined,undefined,false,undefined,undefined,true);
             searched=true;trail.push(`寻找 ${context.search_query}`);
-            lastMessage=(await service.current()).last_turn?.narrative??'';
+            lastMessage=(await readState()).last_turn?.narrative??'';
             if(lastMessage)storyLines.push(lastMessage);
             continue;
-          }catch(error){const latest=await service.current();
+          }catch(error){const latest=await readState();
             if(error instanceof WorldBlockedError){const outcome=gameOutcome('blocked_by_world','open_goal_search',latest.state_revision,
               trail,committedSince(save,latest),'unresolved');
               return agentResult('WORLD_GOAL',gameNarrative(outcome,{completed:trail}),{outcome,presentation:'story',
@@ -1023,7 +1032,7 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
           return {...spoken,message:story,story,plan_id:body.request_id};
         }
         if(wantsScene&&resolvedDestination&&atDestination&&!partner){
-          const after=await service.current(),outcome=gameOutcome(trail.length?'partial_progress':'completed_no_result',
+          const after=await readState(),outcome=gameOutcome(trail.length?'partial_progress':'completed_no_result',
             'open_goal_scene_availability',after.state_revision,trail,committedSince(save,after),'unresolved');
           return agentResult('WORLD_GOAL',[lastMessage,'你到了这里，但眼前没有可以交谈的人。'].filter(Boolean).join('\n'),
             {outcome,presentation:'story',plan_id:body.request_id,canonical_changes:trail.map(entry=>'goal_step:'+entry),
@@ -1039,7 +1048,7 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
             if(decision)break;
             planningError=new Error('open goal planner unavailable');
           }catch(error){planningError=error;}
-          const latest=await service.current(),safe=latest.game_id===current.game_id&&
+          const latest=await readState(),safe=latest.game_id===current.game_id&&
             latest.state_revision===current.state_revision;
           const code=planningError?failureReason(planningError):'planning_unavailable';
           const feedback=generationRepair(planningError);
@@ -1052,7 +1061,7 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
         }
         if(!decision&&planningError)service.logger.warn('agent.open_goal.planning_failed',{
           module:'agent',metadata:{reason:failureReason(planningError),revision:current.state_revision}});
-        if(!decision){const latest=await service.current();return partialFailure(
+        if(!decision){const latest=await readState();return partialFailure(
           engineOutcome('provider_failure','open_goal_planning',latest.state_revision,
             latest.state_revision===current.state_revision,trail,committedSince(save,latest)),latest);}
         if(decision.decision==='clarify')return agentResult(trail.length?'WORLD_GOAL':'CLARIFICATION',
@@ -1098,13 +1107,13 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
             const expanded=await expandMapFrontier(service,current,here,step.direction,
               childId(body.request_id,'region-'+stepIndex));
             if(expanded.kind==='blocked'){
-              const latest=await service.current(),outcome=gameOutcome('blocked_by_world','map_region_frontier',
+              const latest=await readState(),outcome=gameOutcome('blocked_by_world','map_region_frontier',
                 latest.state_revision,trail,committedSince(save,latest),'unresolved');
               return agentResult('WORLD_GOAL',[lastMessage,expanded.reason].filter(Boolean).join('\n'),{
                 outcome,presentation:'assistant',plan_id:body.request_id,
                 canonical_changes:trail.map(entry=>'goal_step:'+entry),view:service.project(latest)});
             }
-            const expandedSave=await service.current();
+            const expandedSave=await readState();
             expandedEntryName=service.project(expandedSave).locations.find(location=>location.id===expanded.entry_id)?.name??'';
             await service.turn({game_id:expandedSave.game_id,expected_revision:expandedSave.state_revision,
               request_id:childId(body.request_id,'region-entry-'+stepIndex),
@@ -1113,16 +1122,16 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
           }else{
             await service.turn({game_id:current.game_id,expected_revision:current.state_revision,request_id:childId(body.request_id,'goal'+stepIndex),action:{type:'WAIT',parameters:{minutes:Number(step.minutes??5)}}});
           }
-          lastMessage=(await service.current()).last_turn?.narrative??'';
+          lastMessage=(await readState()).last_turn?.narrative??'';
           if(lastMessage)storyLines.push(lastMessage);
-        }catch(error){const latest=await service.current();service.logger.warn('agent.open_goal.transaction_failed',{
+        }catch(error){const latest=await readState();service.logger.warn('agent.open_goal.transaction_failed',{
           module:'agent',metadata:{reason:failureReason(error),detail:(error as Error).message,revision:latest.state_revision}});
           if(error instanceof WorldBlockedError){const outcome=gameOutcome('blocked_by_world','open_goal_step',latest.state_revision,trail,committedSince(save,latest),'unresolved');
             return agentResult('WORLD_GOAL',gameNarrative(outcome,{completed:trail}),{outcome,presentation:'story',
               plan_id:body.request_id,canonical_changes:trail.map(entry=>'goal_step:'+entry),view:service.project(latest)});}
           const outcome=executionFailure(error,'open_goal_step',latest,save,trail);
           return partialFailure(outcome,latest);}
-        if((await service.current()).state_revision===beforeRevision)break;
+        if((await readState()).state_revision===beforeRevision)break;
         executedMarkers.add(marker);
         trail.push(step.kind==='move'?`到达 ${String(step.destination)}`:
           step.kind==='expand'?`到达 ${expandedEntryName}`:`等待 ${Number(step.minutes??5)} 分钟`);
@@ -1136,7 +1145,7 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
       // remain structured metadata and must not be appended as story text.
       const narratedStory=[...new Set(storyLines)].join('\n');
       const summary=narratedStory||lastMessage;
-      const after=await service.current();
+      const after=await readState();
       // A single authorized nearby move can satisfy the whole request when the semantic goal
       // did not retain any dependent action. A separately stated post-arrival step stays open.
       const nearbyGoalDone=discretionaryRoute&&!routeStillIntermediate&&trail.some(entry=>entry.startsWith('到达 '))&&
@@ -1147,6 +1156,12 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
       return agentResult('WORLD_GOAL',summary||gameNarrative(outcome,{}),
         {outcome,presentation:narratedStory?'story':'assistant',...(narratedStory?{story:narratedStory}:{}),
           plan_id:body.request_id,canonical_changes:trail.map(entry=>'goal_step:'+entry),view:service.project(after)});
+      }catch(error){
+        if(!(error instanceof OpenGoalReadError))throw error;
+        service.logger.warn('agent.open_goal.refresh_failed',{module:'agent',metadata:{revision:lastObserved.state_revision,completed_steps:trail.length}});
+        return partialFailure(engineOutcome('transaction_failure','open_goal_refresh',lastObserved.state_revision,
+          false,trail,committedSince(save,lastObserved)),lastObserved,false);
+      }
     }
     const ambientPerception=!body.interaction&&isActivePerception(body.input)&&!/(?:他|她|他们|她们|对方|那个人)/.test(body.input)&&
       !resolveEntities(view,body.input).matches.some(entity=>entity.id!==view.player_id&&Boolean(entity.components.character));
