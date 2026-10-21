@@ -872,11 +872,15 @@
       "basis": "Evidence815bbf4/product162ebad: original fixed five-trigger paired matrix20cases (new facts, resource shortage, actual location and relationship changes, three repeated failures; modern/legacy; owner keep/revise), real JsonStore recreation, later owner reconsideration, exact long goal and no duplicate receipts. Matrix20pass plus8adjacentfiles69pass, root strict noEmit31.885s. Resource change explicitly injected authoritative fixture, decisions deterministic substitutes; no claim of real-model judgment, three-world72h/W5.4, process kill or fairness. Product source unchanged."
     },
     "W5.4": {
-      "status": "unverified",
+      "status": "met",
       "evidence": [
-        "tests/npc-persistent-plans.test.ts"
+        "docs/npc-adaptation72-scenarios.v1.json",
+        "docs/npc-adaptation72-background-extension.v1.json",
+        "docs/npc-adaptation72.md",
+        "tests/npc-adaptation72.test.ts",
+        "tests/npc-replacement-transaction.test.ts"
       ],
-      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+      "basis": "Evidence9ac1225/product162ebad unchanged: three active structures (trade, authored relations, calendar/autonomous plans plus resolved/unresolved background incidents),72h each/9 actual fresh JsonStore/AIRuntime/GameService recreations. Three owners each retain exact long goal, original successful prefix/cursors/receipts and six completed replacements; all structures pair missing-listener admission and pre-write failure/retry, exact response/current bytes and no repeat mutator/write/generation. Six selected cases across explicit reports plus2short budget controls, final strict noEmit28.833s/hashes match. Trade/relations runtime paths retained froma824e0d; only extended calendar rerun; selected exclusions explicit, not single-file/full-project all-green. Initial fixture budget failures preserved/classified without product changes; real-model/process-kill/multiplayer/prose/body breadth not claimed."
     },
     "W6.1": {
       "status": "met",
@@ -3748,6 +3752,26 @@
         }
       ],
       "note": "Previously repaired mechanisms now have complete bounded original trigger matrix; +1/+0.625pp=101/160. W5.4 remains unverified, no scope/weight change."
+    },
+    {
+      "batch": "npc-adaptation72-three-structure-acceptance",
+      "type": "repair",
+      "transitions": [
+        {
+          "id": "W5.4",
+          "before": "unverified",
+          "after": "met",
+          "evidence": [
+            "docs/npc-adaptation72-scenarios.v1.json",
+            "docs/npc-adaptation72-background-extension.v1.json",
+            "docs/npc-adaptation72.md",
+            "tests/npc-adaptation72.test.ts",
+            "tests/npc-replacement-transaction.test.ts"
+          ],
+          "reason": "Evidence9ac1225/product162ebad unchanged: three active structures (trade, authored relations, calendar/autonomous plans plus resolved/unresolved background incidents),72h each/9 actual fresh JsonStore/AIRuntime/GameService recreations. Three owners each retain exact long goal, original successful prefix/cursors/receipts and six completed replacements; all structures pair missing-listener admission and pre-write failure/retry, exact response/current bytes and no repeat mutator/write/generation. Six selected cases across explicit reports plus2short budget controls, final strict noEmit28.833s/hashes match. Trade/relations runtime paths retained froma824e0d; only extended calendar rerun; selected exclusions explicit, not single-file/full-project all-green. Initial fixture budget failures preserved/classified without product changes; real-model/process-kill/multiplayer/prose/body breadth not claimed."
+        }
+      ],
+      "note": "+1/+0.625pp=102/16063.75%; W5 completes, macro14/22/4. Fixed weights/standards unchanged; no other world/prose criteria credited."
     }
   ],
   "new_risks": [],
