@@ -101,8 +101,13 @@ function validateItemConditionNarrative(save:SavePackage,prose:string){
   const names=[...new Set(items.map(entity=>String(entity.components.identity!.name)))].sort((a,b)=>b.length-a.length);
   if(!names.length)return;
   const escape=(text:string)=>text.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-  const pattern=new RegExp(`(${names.map(escape).join('|')})((?:现在|此刻|已经|已|仍然|仍|依然|还是|变得|变成|恢复|保持|处于|是|没有|并未|尚未|并非|不是|不再|未|不)*)(完好无损|完整无损|完好|受损|损坏|破损|损毁|毁坏|毁掉)`,'g');
+  const pattern=new RegExp(`(${names.map(escape).join('|')})((?:现在|此刻|已经|已|仍然|仍|依然|还是|变得|变成|恢复|保持|处于|是|没有|并未|尚未|并非|不是|不再|未|不)*)(?:被)?(完好无损|完整无损|完好|受损|损坏|破损|损毁|毁坏|毁掉)`,'g');
   for(const match of prose.matchAll(pattern)){
+    // An explicit clause-initial hypothesis is not a current-state assertion.
+    // Scope the exemption to this occurrence; a following independent clause
+    // must still match Core, including after the same hypothetical/typed quote.
+    const prefix=prose.slice(0,match.index).split(/[，,。；;！？!?\n]/).at(-1)?.trim()??'';
+    if(/^(?:如果|假如|要是)$/.test(prefix))continue;
     const condition=/完好|完整/.test(match[3])?'intact':/损毁|毁坏|毁掉/.test(match[3])?'destroyed':'damaged';
     const negative=((match[2].match(/没有|并未|尚未|并非|不是|不再|未|不/g)??[]).length%2)===1;
     const matching=items.filter(item=>String(item.components.identity!.name)===match[1]);
