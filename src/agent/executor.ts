@@ -56,7 +56,9 @@ function executionFailure(error:unknown,stage:string,save:SavePackage,before?:Sa
 }
 /** One optional, read-only scene continuation after a committed MOVE into newly met company. */
 async function continueArrivalScene(service:GameService,body:PlanRequest,beforeMove:SavePackage,
-  afterMove:SavePackage,moveRequestId:string):Promise<{kind:'not_needed'|'committed'|'unavailable';text:string}>{
+  afterMove:SavePackage,moveRequestId:string):Promise<
+    {kind:'not_needed'|'committed';text:string}|
+    {kind:'unavailable';text:string;code:'provider_failure'|'schema_failure'|'transaction_failure'}>{
   const view=service.project(afterMove);
   const destination=view.entities.find(entity=>entity.id===view.player_id)?.components.location?.location_id;
   const origin=beforeMove.entities.find(entity=>entity.id===beforeMove.player_state.entity_id)?.components.location?.location_id;
@@ -67,6 +69,7 @@ async function continueArrivalScene(service:GameService,body:PlanRequest,beforeM
   if(!residents.length)return {kind:'not_needed',text:''};
   let proposal:Awaited<ReturnType<typeof runSceneInteraction>>=null;
   let repair:SceneRepair|undefined;
+  let failureCode:'provider_failure'|'schema_failure'='schema_failure';
   for(let attempt=1;attempt<=2;attempt++){
     try{proposal=await agentSkills(afterMove).invoke<{
       view:typeof view;input:string;partner:{id:string};speechMode:'none';phase:'arrival';repair?:typeof repair
@@ -77,12 +80,14 @@ async function continueArrivalScene(service:GameService,body:PlanRequest,beforeM
     }catch(error){const failure=sceneFailureInfo(error);
       service.logger.warn('agent.arrival_scene.failed',{module:'agent',metadata:{
         attempt,reason:failureReason(error),stage:failure.stage}});
-      if(['PROVIDER_REFUSAL','PROVIDER_CONTENT_FILTER','SCENE_PROVIDER_FAILURE'].includes(failure.code))break;
+      if(['PROVIDER_REFUSAL','PROVIDER_CONTENT_FILTER','SCENE_PROVIDER_FAILURE'].includes(failure.code)){
+        failureCode='provider_failure';break;
+      }
       repair=sceneRepairFeedback(error,afterMove.state_revision);
     }
     repair??={failure_code:'arrival_scene_invalid',failure_stage:'arrival_scene',revision:afterMove.state_revision};
   }
-  if(!proposal)return {kind:'unavailable',text:''};
+  if(!proposal)return {kind:'unavailable',text:'',code:failureCode};
   const arrivalText=sceneMessage(proposal,view);
   const ordered=orderedSceneBeats(proposal.result)??[
     {kind:'narration' as const,text:proposal.result.narrative},
@@ -93,7 +98,7 @@ async function continueArrivalScene(service:GameService,body:PlanRequest,beforeM
   const movementText=String(afterMove.last_turn?.narrative??'');
   const movementBeats=previous.length?previous:Array.from({length:Math.ceil(movementText.length/1200)},(_,index)=>({
     kind:'narration' as const,text:movementText.slice(index*1200,(index+1)*1200)}));
-  if(movementBeats.length+ordered.length>96)return {kind:'unavailable',text:''};
+  if(movementBeats.length+ordered.length>96)return {kind:'unavailable',text:'',code:'schema_failure'};
   const arrivalId=childId(body.request_id,`arrival-scene:${moveRequestId}`);
   try{await service.agentTransaction({game_id:afterMove.game_id,expected_revision:afterMove.state_revision,
     request_id:arrivalId},{arrival_scene_for:moveRequestId},next=>{
@@ -109,7 +114,20 @@ async function continueArrivalScene(service:GameService,body:PlanRequest,beforeM
       view.entities.filter(entity=>entity.id!==view.player_id&&entity.components.character&&
         entity.components.location?.location_id===destination).map(entity=>entity.id));
   });}catch(error){service.logger.warn('agent.arrival_scene.commit_failed',{module:'agent',metadata:{
-    reason:failureReason(error),revision:afterMove.state_revision}});return {kind:'unavailable',text:''};}
+    reason:failureReason(error),revision:afterMove.state_revision}});
+    // A lost write acknowledgement is not a failed provider call. Resume only
+    // from this transaction's observed identity and matching committed history.
+    try{
+      const latest=await service.current();
+      const fingerprint=createHash('sha256').update(JSON.stringify({agent_operation:{arrival_scene_for:moveRequestId}})).digest('hex');
+      if(latest.game_id===afterMove.game_id&&latest.state_revision===afterMove.state_revision+1&&
+        latest.runtime.receipts.some(receipt=>receipt.id===arrivalId&&receipt.fingerprint===fingerprint&&
+          receipt.revision===latest.state_revision)&&
+        latest.narrative_history?.some(entry=>entry.request_id===arrivalId&&entry.revision===latest.state_revision))
+        return {kind:'committed',text:arrivalText};
+    }catch{/* The caller's canonical refresh boundary handles unreadable state. */}
+    return {kind:'unavailable',text:'',code:'transaction_failure'};
+  }
   service.logger.info('agent.arrival_scene.committed',{module:'agent',request_id:body.request_id,
     revision:afterMove.state_revision+1,metadata:{location_id:destination,move_request_id:moveRequestId,
       speech_event_count:proposal.result.speech_events.length}});
@@ -966,8 +984,11 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
               const arrival=await continueArrivalScene(service,body,current,moved,moveRequestId);
               if(arrival.kind==='unavailable'){
                 const latest=await readState();
-                return partialFailure(engineOutcome('provider_failure','arrival_scene',latest.state_revision,
-                  false,trail,committedSince(save,latest)),latest);
+                const precedingSceneReceiptId=childId(precedingSceneId,'scene');
+                return partialFailure(engineOutcome(arrival.code,'arrival_scene',latest.state_revision,
+                  false,trail,[...new Set([
+                    ...(latest.runtime.receipts.some(receipt=>receipt.id===precedingSceneReceiptId)?[precedingSceneReceiptId]:[]),
+                    ...committedSince(save,latest)])]),latest);
               }
               if(arrival.kind==='committed'){
                 lastMessage=(await readState()).last_turn?.narrative??lastMessage;
@@ -1436,7 +1457,7 @@ export async function handleAgentInput(service:GameService,body:PlanRequest,star
               const arrival=await continueArrivalScene(service,body,beforeEffect,completed,effectRequestId);
               if(arrival.kind==='unavailable'){
                 const latest=await readEffectState();
-                const failure=engineOutcome('provider_failure','arrival_scene',latest.state_revision,false,
+                const failure=engineOutcome(arrival.code,'arrival_scene',latest.state_revision,false,
                   ['scene_interaction',...outcome.settled],sceneReceipts(latest));
                 return agentResult('WORLD_ACTION',engineMessage(failure),{outcome:failure,
                   presentation:'failure',story:latest.last_turn?.narrative??sceneStory,
