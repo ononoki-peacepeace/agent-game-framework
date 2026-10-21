@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "1b69824 + reviewed canonical consumption authority guard",
+  "assessed_source": "bbba90c + reviewed real npm/Vite process-boundary evidence",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -257,9 +257,12 @@
         "tests/development-process-kill.test.ts",
         "tests/fixtures/development-kill-worker.ts",
         "tests/fixtures/development-kill-tool.mjs",
-        "tests/fixtures/development-compiler-deadline.mjs"
+        "tests/fixtures/development-compiler-deadline.mjs",
+        "docs/development-real-pipeline-kill.md",
+        "tests/development-real-pipeline-kill.test.ts",
+        "tests/fixtures/development-pipeline-deadline.mjs"
       ],
-      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required. 989d4c6 product: bounded two-process-tool strong-kill and independent-worker restart evidence added; actual full compiler/install child and service-owner crash matrix remains open. No credit. Actual current full-project TypeScript noEmit watch compiler now SIGKILLs via owned handle after its own startup, durable failed gate/stdout/signal and independent task restart with zero tool/Provider calls pass. Selected5distinctcaseunion:expanded4pass1loaderfail26.273s plus corrected1pass4excluded6.526s, strictfinal28.118sexit0. Complete npm/Vite/install pipeline and service-owner crash/descendant cleanup still open; no credit."
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required. 989d4c6 product: bounded two-process-tool strong-kill and independent-worker restart evidence added; actual full compiler/install child and service-owner crash matrix remains open. No credit. Actual current full-project TypeScript noEmit watch compiler now SIGKILLs via owned handle after its own startup, durable failed gate/stdout/signal and independent task restart with zero tool/Provider calls pass. Selected5distinctcaseunion:expanded4pass1loaderfail26.273s plus corrected1pass4excluded6.526s, strictfinal28.118sexit0. Complete npm/Vite/install pipeline and service-owner crash/descendant cleanup still open; no credit. Actualnpmrunbuild/realTypeScript+Vite buildStart kills nowverified at capabilityframeworkbuild andCoreinstallbuild. Final2pass79.459s,oldworker2selectedpass3excluded13.862s,strict33.268sexit0. Exportednoncebound5Nodeidentitieseach/allExited,originalnestedstdout+exit1,retainedcandidateindex/baseHEAD,independentworkerzeroCommands/sameTask/save/artifact. CopiedVite pause instrumentation disclosed;no productchanges. Serviceownercrash/complete descendant scope remainsunverified."
     },
     "R8.1": {
       "status": "met",
@@ -4851,6 +4854,24 @@
         }
       ],
       "note": "105/16065.625%;net0. Final5files63pass13.999s,strict35.396sexit0. Baseline6fail5pass4.950s,sourcebinding4fail4.053s,initialstrictmissingtestfields35.552s retained. Fixed15case boundary;switch R7.4 after checkpoint."
+    },
+    {
+      "batch": "development-real-pipeline-kill",
+      "type": "evidence_correction",
+      "source": "bbba90c + reviewed process evidence",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "R7.4",
+          "result": "Real npm/TypeScript/Vite failure propagation and independent query verified in two fixed build/install boundaries;ownercrash and complete descendant configurations remain unverified.",
+          "evidence": [
+            "docs/development-real-pipeline-kill.md",
+            "tests/development-real-pipeline-kill.test.ts",
+            "tests/fixtures/development-pipeline-deadline.mjs"
+          ]
+        }
+      ],
+      "note": "105/16065.625%;net0. First2pass96.744s preceded raw-result export;final2pass79.459s with rawlogs,2adjacent selectedpass13.862s/3excluded,strict33.268sexit0. No successful fullbuild or product cleanup mechanism claim."
     }
   ],
   "new_risks": [],

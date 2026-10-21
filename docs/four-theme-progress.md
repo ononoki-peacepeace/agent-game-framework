@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：1b69824 + reviewed canonical consumption authority guard。整体 **65.63%**（105/160 个固定条件满足）。未满足 23，待验证 32。
+计分版本 v1；评估源代码：bbba90c + reviewed real npm/Vite process-boundary evidence。整体 **65.63%**（105/160 个固定条件满足）。未满足 23，待验证 32。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -182,6 +182,7 @@
 | narrative-fixed-corpus-closure | repair | N4.1: unmet → met; N4.3: unmet → met | +1.250 pp |
 | narrative-three-structure-corpus | evidence_correction | N4.4: unverified → met | +0.625 pp |
 | freeform-consumption-authority | repair | A8.3: Concrete false consumption completion repaired through existing structured unavailable result;canonical quantity operation and complete dynamic prerequisite evidence remain open.；完整条件保持开放 | +0.000 pp |
+| development-real-pipeline-kill | evidence_correction | R7.4: Real npm/TypeScript/Vite failure propagation and independent query verified in two fixed build/install boundaries;ownercrash and complete descendant configurations remain unverified.；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -244,7 +245,7 @@
 | R7.1 | 开发安装失败保留明确阶段、退出码及构建输出 | 满足 | [core-install-worktree-protection.md](../docs/core-install-worktree-protection.md), [core-install-worktree-protection.test.ts](../tests/core-install-worktree-protection.test.ts), [core-install-failure-diagnostics.test.ts](../tests/core-install-failure-diagnostics.test.ts), [coding-agent-failure-diagnostics.test.ts](../tests/coding-agent-failure-diagnostics.test.ts), [development-side-effect-matrix.v1.json](../docs/development-side-effect-matrix.v1.json) |
 | R7.2 | 注册和安装受影响回归及真实本地自扩展重新验收通过 | 满足 | [build-performance-diagnosis-2026-10-20.md](../docs/build-performance-diagnosis-2026-10-20.md) |
 | R7.3 | 外部工作区每类副作用具有恢复身份及安全撤回或停止 | 满足 | [core-install-worktree-protection.md](../docs/core-install-worktree-protection.md), [development-side-effect-matrix.v1.json](../docs/development-side-effect-matrix.v1.json), [core-install-worktree-protection.test.ts](../tests/core-install-worktree-protection.test.ts), [extension-development-failure-identity.test.ts](../tests/extension-development-failure-identity.test.ts), [core-install-lifecycle.test.ts](../tests/core-install-lifecycle.test.ts) |
-| R7.4 | 强杀外部工具与嵌套构建后重启验收通过 | 待验证 | [build-performance-diagnosis-2026-10-20.md](../docs/build-performance-diagnosis-2026-10-20.md), [development-process-kill.md](../docs/development-process-kill.md), [development-process-kill.test.ts](../tests/development-process-kill.test.ts), [development-kill-worker.ts](../tests/fixtures/development-kill-worker.ts), [development-kill-tool.mjs](../tests/fixtures/development-kill-tool.mjs), [development-compiler-deadline.mjs](../tests/fixtures/development-compiler-deadline.mjs) |
+| R7.4 | 强杀外部工具与嵌套构建后重启验收通过 | 待验证 | [build-performance-diagnosis-2026-10-20.md](../docs/build-performance-diagnosis-2026-10-20.md), [development-process-kill.md](../docs/development-process-kill.md), [development-process-kill.test.ts](../tests/development-process-kill.test.ts), [development-kill-worker.ts](../tests/fixtures/development-kill-worker.ts), [development-kill-tool.mjs](../tests/fixtures/development-kill-tool.mjs), [development-compiler-deadline.mjs](../tests/fixtures/development-compiler-deadline.mjs), [development-real-pipeline-kill.md](../docs/development-real-pipeline-kill.md), [development-real-pipeline-kill.test.ts](../tests/development-real-pipeline-kill.test.ts), [development-pipeline-deadline.mjs](../tests/fixtures/development-pipeline-deadline.mjs) |
 
 ## R8 Frontend synchronization and all System/media mutation paths
 
