@@ -848,7 +848,7 @@
       "basis": "Bounded historical developer evidence reviewed at f4bf805; not a newest full-suite claim."
     },
     "W5.3": {
-      "status": "unmet",
+      "status": "met",
       "evidence": [
         "tests/npc-persistent-plans.test.ts",
         "tests/npc-own-resource-context.test.ts",
@@ -865,9 +865,11 @@
         "tests/npc-active-plan-revision.test.ts",
         "docs/npc-active-plan-revision.md",
         "tests/npc-repeated-plan-failure.test.ts",
-        "docs/npc-repeated-plan-failure.md"
+        "docs/npc-repeated-plan-failure.md",
+        "tests/npc-adaptation-trigger-matrix.test.ts",
+        "docs/npc-adaptation-trigger-matrix.md"
       ],
-      "basis": "Objective/recovery and owner-resource context gaps repaired with focused evidence; broader resource/location/relationship/new-fact/repeated-failure long-duration matrix remains open. 4e372c0: valid route-blocked legacy activity and owned goal remain manageable inside bounded context;9files78pass/build. Broader adaptive matrix open. d37eb16: conditional plans/owner goals retained in bounded context, owner alone keeps waiting or replaces;9files80pass plus final6case owner controls/build. Full adaptive matrix remains open. 742b1f2: legacy actual Core/system diagnostics and unknown old failures retained, success clears stale metadata; final10files88pass plus schemaHTTP3files52pass/build. Full adaptive matrix open. 70a4575: viable ongoing method/owner goal remain visible after real relationship or witnessed-newfact inputs;10files93pass/build, owner may retain original. Full adaptive matrix open. abd2ac1: three actual repeated waits/reloads preserve prefix receipt/cursor and long goal before one owner replacement;10files92pass/build; broader adaptive/long-duration matrix remains open."
+      "basis": "Evidence815bbf4/product162ebad: original fixed five-trigger paired matrix20cases (new facts, resource shortage, actual location and relationship changes, three repeated failures; modern/legacy; owner keep/revise), real JsonStore recreation, later owner reconsideration, exact long goal and no duplicate receipts. Matrix20pass plus8adjacentfiles69pass, root strict noEmit31.885s. Resource change explicitly injected authoritative fixture, decisions deterministic substitutes; no claim of real-model judgment, three-world72h/W5.4, process kill or fairness. Product source unchanged."
     },
     "W5.4": {
       "status": "unverified",
@@ -3713,6 +3715,39 @@
         }
       ],
       "note": "Restore1/+0.625pp; net0 against pre-counterexample100/160. A6.3/4 remain open."
+    },
+    {
+      "batch": "npc-adaptation-five-trigger-acceptance",
+      "type": "repair",
+      "transitions": [
+        {
+          "id": "W5.3",
+          "before": "unmet",
+          "after": "met",
+          "evidence": [
+            "tests/npc-persistent-plans.test.ts",
+            "tests/npc-own-resource-context.test.ts",
+            "docs/npc-own-resource-context.md",
+            "tests/npc-legacy-long-goal.test.ts",
+            "docs/npc-legacy-long-goal.md",
+            "tests/npc-ended-goal-execution.test.ts",
+            "docs/npc-ended-goal-execution.md",
+            "tests/npc-legacy-plan-recovery.test.ts",
+            "docs/npc-legacy-plan-recovery.md",
+            "tests/npc-conditional-plan-context.test.ts",
+            "docs/npc-conditional-plan-context.md",
+            "docs/npc-legacy-failure-diagnostic.md",
+            "tests/npc-active-plan-revision.test.ts",
+            "docs/npc-active-plan-revision.md",
+            "tests/npc-repeated-plan-failure.test.ts",
+            "docs/npc-repeated-plan-failure.md",
+            "tests/npc-adaptation-trigger-matrix.test.ts",
+            "docs/npc-adaptation-trigger-matrix.md"
+          ],
+          "reason": "Evidence815bbf4/product162ebad: original fixed five-trigger paired matrix20cases (new facts, resource shortage, actual location and relationship changes, three repeated failures; modern/legacy; owner keep/revise), real JsonStore recreation, later owner reconsideration, exact long goal and no duplicate receipts. Matrix20pass plus8adjacentfiles69pass, root strict noEmit31.885s. Resource change explicitly injected authoritative fixture, decisions deterministic substitutes; no claim of real-model judgment, three-world72h/W5.4, process kill or fairness. Product source unchanged."
+        }
+      ],
+      "note": "Previously repaired mechanisms now have complete bounded original trigger matrix; +1/+0.625pp=101/160. W5.4 remains unverified, no scope/weight change."
     }
   ],
   "new_risks": [],

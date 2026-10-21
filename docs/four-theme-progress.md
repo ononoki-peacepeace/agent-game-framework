@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：162ebad。整体 **62.50%**（100/160 个固定条件满足）。未满足 26，待验证 34。
+计分版本 v1；评估源代码：162ebad。整体 **63.13%**（101/160 个固定条件满足）。未满足 25，待验证 34。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -8,9 +8,9 @@
 |---|---:|---:|---:|---|---:|
 | ① 可靠性 | 32 | 5 | 3 | 5/5/0 | 80.0% |
 | ② 自然语言行动 | 22 | 7 | 11 | 3/5/2 | 55.0% |
-| ③ 自主持续世界 | 26 | 6 | 8 | 3/7/0 | 65.0% |
+| ③ 自主持续世界 | 27 | 5 | 8 | 3/7/0 | 67.5% |
 | ④ Narrator 与体验 | 20 | 8 | 12 | 2/6/2 | 50.0% |
-| 合计 | 100 | 26 | 34 | 13/23/4 | 62.50% |
+| 合计 | 101 | 25 | 34 | 13/23/4 | 63.13% |
 
 旧台账的12/21/7是工作包人工分类，保留作历史。这里的完成/部分/未完成由4个条件满足数推导，不能与旧分类混用。旧46%为退役估计；首次建立口径不是产品进展，不计算相对46%的提升。
 
@@ -131,6 +131,7 @@
 | official-conditional-speech-binding-recovery | repair | A1.1: unmet → met; A1.2: unmet → met; A1.4: unmet → met; A5.2: unmet → met | +2.500 pp |
 | conditional-pronoun-topic-counterexample | evidence_correction | A6.2: met → unmet | -0.625 pp |
 | conditional-pronoun-topic-repair | repair | A6.2: unmet → met | +0.625 pp |
+| npc-adaptation-five-trigger-acceptance | repair | W5.3: unmet → met | +0.625 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -354,7 +355,7 @@
 |---|---|---|---|
 | W5.1 | 短期和长期目标及计划已有持久结构 | 满足 | [npc-persistent-plans.test.ts](../tests/npc-persistent-plans.test.ts) |
 | W5.2 | 即时执行计划和阻塞计划有已验证修订路径 | 满足 | [npc-persistent-plans.test.ts](../tests/npc-persistent-plans.test.ts) |
-| W5.3 | 长期目标根据新事实、关系与失败作持续调整 | 未满足 | [npc-persistent-plans.test.ts](../tests/npc-persistent-plans.test.ts), [npc-own-resource-context.test.ts](../tests/npc-own-resource-context.test.ts), [npc-own-resource-context.md](../docs/npc-own-resource-context.md), [npc-legacy-long-goal.test.ts](../tests/npc-legacy-long-goal.test.ts), [npc-legacy-long-goal.md](../docs/npc-legacy-long-goal.md), [npc-ended-goal-execution.test.ts](../tests/npc-ended-goal-execution.test.ts), [npc-ended-goal-execution.md](../docs/npc-ended-goal-execution.md), [npc-legacy-plan-recovery.test.ts](../tests/npc-legacy-plan-recovery.test.ts), [npc-legacy-plan-recovery.md](../docs/npc-legacy-plan-recovery.md), [npc-conditional-plan-context.test.ts](../tests/npc-conditional-plan-context.test.ts), [npc-conditional-plan-context.md](../docs/npc-conditional-plan-context.md), [npc-legacy-failure-diagnostic.md](../docs/npc-legacy-failure-diagnostic.md), [npc-active-plan-revision.test.ts](../tests/npc-active-plan-revision.test.ts), [npc-active-plan-revision.md](../docs/npc-active-plan-revision.md), [npc-repeated-plan-failure.test.ts](../tests/npc-repeated-plan-failure.test.ts), [npc-repeated-plan-failure.md](../docs/npc-repeated-plan-failure.md) |
+| W5.3 | 长期目标根据新事实、关系与失败作持续调整 | 满足 | [npc-persistent-plans.test.ts](../tests/npc-persistent-plans.test.ts), [npc-own-resource-context.test.ts](../tests/npc-own-resource-context.test.ts), [npc-own-resource-context.md](../docs/npc-own-resource-context.md), [npc-legacy-long-goal.test.ts](../tests/npc-legacy-long-goal.test.ts), [npc-legacy-long-goal.md](../docs/npc-legacy-long-goal.md), [npc-ended-goal-execution.test.ts](../tests/npc-ended-goal-execution.test.ts), [npc-ended-goal-execution.md](../docs/npc-ended-goal-execution.md), [npc-legacy-plan-recovery.test.ts](../tests/npc-legacy-plan-recovery.test.ts), [npc-legacy-plan-recovery.md](../docs/npc-legacy-plan-recovery.md), [npc-conditional-plan-context.test.ts](../tests/npc-conditional-plan-context.test.ts), [npc-conditional-plan-context.md](../docs/npc-conditional-plan-context.md), [npc-legacy-failure-diagnostic.md](../docs/npc-legacy-failure-diagnostic.md), [npc-active-plan-revision.test.ts](../tests/npc-active-plan-revision.test.ts), [npc-active-plan-revision.md](../docs/npc-active-plan-revision.md), [npc-repeated-plan-failure.test.ts](../tests/npc-repeated-plan-failure.test.ts), [npc-repeated-plan-failure.md](../docs/npc-repeated-plan-failure.md), [npc-adaptation-trigger-matrix.test.ts](../tests/npc-adaptation-trigger-matrix.test.ts), [npc-adaptation-trigger-matrix.md](../docs/npc-adaptation-trigger-matrix.md) |
 | W5.4 | 跨重启多世界长过程计划执行和修订均验收通过 | 待验证 | [npc-persistent-plans.test.ts](../tests/npc-persistent-plans.test.ts) |
 
 ## W6 Body/resources and transient perception continuity
