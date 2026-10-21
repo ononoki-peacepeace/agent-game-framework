@@ -59,7 +59,19 @@ export function evaluateWorldPrerequisites(save:SavePackage,input:{target_id?:st
         reason='所需物品不在角色可触及的范围';
         if(valid&&subject&&!unsealedContainerAncestors(save,subject)){valid=false;reason='所需物品仍在密封或不可接触的容器内';}
         break;
-      case 'destination_reachable':valid=Boolean(here&&locations.has(requirement.subject_id)&&(here===requirement.subject_id||localHierarchyTransition(save,here,requirement.subject_id)||routePath(map.routes,here,requirement.subject_id)?.length));reason='目标地点当前不可到达';break;
+      case 'destination_reachable':{
+        // Match registered player MOVE: closed destinations/transit points,
+        // unknown route endpoints and unmet route flags do not grant access.
+        const closed=new Set(map.locations.filter(place=>place.lifecycle?.status==='closed').map(place=>place.id));
+        const known=new Set(save.map_state.known_location_ids);
+        const routes=map.routes.filter(route=>!closed.has(route.from)&&!closed.has(route.to)&&
+          known.has(route.from)&&known.has(route.to)&&
+          route.conditions.every(condition=>save.gm_state.flags[condition.flag]===condition.equals));
+        valid=Boolean(here&&locations.has(requirement.subject_id)&&!closed.has(requirement.subject_id)&&
+          (here===requirement.subject_id||localHierarchyTransition(save,here,requirement.subject_id)||
+            routePath(routes,here,requirement.subject_id)?.length));
+        reason='目标地点当前不可到达';break;
+      }
       case 'capability':valid=createRegistry(save.definition.enabled_modules).capabilities.has(requirement.subject_id);reason='当前世界尚无执行该行动所需能力';break;
     }
     const failure=test(requirement.kind,requirement.subject_id,valid,reason);if(failure)return failure;
