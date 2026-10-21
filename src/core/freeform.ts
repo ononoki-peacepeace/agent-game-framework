@@ -518,6 +518,8 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
     if(live.status!=='EXECUTABLE'||!activityRequirement(c.save,input).available)
       throw new WorldBlockedError('prerequisite',
         `这次行动的时间推进会使前置条件失效（${live.reason??'现场资源不可用'}）；本次行动未提交。`);
+    if(destination&&boundLocalDestination(c.save,input)!==destination)
+      throw new WorldBlockedError('prerequisite','局部移动所依据的现场位置已经改变；本次行动未提交。');
     // Ability, fatigue and discoverable evidence can also change during the
     // interval. Bind every result to the state that will actually be settled.
     check=prepareCheck(c.save,requestId,checkInput);
