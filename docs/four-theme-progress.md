@@ -1,6 +1,6 @@
 # 四大主题可复核进度
 
-计分版本 v1；评估源代码：e9ea62a。整体 **62.50%**（100/160 个固定条件满足）。未满足 26，待验证 34。
+计分版本 v1；评估源代码：d93e417。整体 **62.50%**（100/160 个固定条件满足）。未满足 26，待验证 34。
 
 四主题各25%，原40项各2.5%，每项预先固定4个条件、各0.625个百分点。未满足与待验证均不计分；不代表它们没有任何代码。该数值表示已获证据的验收条件权重，不是工时、风险或上线成功概率。
 
@@ -126,6 +126,7 @@
 | perception-inspect-authority-counterexample | evidence_correction | N4.1: met → unmet | -0.625 pp |
 | actual-npc-movement-prose-counterexample | evidence_correction | N4.2: met → unmet | -0.625 pp |
 | complete-narration-authority-snapshot | repair | N4.1: unmet → met; N4.2: unmet → met | +1.250 pp |
+| runnable-offline-prose-capture | repair | N9.1: Fixed18casecaptureandrubricexist;representativedifferentiatedvoice/memory/normalcontrastsremainincomplete.；完整条件保持开放; N9.2: Fiveanchorsdefined;actualqualityratingsblank,modelvoice/memorycontrastsnotestablished.；完整条件保持开放; N9.3: Captured18existingofflinefallbackcases/47pass/486hashes;notcompleteoriginalqualitybenchmark.；完整条件保持开放 | +0.000 pp |
 
 ## R1 Identified HTTP requests: persistent replay/status within retained receipt history
 
@@ -473,9 +474,9 @@
 
 | 条件 | 具体通过条件 | 状态 | 依据 |
 |---|---|---|---|
-| N9.1 | 固定多世界差异化文本基准和可复核评分表 | 未满足 | [four-theme-acceptance-status.md](../docs/four-theme-acceptance-status.md) |
-| N9.2 | 覆盖人物声音、节奏、感知、自然度和连续性 | 未满足 | [four-theme-acceptance-status.md](../docs/four-theme-acceptance-status.md) |
-| N9.3 | 当前源代码跑完整基准并公开逐项未达标结果 | 待验证 | [four-theme-acceptance-status.md](../docs/four-theme-acceptance-status.md) |
+| N9.1 | 固定多世界差异化文本基准和可复核评分表 | 未满足 | [four-theme-acceptance-status.md](../docs/four-theme-acceptance-status.md), [narrator-prose-benchmark.md](../docs/narrator-prose-benchmark.md), [narrator-prose-benchmark.v1.json](../docs/narrator-prose-benchmark.v1.json), [narrator-prose-benchmark.mjs](../scripts/narrator-prose-benchmark.mjs), [narrator-prose-benchmark-capture.ts](../scripts/narrator-prose-benchmark-capture.ts) |
+| N9.2 | 覆盖人物声音、节奏、感知、自然度和连续性 | 未满足 | [four-theme-acceptance-status.md](../docs/four-theme-acceptance-status.md), [narrator-prose-benchmark.md](../docs/narrator-prose-benchmark.md), [narrator-prose-benchmark.v1.json](../docs/narrator-prose-benchmark.v1.json), [narrator-prose-benchmark.mjs](../scripts/narrator-prose-benchmark.mjs), [narrator-prose-benchmark-capture.ts](../scripts/narrator-prose-benchmark-capture.ts) |
+| N9.3 | 当前源代码跑完整基准并公开逐项未达标结果 | 待验证 | [four-theme-acceptance-status.md](../docs/four-theme-acceptance-status.md), [narrator-prose-benchmark.md](../docs/narrator-prose-benchmark.md), [narrator-prose-benchmark.v1.json](../docs/narrator-prose-benchmark.v1.json), [narrator-prose-benchmark.mjs](../scripts/narrator-prose-benchmark.mjs), [narrator-prose-benchmark-capture.ts](../scripts/narrator-prose-benchmark-capture.ts) |
 | N9.4 | 独立或人工复核通过，不能用事实测试替代质量验收 | 待验证 | [four-theme-acceptance-status.md](../docs/four-theme-acceptance-status.md) |
 
 ## N10 Current-source real-provider and human play acceptance

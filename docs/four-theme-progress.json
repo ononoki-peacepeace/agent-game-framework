@@ -1,7 +1,7 @@
 {
   "version": 1,
   "criteria_sha256": "6cf5747945f257007c5e96df04ef5fdb73251d81efb3a8a14c89a7ca0a92b720",
-  "assessed_source": "e9ea62a",
+  "assessed_source": "d93e417",
   "conditions": {
     "R1.1": {
       "status": "met",
@@ -1255,23 +1255,35 @@
     "N9.1": {
       "status": "unmet",
       "evidence": [
-        "docs/four-theme-acceptance-status.md"
+        "docs/four-theme-acceptance-status.md",
+        "docs/narrator-prose-benchmark.md",
+        "docs/narrator-prose-benchmark.v1.json",
+        "scripts/narrator-prose-benchmark.mjs",
+        "scripts/narrator-prose-benchmark-capture.ts"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. d93e417:18fixedofflinecapturecases/fourfixtures/three structuralvariants/five anchored dimensions;47fixtureassertionspass,486hashes,build48691. Blankratings/normalmodel/two-personvoice/samepersonmemorycontrasts/independentreviewremainopen; no original condition awarded."
     },
     "N9.2": {
       "status": "unmet",
       "evidence": [
-        "docs/four-theme-acceptance-status.md"
+        "docs/four-theme-acceptance-status.md",
+        "docs/narrator-prose-benchmark.md",
+        "docs/narrator-prose-benchmark.v1.json",
+        "scripts/narrator-prose-benchmark.mjs",
+        "scripts/narrator-prose-benchmark-capture.ts"
       ],
-      "basis": "Known remaining implementation or acceptance gap in the existing ledger."
+      "basis": "Known remaining implementation or acceptance gap in the existing ledger. d93e417:18fixedofflinecapturecases/fourfixtures/three structuralvariants/five anchored dimensions;47fixtureassertionspass,486hashes,build48691. Blankratings/normalmodel/two-personvoice/samepersonmemorycontrasts/independentreviewremainopen; no original condition awarded."
     },
     "N9.3": {
       "status": "unverified",
       "evidence": [
-        "docs/four-theme-acceptance-status.md"
+        "docs/four-theme-acceptance-status.md",
+        "docs/narrator-prose-benchmark.md",
+        "docs/narrator-prose-benchmark.v1.json",
+        "scripts/narrator-prose-benchmark.mjs",
+        "scripts/narrator-prose-benchmark-capture.ts"
       ],
-      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required."
+      "basis": "Not established by retained current-source evidence; authorization or broader verification may be required. d93e417:18fixedofflinecapturecases/fourfixtures/three structuralvariants/five anchored dimensions;47fixtureassertionspass,486hashes,build48691. Blankratings/normalmodel/two-personvoice/samepersonmemorycontrasts/independentreviewremainopen; no original condition awarded."
     },
     "N9.4": {
       "status": "unverified",
@@ -3453,6 +3465,45 @@
         }
       ],
       "note": "+2conditions/+1.25pp restores prior withdrawal,net0fromresumed100baseline. No new denominator or broader acceptance.42selectedreports18originalpassing+24recovery;native0xC0000409unresolved."
+    },
+    {
+      "batch": "runnable-offline-prose-capture",
+      "type": "repair",
+      "source": "d93e417",
+      "transitions": [],
+      "condition_checks": [
+        {
+          "id": "N9.1",
+          "result": "Fixed18casecaptureandrubricexist;representativedifferentiatedvoice/memory/normalcontrastsremainincomplete.",
+          "evidence": [
+            "docs/narrator-prose-benchmark.md",
+            "docs/narrator-prose-benchmark.v1.json",
+            "scripts/narrator-prose-benchmark.mjs",
+            "scripts/narrator-prose-benchmark-capture.ts"
+          ]
+        },
+        {
+          "id": "N9.2",
+          "result": "Fiveanchorsdefined;actualqualityratingsblank,modelvoice/memorycontrastsnotestablished.",
+          "evidence": [
+            "docs/narrator-prose-benchmark.md",
+            "docs/narrator-prose-benchmark.v1.json",
+            "scripts/narrator-prose-benchmark.mjs",
+            "scripts/narrator-prose-benchmark-capture.ts"
+          ]
+        },
+        {
+          "id": "N9.3",
+          "result": "Captured18existingofflinefallbackcases/47pass/486hashes;notcompleteoriginalqualitybenchmark.",
+          "evidence": [
+            "docs/narrator-prose-benchmark.md",
+            "docs/narrator-prose-benchmark.v1.json",
+            "scripts/narrator-prose-benchmark.mjs",
+            "scripts/narrator-prose-benchmark-capture.ts"
+          ]
+        }
+      ],
+      "note": "Producte9ea62a unchanged;scriptartifactsnotnewfullframeworksnapshot.Score0;N9statusesunchanged."
     }
   ],
   "new_risks": [],
