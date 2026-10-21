@@ -134,7 +134,7 @@ export function validateScenePresenceNarrative(save:SavePackage,prose:string,cla
       const token=match[0];
       if(token==='离开'&&attentionMovement(compact.slice(0,match.index).split(/[，,；;]/).at(-1)??''))return false;
       // "走了两步/几步" is local stepping, never evidence of leaving the scene.
-      if(token==='走了'&&/^[一二两三四五六七八九十百\d]+步/.test(compact.slice(match.index+token.length)))return false;
+      if(token==='走了'&&/^(?:[一二两三四五六七八九十百\d]+|几|数|半|一小)步/.test(compact.slice(match.index+token.length)))return false;
       // An arrival may truthfully name the origin just left. Only this actor's
       // actual visible route can explain that occurrence; "left here" still fails.
       if(token==='离开'&&movements.some(step=>{

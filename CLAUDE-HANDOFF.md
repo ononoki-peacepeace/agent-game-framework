@@ -1,3 +1,7 @@
+## Legal local step wording — 2026-10-21
+
+Parent0c42587. Actual5fail6controls4.924s: 几步/数步/半步/一小步 falselytreatedasdeparture and legalWAITprose discarded. One regex exceptionexpanded; everylaterdeparturepredicate stillchecked. ActualWAIT normalexactprose/oneNarrator/oneCoreinterval+receipt/exactreplay and unchangedNPCcanonicalposition.5files64pass1HTTPfetchfailure25.630s;onlyaffectedHTTPMOVE/diskreplay1pass9excluded9.092s gives5files65distinctpassunion. Strict68.187sexit0; no fullbuild/fullsuite. N4.3unmet103/16064.375%delta0. No schema/API/canonicalNPC/worldresultschange; originalsixdirt/formal/frozen27/3100/Claude safe. Next: broader legalretelling/metaphor/presence clauses pairedwithunsafeclaims;continueoriginalGoal. Exacthash in ignoredSESSION.
+
 ## Sealed storage choice binding — 2026-10-21
 
 Parent7694341.4fail6controls5.518s: sharedstoragebinding/choices promisedsealedsourcecontents or sealeddestination despiteexecutionrefusal. Purebinding now usesexistingunsealedancestry+destinationseal, precisereasons; exteriorsealedcontainermovement/opencontrols retained.4files54pass14.239s/expanded2files21pass8.437s gives5files65distinctpassingunion.12directcasesincludeactualdiskservice recreation unchangedbytes/zeroProvider. Firststrict41.059sexit0/finalexpanded49.386sexit0. A8.3unmet103/16064.375%delta0; nofullbuild/fullsuite/schema/API/Corecommit change. Originalsixdirt/formal/frozen27/3100/Claude untouched. Next: N4 legalexpression/retellings corpus or other remainingfixedconditions; do notdeclarewholeGoal complete. Exacthash in ignoredSESSION.
