@@ -18,3 +18,16 @@ Test process wall time totals **90.906s** over7 runs; build wall time **54.329s*
 Real game Provider calls:0. Test interpreters/planners/Narrators use local controlled doubles or MockAIAdapter. The developer model's per-call count and inference-only latency are not exposed by the available tools, so they are recorded as unobserved rather than estimated from wall time. Two observed Goal counters were331598→662725 tokens and3191→4700 active seconds; these are cumulative counter deltas, not per-call/billing figures or inference-only time. Raw timestamps, commands, overlap, source hashes and process exits are preserved in the ignored checkpoint's `runs.jsonl` and individual timing JSON. This small recorder adds no product runtime dependency.
 
 These measurements belong to this official continuation. Earlier intermediary work/test/build time is not reconstructed or attributed to this interval. The previous selected complete snapshot and its unresolved native-process failures remain historical evidence.
+
+## Conditional pronoun continuation
+
+| Run | Result | Wall seconds | Why run/repeat |
+|---|---|---:|---|
+| Pronoun counterexample | 3 passed,5 failed | 4.960 | New original A6.2 boundary; acceptance withdrawn |
+| Minimal source fix | 3 files,34 passed | 7.349 | Source changed; direct/topic/stage controls |
+| Adjacent regression | 14 files,170 passed,1 fixture failure | 35.878 | Broader conditional and real HTTP persisted replay |
+| Corrected input fixture | 9 passed,1 fixture failure | 4.749 | Only new file rerun; missing direct condition dependency exposed |
+| Corrected stage dependency | 10 passed | 4.635 | Fixture-only correction; product source unchanged |
+| Stable-source complete build | Exit0 | 50.543 | One standard strict build after the one source-file repair |
+
+This batch tests57.571s/build50.543s; official continuation totals tests148.477s/build104.872s. The two small reruns followed concrete fixture failures; the13 already-passing files were retained with matching source fingerprints. Selected passing coverage171 assertions/14 files is reconstructed from latest passing file reports, not represented as a single all-pass run or full-suite result. Live game Provider calls remain0; developer model per-call timing/count remains unobserved.

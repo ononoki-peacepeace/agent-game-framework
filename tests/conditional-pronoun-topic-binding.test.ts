@@ -51,3 +51,21 @@ it('does not execute an otherwise bound pronoun when its branch is false',async(
  const result=await executePlan(f.service,f.body,f.plan);
  expect(result.plan?.goals.map(g=>g.status)).toEqual(['completed','skipped']);expect(await f.store.read()).toEqual(f.before);
 });
+it('does not apply one stage pronoun to a different explicitly named speech stage',async()=>{
+ const input='如果我和林舟熟悉，就向他询问乔宁的安排，再询问乔宁商店何时关门';
+ const f=await fixture(input,'npc_lin');
+ const first={...f.plan.goals[1],referent:'林舟',normalized_goal:'向林舟询问乔宁的安排',speech_recipients:['林舟']};
+ const second={...first,goal_id:'second',referent:'乔宁',normalized_goal:'询问乔宁商店何时关门',speech_recipients:['乔宁'],depends_on:['condition','speech']};
+ const goals=[f.plan.goals[0],first,second].map(({side_effect_level,requires_confirmation,status,contract,...inputGoal})=>inputGoal);
+ const plan=compileGoalContract(f.service.project(f.before),validatePlan({goals}),{kind:'manual',text:input});
+ await executePlan(f.service,f.body,plan);
+ expect((await f.service.current()).resolution_receipts?.filter(r=>r.semantic_action==='TALK').map(r=>r.target_id)).toEqual(['npc_lin','npc_qiao']);
+});
+it('uses a uniquely present public person without treating a remote topic as a listener',async()=>{
+ const input='如果我和林舟熟悉就向他询问乔宁今天的安排',f=await fixture(input,null,true);
+ f.before.entities.find(e=>e.id==='npc_qiao')!.components.location={location_id:'market'};
+ await f.store.write(f.before);
+ const plan=compileGoalContract(f.service.project(f.before),f.plan,{kind:'manual',text:input});
+ await executePlan(f.service,f.body,plan);
+ expect((await f.service.current()).resolution_receipts?.filter(r=>r.semantic_action==='TALK').map(r=>r.target_id)).toEqual(['npc_lin']);
+});

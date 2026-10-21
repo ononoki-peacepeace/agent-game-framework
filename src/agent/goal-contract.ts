@@ -114,6 +114,24 @@ function sourceNamedListener(view:PublicView,text:string){
   const unique=[...new Set(directed)];
   return unique.length===1?bind(view,'person',unique[0]):null;
 }
+function bindConversationPronoun(view:PublicView,mention:string){
+  const player=view.entities.find(entity=>entity.id===view.player_id);
+  const here=player?.components.location?.location_id;
+  const people=view.entities.filter(entity=>entity.id!==view.player_id&&entity.components.character);
+  const focus=people.find(entity=>entity.id===view.interaction_context?.target_entity_id&&
+    entity.components.location?.location_id===here);
+  if(focus?.components.identity?.name)return bind(view,'person',String(focus.components.identity.name));
+  const present=people.filter(entity=>entity.components.location?.location_id===here);
+  if(present.length===1&&present[0].components.identity?.name)return bind(view,'person',String(present[0].components.identity.name));
+  return {role:'person',mention,entity_id:null,status:present.length>1?'ambiguous':'unresolved'} as const;
+}
+/** Only the directive's address slot owns this pronoun, never its guard/topic.
+ * A whole-request pronoun cannot choose listeners for multiple speech stages. */
+function sourceAddressPronoun(text:string){
+  if(hasMultipleClauses(text)||/[「」“”"']/u.test(text))return null;
+  const directives=normalized(text).split(/[，,；;。！？!?]/).map(sourceDirectiveClause);
+  return directives.map(clause=>clause.match(/(?:询问|问|告诉|告知|通知|对|向|跟|与|和)(他|她|对方)/)?.[1]).find(Boolean)??null;
+}
 function talkPerson(view:PublicView,goal:AtomicGoal,source:GoalSource){
   // A stage-owned recipient is not the set of every person mentioned in the
   // original compound request (e.g. asking A about B). Bind once, validate later.
@@ -123,12 +141,7 @@ function talkPerson(view:PublicView,goal:AtomicGoal,source:GoalSource){
   const focus=people.find(entity=>entity.id===view.interaction_context?.target_entity_id&&
     entity.components.location?.location_id===here);
   const pronoun=source.text.match(/他|她|它|对方/);
-  const bindPronoun=()=>{
-    if(focus?.components.identity?.name)return bind(view,'person',String(focus.components.identity.name));
-    const present=people.filter(entity=>entity.components.location?.location_id===here);
-    if(present.length===1&&present[0].components.identity?.name)return bind(view,'person',String(present[0].components.identity.name));
-    return {role:'person',mention:pronoun?.[0]??'对方',entity_id:null,status:present.length>1?'ambiguous':'unresolved'} as const;
-  };
+  const bindPronoun=()=>bindConversationPronoun(view,pronoun?.[0]??'对方');
   const explicit=people.filter(entity=>{
     const name=String(entity.components.identity?.name??'');
     return name.length>=2&&source.text.includes(name);
@@ -244,7 +257,7 @@ function mentionedHeldItem(view:PublicView,text:string){
     status:closest.length===1?'bound':'ambiguous'} as const;
 }
 
-function stepContract(view:PublicView,goal:AtomicGoal,source:GoalSource):StepContract{
+function stepContract(view:PublicView,goal:AtomicGoal,source:GoalSource,singleSpeechStage:boolean):StepContract{
   const playerIntent=source.text;
   const hint=goal.operation_hint,mention=goal.referent?.trim()??'';
   const bindings:StepContract['bindings']=[];
@@ -287,7 +300,9 @@ function stepContract(view:PublicView,goal:AtomicGoal,source:GoalSource):StepCon
     required_capabilities.push('core.transaction');
     completion={kind:'interaction_performed',target_id:site?.entity_id??null};
   }else if(hint==='talk'||goal.type==='WORLD_SPEECH'){
-    const sourceListener=goal.result_ref?null:sourceNamedListener(view,source.text);
+    const namedListener=goal.result_ref?null:sourceNamedListener(view,source.text);
+    const addressedPronoun=!goal.result_ref&&!namedListener&&singleSpeechStage?sourceAddressPronoun(source.text):null;
+    const sourceListener=namedListener??(addressedPronoun?bindConversationPronoun(view,addressedPronoun):null);
     const audience=sourceListener||goal.speech_recipients?.length?[]:talkAudience(view,goal)??[];
     const listeners:StepContract['bindings']=sourceListener?[sourceListener]:goal.speech_recipients?.length?
       goal.speech_recipients.map(name=>bind(view,'person',name)):
@@ -305,7 +320,7 @@ function stepContract(view:PublicView,goal:AtomicGoal,source:GoalSource):StepCon
     completion={kind:'conversation_attempted',person_id:listeners.length?listeners[0].entity_id:person?.entity_id??null,
       ...(explicitGroup?{audience_ids:listeners.map(binding=>binding.entity_id!)}:{})};
     currentTrace()?.info('agent.speech_binding',{metadata:{goal_id:goal.goal_id,
-      source:sourceListener?'original_named_listener':goal.speech_recipients?.length?'speech_recipients':audience.length?'legacy_recipient_list':'single_person_fallback',
+      source:namedListener?'original_named_listener':addressedPronoun?'original_pronoun_listener':goal.speech_recipients?.length?'speech_recipients':audience.length?'legacy_recipient_list':'single_person_fallback',
       listeners:bindings.filter(binding=>binding.role==='person').map(binding=>({entity_id:binding.entity_id,status:binding.status}))}});
   }else if(hint==='item_move'){
     required_capabilities.push('inventory.storage');
@@ -377,7 +392,7 @@ export function compileGoalContract(view:PublicView,plan:AgentPlan,source:GoalSo
     // steps. Its walk is not a map transition even if the planner used MOVE.
     if(compiled.local_compound&&goal.type==='WORLD_ACTION'&&goal.operation_hint==='move')
       goal.operation_hint='activity';
-    goal.contract=stepContract(view,goal,source);
+    goal.contract=stepContract(view,goal,source,speechGoals.length===1);
     if(goal===speechGoals[0]&&speechGoals.length===1&&recipients.length){
       const mismatch=recipients.some((target,index)=>target.entity_id&&
         goal.contract!.bindings.filter(binding=>binding.role==='person')[index]?.entity_id!==target.entity_id);

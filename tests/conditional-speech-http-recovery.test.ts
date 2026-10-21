@@ -10,18 +10,23 @@ import {JsonStore} from '../src/storage/json-store.js';
 import {AIRuntime} from '../src/ai/runtime.js';
 import {MockAIAdapter} from '../src/ai/mock.js';
 import {createApp} from '../src/server/app.js';
+import {sceneAnchor} from '../src/core/interaction.js';
 import * as router from '../src/system/context-router.js';
 import * as planner from '../src/agent/planner.js';
 import * as alignment from '../src/agent/goal-alignment.js';
 import type {GoalInput} from '../src/agent/plan-schema.js';
 afterEach(()=>vi.restoreAllMocks());
-it.each(['then','else'] as const)('retains the original %s recipient over HTTP and exact persisted replay after service recreation',async branch=>{
+it.each([
+ ['then',false],['else',false],['then',true],['else',true],
+] as const)('retains the original %s recipient (pronoun=%s) over HTTP and exact persisted replay after service recreation',async(branch,pronoun)=>{
  const f=await sparseSetup(),initial=await f.service.current(),directory=await mkdtemp(join(tmpdir(),'agf-conditional-listener-'));
  initial.definition.events=[];initial.entities.find(e=>e.id==='npc_qiao')!.components.location={location_id:'square'};
  initial.entities.find(e=>e.id==='player')!.components.relationships={entries:{npc_lin:{familiarity:branch==='then'?60:0}}};
+ if(pronoun)initial.interaction_context={mode:'conversation',target_entity_id:'npc_lin',started_turn:initial.state_revision,
+  last_interaction_turn:initial.state_revision,scene_anchor:sceneAnchor(initial.entities.find(e=>e.id==='player')),status:'active'};
  const store=new JsonStore(directory);await store.write(initial);
  const ai=new AIRuntime(new MockAIAdapter()),service=new GameService(store,ai,initial.definition),before=await service.current();
- const input=`如果我和林舟${branch==='then'?'熟悉':'不熟'}，就询问林舟今天的安排`;
+ const input=`如果我和林舟${branch==='then'?'熟悉':'不熟'}，就${pronoun?'向他询问乔宁':'询问林舟'}今天的安排`;
  const condition:GoalInput={goal_id:'condition',type:'CONDITIONAL_INTENT',normalized_goal:'判断我与林舟是否熟悉',
   condition:{kind:'familiar',entity_id:'npc_lin',description:'我与林舟熟悉'},branch:null,depends_on:[],target_entities:[],temporal_scope:{scope:'now',day_offset:0,window:'any'}};
  const proposed=planner.validatePlan({goals:[condition,{...condition,goal_id:'speech',type:'WORLD_SPEECH',condition:null,branch,
