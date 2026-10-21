@@ -3,7 +3,16 @@ import {physicalStateSummary,visionBlocked,readPhysicalState} from '../core/perc
 
 /** The firewall rejects narration that contradicts these same facts, so the generator
  * has to see them. Nothing here authorises a new world change. */
-export const narratorCognitionPolicy='character_cognition 的每一条只属于该人物本人。own_knowledge、own_beliefs 与 own_recent_experience 是他自己的认知和记忆，既不是世界真相，也不是别人知道的事：不要让一个人物说出或反应出另一个人物条目里的内容。source_type 为 told_by 或 inferred 的内容只是他听说或推测的，不能写成已确认事实；confidence 低的条目本人也可能记错、怀疑或说错。own_active_goals 影响他此刻关心什么、愿意配合到哪一步，不是要他宣读目标。authoritative_body 与 sight 是结算后的权威状态：sight.blocked 为 true 的人物当时没有视觉信息，不得描写他看见、目睹或看清这次动作的经过，但他可以凭触觉、声音、疼痛、气味和既有认知作出反应；posture、eyes 与 restrained_by 不得与这里给出的状态矛盾。这些字段只约束如何呈现已经结算的事实，不授权新增伤害、物品、关系或其他世界变化。';
+export const narratorCognitionPolicy='character_cognition 的每一条只属于该人物本人。own_knowledge、own_beliefs 与 own_recent_experience 是他自己的认知和记忆，既不是世界真相，也不是别人知道的事：不要让一个人物说出或反应出另一个人物条目里的内容。own_recent_experience 也可包含仍重要的早期记忆，以 at 为事件时间，不把回忆写成本轮新事件。source_type 为 told_by 或 inferred 的内容只是他听说或推测的，不能写成已确认事实；confidence 低的条目本人也可能记错、怀疑或说错。own_active_goals 影响他此刻关心什么、愿意配合到哪一步，不是要他宣读目标。authoritative_body 与 sight 是结算后的权威状态：sight.blocked 为 true 的人物当时没有视觉信息，不得描写他看见、目睹或看清这次动作的经过，但他可以凭触觉、声音、疼痛、气味和既有认知作出反应；posture、eyes 与 restrained_by 不得与这里给出的状态矛盾。这些字段只约束如何呈现已经结算的事实，不授权新增伤害、物品、关系或其他世界变化。';
+
+/** Keep one canonically salient memory and two recent others, still bounded to
+ * three. Equal-importance memories retain the previous latest-three behavior. */
+function rememberedExperiences(memories:NonNullable<SavePackage['npc_agent_state']>[string]['memories']){
+  const salient=memories.reduce<typeof memories[number]|undefined>((best,item)=>
+    !best||item.importance>=best.importance?item:best,undefined);
+  const selected=new Set([salient,...memories.filter(item=>item!==salient).slice(-2)]);
+  return memories.filter(item=>selected.has(item));
+}
 
 /** Per-character private cognition and authoritative body state for the presentation layer.
  * Read-only: the player's own cognition stays the player's, so only characters are included. */
@@ -26,7 +35,7 @@ export function narratorCharacterCognition(save:SavePackage,ids:readonly string[
         source_type:item.source_type,source_ref:item.source_ref,confidence:item.confidence})),
       own_beliefs:(mind?.beliefs??[]).slice(-3).map(item=>({proposition:item.proposition.slice(0,200),
         stance:item.stance})),
-      own_recent_experience:(mind?.memories??[]).slice(-3).map(item=>({kind:item.kind,
+      own_recent_experience:rememberedExperiences(mind?.memories??[]).map(item=>({kind:item.kind,
         summary:item.summary.slice(0,200),at:item.at})),
     }];
   });

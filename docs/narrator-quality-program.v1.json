@@ -1,0 +1,510 @@
+{
+  "version": 1,
+  "base": "23083b3a8cb0a9ddb4c66d9a24b2b4a8798fdf7b",
+  "scope": "Independent N5/N7/N8/N9 offline capture; no real-provider or independent-quality acceptance",
+  "original_spec": "docs/narrator-prose-benchmark.v1.json",
+  "conditions": [
+    "N5.3",
+    "N5.4",
+    "N7.3",
+    "N7.4",
+    "N8.2",
+    "N8.4",
+    "N9.1",
+    "N9.2",
+    "N9.3",
+    "N9.4"
+  ],
+  "cases": [
+    {
+      "id": "V-commerce-reserved",
+      "world": "commerce",
+      "test_file": "tests/narrator-program-contrasts.test.ts",
+      "dimensions": [
+        "voice",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "authored_control_not_model_voice"
+    },
+    {
+      "id": "V-commerce-expansive",
+      "world": "commerce",
+      "test_file": "tests/narrator-program-contrasts.test.ts",
+      "dimensions": [
+        "voice",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "authored_control_not_model_voice"
+    },
+    {
+      "id": "V-commerce-remembered",
+      "world": "commerce",
+      "test_file": "tests/narrator-program-contrasts.test.ts",
+      "dimensions": [
+        "voice",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "authored_control_not_model_voice"
+    },
+    {
+      "id": "V-commerce-trusted",
+      "world": "commerce",
+      "test_file": "tests/narrator-program-contrasts.test.ts",
+      "dimensions": [
+        "voice",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "authored_control_not_model_voice"
+    },
+    {
+      "id": "L-commerce",
+      "world": "commerce",
+      "test_file": "tests/narrator-program-long-history.test.ts",
+      "dimensions": [
+        "rhythm",
+        "perception",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_72h_offline_fallback_not_long_model_prose"
+    },
+    {
+      "id": "D-commerce-held",
+      "world": "commerce",
+      "test_file": "tests/narrator-item-fallback.test.ts",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_fallback"
+    },
+    {
+      "id": "D-commerce-scene",
+      "world": "commerce",
+      "test_file": "tests/narrator-item-fallback.test.ts",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_fallback"
+    },
+    {
+      "id": "D-commerce-container",
+      "world": "commerce",
+      "test_file": "tests/narrator-item-fallback.test.ts",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_fallback"
+    },
+    {
+      "id": "D-commerce-scene_container",
+      "world": "commerce",
+      "test_file": "tests/narrator-item-fallback.test.ts",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_fallback"
+    },
+    {
+      "id": "D-commerce-transfer",
+      "world": "commerce",
+      "test_file": "tests/narrator-item-fallback.test.ts",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_fallback"
+    },
+    {
+      "id": "V-relationships-reserved",
+      "world": "relationships",
+      "test_file": "tests/narrator-program-contrasts.test.ts",
+      "dimensions": [
+        "voice",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "authored_control_not_model_voice"
+    },
+    {
+      "id": "V-relationships-expansive",
+      "world": "relationships",
+      "test_file": "tests/narrator-program-contrasts.test.ts",
+      "dimensions": [
+        "voice",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "authored_control_not_model_voice"
+    },
+    {
+      "id": "V-relationships-remembered",
+      "world": "relationships",
+      "test_file": "tests/narrator-program-contrasts.test.ts",
+      "dimensions": [
+        "voice",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "authored_control_not_model_voice"
+    },
+    {
+      "id": "V-relationships-trusted",
+      "world": "relationships",
+      "test_file": "tests/narrator-program-contrasts.test.ts",
+      "dimensions": [
+        "voice",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "authored_control_not_model_voice"
+    },
+    {
+      "id": "L-relationships",
+      "world": "relationships",
+      "test_file": "tests/narrator-program-long-history.test.ts",
+      "dimensions": [
+        "rhythm",
+        "perception",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_72h_offline_fallback_not_long_model_prose"
+    },
+    {
+      "id": "D-relationships-held",
+      "world": "relationships",
+      "test_file": "tests/narrator-item-fallback.test.ts",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_fallback"
+    },
+    {
+      "id": "D-relationships-scene",
+      "world": "relationships",
+      "test_file": "tests/narrator-item-fallback.test.ts",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_fallback"
+    },
+    {
+      "id": "D-relationships-container",
+      "world": "relationships",
+      "test_file": "tests/narrator-item-fallback.test.ts",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_fallback"
+    },
+    {
+      "id": "D-relationships-scene_container",
+      "world": "relationships",
+      "test_file": "tests/narrator-item-fallback.test.ts",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_fallback"
+    },
+    {
+      "id": "D-relationships-transfer",
+      "world": "relationships",
+      "test_file": "tests/narrator-item-fallback.test.ts",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_fallback"
+    },
+    {
+      "id": "V-autonomy-reserved",
+      "world": "autonomy",
+      "test_file": "tests/narrator-program-contrasts.test.ts",
+      "dimensions": [
+        "voice",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "authored_control_not_model_voice"
+    },
+    {
+      "id": "V-autonomy-expansive",
+      "world": "autonomy",
+      "test_file": "tests/narrator-program-contrasts.test.ts",
+      "dimensions": [
+        "voice",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "authored_control_not_model_voice"
+    },
+    {
+      "id": "V-autonomy-remembered",
+      "world": "autonomy",
+      "test_file": "tests/narrator-program-contrasts.test.ts",
+      "dimensions": [
+        "voice",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "authored_control_not_model_voice"
+    },
+    {
+      "id": "V-autonomy-trusted",
+      "world": "autonomy",
+      "test_file": "tests/narrator-program-contrasts.test.ts",
+      "dimensions": [
+        "voice",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "authored_control_not_model_voice"
+    },
+    {
+      "id": "L-autonomy",
+      "world": "autonomy",
+      "test_file": "tests/narrator-program-long-history.test.ts",
+      "dimensions": [
+        "rhythm",
+        "perception",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_72h_offline_fallback_not_long_model_prose"
+    },
+    {
+      "id": "D-autonomy-held",
+      "world": "autonomy",
+      "test_file": "tests/narrator-item-fallback.test.ts",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_fallback"
+    },
+    {
+      "id": "D-autonomy-scene",
+      "world": "autonomy",
+      "test_file": "tests/narrator-item-fallback.test.ts",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_fallback"
+    },
+    {
+      "id": "D-autonomy-container",
+      "world": "autonomy",
+      "test_file": "tests/narrator-item-fallback.test.ts",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_fallback"
+    },
+    {
+      "id": "D-autonomy-scene_container",
+      "world": "autonomy",
+      "test_file": "tests/narrator-item-fallback.test.ts",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_fallback"
+    },
+    {
+      "id": "D-autonomy-transfer",
+      "world": "autonomy",
+      "test_file": "tests/narrator-item-fallback.test.ts",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_fallback"
+    },
+    {
+      "id": "F01",
+      "world": "existing_social_physical_failure",
+      "test_file": "tests/compound-failure-corpus.test.ts",
+      "test_name": "keeps settled stages and explicit unexecuted tail physicalLast=false/'world'",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_partial_plan"
+    },
+    {
+      "id": "F02",
+      "world": "existing_social_physical_failure",
+      "test_file": "tests/compound-failure-corpus.test.ts",
+      "test_name": "keeps settled stages and explicit unexecuted tail physicalLast=false/'provider'",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_partial_plan"
+    },
+    {
+      "id": "F03",
+      "world": "existing_social_physical_failure",
+      "test_file": "tests/compound-failure-corpus.test.ts",
+      "test_name": "keeps settled stages and explicit unexecuted tail physicalLast=false/'before'",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_partial_plan"
+    },
+    {
+      "id": "F04",
+      "world": "existing_social_physical_failure",
+      "test_file": "tests/compound-failure-corpus.test.ts",
+      "test_name": "keeps settled stages and explicit unexecuted tail physicalLast=false/'after'",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_partial_plan"
+    },
+    {
+      "id": "F05",
+      "world": "existing_social_physical_failure",
+      "test_file": "tests/compound-failure-corpus.test.ts",
+      "test_name": "keeps settled stages and explicit unexecuted tail physicalLast=true/'world'",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_partial_plan"
+    },
+    {
+      "id": "F06",
+      "world": "existing_social_physical_failure",
+      "test_file": "tests/compound-failure-corpus.test.ts",
+      "test_name": "keeps settled stages and explicit unexecuted tail physicalLast=true/'provider'",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_partial_plan"
+    },
+    {
+      "id": "F07",
+      "world": "existing_social_physical_failure",
+      "test_file": "tests/compound-failure-corpus.test.ts",
+      "test_name": "keeps settled stages and explicit unexecuted tail physicalLast=true/'before'",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_partial_plan"
+    },
+    {
+      "id": "F08",
+      "world": "existing_social_physical_failure",
+      "test_file": "tests/compound-failure-corpus.test.ts",
+      "test_name": "keeps settled stages and explicit unexecuted tail physicalLast=true/'after'",
+      "dimensions": [
+        "rhythm",
+        "naturalness",
+        "continuity"
+      ],
+      "provenance": "actual_offline_partial_plan"
+    }
+  ],
+  "pairs": [
+    {
+      "id": "commerce-expansive",
+      "left": "V-commerce-reserved",
+      "right": "V-commerce-expansive",
+      "question": "同一问题下比较人物，或同一人物的记忆/关系变化；控制台词不是模型声线证据"
+    },
+    {
+      "id": "commerce-remembered",
+      "left": "V-commerce-reserved",
+      "right": "V-commerce-remembered",
+      "question": "同一问题下比较人物，或同一人物的记忆/关系变化；控制台词不是模型声线证据"
+    },
+    {
+      "id": "commerce-trusted",
+      "left": "V-commerce-reserved",
+      "right": "V-commerce-trusted",
+      "question": "同一问题下比较人物，或同一人物的记忆/关系变化；控制台词不是模型声线证据"
+    },
+    {
+      "id": "relationships-expansive",
+      "left": "V-relationships-reserved",
+      "right": "V-relationships-expansive",
+      "question": "同一问题下比较人物，或同一人物的记忆/关系变化；控制台词不是模型声线证据"
+    },
+    {
+      "id": "relationships-remembered",
+      "left": "V-relationships-reserved",
+      "right": "V-relationships-remembered",
+      "question": "同一问题下比较人物，或同一人物的记忆/关系变化；控制台词不是模型声线证据"
+    },
+    {
+      "id": "relationships-trusted",
+      "left": "V-relationships-reserved",
+      "right": "V-relationships-trusted",
+      "question": "同一问题下比较人物，或同一人物的记忆/关系变化；控制台词不是模型声线证据"
+    },
+    {
+      "id": "autonomy-expansive",
+      "left": "V-autonomy-reserved",
+      "right": "V-autonomy-expansive",
+      "question": "同一问题下比较人物，或同一人物的记忆/关系变化；控制台词不是模型声线证据"
+    },
+    {
+      "id": "autonomy-remembered",
+      "left": "V-autonomy-reserved",
+      "right": "V-autonomy-remembered",
+      "question": "同一问题下比较人物，或同一人物的记忆/关系变化；控制台词不是模型声线证据"
+    },
+    {
+      "id": "autonomy-trusted",
+      "left": "V-autonomy-reserved",
+      "right": "V-autonomy-trusted",
+      "question": "同一问题下比较人物，或同一人物的记忆/关系变化；控制台词不是模型声线证据"
+    }
+  ],
+  "external_requirements": [
+    "Authorized actual normal-model outputs for the same inputs",
+    "Actual per-dimension text judgments, including pair distinctions",
+    "Independent/human review and Windows integration/score decision"
+  ]
+}
