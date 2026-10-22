@@ -33,7 +33,7 @@ it.each(cases)('renders receipt-supported action and result: $kind/$index',async
  await ai.narrate(turn.save,turn.action,turn.facts,receipt);
  await mkdir('.agent-runtime/codex/outcomes',{recursive:true});
  await writeFile(`.agent-runtime/codex/outcomes/${kind}-${index}.json`,JSON.stringify({input:v.input,before,after:turn.save,receipt,output,payloads},null,2));
- expect(output.narrative).toContain(v.word);
+ expect(output.narrative).toContain(v.word);expect(output.narrative).toContain('林舟');
  expect(output.narrative).not.toMatch(/发起了尝试|未能建立接触|已确认|结算|没有达到预期/);
  expect(output.narrative).not.toMatch(/躲开|闪避|挡住|反击|踉跄|流血|骨折/);
  expect(()=>validateResolvedNarrative(receipt,narrativeResultSchema.parse({...output,speaker:null,dialogue:null,choices:[],patches:[]}),false,undefined,turn.save)).not.toThrow();

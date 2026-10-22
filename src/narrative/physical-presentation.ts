@@ -23,8 +23,8 @@ export function physicalOutcomeProse(receipt:Receipt,name='对方',hidden=false)
  if(hidden)return `${attempt}，眼下还看不清结果。`;
  if(!p.contact)return `${attempt}，但没能碰到对方。`;
  const contact=form==='strike'?`你击中了${name}`:`${attempt}，碰到了对方`;
- const control=p.control_established?'你暂时控制住了对方。':
-  (p.kind==='restrain'||forms.includes('restrain'))?'你碰到了对方，却没能控制住对方。':null;
+ const control=p.control_established?`你暂时控制住了${name}。`:
+  (p.kind==='restrain'||forms.includes('restrain'))?`${attempt}，碰到了对方，却没能控制住对方。`:null;
  if(p.harmed)return `${contact}，造成了伤害。${control??''}`;
  if(control)return `${control}${p.kind==='harm'?'这次接触没有造成伤害。':''}`;
  return `${contact}，但这次接触没有造成伤害。`;

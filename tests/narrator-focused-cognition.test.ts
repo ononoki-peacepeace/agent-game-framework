@@ -1,0 +1,22 @@
+import {expect,it} from 'vitest';
+import {mkdir,writeFile} from 'node:fs/promises';
+import {prepareNarrativeWorld,narrativeWorldKinds} from './fixtures/narrative-worlds.js';
+import {characterContext} from '../src/ai/narrative-health.js';
+import {narratorCharacterCognition} from '../src/narrative/character-cognition.js';
+const cases=narrativeWorldKinds.flatMap(kind=>[false,true].map(remote=>({kind,remote})));
+it.each(cases)('retains conversation focus and directional relationships: $kind remote=$remote',async({kind,remote})=>{
+ const save=structuredClone((await prepareNarrativeWorld(kind)).save),lin=save.entities.find(e=>e.id==='npc_lin')!;
+ const extras=Array.from({length:9},(_,i)=>{const entity=structuredClone(lin);entity.id='crowd_'+i;entity.components.identity.name='在场者'+i;
+  entity.components.location={location_id:'square'};return entity;});
+ save.entities=save.entities.filter(e=>e.id!==lin.id);save.entities.push(...extras,lin);
+ lin.components.location={location_id:remote?'station':'square'};
+ lin.components.relationships={entries:Object.fromEntries([...extras.map(e=>[e.id,{trust:1}]),['player',{trust:-40,familiarity:70}]])};
+ const player=save.entities.find(e=>e.id==='player')!;player.components.relationships={entries:{npc_lin:{trust:40,familiarity:10}}};
+ const before=structuredClone(save),context=characterContext(save,'npc_lin'),cognition=narratorCharacterCognition(save,['npc_lin','npc_qiao']);
+ await mkdir('.agent-runtime/codex/cognition',{recursive:true});await writeFile(`.agent-runtime/codex/cognition/${kind}-${remote}.json`,JSON.stringify({before,context,cognition},null,2));
+ expect(context.characters).toHaveLength(8);expect(context.characters[0].id).toBe('npc_lin');
+ expect(context.characters.some(p=>p.id==='player')).toBe(false);
+ expect(context.characters[0]).toMatchObject({location_id:remote?null:'square',present:!remote});
+ expect(cognition[0].own_relationships).toContainEqual({target_id:'player',dimensions:{trust:-40,familiarity:70}});
+ expect(cognition[0].own_relationships.length).toBeLessThanOrEqual(6);expect(save).toEqual(before);
+},30000);

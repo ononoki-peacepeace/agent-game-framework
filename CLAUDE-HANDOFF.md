@@ -837,3 +837,11 @@ separation and nonintrusive degradation disclosure. 70 outcome/service/HTTP and
 `docs/cloud-narrator-concrete-outcomes.md` for original failures, conflict surfaces
 and unchanged acceptance gates. Next batch: reproduce and repair bounded context
 losing a late-array conversation target and its directional player relationship.
+
+Second Narrator checkpoint: explicit interlocutors survive bounded crowd context;
+directional relationships prioritize the player and relevant participants, with
+public absence/location boundaries. Refinement reuses the full ordinary receipt
+projection and physical reactions instead of only flat facts. No authoritative
+NPC/body/action changes. Original failed runs, fixture mistakes and one unchanged
+NPC-owner timing failure are recorded in the continuation document. Next: pinned
+37-file regression, strict build and existing PR #2 offline quality capture.

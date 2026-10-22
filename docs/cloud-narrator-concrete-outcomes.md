@@ -78,3 +78,35 @@ N8.2 and N3.4 gain inspectable prose fixes; N8.4 still requires actual current-m
 and quality assessment. N5/N7/N9 quality gates remain open. No frozen definition,
 formal ledger, denominator or score is modified. General naturalness and arbitrary
 language correctness are not established by these finite offline checks.
+
+## Focus and refinement checkpoint
+
+Six crowd cases reproduce the target falling outside the original eight-character
+slice. NPC context now excludes the player, prioritizes the explicit interlocutor,
+and carries public `location_id` and `present`. It does not recover hidden remote
+locations. Own relationship selection keeps the player's and present participants'
+directional entries before unrelated entries, preserving the existing cap of six.
+No relationship value, NPC decision, memory or goal is changed.
+
+The first corrected crowd run exposed three *fixture* errors demanding a remote
+location that publicView intentionally hides; expected location is null with
+present=false. Five refusal-boundary tests initially expected ProviderError's
+private detail as its public message; their assertion was corrected to the error
+type. These original reports are retained. The next seven-file run passed 47/48;
+an unchanged NPC-owner test produced STACK_TRACE_ERROR at 8.27 seconds. Its
+isolated unchanged recheck passed 2/2 in 7.29 seconds total (260ms test execution).
+This timing failure is retained; final affected run must still be green.
+
+Three actual partial-contact Core cases further show that expression refinement
+received flat facts and a previous paragraph, but lost the ordinary generation's
+structured receipt, compound steps and physical reactions. Both calls now share
+one receipt projection and the same significant incidents. This reduces missing
+information during correction, without changing retry limits or granting facts
+from the rejected candidate. Baseline 0/3, corrected refinement/expression/history
+run 28/28. Prompt equality is a context guarantee, not real-model quality evidence.
+
+Named control prose also retains the target's identity. Additional boundaries
+cover legacy receipts, hidden outcomes, unbound quotations, genuine assistant
+refusals and refusal text outside an otherwise valid NPC quotation. Compatibility
+assertions admit the new grounded no-contact wording while keeping all original
+receipt, damage, time, ordering, invalid-claim and replay checks.
