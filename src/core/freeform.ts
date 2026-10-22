@@ -1,3 +1,4 @@
+import {hasSettledItemMovement} from './item-operation-evidence.js';
 import {consumptionActionForInput,startsConsumptionCommand} from './consumption-intent.js';
 import {resolveActionEntities} from '../agent/entities.js';
 import { z } from 'zod';
@@ -200,10 +201,10 @@ export function assertFreeformGoalEvidence(save:SavePackage,input:string,request
   }
   if(requestsItemRelocation(input)){
     const actorInventory=actor?.components.inventory as Inventory|undefined;
-    if(!receipt.effects.includes('inventory')||!receipt.storage||
+    if(!hasSettledItemMovement(save,receipt)&&(!receipt.effects.includes('inventory')||!receipt.storage||
       actorInventory?.placements?.[receipt.storage.item_id]!==receipt.storage.container_id||
       (actorInventory?.items[receipt.storage.item_id]??0)<1||
-      (actorInventory?.items[receipt.storage.container_id]??0)<1)
+      (actorInventory?.items[receipt.storage.container_id]??0)<1))
       throw new GameError('物品位置尚无完成凭据，本回合尚未提交，可以安全重试。',503);
   }
   if(requestsItemRelocation(input)&&/准备|[，,]/.test(input)&&!receipt.activity?.occurred)

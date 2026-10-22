@@ -317,7 +317,7 @@ export class GameService {
     const totalMinutes=receipts.reduce((sum,receipt)=>sum+receipt.time_cost,0);
     const aggregate={...receipts.at(-1)!,request_id:requestId,action_id:requestId,
       semantic_action:steps.join('，').slice(0,1000),time_cost:totalMinutes,canonical_facts:canonicalFacts,
-      effects:[...new Set(receipts.flatMap(receipt=>receipt.effects))],activity:undefined,storage:undefined,consumption:undefined,
+      effects:[...new Set(receipts.flatMap(receipt=>receipt.effects))],activity:undefined,storage:undefined,consumption:undefined,item_operation:undefined,
       progress_changes:receipts.flatMap(receipt=>receipt.progress_changes??[]),commit_status:'pending' as const};
     candidate.resolution_receipts=[...(candidate.resolution_receipts??[]),aggregate].slice(-200);
     return {turn:{...last,save:candidate,action:{...last.action,id:requestId,time_cost:totalMinutes},facts},receipts,itemStates};

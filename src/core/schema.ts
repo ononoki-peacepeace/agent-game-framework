@@ -1,3 +1,4 @@
+import {itemOperationSchema} from './item-operation-contract.js';
 import {calendarSchema,routineRulesSchema,routineMetaSchema} from '../routine/schema.js';
 import {extensionEntriesSchema} from '../extensions/schema.js';
 import {agentPlanSnapshotSchema,futureIntentSchema} from '../agent/plan-schema.js';
@@ -156,6 +157,7 @@ export const saveSchema = z.strictObject({
     progress_changes:z.array(z.strictObject({key:id,before:integer,after:integer})).max(12).optional(),
     result_entities:z.record(id,z.array(id).max(20)).optional(),
     movement_route:movementRouteSchema.optional(),
+    item_operation:itemOperationSchema.optional(),
     environment:environmentReceiptSchema.optional(),
     repetition:z.strictObject({requested_seconds:z.number().int(),elapsed_seconds:z.number().int(),attempt_ids:z.array(z.string()).max(8),
       termination_mode:z.enum(['while_executable','until_unsuccessful_result']).optional(),

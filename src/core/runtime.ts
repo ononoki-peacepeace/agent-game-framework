@@ -137,6 +137,7 @@ export function executeAction(current: SavePackage, input: unknown, requestId: s
       canonical_facts:facts.slice(0,12).map(fact=>fact.slice(0,500)),effects,
       ...(ctx.consumption?{consumption:ctx.consumption}:{}),
       ...(ctx.movement_route?{movement_route:ctx.movement_route}:{}),
+      ...(ctx.item_operation?{item_operation:ctx.item_operation}:{}),
       result_entities:Object.fromEntries(Object.entries(ctx.result_entities).map(([key,ids])=>[key,[...new Set(ids)].slice(0,20)])),
       at:structuredClone(save.runtime.time),commit_status:'pending' as const,
     }].slice(-200);

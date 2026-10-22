@@ -121,6 +121,9 @@ export const inventoryModule: Module = {
         target.components.inventory??={items:{}};(target.components.inventory as Inventory).items[itemId]=1;
         const item=c.store.entity(itemId);item.components.item!.owner_id=target.id;
         delete item.components.location;delete item.components.scene_position;
+        c.item_operation={kind:'transfer',item_id:itemId,name:String(item.components.identity?.name??itemId),
+          actor_label:actor.id===c.save.player_state.entity_id?'你':String(actor.components.identity?.name??actor.id),
+          recipient_id:target.id,recipient_name:String(target.components.identity?.name??target.id)};
         c.result_entities.items=[itemId];c.advance(1);c.facts.push('物品已交给当前在场的接收者。');
       }},
     DAMAGE_ITEM:{ui:{label:'尝试损坏物品',visibility:'text',target_component:'item'},
@@ -144,6 +147,11 @@ export const inventoryModule: Module = {
       capability:{intent:'item_move',description:'改变已登记物品在角色持有物或当前场景中的位置',target_role:'item',parameter_roles:{item_id:'item',to:'destination'},completion_kind:'item_location'},
       parameters:z.strictObject({item_id:id,to:z.enum(['held','container','scene','scene_container']),container_id:id.nullable().default(null),position_label:z.string().max(80).nullable().default(null)}),execute(c){
       const itemId=String(c.action.parameters.item_id),to=String(c.action.parameters.to);
+      const original=c.store.entity(itemId),actor=c.store.entity(c.action.actor_id),inventory=actor.components.inventory as Inventory|undefined;
+      const fromContainer=inventory?.placements?.[itemId]??original.components.item?.container_id??null;
+      const fromHeld=Number(inventory?.items[itemId]??0)>0&&!fromContainer;
+      const originalContainer=typeof fromContainer==='string'?c.save.entities.find(e=>e.id===fromContainer):undefined;
+
       if(to==='scene')putItemInScene(c.save,itemId,String(c.action.parameters.position_label??'')||null,c.action.actor_id);
       else if(to==='scene_container')putItemInSceneContainer(c.save,itemId,String(c.action.parameters.container_id??''),c.action.actor_id);
       else {
@@ -153,6 +161,13 @@ export const inventoryModule: Module = {
         if((player.components.inventory as Inventory).items[itemId]!==1)assert(item.components.location?.location_id===player.components.location?.location_id,'物品不在当前场景');
         putItemInInventory(c.save,itemId,to==='container'?String(c.action.parameters.container_id??''):null,c.action.actor_id);
       }
+      const containerId=to==='container'||to==='scene_container'?String(c.action.parameters.container_id):null;
+      c.item_operation={kind:'move',item_id:itemId,name:String(original.components.identity?.name??itemId),
+        actor_label:actor.id===c.save.player_state.entity_id?'你':String(actor.components.identity?.name??actor.id),
+        destination:to as 'held'|'container'|'scene'|'scene_container',container_id:containerId,
+        container_name:containerId?String(c.store.entity(containerId).components.identity?.name??containerId):null,
+        from_container_id:typeof fromContainer==='string'?fromContainer:null,
+        from_container_name:originalContainer?String(originalContainer.components.identity?.name??originalContainer.id):null,from_held:fromHeld};
       c.result_entities.items=[itemId];c.advance(1);c.facts.push(`物品位置已更新：${String(c.save.entities.find(entity=>entity.id===itemId)?.components.identity?.name??'物品')}。`);
     }},
   },
