@@ -9,6 +9,9 @@ export interface AuthoritativeItemContext {
   placement:'held'|'scene'|'inside_container'|'worn'|'unknown';
   container_id:string|null;
   location_id:string|null;
+  holder_id:string|null;
+  condition:string;
+  container_access:'open'|'sealed'|'unknown';
 }
 
 /** A compact, read-only inventory projection for model binding and narration.
@@ -22,16 +25,27 @@ export function authoritativeItemContext(view:PublicView):AuthoritativeItemConte
     const item=entity.components.item as {owner_id?:string|null;container_id?:string|null;placement?:string}|undefined;
     const quantity=Number(inventory.items?.[entity.id]??0);
     const location=entity.components.location?.location_id;
-    const owned=quantity>0||item?.owner_id===view.player_id;
-    const present=location===local;
-    if(!owned&&!present)return [];
-    const rawPlacement=inventory.placements?.[entity.id]!==undefined?
-      (inventory.placements[entity.id]===null?'held':'inside_container'):
-      item?.placement;
-    const placement=(rawPlacement==='held'||rawPlacement==='scene'||rawPlacement==='inside_container'||rawPlacement==='worn')?rawPlacement:'unknown';
-    return [{item_id:entity.id,name:String(entity.components.identity?.name??entity.id),quantity:quantity||1,
-      placement,container_id:typeof (inventory.placements?.[entity.id]??item?.container_id)==='string'?(inventory.placements?.[entity.id]??item?.container_id) as string:null,
-      location_id:typeof location==='string'?location:null}];
+    // Ownership is provenance, not current possession. Scene items (including
+    // scene-container contents) never enter the player's inventory projection.
+    const held=quantity>0;
+    if(!held&&location!==local)return [];
+    const containerId=held?inventory.placements?.[entity.id]??null:item?.container_id??null;
+    const slots=player?.components.equipment?.slots as Record<string,string|null>|undefined;
+    const worn=held&&Object.values(slots??{}).includes(entity.id);
+    let access:AuthoritativeItemContext['container_access']='open';
+    let parentId=containerId;const seen=new Set([entity.id]);
+    while(parentId){
+      const parent=view.entities.find(candidate=>candidate.id===parentId);
+      if(seen.has(parentId)||parent?.components.item?.container!==true){access='unknown';break;}
+      seen.add(parentId);
+      if((parent.components.item.tags as string[]|undefined)?.includes('sealed')){access='sealed';break;}
+      parentId=held?inventory.placements?.[parent.id]??null:(parent.components.item.container_id as string|undefined)??null;
+    }
+    const placement:AuthoritativeItemContext['placement']=!held?'scene':worn?'worn':containerId?'inside_container':'held';
+    return [{item_id:entity.id,name:String(entity.components.identity?.name??entity.id),quantity:held?quantity:1,
+      placement,container_id:typeof containerId==='string'?containerId:null,
+      location_id:typeof location==='string'?location:null,holder_id:held?view.player_id:null,
+      condition:String(entity.components.item?.condition??'intact'),container_access:access}];
   });
 }
 

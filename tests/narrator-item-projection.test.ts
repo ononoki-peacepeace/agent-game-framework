@@ -1,0 +1,33 @@
+import {expect,it} from 'vitest';
+import {randomUUID} from 'node:crypto';
+import {narrativeWorldKinds,prepareNarrativeWorld} from './fixtures/narrative-worlds.js';
+import {authoritativeItemContext,actionBindingContext} from '../src/ai/action-context.js';
+import {publicView,validateSave} from '../src/core/state.js';
+import {executeAction} from '../src/core/runtime.js';
+import {putItemInInventory} from '../src/modules/inventory.js';
+it.each(narrativeWorldKinds)('projects actual scene/held/container placement in %s',async kind=>{
+ const {save:base}=await prepareNarrativeWorld(kind),save=structuredClone(base);
+ const player=save.entities.find(e=>e.id==='player')!,paper=save.entities.find(e=>e.id==='qa_paper')!;
+ // Ownership records provenance; it must never imply current possession.
+ paper.components.item!.owner_id='player';
+ const view=publicView(validateSave(save)),context=actionBindingContext(view,'观察纸片');
+ expect(context.authoritative_inventory.some(item=>item.item_id==='qa_paper')).toBe(false);
+ expect(context.visible_scene_items.find(item=>item.item_id==='qa_paper')).toMatchObject({placement:'scene',quantity:1});
+ const pickup=executeAction(save,{type:'MOVE_ITEM',parameters:{item_id:'qa_paper',to:'held'}},randomUUID()).save;
+ expect(authoritativeItemContext(publicView(pickup)).find(item=>item.item_id==='qa_paper')).toMatchObject({placement:'held',quantity:1});
+ const box={id:'qa_case',type:'item',components:{identity:{name:'木盒',description:'现有容器',avatar_id:null},location:{location_id:player.components.location!.location_id},item:{weight:1,stackable:false,container:true,tracking:'tracked' as const},discovery:{known_to_player:true}}};
+ pickup.entities.push(box);
+ const contained=executeAction(pickup,{type:'MOVE_ITEM',parameters:{item_id:'qa_paper',to:'scene_container',container_id:'qa_case'}},randomUUID()).save;
+ const scene=actionBindingContext(publicView(contained),'观察木盒中的纸片');
+ expect(scene.authoritative_inventory.some(item=>item.item_id==='qa_paper')).toBe(false);
+ expect(scene.visible_scene_items.find(item=>item.item_id==='qa_paper')).toMatchObject({placement:'scene',container_id:'qa_case'});
+ putItemInInventory(contained,'qa_case');putItemInInventory(contained,'qa_paper','qa_case');
+ const packed=actionBindingContext(publicView(validateSave(contained)),'观察背包中的纸片');
+ expect(packed.authoritative_inventory.find(item=>item.item_id==='qa_paper')).toMatchObject({placement:'inside_container',container_id:'qa_case',container_access:'open'});
+ contained.entities.find(entity=>entity.id==='qa_case')!.components.item!.tags=['sealed'];
+ expect(authoritativeItemContext(publicView(contained)).find(item=>item.item_id==='qa_paper')?.container_access).toBe('sealed');
+ expect(()=>executeAction(contained,{type:'MOVE_ITEM',parameters:{item_id:'qa_paper',to:'held'}},randomUUID())).toThrow();
+ contained.entities.find(entity=>entity.id==='qa_case')!.components.item!.tags=[];
+ const unpacked=executeAction(contained,{type:'MOVE_ITEM',parameters:{item_id:'qa_paper',to:'held'}},randomUUID()).save;
+ expect(authoritativeItemContext(publicView(unpacked)).find(item=>item.item_id==='qa_paper')).toMatchObject({placement:'held',container_id:null});
+},30000);

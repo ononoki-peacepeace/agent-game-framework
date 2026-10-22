@@ -14,6 +14,13 @@ export type UIAction =
   | { kind: 'export_save' }
   | { kind: 'extension_development'; request: string };
 
+/** A public, committed performance snapshot; never reconstructed from quoted prose. */
+export interface StoryTurn {
+  request_id:string;
+  turn:NonNullable<PublicView['last_turn']>;
+  speakers:PublicView['entities'];
+}
+
 export interface AgentResult {
   outcome: FrameworkOutcome;
   /** Bounded recovery facts for a failed or partially committed request. */
@@ -40,6 +47,7 @@ export interface AgentResult {
   message: string;
   /** Only prose assembled from validated Narrator turns may replace the latest last_turn. */
   story?: string;
+  story_turns?: StoryTurn[];
   ui_actions: UIAction[];
   tool_calls: { tool_id: string; ok: boolean }[];
   canonical_changes: string[];

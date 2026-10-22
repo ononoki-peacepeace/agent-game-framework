@@ -1,0 +1,36 @@
+import {expect,it} from 'vitest';
+import {randomUUID} from 'node:crypto';
+import {narrativeWorldKinds,prepareNarrativeWorld} from './fixtures/narrative-worlds.js';
+import {executeAction} from '../src/core/runtime.js';
+import {validateResolvedNarrative} from '../src/core/narrative-firewall.js';
+const result=(narrative:string)=>({narrative,speaker:null,dialogue:null,choices:[],context_actions:[],patches:[],interaction:null,item_claims:[],stable_locations:[],mechanical_claims:[]});
+it.each(narrativeWorldKinds)('rejects current possession invented after a real transfer in %s',async kind=>{
+ const {save}=await prepareNarrativeWorld(kind);
+ const picked=executeAction(save,{type:'MOVE_ITEM',parameters:{item_id:'qa_paper',to:'held'}},randomUUID()).save;
+ const transferred=executeAction(picked,{type:'TRANSFER_ITEM',target_id:'npc_lin',parameters:{item_id:'qa_paper'}},randomUUID()).save;
+ const receipt=transferred.resolution_receipts!.at(-1)!;
+ expect(()=>validateResolvedNarrative(receipt,result('你仍然拿着纸片。'),false,undefined,transferred)).toThrow();
+ expect(()=>validateResolvedNarrative(receipt,result('纸片仍在你的手中。'),false,undefined,transferred)).toThrow();
+ expect(()=>validateResolvedNarrative(receipt,result('你没有拿着纸片。'),false,undefined,transferred)).not.toThrow();
+ expect(()=>validateResolvedNarrative(receipt,result('你准备拿着纸片。'),false,undefined,transferred)).not.toThrow();
+ expect(()=>validateResolvedNarrative(receipt,result('你把纸片交给林舟。'),false,undefined,transferred)).not.toThrow();
+ const returned=executeAction(transferred,{type:'TRANSFER_ITEM',target_id:'player',parameters:{item_id:'qa_paper'}},randomUUID(),'ai',undefined,undefined,true,'npc_lin').save;
+ expect(()=>validateResolvedNarrative(returned.resolution_receipts!.at(-1)!,result('你拿着纸片。'),false,undefined,returned)).not.toThrow();
+ expect(()=>validateResolvedNarrative(returned.resolution_receipts!.at(-1)!,result('你持有一张纸片。'),false,undefined,returned)).not.toThrow();
+ expect(()=>validateResolvedNarrative(returned.resolution_receipts!.at(-1)!,result('你持有2张纸片。'),false,undefined,returned)).toThrow();
+ expect(()=>validateResolvedNarrative(receipt,result('你持有零张纸片。'),false,undefined,transferred)).not.toThrow();
+},30000);
+it.each(narrativeWorldKinds)('keeps event-time holdings separate from final holdings and typed speech in %s',async kind=>{
+ const {save}=await prepareNarrativeWorld(kind);
+ const picked=executeAction(save,{type:'MOVE_ITEM',parameters:{item_id:'qa_paper',to:'held'}},randomUUID()).save;
+ const transferred=executeAction(picked,{type:'TRANSFER_ITEM',target_id:'npc_lin',parameters:{item_id:'qa_paper'}},randomUUID()).save;
+ const receipt=transferred.resolution_receipts!.at(-1)!,states=[picked,transferred].map(state=>state.entities.find(entity=>entity.id==='player')!.components.inventory!);
+ const validate=(text:string)=>validateResolvedNarrative(receipt,result(text),false,undefined,transferred,false,states);
+ expect(()=>validate('你拿着纸片，随后把纸片交给林舟。')).not.toThrow();
+ expect(()=>validate('你现在拿着纸片。')).toThrow();
+ expect(()=>validate('纸片仍在你的手中。')).toThrow();
+ expect(()=>validateResolvedNarrative(picked.resolution_receipts!.at(-1)!,result('你没有拿着纸片。'),false,undefined,picked)).toThrow();
+ const quoted={...result('林舟说：“你拿着纸片。”'),scene_beats:[{kind:'speech' as const,speaker_id:'npc_lin',utterance:'你拿着纸片。'}]};
+ expect(()=>validateResolvedNarrative(receipt,quoted,false,undefined,transferred)).not.toThrow();
+ expect(()=>validateResolvedNarrative(receipt,{...quoted,narrative:quoted.narrative+'你拿着纸片。'},false,undefined,transferred)).toThrow();
+},30000);
