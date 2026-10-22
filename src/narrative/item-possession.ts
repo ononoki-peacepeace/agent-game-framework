@@ -52,13 +52,14 @@ export function itemPossessionIssues(save:SavePackage,prose:string,settledInvent
     const history=actor.id===player?.id?settledInventories:[];
     const states=current||!history.length?[inventory]:[...history,inventory];
     const matching=items.filter(entity=>String(entity.components.identity!.name)===name);
-    if(matching.some(entity=>{
-     return !states.some(state=>{
-      const actual=inHand&&state?.placements?.[entity.id]?0:Number(state?.items?.[entity.id]??0);
-      const supported=quantity===null?actual>0:actual===quantity;
-      return supported!==negative;
-     });
-    }))issues.push({index:offset+clause.indexOf(text),text:(carried??location)![0]});
+    // A display name can refer to several canonical items. Compare their total
+    // for this actor within each single settled image, never across time.
+    const supported=states.some(state=>{
+     const actual=matching.reduce((total,entity)=>total+
+      (inHand&&state?.placements?.[entity.id]?0:Number(state?.items?.[entity.id]??0)),0);
+     return (quantity===null?actual>0:actual===quantity)!==negative;
+    });
+    if(!supported)issues.push({index:offset+clause.indexOf(text),text:(carried??location)![0]});
    }
   }
   offset+=clause.length+1;
