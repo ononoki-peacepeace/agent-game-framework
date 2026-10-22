@@ -9,7 +9,8 @@ import {z} from 'zod';
 import {inputRecoverySchema} from '../recovery/request-context.js';
 import {replaceWithBoundedRetry,writeAtomicJson} from './atomic-json.js';
 import {withCurrentImageWrite} from './current-write-guard.js';
-export interface PendingTurn {game_id:string;request_id:string;fingerprint:string;expected_revision:number;candidate:SavePackage;action:Action;facts:string[];generic:boolean;narration_steps?:string[];narration_item_states?:{items?:Record<string,number>;placements?:Record<string,string|null>}[]}
+export interface PendingTurn {game_id:string;request_id:string;fingerprint:string;expected_revision:number;candidate:SavePackage;action:Action;facts:string[];generic:boolean;narration_steps?:string[];
+  background_settled?:boolean;narration_item_states?:{items?:Record<string,number>;placements?:Record<string,string|null>}[]}
 const inputRecordSchema=z.strictObject({version:z.literal(1),game_id:z.string().uuid(),request_id:z.string().uuid(),
   fingerprint:z.string().regex(/^[a-f0-9]{64}$/),state:z.enum(['running','completed','failed']),started_at:z.number(),
   response:z.json().optional(),error:z.string().optional(),http_status:z.number().int().optional(),committed_revision:z.number().int().optional(),

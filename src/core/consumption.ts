@@ -30,7 +30,7 @@ export function executeConsumption(c:ActionContext){
  const subject=initial.actor.id===c.save.player_state.entity_id?'你':String(initial.actor.components.identity?.name??initial.actor.id);
  const origin=initial.actor.components.location?.location_id;
  const record:ConsumptionReceipt={item_id:initial.item.id,name:String(initial.item.components.identity?.name??initial.item.id),method:initial.rule.method,
-  requested_quantity:quantity,before_quantity:before,consumed_quantity:0,after_quantity:before,status:'interrupted'};
+  ...(typeof origin==='string'?{location_id:origin}:{}),requested_quantity:quantity,before_quantity:before,consumed_quantity:0,after_quantity:before,status:'interrupted'};
  c.consumption=record;c.result_entities.items=[initial.item.id];
  let left=initial.rule.minutes;
  while(left>0){

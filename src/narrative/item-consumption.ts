@@ -35,3 +35,11 @@ export function consumptionEventNarrative(record:ConsumptionReceipt,subject='你
  return record.status==='completed'?`${subject}${verb}了${record.consumed_quantity}份${record.name}。`:
   `${subject}还没${verb}${record.name}，便因眼前的事情停了下来；物品数量没有减少。`;
 }
+
+/** Only event-time co-presence exposes an NPC operation; current inventory is private. */
+export function visibleNpcConsumptions(save:SavePackage,receipts:Receipt[]){
+ const here=save.entities.find(e=>e.id===save.player_state.entity_id)?.components.location?.location_id;
+ return receipts.filter(r=>r.actor_id!==save.player_state.entity_id&&r.semantic_action==='CONSUME_ITEM'&&
+  r.consumption?.location_id===here&&typeof here==='string'&&save.entities.some(e=>e.id===r.actor_id&&
+   e.components.character&&e.components.discovery?.known_to_player!==false));
+}
