@@ -4,9 +4,9 @@ Delivery branch `codex/cloud-narrator-compound-items` now includes latest checke
 
 | Condition | Existing evidence | This batch | Honest remaining gate |
 | --- | --- | --- | --- |
-| N3.4 unmet | Windows actual 30-case three-world long corpus; duplicate action identity repaired; style review fails rhythm/perception and authored candidate tool language | Reproduce and fix actual attributed speech composition; retain exact repeated turns, NPC ownership, failure/partial/unexecuted boundaries | Long prose naturalness still unmet; authored offline samples and developer inspection do not establish current-model or independent human quality |
-| N6.3 unmet | Existing contained/sealed movement/damage/equipment, sale and materialization tests | Scene/held/container projection and present possession counterexamples; combined real item lifecycle in progress | Fixed combined matrix must pass before recommending engineering closure; consumption capability absent, refusal must stay explicit |
-| N6.4 unverified | Prior individual item tests, no complete three-world sequence | Three structurally different worlds, actual Core receipts and disk replay/later actions in progress | Never claim all generated prose is verified by a finite offline set |
+| N3.4 unmet | Windows actual 30-case three-world long corpus; duplicate action identity repaired; style review fails rhythm/perception and authored candidate tool language | Repaired attributed speech composition and same-revision polling; repeated turns, NPC ownership, failure/partial/unexecuted boundaries verified | Long prose naturalness still unmet; authored offline samples and developer inspection do not establish current-model or independent human quality |
+| N6.3 unmet | Existing contained/sealed movement/damage/equipment, sale and materialization tests | Scene/held/container projection and actor possession repaired; committed combined three-world lifecycle verified | Offline fixed matrix complete for Windows review; consumption capability absent, refusal remains explicit |
+| N6.4 unverified | Prior individual item tests, no complete three-world sequence | Three structural worlds, actual committed player/NPC receipts, quantities, disk replay and later executable actions verified | Never claim all generated prose is verified by a finite offline set |
 
 ## N3 checkpoint
 
@@ -95,3 +95,24 @@ Minimal repair recognizes a multi-turn structured sequence at the same game/revi
 `compound-items-delivery-audit.json` replaces the complete affected file results, without adding overlapping counts: **32files332 distinct test cases passed,0failed/0skipped**. Final568 source/config/test hashes unchanged in `compound-items-delivery-inputs.json`. `compound-polled-final-build.log`: final isolated strict root/client/server build exit0. The old331pass/1failure and20pass/1failure reports remain raw development/integration evidence; their stale numbering assertion is not hidden or counted as final success. This affected matrix is not a full repository test-suite claim.
 
 Formal ledger remains exactly109/160 (68.125%), N3.4unmet/N6.3unmet/N6.4unverified. N3 factual omissions and polling loss are repaired; original long-prose style quality is not awarded. N6 fixed offline evidence is ready for Windows review against the frozen conditions, including committed temporary-item admission, player/NPC inventory transitions, failure/partial/unexecuted tails, receipt identity/quantity, private state exclusion, disk restart and no-reexecution replay. No real-model or human quality result is fabricated. Named-item consumption remains an explicit unsupported Core refusal. No further independent evidenced implementation defect remains in this bounded batch; Windows/user integration and remaining external quality review are the next breakpoint.
+
+
+## Published handoff
+
+- Independent branch: `codex/cloud-narrator-compound-items`.
+- Tested final source: `b2e574c42479faaee34e694f556d50017cdd3765`. Follow-up documentation does not change tested source. Remote main was rechecked at `7cd0c8a4665831acc0b52faf646ddf9062b2d874` before delivery; it is included.
+- Stable source checkpoints: `03bd29f` (attributed turns), `b3e542f` (item projection/temporal evidence), `4b1976f` (NPC actor and committed lifecycle), `b2e574c` (polling). `4f4a15a` incorporates latest main. All are pushed, without force or a main/PR merge.
+- PR attempt: GitHub GraphQL returned `Post "https://api.github.com/graphql": Forbidden`; raw `.agent-runtime/codex/compound-items-pr-create.log`. Create it manually: https://github.com/ononoki-peacepeace/agent-game-framework/pull/new/codex/cloud-narrator-compound-items . Suggested title/body: cloud `/tmp/narrator-compound-items-pr.md`.
+- Evidence archive (cloud workspace): `/workspace/scratch/narrator-compound-items-evidence-b2e574c.zip`,5,509,357bytes,319raw/runtime files plus manifest/source patch/reproduction script. ZIP CRC checked. SHA256 `d447f88e8afd8fb22cc5323512cc02225fb348b55becb2942169c18e6b27d82b`; `.zip.sha256` sibling. Synthetic fixtures only; no formal save, credentials or configuration copied.
+
+Windows should inspect the branch diff from7cd0c8a, especially the optional Agent story snapshots, public item context, receipt masking, service pending metadata and optional PendingTurn field. Preserve integrated PR #2 history/memory/prose changes. Review raw failure and final file-report selection before deciding N6.3/N6.4 condition credit. Do not merge automatically or change frozen scoring on test count.
+
+The exact32-file affected inventory is `docs/cloud-compound-items-tests.json`. Portable replay from a `game` checkout (Node>=22.13, installed lockfile dependencies):
+
+```sh
+node --input-type=module -e "import fs from 'node:fs'; import {spawnSync} from 'node:child_process'; const files=JSON.parse(fs.readFileSync('docs/cloud-compound-items-tests.json','utf8')); process.exit(spawnSync(process.execPath,['scripts/agent-workspace.mjs','codex','test',...files,'--testTimeout=30000'],{stdio:'inherit'}).status??1)"
+node scripts/agent-workspace.mjs codex build
+node scripts/four-theme-progress.mjs --check
+```
+
+These use isolated offline data; no server/client mode or port3100. Final worktree is intended clean after the documentation checkpoint; no new unresolved implementation failure is hidden. Remaining limits are the explicitly unclosed prose-quality/external review gates and bounded language/matrix coverage described above. No real-provider authorization is requested by this handoff.
