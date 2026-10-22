@@ -110,3 +110,27 @@ cover legacy receipts, hidden outcomes, unbound quotations, genuine assistant
 refusals and refusal text outside an otherwise valid NPC quotation. Compatibility
 assertions admit the new grounded no-contact wording while keeping all original
 receipt, damage, time, ordering, invalid-claim and replay checks.
+
+## Independent integration preview
+
+`git merge-tree --write-tree --name-only 50eb563 codex/cloud-item-stack-transfer`
+computed a temporary merge tree only; no checkout, branch or PR was merged.
+Conflicts: `CLAUDE-HANDOFF.md`, `src/ai/runtime.ts`, `src/client/SceneStory.tsx`,
+`src/core/narrative-firewall.ts`. Integration must preserve:
+
+1. Both sets of imports in runtime/firewall.
+2. PR #5/#6's `item_operation`, privacy-projected `consumption`, and
+   `item_entities` fields in the shared `resolutionReceipt` object, including
+   each child step. Both initial generation and refinement must receive it.
+3. PR #3's `props.turns` loop and snapshot speaker list in SceneStory, together
+   with this branch's closed disclosure. Do not replace the loop with the older
+   single-turn render call.
+4. Both handoff sections. This preview does not verify Windows' unknown changes.
+
+The first existing 56-case capture on `50eb563` retained all 56 records and 100
+request envelopes without cross-case identities, but failed 8/103 assertions:
+`compound-failure-corpus` still required the exact older words `接触`/`触及`.
+Actual new outputs use `碰到`. All receipt, stamina, HP, timing and order inputs
+are retained in that failed capture. Two text patterns are updated to admit the
+same factual result; their non-text settlement and replay assertions remain.
+This failed capture is not represented as a passing quality benchmark.
