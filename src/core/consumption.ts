@@ -19,7 +19,7 @@ function consumptionSource(c:ActionContext){
  const inventory=actor.components.inventory as Inventory|undefined;
  worldAssert(Boolean(inventory&&(inventory.items[item!.id]??0)>=quantity),'unavailable','本人持有的指定物品数量不足');
  worldAssert(item!.components.item!.condition===undefined||item!.components.item!.condition==='intact','unavailable','物品已损坏或损毁，不能按完好物品消耗');
- worldAssert(unsealedContainerAncestors(c.save,item!),'unavailable','物品仍在密封或不可接触的容器内');
+ worldAssert(unsealedContainerAncestors(c.save,item!,actor.id),'unavailable','物品仍在密封或不可接触的容器内');
  worldAssert(!Object.values(actor.components.equipment?.slots??{}).includes(item!.id),'unavailable','请先卸下这件物品');
  worldAssert(!Object.entries(inventory!.placements??{}).some(([child,parent])=>parent===item!.id&&(inventory!.items[child]??0)>0),'unavailable','请先取出容器中的物品');
  worldAssert((rule.data.required_flags??[]).every(flag=>c.save.gm_state.flags[flag.flag]===flag.equals),'prerequisite','世界规定的消耗前提尚未满足');
