@@ -63,8 +63,14 @@ export function agentPresentation(previous:PublicView|null,result:AgentResult,
     }
   }
   if(!engineFailure&&result.presentation==='story'&&next){
-    if(committedStoryAlreadyVisible&&!freshNarrative)return {storyOverride:null,agentReply:null,goalProgress};
-    if(freshNarrative){
+    // A poll can already expose the final turn while the response still owns
+    // the complete performance. Receipt identity, not text novelty, proves it.
+    const sequence=result.story_turns;
+    const polledSequence=Boolean(sequence&&sequence.length>1&&previous?.game_id===next.game_id&&
+      previous.revision===next.revision&&result.outcome.revision===next.revision&&
+      sequence.every(turn=>result.outcome.receipt_ids.includes(turn.request_id)));
+    if(committedStoryAlreadyVisible&&!freshNarrative&&!polledSequence)return {storyOverride:null,agentReply:null,goalProgress};
+    if(freshNarrative||polledSequence){
       // Only an explicitly assembled sequence of Narrator turns may override the latest committed turn.
       const story=result.story?.trim();
       const factualReply=goals.filter(goal=>goal.status==='completed'&&

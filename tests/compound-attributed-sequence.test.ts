@@ -40,8 +40,10 @@ it.each(narrativeWorldKinds)('retains repeated attributed reactions around waiti
   const response=await executePlan(service,request,validatePlan({goals})),after=await service.current();
   const shown=agentPresentation(service.project(before),response);
   const html=renderToStaticMarkup(createElement(SceneStory,{view:response.view!,override:shown.storyOverride?.text??null,turns:shown.storyOverride?.turns,onSelectEntity:()=>{}}));
+  const polled=agentPresentation(service.project(after),response);
+  const polledHtml=renderToStaticMarkup(createElement(SceneStory,{view:response.view!,override:polled.storyOverride?.text??null,turns:polled.storyOverride?.turns,onSelectEntity:()=>{}}));
   const receipts=after.resolution_receipts!.filter(r=>!before.resolution_receipts?.some(old=>old.request_id===r.request_id));
-  await writeFile(join(process.cwd(),'.agent-runtime/codex',`attributed-${run}-${kind}.json`),JSON.stringify({request,response,receipts,html},null,2));
+  await writeFile(join(process.cwd(),'.agent-runtime/codex',`attributed-${run}-${kind}.json`),JSON.stringify({request,response,receipts,html,polled,polledHtml},null,2));
   expect(response.plan?.status).toBe('completed');expect(receipts.filter(r=>r.physical_outcome)).toHaveLength(2);
   expect(receipts.filter(r=>r.physical_outcome).every(r=>!r.physical_outcome!.contact)).toBe(true);
   expect(after.entities.find(e=>e.id==='npc_lin')!.components.condition!.hp).toBe(100);
@@ -50,6 +52,7 @@ it.each(narrativeWorldKinds)('retains repeated attributed reactions around waiti
   expect(html.indexOf('先停一下。')).toBeLessThan(html.indexOf('等了1分钟'));
   expect(html.lastIndexOf('先停一下。')).toBeGreaterThan(html.indexOf('等了1分钟'));
   expect(html).not.toMatch(/受伤|造成了伤害|同意|微笑/);
+  expect(polledHtml).toBe(html);
   const bytes=await readFile(join(directory,'current.json')),calls=[rngCalls,narrate.mock.calls.length];
   const fresh=new GameService(new JsonStore(directory),ai,seed.definition);
   for(let i=0;i<receipts.length;i++)await fresh.turn({game_id:before.game_id,expected_revision:before.state_revision,request_id:receipts[i].request_id,input:steps[i]});
