@@ -250,8 +250,10 @@ describe('Phase 3 local compound candidate',()=>{
     expect(after.state_revision).toBe(f.before.state_revision+1);
     expect(f.writes).toHaveBeenCalledTimes(1);
     expect(after.last_turn?.presentation).toMatchObject({status:'degraded'});
-    expect(after.last_turn?.narrative).toContain('1、');
-    expect(after.last_turn?.narrative).toContain('2、');
+    expect(after.last_turn!.narrative).toContain('伸个懒腰');
+    expect(after.last_turn!.narrative).toContain('整理桌面');
+    expect(after.last_turn!.narrative.indexOf('伸个懒腰')).toBeLessThan(after.last_turn!.narrative.indexOf('整理桌面'));
+    expect(after.last_turn!.narrative).not.toMatch(/(?:^|\n)\d+、/);
   });
   it('preserves all local steps in planner output and expands movement plus activity',async()=>{
     const f=await sparseSetup(),save=await f.service.current();

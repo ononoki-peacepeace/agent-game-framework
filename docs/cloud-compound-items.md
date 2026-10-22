@@ -1,6 +1,6 @@
 # Independent cloud compound and item batch
 
-Base: remote `main` verified by fetch and ls-remote at `dc3ac77725c88903972dc75a1b37aeb4faa92533`. Independent branch `codex/cloud-narrator-compound-items`; PR #2 is not in that base and is not copied. Frozen criteria/protocol/ledger retained verbatim: 109/160. No paid provider, formal save, port 3100, credentials or Release operation.
+Delivery branch `codex/cloud-narrator-compound-items` now includes latest checked remote main `7cd0c8a4665831acc0b52faf646ddf9062b2d874` (PR #2) through merge `4f4a15a`. Original independent start was fetched/verified `dc3ac77725c88903972dc75a1b37aeb4faa92533`; the first checkpoints did not copy unmerged PR #2 work. Frozen criteria/protocol/ledger retained verbatim: 109/160. No paid provider, formal save, port 3100, credentials or Release operation.
 
 | Condition | Existing evidence | This batch | Honest remaining gate |
 | --- | --- | --- | --- |
@@ -61,6 +61,27 @@ Shared integration surfaces: `src/ai/action-context.ts`, Narrator runtime contex
 
 ## N6 stable checkpoint validation
 
-Pinned final inputs:554files,zero changed hashes. Final two nonoverlapping reports: `compound-items-verified-new-tests.json` six files24pass and `compound-items-verified-adjacent.json`21files269pass. Audit: **27files293 distinct passing assertions,0failed/0skipped**. This is the selected affected regression, not a full repository-suite claim. `compound-items-verified-build.log`: isolated strict root TypeScript + Vite client + server TypeScript build exit0. Existing zod annotation/chunk size warnings only. All fixtures offline; no real provider or independent quality scores.
+Pinned final inputs:554files,zero changed hashes. Final two nonoverlapping reports: `compound-items-verified-new-tests.json` six files24pass and `compound-items-verified-adjacent.json`21files269pass. Audit: **27files293 distinct passing test cases,0failed/0skipped**. This is the selected affected regression, not a full repository-suite claim. `compound-items-verified-build.log`: isolated strict root TypeScript + Vite client + server TypeScript build exit0. Existing zod annotation/chunk size warnings only. All fixtures offline; no real provider or independent quality scores.
 
 N6.3/N6.4 now have the fixed offline implementation/lifecycle evidence described above, available for Windows review. Formal statuses remain unmet/unverified and109/160 unchanged. N3.4 remains unmet for prose quality. Successful consumption is unavailable in current Core and is not fabricated. Remote latest main is7cd0c8a; tested source base in this checkpoint isdc3ac77, with explicit PR #2 compatibility check still to follow.
+
+
+## Latest-main NPC possession and committed lifecycle checkpoint
+
+Additional actual N6.4 counterexample: after player pickup, NPC Lin has zero paper but `林舟仍然拿着纸片。` passed. `npc-possession-before.json`:0pass/3fail across all worlds. Generalized the same possession checker to explicitly named visible current-scene actors, retaining actual per-actor inventory, quantity, denial/intention and quoted-speech controls. Player event-time inventory snapshots are never silently treated as NPC snapshots; unmarked multi-stage NPC clauses are not forced into a final-now reading. `npc-possession-after.json`:29pass,0fail; actual latest-main wider regression follows.
+
+`compound-items-raw-counterexamples.json` retains exact input states, prose, actual decisions and original source hashes. Historical03bd Narrator accepts both false player/NPC assertions; b3 rejects the player one but still accepts the NPC one; final rejects both. Legal player transfer and true NPC holding remain accepted. This explicitly re-executes historical Narrator functions on the same current Core-generated candidates, not a claim of an entire historical product run or committed-state replay from those candidate snapshots.
+
+Evidence audit found a fixture limitation: early lifecycle variants directly persisted Core candidates for materialization, failed pickup and NPC return. Their relevant receipts were still `pending`. This is retained as candidate-state evidence and is **not used as the final committed lifecycle proof**. The final lifecycle instead uses actual GameService turns for both environment admission and failed pickup, and a controlled NPC Core action through actual framework `agentTransaction` for returns, with framework-owned commit metadata, revision/checkpoint/atomic disk write and fresh-service identified replay. It asserts committed receipts, one execution, identical bytes and no repeated generation. The NPC operation is a fixed Core actor input, not evidence that a real model autonomously decided to transfer. No Core facts are overridden.
+
+Final materialization receipts, failed pickup and both NPC returns are all `committed` in commerce/relationships/autonomy captures `item-lifecycle-4a2ffb0e-*`. The subsequent actual player operations and stock quantity changes still succeed or refuse as expected. All assessments/prose/audits are explicitly fixed offline adapters, not real model/human quality ratings.
+
+Latest-main validation:
+
+- `compound-items-latest-main-tests.json`:32files,331pass/1fail/0skip,568 unchanged source/config/test input hashes. Sole failure is an old Phase3 assertion requiring1、2、, inconsistent with PR #2 paragraph fallback. Preserve paragraph prose; updated assertion requires both actual activities in order and no mechanical numbering.
+- `compound-items-transaction-proof.json`:20pass/1fail; the strengthened three-world lifecycle passes. Its Phase3 module had already loaded the old assertion before the edit. Original failure retained.
+- `compound-phase3-prose-final.json`: complete updated Phase3 file18pass/0fail/0skip.
+- `compound-items-latest-main-audit.json`: selects the full newer lifecycle and Phase3 file results over those two old files, yielding **32files332 distinct test cases passed,0failed/0skipped**. All production source hashes stayed unchanged; only the two test files changed and were fully rerun. This is a bounded affected regression, not a full-suite claim or an inflated sum of overlapping reports. Vitest assertionResults rows here mean test cases, not individual expect calls.
+- `compound-items-latest-main-build.log`: strict root/client/server isolated build exit0. `compound-items-delivery-types.log`: final strict root TypeScript exit0 after the evidence/test updates.
+
+Production modules merged latest main automatically. The sole merge conflict was append-only CLAUDE-HANDOFF.md; both complete sections were retained. PR #2 history/memory/fallback improvements remain present. Frozen specs/statuses/109-of160 were not changed. N6.3/N6.4 now have the described bounded fixed evidence for Windows condition review; N3.4 prose quality remains unmet. Remaining outside evidence: real model/human quality; successful consumption is not supported by current Core and remains a refusal. Next bounded check is whether a composite performance survives a state poll reaching the same revision before its input response.
