@@ -114,12 +114,20 @@ export const inventoryModule: Module = {
         const itemId=String(c.action.parameters.item_id),inventory=actor.components.inventory as Inventory|undefined;
         assert(target?.components.character&&target.id!==actor.id&&target.components.location?.location_id===actor.components.location?.location_id,'接收物品的人不在同一地点');
         assert(inventory?.items[itemId]===1,'本人没有持有这件物品');
-        worldAssert(unsealedContainerAncestors(c.save,c.store.entity(itemId)),'unavailable','物品仍在密封或不可接触的容器内，当前不能交付');
+        worldAssert(unsealedContainerAncestors(c.save,c.store.entity(itemId),actor.id),'unavailable','物品仍在密封或不可接触的容器内，当前不能交付');
         assert(!Object.values(actor.components.equipment?.slots??{}).includes(itemId),'请先卸下这件物品');
         assert(!Object.entries(inventory.placements??{}).some(([child,parent])=>parent===itemId&&(inventory.items[child]??0)>0),'请先取出容器里的物品');
+        const item=c.store.entity(itemId),targetInventory=(target.components.inventory??={items:{}}) as Inventory;
+        const received=(targetInventory.items[itemId]??0)+1;
+        worldAssert(integer.safeParse(received).success,'unavailable','接收者的物品数量已达世界上限');
+        worldAssert(!targetInventory.placements?.[itemId],'unavailable','接收者的同类物品仍有单件容器位置，当前不能合并堆叠');
         delete inventory.items[itemId];if(inventory.placements)delete inventory.placements[itemId];
-        target.components.inventory??={items:{}};(target.components.inventory as Inventory).items[itemId]=1;
-        const item=c.store.entity(itemId);item.components.item!.owner_id=target.id;
+        targetInventory.items[itemId]=received;
+        if(item.components.item!.stackable){
+          // One commodity ID can represent units held by several actors.
+          delete item.components.item!.owner_id;
+          if(received>1&&targetInventory.placements)delete targetInventory.placements[itemId];
+        }else item.components.item!.owner_id=target.id;
         delete item.components.location;delete item.components.scene_position;
         c.item_operation={kind:'transfer',item_id:itemId,name:String(item.components.identity?.name??itemId),
           actor_label:actor.id===c.save.player_state.entity_id?'你':String(actor.components.identity?.name??actor.id),

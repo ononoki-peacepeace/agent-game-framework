@@ -15,7 +15,7 @@ function trade(c: ActionContext, buying: boolean) {
   worldAssert(c.store.component<{ location_id: string }>(shopId, 'location').location_id === c.store.component<{ location_id: string }>(c.action.actor_id, 'location').location_id, 'not_present','商店不在当前位置');
   const inv = c.store.component<Inventory>(c.action.actor_id, 'inventory');
   if(!buying){
-    worldAssert(unsealedContainerAncestors(c.save,c.store.entity(item)),'unavailable','物品仍在密封或不可接触的容器内，当前不能出售');
+    worldAssert(unsealedContainerAncestors(c.save,c.store.entity(item),c.action.actor_id),'unavailable','物品仍在密封或不可接触的容器内，当前不能出售');
     worldAssert(!Object.values(c.store.entity(c.action.actor_id).components.equipment?.slots??{}).includes(item),
       'unavailable','请先卸下这件物品，再出售');
     worldAssert(!Object.entries(inv.placements??{}).some(([child,parent])=>parent===item&&(inv.items[child]??0)>0),
