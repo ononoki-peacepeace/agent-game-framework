@@ -76,7 +76,7 @@ it.each(matrix)('keeps all actual long stages in $kind/fallback=$fallback/$bound
   expect(response.story).toContain(fallback?'你等了1分钟':'你在原地等了一分钟');
   const greeting=fallback?'你向林舟开了口。':'你向林舟问了好。';
   expect(response.story!.split(greeting).length-1).toBe(boundary==='normal'?2:1);
-  if(count>=3){expect(response.story).toMatch(/未能建立接触|没能建立接触/);expect(core).toHaveBeenCalledOnce();}
+  if(count>=3){expect(response.story).toMatch(/未能建立接触|没能建立接触|没能碰到对方/);expect(core).toHaveBeenCalledOnce();}
   else{expect(core).toHaveBeenCalledOnce();expect(rngCalls).toBe(0);expect(response.story).not.toMatch(/建立接触/);}
   if(count>=4)expect(response.story).toContain('整理');else expect(response.story).not.toContain('整理');
   expect(html).toContain(fallback?'你等了1分钟':'你在原地等了一分钟');

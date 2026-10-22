@@ -17,6 +17,8 @@ function rememberedExperiences(memories:NonNullable<SavePackage['npc_agent_state
 /** Per-character private cognition and authoritative body state for the presentation layer.
  * Read-only: the player's own cognition stays the player's, so only characters are included. */
 export function narratorCharacterCognition(save:SavePackage,ids:readonly string[]){
+  const relevant=[save.player_state.entity_id,...new Set(ids)];
+  const priority=(id:string)=>{const index=relevant.indexOf(id);return index<0?relevant.length:index;};
   return [...new Set(ids)].flatMap(id=>{
     const entity=save.entities.find(item=>item.id===id&&item.components.character);
     if(!entity||id===save.player_state.entity_id)return [];
@@ -27,7 +29,7 @@ export function narratorCharacterCognition(save:SavePackage,ids:readonly string[
         restrained_by:state.restrained_by},
       sight:{blocked:sight.blocked,reason:sight.reason},
       own_relationships:Object.entries((entity.components.relationships?.entries??{}) as Record<string,Record<string,number>>)
-        .slice(0,6).map(([target_id,dimensions])=>({target_id,dimensions})),
+        .sort(([a],[b])=>priority(a)-priority(b)).slice(0,6).map(([target_id,dimensions])=>({target_id,dimensions})),
       own_active_goals:(mind?.goals??[]).filter(goal=>goal.status==='active')
         .sort((a,b)=>b.priority-a.priority).slice(0,3)
         .map(goal=>({description:goal.description,horizon:goal.horizon})),

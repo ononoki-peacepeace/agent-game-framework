@@ -52,7 +52,7 @@ it.each(normal)('same Freeform corpus $sample.id in $kind / fallback=$fallback',
   expect(npc.components.condition!.hp).toBe(sample.kind==='physical'&&sample.harmed?100-(save.definition.ruleset.physical_rules?.minor_damage??5):100);
   if(sample.kind==='physical'){
    expect(receipt.physical_outcome).toMatchObject({contact:sample.contact,harmed:sample.harmed});
-   if(!sample.contact)expect(after.last_turn!.narrative).toMatch(/未能建立接触|没能建立接触/);
+   if(!sample.contact)expect(after.last_turn!.narrative).toMatch(/未能建立接触|没能建立接触|没能碰到对方/);
    if(sample.contact&&!sample.harmed)expect(after.last_turn!.narrative).toMatch(/没有.{0,15}伤害/);
   }
   const held=(player.components.inventory as Inventory).items.qa_paper??0;

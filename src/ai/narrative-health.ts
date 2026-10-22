@@ -9,11 +9,16 @@ export const performanceContinuityPolicy='历史旁白仅用于保持已经发�
 export const continuityGuidance='保持人物人格、记忆、关系和行为连续性。结合近期事件和当下首要目标作出反应，不使用固定情绪顺序。不强迫讲话或最低字数；沉默、逃离、僵住、拒绝均可，关键是符合人物和刚发生的事。只采用公开可观察信息；人物不能知道不在场时的私密事件。interaction 只描述交流是否持续：NPC 主动交谈可返回 active；明确结束、离开、不能交流可返回 ended，否则 null；target_id 必须是给定人物。安全边界优先，必要时概括或淡出，禁止把模型拒绝说明写作人物台词。';
 export function characterContext(save:SavePackage,targetId?:string){
   const view=publicView(save),player=view.entities.find(e=>e.id===view.player_id);
-  const characters=view.entities.filter(e=>e.components.character&&(e.id===targetId||e.components.location?.location_id===player?.components.location?.location_id)).slice(0,8);
+  // The explicit interlocutor must survive a crowd's insertion order. The
+  // player is not an NPC voice and must not consume this bounded NPC budget.
+  const characters=view.entities.filter(e=>e.id!==view.player_id&&e.components.character&&
+    (e.id===targetId||e.components.location?.location_id===player?.components.location?.location_id))
+    .sort((a,b)=>Number(b.id===targetId)-Number(a.id===targetId)).slice(0,8);
   return {
     scene:{time:view.time,location:player?.components.location??null,local_position:player?.components.scene_position??null},
     conversation_focus:view.interaction_context??null,
     characters:characters.map(e=>({id:e.id,name:e.components.identity?.name,
+      location_id:e.components.location?.location_id??null,present:!!player?.components.location?.location_id&&e.components.location?.location_id===player.components.location.location_id,
       allowed_persona:composePersonaContext(save,e.id,1000,false)?.fields??{},
       public_description:String(e.components.identity?.description??'').slice(0,500),traits:e.components.traits??null,
       observable_condition:e.components.condition??null,relationship:relationshipSummary(view,e).text,
@@ -23,9 +28,25 @@ export function characterContext(save:SavePackage,targetId?:string){
     guidance:continuityGuidance,
   };
 }
-export function assertNotRefusal(value:{narrative?:string;dialogue?:string|null}){
-  const text=[value.narrative,value.dialogue].filter(Boolean).join('\n');
-  if(/作为(?:一个)?\s*(?:AI|人工智能|语言模型)|as an? (?:AI|language model)|(?:我|I)\s*(?:无法|不能|不能够|cannot|can't)\s*(?:协助|帮助|生成|提供|继续描写|help|assist|generate).{0,60}(?:内容|请求|场景|content|request)|违反.{0,12}(?:安全政策|内容政策)/i.test(text))throw new ProviderError('refusal','Narrative contains provider refusal','本段描写需要安全降级');
+/** NPC refusals are speech, not a provider failure. Only explicitly bound,
+ * quoted utterances may be removed from the assistant-refusal scan. Provider
+ * self-identification is rejected even inside such an utterance. */
+export function assertNotRefusal(value:{narrative?:string;dialogue?:string|null;speaker?:string|null;
+  scene_beats?:{kind:string;speaker_id?:string;utterance?:string}[]},speakerIds:ReadonlySet<string>=new Set()){
+  const all=[value.narrative,value.dialogue].filter(Boolean).join('\n');
+  const explicit=/作为(?:一个)?\s*(?:AI|人工智能|语言模型)|as an? (?:AI|language model)|违反.{0,12}(?:安全政策|内容政策)/i;
+  const refusal=/(?:我|I)\s*(?:无法|不能|不能够|cannot|can't)\s*(?:协助|帮助|生成|提供|继续描写|help|assist|generate).{0,60}(?:内容|请求|场景|content|request)/i;
+  let body=value.narrative??'';
+  const speech=(value.scene_beats??[]).filter(beat=>beat.kind==='speech'&&speakerIds.has(beat.speaker_id??'')&&beat.utterance)
+    .map(beat=>beat.utterance!);
+  const boundDialogue=Boolean(value.speaker&&speakerIds.has(value.speaker));
+  if(boundDialogue&&value.dialogue&&!speech.includes(value.dialogue))speech.push(value.dialogue);
+  for(const utterance of speech)for(const [open,close] of [['“','”'],['「','」'],['『','』'],['"','"']]){
+    const quote=open+utterance+close,index=body.indexOf(quote);
+    if(index>=0){body=body.slice(0,index)+' '.repeat(quote.length)+body.slice(index+quote.length);break;}
+  }
+  if(explicit.test(all)||refusal.test(body+'\n'+(boundDialogue?'':value.dialogue??'')))
+    throw new ProviderError('refusal','Narrative contains provider refusal','本段描写需要安全降级');
 }
 const normalize=(s:string)=>s.toLowerCase().replace(/[\p{P}\p{S}\s]/gu,'');
 function similarity(a:string,b:string){

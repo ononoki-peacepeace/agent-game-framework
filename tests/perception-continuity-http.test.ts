@@ -122,7 +122,7 @@ describe('recorded bodily state governs the next HTTP turn',()=>{
     expect(result.view.last_turn.presentation).toMatchObject({status:'degraded'});
     expect(result.view.last_turn.presentation.reasons.join(' ')).toContain('perception');
     expect(result.message).not.toContain('看得很清楚');
-    expect(result.view.notices.join('')).toContain('降级');
+    expect(result.view.notices.join('')).not.toMatch(/降级|保存状态为准/);
     // 5. A presentation failure did not roll back or re-run the settled world outcome.
     expect(after.state_revision).toBe(before.state_revision+1);
     expect(receipt.commit_status).toBe('committed');

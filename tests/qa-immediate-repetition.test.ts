@@ -127,7 +127,7 @@ describe('immediate bounded repetition through existing Core',()=>{
     const turn=executeFreeform(fixture(),text,{...proposal(),repetition:null},randomUUID(),rng([.01,.99]));
     const receipt=turn.save.resolution_receipts!.at(-1)!;
     const result=physicalNarrativeFallback(turn.save,receipt,false);
-    expect(result.narrative).toContain('未能建立接触');expect(result.scene_beats?.every(beat=>beat.kind==='narration')).toBe(true);
+    expect(result.narrative).toContain('没能碰到对方');expect(result.scene_beats?.every(beat=>beat.kind==='narration')).toBe(true);
     turn.save.npc_agent_state??={};turn.save.npc_agent_state.npc_lin=emptyNpcAgentState();
     turn.save.npc_agent_state.npc_lin.last_decisions=[{event_ref:`reaction:${receipt.request_id}`,kind:'speech',summary:'要求停止',target_id:'player',revision:1,speech:'やめてください！'}];
     expect(physicalNarrativeFallback(turn.save,receipt,false).scene_beats?.every(beat=>beat.kind==='narration')).toBe(true);

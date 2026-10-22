@@ -59,9 +59,10 @@ describe('presentation degradation survives actual Agent HTTP and saved views',(
     expect(result.view.last_turn.presentation).toMatchObject({status:'degraded',reasons:expect.any(Array)});
     expect(result.view.last_turn.presentation.reasons.length).toBeGreaterThan(0);
     expect(result.narration).toEqual(result.view.last_turn.presentation);
-    expect(result.view.notices.join('')).toContain('降级');
+    expect(result.view.notices.join('')).not.toMatch(/降级|保存状态为准/);
     expect(result.message).not.toContain('钥匙');
-    expect(renderToStaticMarkup(createElement(SceneStory,{view:result.view,override:null,onSelectEntity:()=>{}}))).toContain('场景描写已降级');
+    const html=renderToStaticMarkup(createElement(SceneStory,{view:result.view,override:null,onSelectEntity:()=>{}}));
+    expect(html).toContain('<summary>叙事说明</summary>');expect(html).not.toMatch(/<details[^>]*open|事实摘要|保存状态为准/);
     const after=(await store.read())!;
     expect(after.state_revision).toBe(before.state_revision+1);
     expect(publicView(validateSave(JSON.parse(JSON.stringify(after)))).last_turn).toEqual(result.view.last_turn);

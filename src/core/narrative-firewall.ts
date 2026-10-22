@@ -1,3 +1,4 @@
+import {physicalOutcomeProse} from '../narrative/physical-presentation.js';
 import {GameError,type SavePackage} from './schema.js';
 import type {z} from 'zod';
 import {narrativeResultSchema} from '../ai/contracts.js';
@@ -528,13 +529,7 @@ export function canonicalResolutionNarrative(receipt:Receipt,hidden:boolean,perc
   if(receipt.semantic_action==='WAIT'&&!hidden&&receipt.kind==='DETERMINISTIC'&&receipt.outcome==='success')
     return receipt.time_cost===0?'你停了下来。':
       interruptedActivity(receipt)?`你等了${receipt.time_cost}分钟便停了下来。`:`你等了${receipt.time_cost}分钟。`;
-  if(receipt.physical_outcome){
-    const physical=receipt.physical_outcome;
-    return !physical.contact?'这次强制动作没能建立接触，没有造成已确认的伤害。':
-      physical.harmed?'你的动作造成了已经确认的伤害，对方的身体状态随之改变。':
-      physical.kind==='restrain'&&(physical.control_established??['success','strong_success'].includes(receipt.outcome))?'你暂时控制住了对方，这次没有造成已确认的伤害。':
-        '你接触到了对方，但进一步的动作没有得手，这次没有造成已确认的伤害。';
-  }
+  if(receipt.physical_outcome)return physicalOutcomeProse(receipt,'对方',hidden)!;
   if(perception||isActivePerception(receipt.semantic_action)){
     const discovered=receipt.canonical_facts.filter(fact=>fact.startsWith('发现已存在的证据：'));
     return discovered.length?`你仔细查看了眼前的情形。${discovered.map(fact=>fact.slice('发现已存在的证据：'.length)).join('；')}`:
@@ -569,16 +564,13 @@ export function physicalNarrativeFallback(save:SavePackage,receipt:Receipt,hidde
   const target=save.entities.find(entity=>entity.id===receipt.target_id);
   const name=String(target?.components.identity?.name??'对方');
   const physical=receipt.physical_outcome!;
-  const action=physical.contact?`你的动作触及了${name}。${physical.harmed?'这次动作确实造成了伤害。':
-    physical.control_established?'接触之后，你暂时维持住了控制。':'但接下来的动作没有达到预期；本次没有新增已确认的伤害。'}`:
-    `你对${name}发起了尝试，这一次未能建立接触。`;
+  const action=physicalOutcomeProse(receipt,name,hidden)!;
   const attempts=related.filter(r=>receipt.repetition?.attempt_ids.includes(r.request_id)&&r.physical_outcome);
-  const sequence=attempts.map((r,i)=>{const p=r.physical_outcome!;
-    return `第${i+1}次尝试，${!p.contact?'你没能触及对方':p.harmed?'你的动作触及对方，造成了已确认的伤害':p.control_established?'你触及对方，维持住了控制':'你触及对方，但没有造成新的已确认伤害'}。`;}).join('');
+  const sequence=attempts.map(r=>physicalOutcomeProse(r,name,hidden)).join('');
   const departures=related.filter(r=>r.actor_id!==receipt.actor_id&&r.movement_route?.location_ids[0]===actor?.components.location?.location_id&&
     r.movement_route?.location_ids.at(-1)!==actor?.components.location?.location_id).map(r=>
       `${String(save.entities.find(e=>e.id===r.actor_id)?.components.identity?.name??'在场的人')}离开了这里。`).join('');
-  const prose=[hidden?canonicalResolutionNarrative(receipt,true):sequence||action,
+  const prose=[sequence||action,
     receipt.repetition?`这段尝试持续了${receipt.repetition.elapsed_seconds}秒，随后停下。`:null,departures||null]
     .filter(Boolean).join('\n\n');
   const beats:NonNullable<SavePackage['last_turn']>['scene_beats']=[{kind:'narration',text:prose.slice(0,1200)}];

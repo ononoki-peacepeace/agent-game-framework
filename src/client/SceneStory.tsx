@@ -6,7 +6,7 @@ import {visibleStoryBeats,anchoredStoryBeats} from './story-beats.js';
 type SceneStoryProps={view:PublicView;override:string|null;onSelectEntity:(entity:Entity)=>void};
 export function SceneStory(props:SceneStoryProps){
   return <>{props.view.last_turn?.presentation?.status==='degraded'&&
-    <p role="status" className="narration-notice">场景描写已降级为事实摘要，本轮世界结算结果以已保存状态为准。</p>}
+    <details className="narration-notice"><summary>叙事说明</summary><p>本段依据实际行动结果直接呈现。</p></details>}
     <SceneStoryContent {...props}/></>;
 }
 function SceneStoryContent({view,override,onSelectEntity}:SceneStoryProps){

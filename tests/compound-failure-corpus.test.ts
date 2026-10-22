@@ -57,8 +57,8 @@ it.each(atomic)('retains truthful attempted physical/speech outcome physicalLast
   expect(after.runtime.time.minute-before.runtime.time.minute).toBe(before.definition.ruleset.talk_minutes+1);
   for(const id of ['player','npc_lin'])expect(after.entities.find(e=>e.id===id)!.components.condition!.stamina).toBe(49);
   expect(after.entities.find(e=>e.id==='npc_lin')!.components.condition!.hp).toBe(100);
-  expect(prose).toMatch(/你向林舟开了口/);expect(prose).toMatch(sampleId==='contact-miss'?/(?:没能|未能).{0,12}接触/:/没有.{0,15}伤害/);
-  const physicalPosition=prose.search(sampleId==='contact-miss'?/没能|未能/:/触及/);expect(physicalPosition>=0).toBe(true);
+  expect(prose).toMatch(/你向林舟开了口/);expect(prose).toMatch(sampleId==='contact-miss'?/(?:没能|未能).{0,12}(?:接触|碰到)/:/没有.{0,15}伤害/);
+  const physicalPosition=prose.search(sampleId==='contact-miss'?/没能|未能/:/触及|碰到了/);expect(physicalPosition>=0).toBe(true);
   expect(prose.indexOf('你向林舟开了口')<physicalPosition).toBe(physicalLast);
   expect(after.last_turn!.dialogue??null).toBeNull();expect(after.last_turn!.scene_beats?.filter(b=>b.kind==='speech')??[]).toHaveLength(0);
   expect(prose).not.toMatch(/林舟受伤了|造成了伤害|整理尚未开始/);expect(after.last_turn!.presentation?.status).toBe('degraded');
