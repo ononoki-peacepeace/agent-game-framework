@@ -7,6 +7,7 @@
   "tests/compound-narration-aggregation.test.ts",
   "tests/compound-three-world-prose.test.ts",
   "tests/consumption-boundaries.test.ts",
+  "tests/consumption-compound-pending.test.ts",
   "tests/consumption-lifecycle.test.ts",
   "tests/consumption-narration.test.ts",
   "tests/consumption-npc.test.ts",

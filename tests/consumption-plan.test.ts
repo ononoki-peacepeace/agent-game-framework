@@ -43,7 +43,7 @@ it.each(narrativeWorldKinds.flatMap(kind=>(['normal','shortage','interrupted','a
   expect(receipts.every(r=>r.commit_status==='committed')).toBe(true);
   if(boundary==='normal'||atomic){
    expect(response.plan?.status).toBe('completed');expect(quantity(after)).toBe(0);
-   expect(receipts.filter(r=>r.consumption?.status==='completed')).toHaveLength(atomic?2:1);
+   expect(receipts.filter(r=>r.consumption?.status==='completed')).toHaveLength(1);
   }else{
    expect(response.plan?.goals[2].status).toBe('skipped');expect(response.plan?.goals[1].status).not.toBe('completed');expect(quantity(after)).toBe(1);
    if(boundary==='interrupted'){

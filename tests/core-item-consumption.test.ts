@@ -4,10 +4,12 @@ import {writeFile} from 'node:fs/promises';
 import {narrativeWorldKinds} from './fixtures/narrative-worlds.js';
 import {consumptionWorld,quantity} from './fixtures/consumption-worlds.js';
 import {executeAction} from '../src/core/runtime.js';
-import {validateSave} from '../src/core/state.js';
+import {validateSave,newSave} from '../src/core/state.js';
 const run=randomUUID();
 it.each(narrativeWorldKinds)('settles actual partial-stack and final consumption without inventing benefits in %s',async kind=>{
  const {save}=await consumptionWorld(kind),before=structuredClone(save);
+ const authored=newSave(save.definition);expect(quantity(authored)).toBe(3);
+ expect(authored.entities.find(e=>e.id==='qa_bread')!.components.item!.consumable).toEqual({method:'eat',minutes:2});
  const action={type:'CONSUME_ITEM',target_id:'qa_bread',parameters:{quantity:2}};
  let actual:unknown;
  try{actual=executeAction(save,action,randomUUID());}catch(error){actual={error:String(error)};}

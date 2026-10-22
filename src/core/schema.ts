@@ -219,7 +219,7 @@ export const saveSchema = z.strictObject({
   event_state: z.strictObject({ fired: z.array(id).max(500), counts: dictionary(integer) }),
   runtime: z.strictObject({ time: z.strictObject({ day: integer, minute: integer }),
     scene_seconds:z.number().int().min(0).max(59).optional(),
-    receipts: z.array(z.strictObject({ id: z.string().uuid(), fingerprint: z.string(), revision: integer })).max(100) }),
+    receipts: z.array(z.strictObject({ id: z.string().uuid(), fingerprint: z.string(), revision: integer,compound_steps:z.array(z.string().min(1).max(2000)).min(2).max(4).optional() })).max(100) }),
   map_state: mapStateSchema.default({ known_location_ids: [], dynamic_locations: [], dynamic_routes: [],dynamic_regions:[] }),
   ai: z.strictObject({ threads: dictionary(z.string().max(200)) }),
   last_turn: narrativeSchema.nullable(),

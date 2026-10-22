@@ -6,6 +6,10 @@ export async function consumptionWorld(kind:NarrativeWorldKind){
   item:{weight:.1,stackable:true,consumable:{method:'eat',minutes:2}},discovery:{known_to_player:true}}};
  const other=structuredClone(bread);other.id='qa_other_bread';
  save.entities.push(bread,other);
+ save.definition.entities.push(structuredClone(bread),structuredClone(other));
+ (save.definition.entities.find(e=>e.id===save.player_state.entity_id)!.components.inventory!.items as Record<string,number>).qa_bread=3;
+ const initialNpc=save.definition.entities.find(e=>e.id==='npc_lin')!;initialNpc.components.inventory??={items:{}};
+ (initialNpc.components.inventory.items as Record<string,number>).qa_other_bread=2;
  const player=save.entities.find(e=>e.id===save.player_state.entity_id)!;
  (player.components.inventory!.items as Record<string,number>).qa_bread=3;
  (save.entities.find(e=>e.id==='npc_lin')!.components.inventory??={items:{}}).items={qa_other_bread:2};
