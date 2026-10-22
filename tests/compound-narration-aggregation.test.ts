@@ -44,10 +44,10 @@ describe('compound narration degradation through the service',()=>{
     await f.service.turn(request,undefined,undefined,undefined,false,undefined,steps);
     const after=await f.service.current();
     expect(after.state_revision).toBe(before.state_revision+1);
-    expect(after.last_turn?.narrative).toContain('1、');
-    expect(after.last_turn?.narrative).toContain('2、');
     expect(after.last_turn?.narrative).toContain('伸个懒腰');
     expect(after.last_turn?.narrative).toContain('整理桌面');
+    expect(after.last_turn!.narrative.indexOf('伸个懒腰')).toBeLessThan(after.last_turn!.narrative.indexOf('整理桌面'));
+    expect(after.last_turn!.narrative).not.toMatch(/^\d+、/m);
     expect(after.last_turn?.presentation).toMatchObject({status:'degraded'});
     expect(attempts).toBe(3);
   });

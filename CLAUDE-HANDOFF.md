@@ -784,6 +784,49 @@ Windows owner should inspect this tiny firewall hunk against current main at a
 safe checkpoint and integrate only after explicit review; do not auto-merge.
 Broader paraphrase/historical-state semantics remain outside this bounded corpus.
 
+
+## Independent cloud Narrator program — N5 / N7 / N8 / N9 — 2026-10-21
+
+Branch `codex/cloud-narrator-quality-program`; inspected/rebased main
+`dc3ac77725c88903972dc75a1b37aeb4faa92533`. Tested product/fixture/tool source:
+`80e2ac91a68a6e4e61b791632c004ba7e0573bd0`. Final follow-up is documentation/evidence only.
+Scope: N5.3/4, N7.3/4, N8.2/4, N9.1–4. N4 PR #1 is inherited; R/A/W/N3/N6/N10
+conditions are not claimed. Frozen criteria/protocol/ledger, dependency files,
+Core rules/transactions and N3 executor are unchanged.
+
+Five reproduced presentation/context defects repaired: remote/unattributed
+history returning during refinement; salient old own-memory disappearing from
+Narrator projection; generic item relocation/handoff prose; numbered compound
+fallback narration; raw scheduled-clock labels leaking into prose. Capture-hook
+cross-case identity leakage was separately diagnosed and repaired; its original
+95-identity failure audit is retained. See `docs/narrator-cloud-program.md` for
+all original fixture/compile failures, test boundaries and shared-file conflicts.
+
+Current-source full offline run: 56/56 cases, 103 passed, zero failed/skipped,
+649 unchanged hashes, zero cross-case identities; three distinct structures,
+72h each, nine new store/service readbacks/replays, actual before/after item and
+partial-plan/write-boundary evidence. Strict root/client/server build exit0,
+133.954s. Additional targeted reports overlap; no whole-project suite claim.
+Public per-case prose/status results: `docs/narrator-program-offline-results.md`.
+Raw final run: `.agent-runtime/codex/narrator-program/2026-10-21T15-36-56-589Z/`.
+
+No real Provider call, fake human rating, production deployment/save edit or
+Release. All quality cells remain unreviewed and no condition credit is awarded;
+ledger remains109/160. Dry-run queue:100 actual-context candidate requests,
+2,596,716 input characters, up to600,000 output tokens, not actual use/cost.
+A chosen Provider/model, explicit call/output or fee authorization, real outputs
+and real textual/independent review are the remaining external breakpoint.
+The ten-condition matrix distinguishes implementation candidates from those
+unexecuted gates. Do not treat scripted voice controls as real model evidence.
+
+Stable checkpoints are pushed. GitHub GraphQL PR creation returned Forbidden;
+manual PR: https://github.com/ononoki-peacepeace/agent-game-framework/pull/new/codex/cloud-narrator-quality-program
+Windows must inspect the Narrator context/projection, two fallback call sites,
+optional compound presentation argument and display-test changes before safe
+integration. Do not overwrite unmerged work or auto-merge; uniform scoring stays
+with Windows/user review. Resume from the source-hash-bound queue after actual
+authorization, retaining refusals, truncations, raw failures and low judgments.
+
 ## Cloud N3/N6 independent checkpoint (2026-10-22)
 
 Branch `codex/cloud-narrator-compound-items`, latest remote main base `dc3ac77`; PR #2 is not incorporated. N3 actual missing attributed-turn display repaired using optional public `AgentResult.story_turns` snapshots and existing per-turn renderer. Tests and raw failed evidence documented in `docs/cloud-compound-items.md`. No Core/schema/frozen ledger edits. Shared conflicts: `src/agent/executor.ts`, `src/agent/contracts.ts`, `src/client/agent-presentation.ts`, `SceneStory.tsx`, App state type and props. Preserve PR #2 fallback/history work independently. 73 selected tests and strict isolated build pass; N3.4 quality remains unmet. Continuing N6.3/N6.4 actual item projection/possession/lifecycle work next; those unstaged files are not part of this N3 checkpoint.
@@ -791,3 +834,7 @@ Branch `codex/cloud-narrator-compound-items`, latest remote main base `dc3ac77`;
 ### Cloud N6 fixed item lifecycle checkpoint (2026-10-22)
 
 Continuing on `codex/cloud-narrator-compound-items`, after03bd29f. Fixes scene/held/packed projection and ownership provenance; explicit present possession/quantities; receipt-backed handover item reference with private NPC state redacted; per-stage inventories retained in additive optional pending metadata so real interrupted compound resumes without re-executing Core. Actual three-world authored positive/negative lifecycle, partial plan, pending restart, byte-exact replay and NPC return/use controls. `docs/cloud-compound-items.md` contains actual failures and root causes. Final selected27files293pass0fail0skip,554 unchanged input hashes, strict isolated root/client/server build exit0. Frozen score/status untouched. New main7cd0c8a (PR #2) was observed late in the batch; independent checkpoint preserves tested originaldc3ac77 base, integration probe follows. Shared surfaces runtime/service/firewall/action-context/PendingTurn; preserve PR #2 history/memory/fallback work. No paid call/formal save/production/credentials operation.
+
+### Cloud latest-main compatibility checkpoint
+
+Merged remote main7cd0c8a (PR #2) into the independent cloud branch. All production modules merged automatically, preserving both implementations. Only append-only handoff paragraphs conflicted; both complete sections were retained in chronological order. No PR or main merge by this cloud task. Latest-main regression follows; original standalone checkpoints03bd29f/b3e542f remain independently reviewable.

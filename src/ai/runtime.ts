@@ -31,6 +31,7 @@ import { createRegistry } from '../modules/index.js';
 import { observe, errorText } from '../observability/index.js';
 import { defaultRoleplayConfig, roleplayPolicyFragment } from '../narrative/policy.js';
 import {narratorCharacterCognition,narratorCognitionPolicy} from '../narrative/character-cognition.js';
+import {narratorHistory} from '../narrative/history.js';
 import type {RoleplayConfig} from '../narrative/schema.js';
 import {reviewWorldNovelty} from '../world/novelty.js';
 import {WorldCandidateError,normalizeWorldCandidate,worldCandidateIssues,initialNpcRequirement,projectWorldRepair,projectNoveltyRepair,projectSemanticRepair,compiledWorldIssue,publicWorldCreationFailure,type WorldIssue} from './world-initializer-repair.js';
@@ -659,16 +660,14 @@ export class AIRuntime {
     const hereId=view.entities.find(entity=>entity.id===view.player_id)?.components.location?.location_id;
     const here=view.locations.find(location=>location.id===hereId);
     const narratorCharacters=characterContext(save,action.target_id);
-    const narratorContext={...narratorCharacters,
-      character_cognition:narratorCharacterCognition(save,[...narratorCharacters.characters.map(entry=>entry.id),
-        ...(receipt?.physical_outcome?.witness_ids??[])]),cognition_policy:narratorCognitionPolicy};
     const latestScene=save.narrative_history?.at(-1);
     const sameScene=latestScene?.location_id===hereId&&!receipt?.movement_route;
-    const sceneHistory=(save.narrative_history??[]).slice(-6).map(entry=>({
-      location_id:entry.location_id??null,time:entry.time,historical:true,
-      ...((entry.location_id===hereId||entry.location_id==null)&&!receipt?.movement_route?
-        {narrative:entry.narrative.slice(0,700)}:{}),
-      speech_events:entry.speech_events??[]}));
+    const sceneHistory=narratorHistory(save,hereId,Boolean(receipt?.movement_route));
+    // Ordinary narration and expression-only refinement share one historical
+    // frame. Refinement must not reintroduce remote scenery or lose attribution.
+    const narratorContext={...narratorCharacters,recent_turns:sceneHistory,
+      character_cognition:narratorCharacterCognition(save,[...narratorCharacters.characters.map(entry=>entry.id),
+        ...(receipt?.physical_outcome?.witness_ids??[])]),cognition_policy:narratorCognitionPolicy};
     // Keep map identity/topology, but do not present every known room's fixtures
     // as scenery available at the current location (especially its parent).
     narratorView.locations=view.locations.map(location=>location.id===hereId?location:{...location,description:''});
@@ -756,7 +755,7 @@ export class AIRuntime {
         ...(compoundReceipts?{compound_steps:compoundReceipts.map(step=>({semantic_action:step.semantic_action,time_cost:step.time_cost,
           actor_id:step.actor_id,target_id:step.target_id,item_entities:narratorReceiptItems(save,step,view),movement_route:step.movement_route??null,effects:step.effects,activity:step.activity??null,canonical_facts:step.canonical_facts}))}:{})},
         mechanical_claim_policy:'activity 只表示角色在 receipt.activity 指定地点、按记录时长进行了普通活动；复合行动也可引用 compound_steps 中对应的 activity。必须引用对应的“进行了活动” canonical_facts，不能表示完成具体页数、任务或其他持久变化。progress 只表示有 progress_changes 支持的持久进度，不能用 activity 代替。正文中的成功失败、物品、伤害、金钱、位置、秘密发现与随机结果，也只能改写 resolution_receipt 明确许可的事实；每条此类声明必须在 mechanical_claims 中给出对应 canonical_facts 的 fact_index。不得将普通观察扩写为额外的玩家操作；没有相应 action/receipt 时，不得声称玩家推开、敲击、拿取、移动或使用了别的对象。无法引用时只写动作尝试和感官环境，不要自行决定结果。'}:{}),
-      character_context:{...narratorContext,recent_turns:sceneHistory},
+      character_context:narratorContext,
       relationship_dimensions: save.definition.ruleset.relationship_dimensions,
       scene_context: {
         authoritative_recent_actions:recentSettledActions(save),
@@ -805,7 +804,8 @@ export class AIRuntime {
     return this.refineNarrative(save,parsed,facts,narratorContext);
   }
   private async refineNarrative(save:SavePackage,first:z.infer<typeof narrativeResultSchema>,facts:string[],
-    context:ReturnType<typeof characterContext>&{character_cognition:ReturnType<typeof narratorCharacterCognition>;cognition_policy:string}){
+    context:Omit<ReturnType<typeof characterContext>,'recent_turns'>&{recent_turns:ReturnType<typeof narratorHistory>;
+      character_cognition:ReturnType<typeof narratorCharacterCognition>;cognition_policy:string}){
     const health=narrativeHealth(save,first,facts);if(!health.detected)return first;
     observe('warn','narrative.degeneration_detected',{module:'ai',metadata:health});
     try{
