@@ -845,3 +845,22 @@ projection and physical reactions instead of only flat facts. No authoritative
 NPC/body/action changes. Original failed runs, fixture mistakes and one unchanged
 NPC-owner timing failure are recorded in the continuation document. Next: pinned
 37-file regression, strict build and existing PR #2 offline quality capture.
+
+### Final concrete-outcomes verification and recovery point
+
+Product source `50eb56327bd3ffeff64ecbb29ee1eab39b929301`: 37 files / 465 passed,
+0 failed/skipped; 657 unchanged inputs; strict root/client/server build exit 0.
+`684a6a610faf6f55b34759c2b1f9d8018df7b129` changes only old corpus text patterns
+and documentation; product bytes unchanged. Existing 56-case quality capture:
+103 passed, 656 unchanged hashes, zero missing/cross-case cases. Prior failed
+95/8 capture and the transient unexpanded STACK_TRACE_ERROR are preserved.
+No model calls, quality scores or formal acceptance changes. Frozen score109/160.
+
+Branch `codex/cloud-narrator-concrete-outcomes`, base main `7cd0c8a` (PR #2).
+Do not overwrite or merge PR #3–#7 automatically. Read the explicit four-file
+merge-preview instructions in `docs/cloud-narrator-concrete-outcomes.md`; retain
+both item privacy/event projections and multi-turn story rendering. Next external
+checkpoint: Windows compatibility integration, then actual model/independent
+text judgment under the frozen standards. Consumption remains on prior PRs and
+was not redeveloped here. No reproduced failure remains in the declared current
+offline suites; broader naturalness and arbitrary language remain unverified.

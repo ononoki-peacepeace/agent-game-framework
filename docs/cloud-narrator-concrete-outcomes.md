@@ -95,7 +95,7 @@ private detail as its public message; their assertion was corrected to the error
 type. These original reports are retained. The next seven-file run passed 47/48;
 an unchanged NPC-owner test produced STACK_TRACE_ERROR at 8.27 seconds. Its
 isolated unchanged recheck passed 2/2 in 7.29 seconds total (260ms test execution).
-This timing failure is retained; final affected run must still be green.
+The JSON reporter did not expand the cause. This failure is retained; the final affected run must still be green.
 
 Three actual partial-contact Core cases further show that expression refinement
 received flat facts and a previous paragraph, but lost the ordinary generation's
@@ -134,3 +134,70 @@ Actual new outputs use `碰到`. All receipt, stamina, HP, timing and order inpu
 are retained in that failed capture. Two text patterns are updated to admit the
 same factual result; their non-text settlement and replay assertions remain.
 This failed capture is not represented as a passing quality benchmark.
+
+## Remaining fourteen-condition matrix (no score changes)
+
+| Condition | Frozen ledger | Actual boundary |
+|---|---|---|
+| A8.3 | unmet | Prior consumption delivery only; no Core/resource work repeated here. Windows integration remains external. |
+| N3.4 | unmet | Concrete physical forms and coherent refinement improve bounded samples; general long-action naturalness is not established. |
+| N6.3 | unmet | Prior item PRs remain separate. This main-based branch does not have PR #5 consumption. |
+| N6.4 | unverified | Prior real item/replay evidence remains on PR #5–#7; combined integration and consumption regression still needed. |
+| N5.3 | unmet | Crowded focus and directional relationship loss repaired; context correctness is not differentiated generated voice. |
+| N5.4 | unverified | Authorized actual-model dialogue and independent personality/relationship/memory review still absent. |
+| N7.3 | unmet | Preserved absence boundaries and refinement settlement/history; generated long-term expression still needs assessment. |
+| N7.4 | unverified | Existing three-world 72h offline readbacks are re-executed for regression; real long-text quality remains unverified. |
+| N8.2 | unmet | Specific result rendering, bounded recovery and quieter UI implemented; published samples still require quality judgment. |
+| N8.4 | unverified | Current actual-model comparison absent. Offline failures and controlled outputs cannot satisfy this condition. |
+| N9.1 | unmet | Existing 56-case program reused, with this batch’s raw-output supplement and blank review fields. |
+| N9.2 | unmet | Existing anchored dimensions/pairs retained. No automatic naturalness or voice score assigned. |
+| N9.3 | unverified | Current-source offline execution provided with retained failures; no authorized normal-model counterpart. |
+| N9.4 | unverified | No independent/human verdict; all quality ratings remain blank. |
+
+For receipts that only record a failed check, the cause remains unknown. This
+branch does not invent dodge/block/counterattack events or modify Windows' Core
+rules to produce them. Old receipts without action forms retain less specific
+prose. Finite Chinese regression samples do not prove arbitrary language or every
+world configuration. Technical transaction failures still retain actionable Agent
+status messages; they are not silently converted into successful story outcomes.
+
+The product code at `50eb563` passed the exact 37-file inventory: **465 passed,
+0 failed, 0 skipped**, 634.31 seconds, 657 unchanged input hashes. Strict root,
+client and server build exited 0. Existing Zod-comment/bundle-size warnings remain.
+The test runner used `--testTimeout=30000` for this broad isolated environment run;
+assertions were unchanged. The later commit `684a6a6` changes only two text
+patterns in a separate corpus test and this document; all product source is
+byte-identical. The full-run source snapshot is preserved independently.
+
+Final quality capture on `684a6a610faf6f55b34759c2b1f9d8018df7b129`:
+`2026-10-22T12-09-08-714Z`, **56/56 cases, 103 passed, 0 failed/skipped**,
+656 unchanged hashes, 100 offline request envelopes, zero cross-case identities.
+The preceding `2026-10-22T12-02-57-093Z` failed capture remains in the archive.
+These test counts overlap the 37-file regression; do not sum them into coverage.
+No real-provider calls, human ratings or acceptance credits were created.
+
+Evidence bundle: `/workspace/scratch/narrator-concrete-outcomes-50eb563.zip`,
+with adjacent `.manifest.json` and `.zip.sha256`. It includes the exact full-run
+source snapshot, both quality captures, original failures, current raw contexts
+and text, byte replay checks, and an unscored 39-record supplement (nine of these
+records concern context contracts, not generated quality). The bundle contains
+only synthetic development artifacts. Current voice/naturalness judgments remain
+external. The original review packet can be processed by the existing
+`scripts/narrator-quality-review.ts`; do not submit the separate supplement to
+that original fixed-56 schema or fabricate a reviewer identity.
+
+Reproduce from a checkout named `game` with Node 24 / npm 11:
+
+```sh
+npm ci --ignore-scripts
+node scripts/agent-workspace.mjs codex test <files from docs/cloud-narrator-outcomes-tests.json> --testTimeout=30000
+node scripts/agent-workspace.mjs codex build
+node scripts/narrator-quality-program.mjs
+node scripts/four-theme-progress.mjs --check
+```
+
+The placeholder above means the explicit 37 file paths in the inventory, not a
+shell glob or all repository tests. On this cloud environment installation used
+`--offline --cache /workspace/.npm-cache`; no provider configuration was copied.
+The user-facing story samples and empty quality judgments are in the archive's
+`evidence/outcomes-review-supplement.md/json` and both `quality-program` runs.
