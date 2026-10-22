@@ -864,3 +864,13 @@ checkpoint: Windows compatibility integration, then actual model/independent
 text judgment under the frozen standards. Consumption remains on prior PRs and
 was not redeveloped here. No reproduced failure remains in the declared current
 offline suites; broader naturalness and arbitrary language remain unverified.
+
+## Narrator memory provenance continuation
+
+New branch `codex/cloud-narrator-memory-provenance`, explicitly based on PR #8
+head `dc18a72`; target that branch, not main, while PR #8 remains unintegrated.
+Only the Narrator cognition module changes product code: bounded relevant memory
+selection, chronological presentation and source/participant retention. Nine
+original three-world failures plus one imported-order failure are retained.
+Actual service/store/replay cases cover ordinary authored and refused narration.
+See `docs/cloud-narrator-memory-provenance.md`; frozen standards/score unchanged.

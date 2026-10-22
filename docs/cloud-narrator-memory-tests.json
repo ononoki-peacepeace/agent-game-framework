@@ -1,0 +1,18 @@
+{
+  "scope": "Offline affected cognition and narrative regression; no quality verdict",
+  "files": [
+    "tests/narrator-memory-provenance.test.ts",
+    "tests/narrator-memory-restart.test.ts",
+    "tests/narrator-memory-selection.test.ts",
+    "tests/narrator-character-cognition.test.ts",
+    "tests/narrator-focused-cognition.test.ts",
+    "tests/narrator-refinement-history.test.ts",
+    "tests/narrator-refinement-outcomes.test.ts",
+    "tests/narrator-expression-recovery.test.ts",
+    "tests/narrator-program-long-history.test.ts",
+    "tests/narrator-program-contrasts.test.ts",
+    "tests/npc-dialogue-style.test.ts",
+    "tests/continuity.test.ts",
+    "tests/narrator-goal-focus.test.ts"
+  ]
+}
