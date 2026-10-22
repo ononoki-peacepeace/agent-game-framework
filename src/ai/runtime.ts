@@ -1,3 +1,4 @@
+import {projectConsumptionForNarrator} from '../narrative/item-consumption.js';
 import {consumptionActionForInput} from '../core/consumption-intent.js';
 import {narratorReceiptItems} from '../narrative/item-evidence.js';
 import {actionBindingContext,authoritativeItemContext,recentSettledActions} from './action-context.js';
@@ -754,9 +755,9 @@ export class AIRuntime {
         outcome:save.resolution_history?.find(entry=>entry.check_id===receipt.check_id)?.hidden?'unconfirmed':receipt.outcome,
         time_cost:receipt.time_cost,canonical_facts:receipt.canonical_facts,effects:receipt.effects,
         activity:receipt.activity??null,storage:receipt.storage??null,progress_changes:receipt.progress_changes??[],
-        environment:receipt.environment??null,consumption:receipt.consumption??null,item_entities:narratorReceiptItems(save,receipt,view),
+        environment:receipt.environment??null,consumption:projectConsumptionForNarrator(save,receipt),item_entities:narratorReceiptItems(save,receipt,view),
         ...(compoundReceipts?{compound_steps:compoundReceipts.map(step=>({semantic_action:step.semantic_action,time_cost:step.time_cost,
-          actor_id:step.actor_id,target_id:step.target_id,consumption:step.consumption??null,item_entities:narratorReceiptItems(save,step,view),movement_route:step.movement_route??null,effects:step.effects,activity:step.activity??null,canonical_facts:step.canonical_facts}))}:{})},
+          actor_id:step.actor_id,target_id:step.target_id,consumption:projectConsumptionForNarrator(save,step),item_entities:narratorReceiptItems(save,step,view),movement_route:step.movement_route??null,effects:step.effects,activity:step.activity??null,canonical_facts:step.canonical_facts}))}:{})},
         mechanical_claim_policy:'activity 只表示角色在 receipt.activity 指定地点、按记录时长进行了普通活动；复合行动也可引用 compound_steps 中对应的 activity。必须引用对应的“进行了活动” canonical_facts，不能表示完成具体页数、任务或其他持久变化。progress 只表示有 progress_changes 支持的持久进度，不能用 activity 代替。正文中的成功失败、物品、伤害、金钱、位置、秘密发现与随机结果，也只能改写 resolution_receipt 明确许可的事实；每条此类声明必须在 mechanical_claims 中给出对应 canonical_facts 的 fact_index。不得将普通观察扩写为额外的玩家操作；没有相应 action/receipt 时，不得声称玩家推开、敲击、拿取、移动或使用了别的对象。无法引用时只写动作尝试和感官环境，不要自行决定结果。'}:{}),
       character_context:narratorContext,
       relationship_dimensions: save.definition.ruleset.relationship_dimensions,
