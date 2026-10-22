@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import {consumptionRuleSchema} from '../core/consumption-contract.js';
+import {executeConsumption,executeOpenContainer} from '../core/consumption.js';
 import { randomUUID } from 'node:crypto';
 import { assert, dictionary, integer, id, type SavePackage } from '../core/schema.js';
 import type { Module } from '../core/registry.js';
@@ -6,7 +8,7 @@ import {prepareCheck,resolveCheck} from '../core/resolution.js';
 import {worldAssert} from '../agent/outcome.js';
 import {unsealedContainerAncestors} from '../core/item-access.js';
 export type Inventory = { items: Record<string, number>; placements?: Record<string, string | null> };
-const itemSchema=z.strictObject({weight:z.number().min(0).max(100000),stackable:z.boolean(),container:z.boolean().optional(),container_id:id.optional(),placed_sequence:z.number().int().nonnegative().optional(),owner_id:id.optional(),condition:z.enum(['intact','damaged','destroyed']).optional(),tags:z.array(z.string().regex(/^[a-z][a-z0-9_]{0,39}$/)).max(12).optional(),tracking:z.enum(['incidental','tracked']).optional()});
+const itemSchema=z.strictObject({weight:z.number().min(0).max(100000),stackable:z.boolean(),consumable:consumptionRuleSchema.optional(),openable:z.boolean().optional(),container:z.boolean().optional(),container_id:id.optional(),placed_sequence:z.number().int().nonnegative().optional(),owner_id:id.optional(),condition:z.enum(['intact','damaged','destroyed']).optional(),tags:z.array(z.string().regex(/^[a-z][a-z0-9_]{0,39}$/)).max(12).optional(),tracking:z.enum(['incidental','tracked']).optional()});
 
 function playerInventory(save:SavePackage,actorId=save.player_state.entity_id){
   const player=save.entities.find(entity=>entity.id===actorId);
@@ -100,6 +102,11 @@ export const inventoryModule: Module = {
     inventory: { schema: z.strictObject({ items: dictionary(integer), placements:dictionary(z.string().nullable()).optional() }), project: (d, e, s) => e.id === s.player_state.entity_id ? d : undefined },
   },
   actions:{
+    CONSUME_ITEM:{ui:{label:'消耗物品',visibility:'text',target_component:'item'},
+      capability:{intent:'interact',description:'仅按世界声明的消耗规则减少本人持有的指定物品数量；不推定营养、治疗或其他收益',target_role:'item',parameter_roles:{quantity:'quantity'},completion_kind:'interaction_performed'},
+      parameters:z.strictObject({quantity:z.number().int().min(1).max(1000000).default(1)}),execute:executeConsumption},
+    OPEN_CONTAINER:{ui:{label:'打开容器',visibility:'text',target_component:'item'},
+      parameters:z.strictObject({}),execute:executeOpenContainer},
     TRANSFER_ITEM:{ui:{label:'交付物品',visibility:'text',target_component:'character'},
       capability:{intent:'item_move',description:'将本人持有的一件物品交给同场人物；不代表对方答应任何其他条件',target_role:'person',parameter_roles:{item_id:'item'},completion_kind:'interaction_performed'},
       parameters:z.strictObject({item_id:id}),execute(c){

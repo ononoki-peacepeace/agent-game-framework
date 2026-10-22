@@ -133,8 +133,9 @@ export function executeAction(current: SavePackage, input: unknown, requestId: s
     save.resolution_receipts=[...(save.resolution_receipts??[]),{
       request_id:requestId,action_id:action.id,actor_id:action.actor_id,target_id:action.target_id??null,
       semantic_action:action.type,kind,prerequisites:[{kind:'registered_action',subject_id:action.type,satisfied:true as const}],
-      check_id:check?.check_id??'',rolls:check?.rolls??[],outcome:check?.outcome??'success',time_cost:action.time_cost,
+      check_id:check?.check_id??'',rolls:check?.rolls??[],outcome:ctx.outcome??check?.outcome??'success',time_cost:action.time_cost,
       canonical_facts:facts.slice(0,12).map(fact=>fact.slice(0,500)),effects,
+      ...(ctx.consumption?{consumption:ctx.consumption}:{}),
       ...(ctx.movement_route?{movement_route:ctx.movement_route}:{}),
       result_entities:Object.fromEntries(Object.entries(ctx.result_entities).map(([key,ids])=>[key,[...new Set(ids)].slice(0,20)])),
       at:structuredClone(save.runtime.time),commit_status:'pending' as const,

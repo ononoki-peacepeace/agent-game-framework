@@ -7,6 +7,7 @@ import {behaviorPatchSchema} from '../ai/guidance.js';
 import {npcAgentStateSchema} from '../agent/npc-state.js';
 import {environmentStateSchema,environmentReceiptSchema} from './environment-schema.js';
 import { z } from 'zod';
+import {consumptionReceiptSchema} from './consumption-contract.js';
 
 export const VERSION = '0.1.0';
 export const id = z.string().regex(/^[a-zA-Z][a-zA-Z0-9_-]{0,79}$/).refine(x => !['constructor','prototype','__proto__'].includes(x));
@@ -149,6 +150,7 @@ export const saveSchema = z.strictObject({
     activity:z.strictObject({description:z.string().min(1).max(300),location_id:id.nullable(),duration_minutes:integer,occurred:z.literal(true)}).optional(),
     inspection_results:z.array(z.strictObject({item:z.string().min(1).max(120),result:z.enum(['found','nothing','blocked','not_checked']),detail:z.string().max(300)})).max(12).optional(),
     inspection_status:z.enum(['complete','partial','world_blocked','not_executed','objective_failure','technical_failure']).optional(),
+    consumption:consumptionReceiptSchema.optional(),
     storage:z.strictObject({item_id:id,container_id:id}).optional(),
     progress_changes:z.array(z.strictObject({key:id,before:integer,after:integer})).max(12).optional(),
     result_entities:z.record(id,z.array(id).max(20)).optional(),
