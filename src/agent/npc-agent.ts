@@ -26,6 +26,7 @@ export const npcDecisionSchema=z.strictObject({
   intent:z.string().min(1).max(300),
   proposed_action:z.strictObject({type:ref,target_id:ref.nullable(),reason:z.string().min(1).max(300),
     duration_minutes:z.number().int().min(1).max(240).nullish(),
+    quantity:z.number().int().min(1).max(1000000).nullish(),
     environment_query:environmentQuerySchema.nullish().optional()}).nullable(),
   evidence_refs:z.array(ref).max(12),
   belief_updates:z.array(z.strictObject({id:ref,proposition:z.string().min(1).max(500),
@@ -146,10 +147,11 @@ export function buildNpcAgentContext(save:SavePackage,npcId:string,event:NpcAgen
           statement:item.statement,release_condition:item.release_condition})).slice(0,6),
       self_state_instruction:'若本次决定改变了自己的姿态或是否闭眼，必须填写 self_state；只写在台词里不会被世界记录。'+
         '若 pending_release_conditions 中的条件此刻已经发生，就在 self_state 里写出恢复后的姿态或睁眼，否则该状态会继续有效。'},
+    item_action_instruction:'CONSUME_ITEM 只能用于 own_possessions 中有 consumable 世界规则的本人持有物；target_id 为该物品ID，quantity 为正整数份数。不能消费玩家或其他人的物品，不自行增加营养、治疗或时间收益。',
     own_wallet:npc.components.wallet?structuredClone(npc.components.wallet):null,
     own_possessions:save.entities.filter(entity=>Number((npc.components.inventory?.items as Record<string,number>|undefined)?.[entity.id]??0)>0)
       .map(entity=>({id:entity.id,name:entity.components.identity?.name??null,quantity:Number((npc.components.inventory?.items as Record<string,number>|undefined)?.[entity.id]??0),
-        condition:entity.components.item?.condition??'intact'})).slice(0,30),
+        condition:entity.components.item?.condition??'intact',consumable:entity.components.item?.consumable??null})).slice(0,30),
     knowledge:state.knowledge.slice(-40),beliefs:state.beliefs.slice(-40),memories,
     historical_presence:selected.historical_presence,
     own_recent_settled_actions:recentSettledActions(save,npcId),
@@ -1225,6 +1227,8 @@ export async function settleAutonomousNpcTurn(service:GameService,input:SavePack
       action={type:'TALK',target_id:targetId,parameters:{topic:(decision.speech??proposal?.reason??'近况').slice(0,2000)}};
     }else if(type==='HOLD'&&proposal){
       action={type:'HOLD',parameters:{minutes:proposal.duration_minutes??30,activity:proposal.reason}};
+    }else if(type==='CONSUME_ITEM'&&proposal&&targetId){
+      action={type:'CONSUME_ITEM',target_id:targetId,parameters:{quantity:proposal.quantity??1}};
     }else if(type==='TAKE'&&targetId&&save.entities.some(item=>item.id===targetId&&item.components.item&&item.components.location?.location_id===here)){
       action={type:'MOVE_ITEM',parameters:{item_id:targetId,to:'held'}};
     }else if(type==='DROP'&&targetId&&Number((npc.components.inventory?.items as Record<string,number>|undefined)?.[targetId]??0)>0){
@@ -1235,6 +1239,7 @@ export async function settleAutonomousNpcTurn(service:GameService,input:SavePack
       !decision.goal_updates.some(update=>update.goal_id===plan.goal_id&&update.status!=='active'));
     const expectedCost=action?.type==='MOVE'?buildNpcAgentContext(save,npc.id,{kind:'world_event',description:'核对行动时间'})
       .scene.reachable_locations.find(place=>place.id===targetId)?.travel_minutes??Infinity:
+      action?.type==='CONSUME_ITEM'?Number((save.entities.find(e=>e.id===targetId)?.components.item?.consumable as {minutes?:number}|undefined)?.minutes??Infinity):
       action?.type==='HOLD'?Number(action.parameters.minutes):action?.type==='TALK'?save.definition.ruleset.talk_minutes:1;
     if(action&&(activePlan||expectedCost>actionBudget)){
       if(!activePlan&&['MOVE','INSPECT','TALK','HOLD'].includes(action.type)&&!decision.plan_proposals.some(plan=>plan.steps?.length)){

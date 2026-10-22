@@ -1,3 +1,4 @@
+import {consumptionNarrativeIssue,consumptionEventNarrative} from '../narrative/item-consumption.js';
 import {itemPossessionIssues,type ItemPossessionInventory} from '../narrative/item-possession.js';
 import {GameError,type SavePackage} from './schema.js';
 import type {z} from 'zod';
@@ -252,6 +253,8 @@ export function validateResolvedNarrative(receipt:Receipt,result:Narrative,hidde
   const prose=[body,...(result.scene_beats??[]).filter(beat=>beat.kind==='narration').map(beat=>beat.text)].join('\n');
   if(scene){
     validateItemConditionNarrative(scene,prose);
+    const consumptionIssue=consumptionNarrativeIssue(scene,prose,compoundReceipts??[receipt]);
+    if(consumptionIssue)throw new NarrativePatternError('item_consumption',prose.indexOf(consumptionIssue),consumptionIssue,'消耗描写与Core物品消耗凭据不一致');
     const issue=itemPossessionIssues(scene,prose,settledInventories)[0];
     if(issue)throw new NarrativePatternError('item_possession',issue.index,matchedSnippet(prose,issue.index,issue.text.length),
       '旁白当前持有物与Core权威库存不一致，历史动作和归属不能代替当前持有状态');
@@ -532,6 +535,7 @@ export function canonicalCompoundNarrative(save:SavePackage,hidden:boolean,steps
 }
 
 export function canonicalResolutionNarrative(receipt:Receipt,hidden:boolean,perception=false){
+  if(!hidden&&receipt.consumption)return consumptionEventNarrative(receipt.consumption);
   if(receipt.environment&&!hidden)return receipt.canonical_facts.join(' ');
   if(receipt.semantic_action==='WAIT'&&!hidden&&receipt.kind==='DETERMINISTIC'&&receipt.outcome==='success')
     return receipt.time_cost===0?'你停了下来。':

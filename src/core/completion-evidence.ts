@@ -5,6 +5,7 @@ export const interruptedHoldFact=(minutes:number)=>`持续活动因需要处理�
 export const interruptedWaitFact=(minutes:number)=>`本次等待因需要处理的事情而暂停，实际经过 ${minutes} 分钟。`;
 /** An occurred interval is not completion of the requested activity after a foreground handoff. */
 export function interruptedActivity(receipt:NonNullable<SavePackage['resolution_receipts']>[number]){
+  if(receipt.consumption?.status==='interrupted')return true;
   if(receipt.semantic_action==='WAIT'&&receipt.kind==='DETERMINISTIC'&&receipt.outcome==='success')
     return receipt.canonical_facts.includes(interruptedWaitFact(receipt.time_cost));
   if(receipt.semantic_action==='HOLD'&&receipt.kind==='DETERMINISTIC'&&receipt.outcome==='success')

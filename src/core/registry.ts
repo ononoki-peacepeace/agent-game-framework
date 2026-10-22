@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type {ConsumptionReceipt} from './consumption-contract.js';
 import type { Entity, PanelMeta, ComponentData } from '../shared/contracts.js';
 import { assert, safeParse, type Action, type SavePackage, type GameEvent, type MovementRoute } from './schema.js';
 import type { RNG } from './dice.js';
@@ -15,6 +16,8 @@ export interface ActionContext {
   emit(event: GameEvent): void; advance(minutes: number): void; facts: string[];
   result_entities:Record<string,string[]>;
   movement_route?:MovementRoute;
+  consumption?:ConsumptionReceipt;
+  outcome?:'partial_success';
   next_time_boundary?:()=>number|null;
   npc_time_budget?:{plan_actions:number;scope_id:string};
   shared_world_interval?:boolean;

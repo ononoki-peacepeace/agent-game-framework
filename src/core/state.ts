@@ -242,6 +242,8 @@ export function validateSave(input: unknown, suppliedRegistry?: ModuleRegistry):
     assert(Boolean(placement.location_id||placement.anchor_entity_id||placement.scene_scope),'隐藏事实缺少场景定位');
   }
   }
+  const disposableRules=save.definition.ruleset.ordinary_item_consumption??[];
+  assert(new Set(disposableRules.map(rule=>rule.name)).size===disposableRules.length,'普通临时物品消耗规则名称重复');
   registry.validate(save);
   if(save.interaction_context&&!activeFocus(save))save.interaction_context.status='ended';
   // Validate the embedded initial world as well; imports must remain self-contained and valid.

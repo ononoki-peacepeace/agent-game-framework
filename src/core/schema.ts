@@ -7,6 +7,7 @@ import {behaviorPatchSchema} from '../ai/guidance.js';
 import {npcAgentStateSchema} from '../agent/npc-state.js';
 import {environmentStateSchema,environmentReceiptSchema} from './environment-schema.js';
 import { z } from 'zod';
+import {consumptionReceiptSchema} from './consumption-contract.js';
 
 export const VERSION = '0.1.0';
 export const id = z.string().regex(/^[a-zA-Z][a-zA-Z0-9_-]{0,79}$/).refine(x => !['constructor','prototype','__proto__'].includes(x));
@@ -65,6 +66,7 @@ export const eventSchema = z.strictObject({
 export const physicalIntentSchema=z.strictObject({forms:z.array(z.enum(['strike','push','restrain','other'])).min(1).max(4),source_quote:z.string().min(2).max(1000)});
 export const rulesSchema = z.strictObject({
   minutes_per_day: integer.min(60).max(10000), max_wait_minutes: integer.min(1).max(1440),
+  ordinary_item_consumption:z.array(z.strictObject({name:z.string().min(2).max(80),minutes:integer.min(1).max(240)})).max(24).optional(),
   talk_minutes: integer.min(1).max(120), trade_minutes: integer.min(1).max(120),
   default_check: z.string().max(30), currencies: dictionary(z.string().min(1).max(80)),
   capability_domains:dictionary(z.strictObject({attribute:id.nullable(),skills:z.array(id).max(8),
@@ -149,6 +151,7 @@ export const saveSchema = z.strictObject({
     activity:z.strictObject({description:z.string().min(1).max(300),location_id:id.nullable(),duration_minutes:integer,occurred:z.literal(true)}).optional(),
     inspection_results:z.array(z.strictObject({item:z.string().min(1).max(120),result:z.enum(['found','nothing','blocked','not_checked']),detail:z.string().max(300)})).max(12).optional(),
     inspection_status:z.enum(['complete','partial','world_blocked','not_executed','objective_failure','technical_failure']).optional(),
+    consumption:consumptionReceiptSchema.optional(),
     storage:z.strictObject({item_id:id,container_id:id}).optional(),
     progress_changes:z.array(z.strictObject({key:id,before:integer,after:integer})).max(12).optional(),
     result_entities:z.record(id,z.array(id).max(20)).optional(),
@@ -216,7 +219,7 @@ export const saveSchema = z.strictObject({
   event_state: z.strictObject({ fired: z.array(id).max(500), counts: dictionary(integer) }),
   runtime: z.strictObject({ time: z.strictObject({ day: integer, minute: integer }),
     scene_seconds:z.number().int().min(0).max(59).optional(),
-    receipts: z.array(z.strictObject({ id: z.string().uuid(), fingerprint: z.string(), revision: integer })).max(100) }),
+    receipts: z.array(z.strictObject({ id: z.string().uuid(), fingerprint: z.string(), revision: integer,compound_steps:z.array(z.string().min(1).max(2000)).min(2).max(4).optional() })).max(100) }),
   map_state: mapStateSchema.default({ known_location_ids: [], dynamic_locations: [], dynamic_routes: [],dynamic_regions:[] }),
   ai: z.strictObject({ threads: dictionary(z.string().max(200)) }),
   last_turn: narrativeSchema.nullable(),

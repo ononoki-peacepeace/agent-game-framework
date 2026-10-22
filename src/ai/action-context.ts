@@ -12,6 +12,7 @@ export interface AuthoritativeItemContext {
   holder_id:string|null;
   condition:string;
   container_access:'open'|'sealed'|'unknown';
+  consumable?:{method:'eat'|'drink'|'use';minutes:number};
 }
 
 /** A compact, read-only inventory projection for model binding and narration.
@@ -45,7 +46,8 @@ export function authoritativeItemContext(view:PublicView):AuthoritativeItemConte
     return [{item_id:entity.id,name:String(entity.components.identity?.name??entity.id),quantity:held?quantity:1,
       placement,container_id:typeof containerId==='string'?containerId:null,
       location_id:typeof location==='string'?location:null,holder_id:held?view.player_id:null,
-      condition:String(entity.components.item?.condition??'intact'),container_access:access}];
+      condition:String(entity.components.item?.condition??'intact'),container_access:access,
+      ...(entity.components.item?.consumable?{consumable:entity.components.item.consumable as AuthoritativeItemContext['consumable']}:{})}];
   });
 }
 

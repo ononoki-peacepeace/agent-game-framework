@@ -1,0 +1,34 @@
+import {expect,it} from 'vitest';
+import {randomUUID} from 'node:crypto';
+import {writeFile} from 'node:fs/promises';
+import {narrativeWorldKinds} from './fixtures/narrative-worlds.js';
+import {consumptionWorld} from './fixtures/consumption-worlds.js';
+import {executeAction} from '../src/core/runtime.js';
+import {validateResolvedNarrative} from '../src/core/narrative-firewall.js';
+import {canonicalItemFallback} from '../src/narrative/item-fallback.js';
+const narrative=(text:string)=>({narrative:text,speaker:null,dialogue:null,choices:[],context_actions:[],patches:[],interaction:null,item_claims:[],stable_locations:[],mechanical_claims:[]});
+const run=randomUUID();
+it.each(narrativeWorldKinds)('grounds consumed count/method and retained holdings in normal and fallback prose in %s',async kind=>{
+ const {save}=await consumptionWorld(kind),turn=executeAction(save,{type:'CONSUME_ITEM',target_id:'qa_bread',parameters:{quantity:2}},randomUUID()),receipt=turn.save.resolution_receipts!.at(-1)!;
+ const legal='你吃掉了2份面包。你仍然持有一份面包。',illegal=['你吃掉了三份面包。','你喝掉了2份面包。','你仍然持有三份面包。'];
+ const decisions=illegal.map(text=>{try{validateResolvedNarrative(receipt,narrative(text),false,undefined,turn.save);return {text,accepted:true};}catch(error){return {text,accepted:false,error:String(error)};}});
+ const fallback=canonicalItemFallback(turn.save,turn.action,receipt,false);
+ await writeFile(`.agent-runtime/codex/consumption-prose-${run}-${kind}.json`,JSON.stringify({turn,legal,decisions,fallback},null,2));
+ expect(()=>validateResolvedNarrative(receipt,narrative(legal),false,undefined,turn.save)).not.toThrow();
+ expect(decisions.every(row=>!row.accepted)).toBe(true);expect(fallback).toBe('你吃掉了2份面包，还持有1份面包。');
+ const speech={...narrative('林舟说：“你吃掉了三份面包。”'),scene_beats:[{kind:'speech' as const,speaker_id:'npc_lin',utterance:'你吃掉了三份面包。'}]};
+ expect(()=>validateResolvedNarrative(receipt,speech,false,undefined,turn.save)).not.toThrow();
+ expect(()=>validateResolvedNarrative(receipt,{...speech,narrative:speech.narrative+'你吃掉了三份面包。'},false,undefined,turn.save)).toThrow();
+ const inspection=executeAction(save,{type:'INSPECT',parameters:{}},randomUUID());
+ expect(()=>validateResolvedNarrative(inspection.save.resolution_receipts!.at(-1)!,narrative('你吃掉了一份面包。'),false,undefined,inspection.save)).toThrow();
+},30000);
+it.each(narrativeWorldKinds)('describes remaining same-name units across distinct owned entities after one is exhausted in %s',async kind=>{
+ const {save}=await consumptionWorld(kind);
+ (save.entities.find(e=>e.id==='player')!.components.inventory!.items as Record<string,number>).qa_other_bread=2;
+ const turn=executeAction(save,{type:'CONSUME_ITEM',target_id:'qa_bread',parameters:{quantity:3}},randomUUID());
+ const receipt=turn.save.resolution_receipts!.at(-1)!,fallback=canonicalItemFallback(turn.save,turn.action,receipt,false);
+ await writeFile(`.agent-runtime/codex/consumption-same-name-${run}-${kind}.json`,JSON.stringify({save,turn,fallback},null,2));
+ expect(fallback).toBe('你吃掉了3份面包，还持有2份面包。');
+ expect(()=>validateResolvedNarrative(receipt,narrative('你吃掉了3份面包。你仍然持有两份面包。'),false,undefined,turn.save)).not.toThrow();
+ expect(()=>validateResolvedNarrative(receipt,narrative('你没有持有面包。'),false,undefined,turn.save)).toThrow();
+},30000);

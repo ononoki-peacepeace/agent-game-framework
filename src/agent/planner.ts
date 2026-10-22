@@ -1,3 +1,4 @@
+import {startsConsumptionCommand} from '../core/consumption-intent.js';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import type {PublicView} from '../shared/contracts.js';
@@ -72,7 +73,7 @@ export function localCompoundSteps(view:PublicView,text:string,plan:AgentPlan):s
  const explicit:string[]=[];
  if(single&&hasMultipleClauses(text))for(const clause of clauses){
    const part=clause.replace(/^(?:再|然后|接着)\s*/,'');
-   const startsAction=Boolean(localDestination(part)||isActivePerception(part)||
+   const startsAction=Boolean(localDestination(part)||isActivePerception(part)||startsConsumptionCommand(part)||
      /(?:起身|站起|坐下|躺下|休息|整理|收拾|伸个|拿起|放下)/.test(part));
    if(explicit.length&&(!startsAction||/^(?:以及|并且|而且|同时)/.test(part)))
      explicit[explicit.length-1]+='，'+clause;

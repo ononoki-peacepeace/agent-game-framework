@@ -1,3 +1,5 @@
+import {projectConsumptionForNarrator} from '../narrative/item-consumption.js';
+import {consumptionActionForInput} from '../core/consumption-intent.js';
 import {narratorReceiptItems} from '../narrative/item-evidence.js';
 import {actionBindingContext,authoritativeItemContext,recentSettledActions} from './action-context.js';
 import {routinePlanSchema} from '../routine/schema.js';
@@ -563,6 +565,7 @@ export class AIRuntime {
     catch(error){if(!(error instanceof FreeformRepairableError))throw error;throw new CandidateValidationError('freeform',error.diagnostics.length?error.diagnostics.map(i=>({...i,message:i.expected})):[{path:'resolution',code:'missing_resolution',expected:'正式判定方案或真实blocker',message:error.message}],result.data);}
   }
   async interpret(save: SavePackage, input: string, repair?:{failure_code:string;previous_action?:string;generation_repair?:GenerationRepair}) {
+    const consumption=consumptionActionForInput(save,input);if(consumption)return consumption;
     if(isActivePerception(input))return {type:'FREEFORM_ACTION',parameters:{}};
     const hold=localDurationIntent(input,save.runtime.time,save.definition.ruleset.minutes_per_day);
     if(hold)return {type:'HOLD',parameters:hold};
@@ -580,6 +583,7 @@ export class AIRuntime {
         instruction:'上一次行动提案的参数不符合该行动合同。只修正行动选择和参数，不推断行动已经执行。'}}:{}),
       action_catalog: registry.actions.all().filter(([, a]) => (a.ui?.visibility ?? 'internal') !== 'internal').map(([type, a]) => ({ type, parameters: z.toJSONSchema(a.parameters) })),
     }, save,undefined,undefined,'intent_interpreter',true,false);
+    if(parsed.type==='CONSUME_ITEM')return {type:'FREEFORM_ACTION',parameters:{}};
     if(parsed.type==='MOVE'&&!knownDestination(save,input))return {type:'FREEFORM_ACTION',parameters:{}};
     if((!registry.actions.has(parsed.type)||(registry.actions.get(parsed.type).ui?.visibility??'internal')==='internal')&&!parsed.clarification)return {type:'FREEFORM_ACTION',parameters:{}};
     assert(!parsed.clarification, parsed.clarification ?? '行动需要澄清');
@@ -751,9 +755,9 @@ export class AIRuntime {
         outcome:save.resolution_history?.find(entry=>entry.check_id===receipt.check_id)?.hidden?'unconfirmed':receipt.outcome,
         time_cost:receipt.time_cost,canonical_facts:receipt.canonical_facts,effects:receipt.effects,
         activity:receipt.activity??null,storage:receipt.storage??null,progress_changes:receipt.progress_changes??[],
-        environment:receipt.environment??null,item_entities:narratorReceiptItems(save,receipt,view),
+        environment:receipt.environment??null,consumption:projectConsumptionForNarrator(save,receipt),item_entities:narratorReceiptItems(save,receipt,view),
         ...(compoundReceipts?{compound_steps:compoundReceipts.map(step=>({semantic_action:step.semantic_action,time_cost:step.time_cost,
-          actor_id:step.actor_id,target_id:step.target_id,item_entities:narratorReceiptItems(save,step,view),movement_route:step.movement_route??null,effects:step.effects,activity:step.activity??null,canonical_facts:step.canonical_facts}))}:{})},
+          actor_id:step.actor_id,target_id:step.target_id,consumption:projectConsumptionForNarrator(save,step),item_entities:narratorReceiptItems(save,step,view),movement_route:step.movement_route??null,effects:step.effects,activity:step.activity??null,canonical_facts:step.canonical_facts}))}:{})},
         mechanical_claim_policy:'activity 只表示角色在 receipt.activity 指定地点、按记录时长进行了普通活动；复合行动也可引用 compound_steps 中对应的 activity。必须引用对应的“进行了活动” canonical_facts，不能表示完成具体页数、任务或其他持久变化。progress 只表示有 progress_changes 支持的持久进度，不能用 activity 代替。正文中的成功失败、物品、伤害、金钱、位置、秘密发现与随机结果，也只能改写 resolution_receipt 明确许可的事实；每条此类声明必须在 mechanical_claims 中给出对应 canonical_facts 的 fact_index。不得将普通观察扩写为额外的玩家操作；没有相应 action/receipt 时，不得声称玩家推开、敲击、拿取、移动或使用了别的对象。无法引用时只写动作尝试和感官环境，不要自行决定结果。'}:{}),
       character_context:narratorContext,
       relationship_dimensions: save.definition.ruleset.relationship_dimensions,

@@ -1,3 +1,4 @@
+import {visibleNpcConsumptions,consumptionEventNarrative} from '../narrative/item-consumption.js';
 import type {ItemPossessionInventory} from '../narrative/item-possession.js';
 import {CandidateValidationError,generationRepair,generationBudget,schemaIssues,type GenerationRepair} from '../ai/failures.js';
 import {failureReason,ProviderError,NarratorSchemaError} from '../ai/failures.js';
@@ -85,7 +86,17 @@ function applyOptionalEnrichment(save: SavePackage, patches: unknown[], action: 
   return next;
 }
 /** Player-facing prose for the rare case where narration itself failed: never a tool summary, never an internal id. */
-function narrationFallback(save: SavePackage, action: Parameters<typeof applyPatches>[2],prior:SavePackage,compound?:readonly string[]):
+function narrationFallback(save:SavePackage,action:Parameters<typeof applyPatches>[2],prior:SavePackage,compound?:readonly string[]){
+  const base=narrationFallbackBase(save,action,prior,compound);
+  const related=save.resolution_receipts?.filter(r=>!prior.resolution_receipts?.some(old=>old.request_id===r.request_id))??[];
+  const events=visibleNpcConsumptions(save,related).map(r=>consumptionEventNarrative(r.consumption!,
+    String(save.entities.find(e=>e.id===r.actor_id)!.components.identity?.name??'在场的人')));
+  if(!events.length)return base;
+  const extra=events.join(' ');
+  return {...base,narrative:base.narrative+'\n\n'+extra,
+    ...(base.scene_beats?.length?{scene_beats:[...base.scene_beats,{kind:'narration' as const,text:extra}]}:{})};
+}
+function narrationFallbackBase(save: SavePackage, action: Parameters<typeof applyPatches>[2],prior:SavePackage,compound?:readonly string[]):
   Pick<NonNullable<SavePackage['last_turn']>,'narrative'|'scene_beats'> {
   const receipt=save.resolution_receipts?.find(entry=>entry.request_id===action.id);
   if(receipt){
@@ -306,7 +317,7 @@ export class GameService {
     const totalMinutes=receipts.reduce((sum,receipt)=>sum+receipt.time_cost,0);
     const aggregate={...receipts.at(-1)!,request_id:requestId,action_id:requestId,
       semantic_action:steps.join('，').slice(0,1000),time_cost:totalMinutes,canonical_facts:canonicalFacts,
-      effects:[...new Set(receipts.flatMap(receipt=>receipt.effects))],activity:undefined,storage:undefined,
+      effects:[...new Set(receipts.flatMap(receipt=>receipt.effects))],activity:undefined,storage:undefined,consumption:undefined,
       progress_changes:receipts.flatMap(receipt=>receipt.progress_changes??[]),commit_status:'pending' as const};
     candidate.resolution_receipts=[...(candidate.resolution_receipts??[]),aggregate].slice(-200);
     return {turn:{...last,save:candidate,action:{...last.action,id:requestId,time_cost:totalMinutes},facts},receipts,itemStates};
@@ -513,12 +524,17 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       return runWithTrace(trace, async () => {
       const req = request, current = await this.current();
       const beforeTurn=structuredClone(current);
-      const fingerprint = createHash('sha256').update(JSON.stringify({ action: req.action, input: req.input,...(req.end_conversation?{end_conversation:true}:{}),...(completeFutureId?{complete_future:completeFutureId}:{}),...(compoundSteps?{compound_steps:compoundSteps}:{}) })).digest('hex');
       if (req.game_id !== current.game_id) { trace.warn('save.conflict', { revision: current.state_revision, metadata: { reason: 'game_id_mismatch' } }); throw new GameError('游戏已切换，请刷新后操作', 409); }
       const receipt = current.runtime.receipts.find(r => r.id === req.request_id);
+      if (!receipt&&req.expected_revision !== current.state_revision) { trace.warn('save.conflict', { revision: current.state_revision, metadata: { reason: 'expected_revision_mismatch', expected_revision: req.expected_revision, actual_revision: current.state_revision } }); throw new GameError('状态已更新，请刷新后重试', 409); }
+      let pending=receipt?undefined:await this.storage.readPending?.(req.request_id)??this.pendingTurns.get(req.request_id);
+      const storedSteps=receipt?.compound_steps??(pending?.game_id===current.game_id?pending.narration_steps:undefined);
+      if(storedSteps){
+        assert(!compoundSteps||JSON.stringify(compoundSteps)===JSON.stringify(storedSteps),'待完成复合行动步骤与原请求不一致');
+        compoundSteps=storedSteps;
+      }
+      const fingerprint = createHash('sha256').update(JSON.stringify({ action: req.action, input: req.input,...(req.end_conversation?{end_conversation:true}:{}),...(completeFutureId?{complete_future:completeFutureId}:{}),...(compoundSteps?{compound_steps:compoundSteps}:{}) })).digest('hex');
       if (receipt) { assert(receipt.fingerprint === fingerprint, '请求 ID 已用于另一行动');this.pendingTurns.delete(req.request_id);await this.storage.clearPending?.(req.request_id).catch(()=>undefined); return publicView(current); }
-      if (req.expected_revision !== current.state_revision) { trace.warn('save.conflict', { revision: current.state_revision, metadata: { reason: 'expected_revision_mismatch', expected_revision: req.expected_revision, actual_revision: current.state_revision } }); throw new GameError('状态已更新，请刷新后重试', 409); }
-      let pending=await this.storage.readPending?.(req.request_id)??this.pendingTurns.get(req.request_id);
       if(pending?.generic&&req.input&&!compoundSteps){
         assert(pending.game_id===current.game_id&&pending.expected_revision===current.state_revision&&
           pending.fingerprint===fingerprint,'待完成判定与当前请求不一致');
@@ -559,6 +575,15 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       const containerSurveyId=req.input?broadContainerObservation(actionBase,req.input):null;
       let generic:boolean,turn:ReturnType<typeof executeAction>;
       let compoundItemStates:ItemPossessionInventory[]=[];
+      const persistPending=async(candidate:SavePackage,backgroundSettled=false)=>{
+        // Every restaging path must retain the same request identity and stage snapshots.
+        const staged:PendingTurn={game_id:current.game_id,request_id:req.request_id,fingerprint,
+          expected_revision:current.state_revision,candidate,action:turn.action,facts:turn.facts,generic,
+          ...(backgroundSettled?{background_settled:true}:{}),
+          ...(compoundSteps?{narration_steps:[...compoundSteps]}:{}),
+          ...(compoundItemStates.length?{narration_item_states:compoundItemStates}:{})};
+        await this.storage.writePending?.(staged);this.pendingTurns.set(req.request_id,structuredClone(staged));
+      };
       let travelDecisionLines:{speaker_id:string;utterance:string}[]=[];
       let travelDecisionReceipt:{id:string;fingerprint:string}|null=null;
       if(pending){
@@ -732,8 +757,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
         }
         if(generic)assert(turn.save.resolution_receipts?.some(entry=>entry.request_id===req.request_id),'开放世界行动缺少程序判定凭据');
         if(!generic||turn.save.resolution_receipts?.some(entry=>entry.request_id===req.request_id)){
-          const staged:PendingTurn={game_id:current.game_id,request_id:req.request_id,fingerprint,expected_revision:current.state_revision,candidate:turn.save,action:turn.action,facts:turn.facts,generic,...(compoundItemStates.length?{narration_item_states:compoundItemStates}:{})};
-          await this.storage.writePending?.(staged);this.pendingTurns.set(req.request_id,structuredClone(staged));
+          await persistPending(turn.save);
         }
       }
       let next = turn.save;
@@ -743,7 +767,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
         narrationPresentation={status:'degraded',reasons:[...new Set([
           ...(narrationPresentation?.reasons??[]),reason.slice(0,500)||'narration_unavailable'])].slice(0,8)};
       };
-      if(!compileOnly){
+      if(!compileOnly&&!pending?.background_settled){
         // Local compound Core steps settle atomically first. Reactions belong to
         // their physical child, after the batch, with the same total call budget.
         // Never react again to the aggregate's inherited final-step outcome.
@@ -770,11 +794,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
           settleAutonomousNpcTurn(this,next,current.runtime.time,req.request_id,signal));
         next=autonomous.save;
         turn.facts.push(...autonomous.visibleFacts);
-        if(autonomous.save!==turn.save){
-          const staged:PendingTurn={game_id:current.game_id,request_id:req.request_id,fingerprint,
-            expected_revision:current.state_revision,candidate:next,action:turn.action,facts:turn.facts,generic};
-          await this.storage.writePending?.(staged);this.pendingTurns.set(req.request_id,structuredClone(staged));
-        }
+        await persistPending(next,true);
       }
       let interaction: {target_id:string;status:'active'|'ended'}|null=null;
       if (['START_ROUTINE','CONTINUE_ROUTINE'].includes(turn.action.type)) {
@@ -796,9 +816,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
             const autonomous=await trace.measure('npc_agent.routine_batch',()=>
               settleAutonomousNpcTurn(this,next,startedAt,`${req.request_id}:routine`,signal,1));
             next=autonomous.save;turn.facts.push(...autonomous.visibleFacts);
-            const staged:PendingTurn={game_id:current.game_id,request_id:req.request_id,fingerprint,
-              expected_revision:current.state_revision,candidate:next,action:turn.action,facts:turn.facts,generic};
-            await this.storage.writePending?.(staged);this.pendingTurns.set(req.request_id,structuredClone(staged));
+            await persistPending(next,true);
           }
         }
       } else if(['SAVE_ROUTINE','CLEAR_ROUTINE','CANCEL_ROUTINE','PAUSE_ROUTINE'].includes(turn.action.type)) {
@@ -814,7 +832,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
         const check=next.resolution_history?.find(entry=>entry.request_id===req.request_id);
         const playerPlace=next.entities.find(e=>e.id===next.player_state.entity_id)?.components.location?.location_id;
         const visibleSteps=next.resolution_receipts?.filter(r=>!current.resolution_receipts?.some(old=>old.request_id===r.request_id)&&
-          (r.actor_id===next.player_state.entity_id||r.movement_route?.location_ids[0]===playerPlace||r.movement_route?.location_ids.at(-1)===playerPlace));
+          (r.actor_id===next.player_state.entity_id||visibleNpcConsumptions(next,[r]).length>0||r.movement_route?.location_ids[0]===playerPlace||r.movement_route?.location_ids.at(-1)===playerPlace));
         const narrativeSteps=compoundReceipts?
           [...compoundReceipts,...(visibleSteps??[]).filter(step=>step.actor_id!==next.player_state.entity_id)]:visibleSteps;
         if(receipt?.physical_outcome)for(const step of visibleSteps??[]){
@@ -1104,7 +1122,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       }
       next.runtime.receipts = [...next.runtime.receipts,
         ...(travelDecisionReceipt?[{...travelDecisionReceipt,revision:next.state_revision}]:[]),
-        { id: req.request_id, fingerprint, revision: next.state_revision }].slice(-100);
+        { id: req.request_id, fingerprint, revision: next.state_revision,...(compoundSteps?{compound_steps:[...compoundSteps]}:{}) }].slice(-100);
       if(completeFutureId){const intent=next.future_intents!.find(i=>i.id===completeFutureId)!;intent.status='completed';intent.completed_by_request=req.request_id;}
       const worldTurn=!compileOnly&&!['SAVE_ROUTINE','CLEAR_ROUTINE','CANCEL_ROUTINE','PAUSE_ROUTINE'].includes(turn.action.type);
       if(worldTurn){
