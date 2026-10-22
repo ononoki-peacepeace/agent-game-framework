@@ -894,3 +894,7 @@ Late actual-prompt audit finds visible NPC consumption exposed private stock bef
 ### Cloud consumption privacy correction delivery (2026-10-22)
 
 Pushed55ef9f3 (Core unchanged),7file33pass0fail0skip plus fresh strict root/client/server build exit0. Supplement `/workspace/scratch/consumption-privacy-evidence-55ef9f3.zip`, SHA25639161f8c5f215ac9cfe50d7e389d703b41dea75c4310bf3388fcf2a630fa1ab3, CRC verified. Original657broad report remains bound626e4f5; cumulative Narrator696broad run source7052842 precedes projection correction and must not be called the latest-source single run. Latest cumulative affected rerun/build follows after merging this independent delta into Narrator branch. No private NPC stock before/after/requested in prompts; complete Core records retained. Same manual stacked PR targetPR4, API Forbidden, no score/main/production/model operations.
+
+### Cloud Narrator broad verification / privacy integration checkpoint
+
+Broad70files696pass0fail0skip,1029.743s, exact inventory/no duplicates,594 unchanged input hashes on source7052842; strict root/client/server build exit0. Integrated consumption privacy55ef9f3 via own dependency branch, preserving item_operation plus redacted NPC consumption projection in one resolved AI context hunk. No Windows/main/PR merge. Latest22-file full affected replacements and strict build follow; do not call old696 a single run of newer source. Generated NPC audit output retained separately and restored to baseline bytes. Full frozen ledger unchanged.
