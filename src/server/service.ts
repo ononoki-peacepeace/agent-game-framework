@@ -968,7 +968,6 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
                     degradeNarration(reason);
                     observe('warn','narrative.safe_fallback',{module:'turn',request_id:req.request_id,
                       metadata:{reason:'physical_outcome_unverified',narrator_attempts:attempt}});
-                    notices.push('场景描写校验未通过，本次展示采用已验证的场景与结算事实。');
                     return {...result,...physicalNarrativeFallback(next,receipt,Boolean(check?.hidden),next.resolution_receipts?.filter(r=>!current.resolution_receipts?.some(old=>old.request_id===r.request_id))),
                       speaker:null,dialogue:null,choices:[],choice_semantics:[],context_actions:[],
                       patches:[],interaction:null,item_claims:[],stable_locations:[],mechanical_claims:[],presence_claims:[]};

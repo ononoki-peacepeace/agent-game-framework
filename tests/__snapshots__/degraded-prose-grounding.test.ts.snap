@@ -14,13 +14,13 @@ exports[`keeps 'observe' degradation factual and readable after 'refusal' 1`] = 
 你仔细观察了一会儿，在这次检查范围内暂时没有发现明显异常或新的线索。"
 `;
 
-exports[`keeps 'physical_failure' degradation factual and readable after 'content_filter' 1`] = `"你对林舟发起了尝试，这一次未能建立接触。"`;
+exports[`keeps 'physical_failure' degradation factual and readable after 'content_filter' 1`] = `"你向林舟出手，但没能碰到对方。"`;
 
-exports[`keeps 'physical_failure' degradation factual and readable after 'refusal' 1`] = `"你对林舟发起了尝试，这一次未能建立接触。"`;
+exports[`keeps 'physical_failure' degradation factual and readable after 'refusal' 1`] = `"你向林舟出手，但没能碰到对方。"`;
 
-exports[`keeps 'physical_success' degradation factual and readable after 'content_filter' 1`] = `"你的动作触及了林舟。这次动作确实造成了伤害。"`;
+exports[`keeps 'physical_success' degradation factual and readable after 'content_filter' 1`] = `"你向林舟出手，碰到了对方，造成了伤害。"`;
 
-exports[`keeps 'physical_success' degradation factual and readable after 'refusal' 1`] = `"你的动作触及了林舟。这次动作确实造成了伤害。"`;
+exports[`keeps 'physical_success' degradation factual and readable after 'refusal' 1`] = `"你向林舟出手，碰到了对方，造成了伤害。"`;
 
 exports[`keeps 'talk' degradation factual and readable after 'content_filter' 1`] = `"你向林舟开了口。"`;
 

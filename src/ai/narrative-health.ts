@@ -23,9 +23,25 @@ export function characterContext(save:SavePackage,targetId?:string){
     guidance:continuityGuidance,
   };
 }
-export function assertNotRefusal(value:{narrative?:string;dialogue?:string|null}){
-  const text=[value.narrative,value.dialogue].filter(Boolean).join('\n');
-  if(/作为(?:一个)?\s*(?:AI|人工智能|语言模型)|as an? (?:AI|language model)|(?:我|I)\s*(?:无法|不能|不能够|cannot|can't)\s*(?:协助|帮助|生成|提供|继续描写|help|assist|generate).{0,60}(?:内容|请求|场景|content|request)|违反.{0,12}(?:安全政策|内容政策)/i.test(text))throw new ProviderError('refusal','Narrative contains provider refusal','本段描写需要安全降级');
+/** NPC refusals are speech, not a provider failure. Only explicitly bound,
+ * quoted utterances may be removed from the assistant-refusal scan. Provider
+ * self-identification is rejected even inside such an utterance. */
+export function assertNotRefusal(value:{narrative?:string;dialogue?:string|null;speaker?:string|null;
+  scene_beats?:{kind:string;speaker_id?:string;utterance?:string}[]},speakerIds:ReadonlySet<string>=new Set()){
+  const all=[value.narrative,value.dialogue].filter(Boolean).join('\n');
+  const explicit=/作为(?:一个)?\s*(?:AI|人工智能|语言模型)|as an? (?:AI|language model)|违反.{0,12}(?:安全政策|内容政策)/i;
+  const refusal=/(?:我|I)\s*(?:无法|不能|不能够|cannot|can't)\s*(?:协助|帮助|生成|提供|继续描写|help|assist|generate).{0,60}(?:内容|请求|场景|content|request)/i;
+  let body=value.narrative??'';
+  const speech=(value.scene_beats??[]).filter(beat=>beat.kind==='speech'&&speakerIds.has(beat.speaker_id??'')&&beat.utterance)
+    .map(beat=>beat.utterance!);
+  const boundDialogue=Boolean(value.speaker&&speakerIds.has(value.speaker));
+  if(boundDialogue&&value.dialogue&&!speech.includes(value.dialogue))speech.push(value.dialogue);
+  for(const utterance of speech)for(const [open,close] of [['“','”'],['「','」'],['『','』'],['"','"']]){
+    const quote=open+utterance+close,index=body.indexOf(quote);
+    if(index>=0){body=body.slice(0,index)+' '.repeat(quote.length)+body.slice(index+quote.length);break;}
+  }
+  if(explicit.test(all)||refusal.test(body+'\n'+(boundDialogue?'':value.dialogue??'')))
+    throw new ProviderError('refusal','Narrative contains provider refusal','本段描写需要安全降级');
 }
 const normalize=(s:string)=>s.toLowerCase().replace(/[\p{P}\p{S}\s]/gu,'');
 function similarity(a:string,b:string){

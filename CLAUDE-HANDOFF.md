@@ -826,3 +826,14 @@ optional compound presentation argument and display-test changes before safe
 integration. Do not overwrite unmerged work or auto-merge; uniform scoring stays
 with Windows/user review. Resume from the source-hash-bound queue after actual
 authorization, retaining refusals, truncations, raw failures and low judgments.
+
+## Cloud Narrator concrete outcomes continuation, 2026-10-22
+
+Independent branch `codex/cloud-narrator-concrete-outcomes` starts at remote main
+`7cd0c8a`; no dependency on unmerged PR #3–#7. First reviewed batch adds read-only
+physical presentation, coherent expression recovery, NPC/provider refusal
+separation and nonintrusive degradation disclosure. 70 outcome/service/HTTP and
+53 expression/history adjacent tests pass. See
+`docs/cloud-narrator-concrete-outcomes.md` for original failures, conflict surfaces
+and unchanged acceptance gates. Next batch: reproduce and repair bounded context
+losing a late-array conversation target and its directional player relationship.

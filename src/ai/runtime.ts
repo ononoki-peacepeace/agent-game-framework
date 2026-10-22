@@ -1,3 +1,4 @@
+import {physicalPresentation} from '../narrative/physical-presentation.js';
 import {actionBindingContext,authoritativeItemContext,recentSettledActions} from './action-context.js';
 import {routinePlanSchema} from '../routine/schema.js';
 import {characterContext,continuityGuidance,dialogueContinuityPolicy,performanceContinuityPolicy,narrativeHealth,assertNotRefusal} from './narrative-health.js';
@@ -682,7 +683,7 @@ export class AIRuntime {
       receipt?.canonical_facts.filter(fact=>(receipt.repetition?fact.includes('发现已存在的证据：'):fact.startsWith('发现已存在的证据：'))||
         fact.includes('这次检查范围内没有发现'))??[]:[];
     const physicalReceipts=(compoundReceipts??(receipt?[receipt]:[])).filter(step=>step.physical_outcome);
-    const significantIncidents=physicalReceipts.map(physicalReceipt=>({request_id:physicalReceipt.request_id,outcome:physicalReceipt.physical_outcome,repetition:physicalReceipt.repetition??null,
+    const significantIncidents=physicalReceipts.map(physicalReceipt=>({request_id:physicalReceipt.request_id,presentation:physicalPresentation(physicalReceipt,Boolean(save.resolution_history?.find(entry=>entry.check_id===physicalReceipt.check_id)?.hidden)),outcome:physicalReceipt.physical_outcome,repetition:physicalReceipt.repetition??null,
         attempts:(save.resolution_receipts??[]).filter(r=>physicalReceipt.repetition?.attempt_ids.includes(r.request_id)).map(r=>({outcome:r.physical_outcome,at:r.at,time_cost:r.time_cost})),
         stage_results:save.resolution_history?.find(entry=>entry.check_id===physicalReceipt.check_id)?.stage_results??[],
         // Who could actually see this is recorded at settlement. Naming it per witness
@@ -799,7 +800,7 @@ export class AIRuntime {
       if (parsed.speaker !== action.target_id || parsed.dialogue === null) { parsed.speaker = null; parsed.dialogue = null; }
       parsed.patches = parsed.patches.filter(p => p.entity_id === action.actor_id && p.target_id === action.target_id);
     }
-    assertNotRefusal(parsed);
+    assertNotRefusal(parsed,new Set(narratorContext.characters.map(person=>person.id).filter(id=>id!==view.player_id)));
     return this.refineNarrative(save,parsed,facts,narratorContext);
   }
   private async refineNarrative(save:SavePackage,first:z.infer<typeof narrativeResultSchema>,facts:string[],
@@ -815,10 +816,14 @@ export class AIRuntime {
         style_directives:behaviorFragment(save,'narrator'),fixed_outcome:{facts,first},health,
         character_context:context,
       },undefined,undefined,undefined,'narrator',false,false);
-      assertNotRefusal(parsed);
+      assertNotRefusal(parsed,new Set(context.characters.map(person=>person.id).filter(id=>id!==save.player_state.entity_id)));
+      const speech=(value:typeof first)=>value.scene_beats?.filter(beat=>beat.kind==='speech')??[];
+      if(JSON.stringify(speech(parsed))!==JSON.stringify(speech(first)))return first;
+      // Adopt the complete performance together: retaining old narration beats
+      // would contradict the repaired body and can trigger needless fact retries.
       observe('info','narrative.regenerated',{module:'ai',metadata:{...narrativeHealth(save,parsed,facts),attempt:1}});
       // Regeneration cannot add enrichment, choices, targets or actions. Only prose is replaced.
-      return {...first,narrative:parsed.narrative,dialogue:first.speaker&&parsed.speaker===first.speaker?parsed.dialogue:first.dialogue};
+      return {...first,narrative:parsed.narrative,scene_beats:parsed.scene_beats,dialogue:first.speaker&&parsed.speaker===first.speaker?parsed.dialogue:first.dialogue};
     }catch(error){observe('warn','narrative.regeneration_failed',{module:'ai',metadata:{reason:failureReason(error),attempt:1}});return first;}
   }
 }
