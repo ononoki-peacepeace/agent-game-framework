@@ -399,6 +399,7 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
  }
  const initialTime=save.runtime.time.day*save.definition.ruleset.minutes_per_day+save.runtime.time.minute;
  const initialSave=save;let stateReadable=true;
+ const storyTurns:NonNullable<AgentResult['story_turns']>=[];
  plan.plan_id=body.request_id;plan.status='running';let clarification:string|null=null,awarenessStatus:AgentResult['awareness_status'];let stepOutcome:AgentResult['outcome']|null=null;let partialNarrative:string|null=null,partialNarrativeGoal:string|null=null;const ui:UIAction[]=[],changes:string[]=[],partialChanges:string[]=[],calls:AgentResult['tool_calls']=[],futures:FutureIntent[]=[];
  for(const id of plan.execution_order){const goal=plan.goals.find(g=>g.goal_id===id)!;
   const compoundWorldGoals=plan.goals.filter(goal=>goal.side_effect_level==='world');
@@ -421,6 +422,7 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
   if(goal.branch){const parent=dependencies.find(g=>g.type==='CONDITIONAL_INTENT');if(!parent||parent.result?.condition===null||parent.result?.condition===undefined){goal.status='unresolved';goal.result={summary:'条件未知，未执行任何分支。'};continue;}if(parent.result.condition!==(goal.branch==='then')){goal.status='skipped';goal.result={summary:'条件不匹配，跳过此分支。'};continue;}}
   goal.status='ready';goal.status='running';
   let stepStage='plan_step';
+  const priorSceneIds=new Set(save.narrative_history?.map(entry=>entry.request_id));
   try {
    if(changes.length&&goal.side_effect_level==='world'){
     stepStage='plan_handoff';
@@ -558,6 +560,21 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
     '这次行动的模型响应未完整生成，当前目标尚未完成。请稍后从当前状态重试。':
     /未注册|parameters|schema|Invalid|FREEFORM_ACTION|relationship_delta|ConditionNode|条件必须由独立条件节点|框架校验|状态校验|canonical delta|contract/i.test(detail)?
       '这次行动没有正常完成，世界状态没有改变，可以安全重试。':displayText(detail,publicView(save).entities,publicView(save).locations)};calls.push({tool_id:goal.type,ok:false});if(!stateReadable||goal.side_effect_level==='world'||clarification||plan.local_compound)break;}
+  finally{
+   const entry=save.narrative_history?.at(-1);
+   const requestId=childId(body.request_id,plan.local_compound?'local_compound':id);
+   // Capture before bounded history eviction, including a committed write whose
+   // acknowledgement was lost. A stale turn or a blocked attempt supplies none.
+   if(stateReadable&&entry?.request_id===requestId&&!priorSceneIds.has(requestId)&&
+      save.resolution_receipts?.some(receipt=>receipt.request_id===requestId&&receipt.commit_status==='committed')&&save.last_turn){
+    const projected=service.project(save),speakerIds=new Set([
+     ...(save.last_turn.scene_beats??[]).flatMap(beat=>beat.kind==='speech'?[beat.speaker_id]:[]),
+     ...(save.last_turn.speaker?[save.last_turn.speaker]:[])]);
+    storyTurns.push({request_id:requestId,turn:structuredClone(projected.last_turn!),
+     speakers:projected.entities.filter(entity=>speakerIds.has(entity.id)).map(entity=>({id:entity.id,type:entity.type,
+      components:{identity:structuredClone(entity.components.identity??{})}}))});
+   }
+  }
  }
  for(const goal of plan.goals)if(goal.status==='pending')goal.status='skipped';
  try{save=await service.current();stateReadable=true;}catch{
@@ -600,6 +617,7 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
  const committedNarrative=committedSince(initialSave,save).length?
    (narratedSteps.length?(plan.local_compound?narratedSteps.slice(0,1):narratedSteps):
     [save.last_turn?.narrative?.trim()].filter((text):text is string=>Boolean(text))).join('\n'):'';
+ const completeStoryTurns=storyTurns.length===(plan.local_compound?Math.min(1,narratedSteps.length):narratedSteps.length)?storyTurns:[];
  const stopped=plan.goals.filter(goal=>['blocked','unresolved','failed','waiting_for_player'].includes(goal.status))
    .map(goal=>`“${goal.normalized_goal}”尚未完成${goal.result?.summary?`：${goal.result.summary}`:'。'}`);
  const skipped=plan.goals.filter(goal=>goal.status==='skipped').map(goal=>goal.normalized_goal);
@@ -611,7 +629,7 @@ export async function executePlan(service:GameService,body:PlanRequest,plan:Agen
  return agentResult(plan.goals.length===1?plan.goals[0].type:'MULTI_GOAL',finalMessage,{outcome:finalOutcome,
    ...(finalOutcome.type==='engine_failure'?{recovery:recoveryContext(body.original_input??body.input,finalOutcome,{goal_ids:plan.goals.map(goal=>goal.goal_id),failed_goals:plan.goals.filter(goal=>goal.status==='failed').map(goal=>({goal_id:goal.goal_id,summary:goal.result?.summary??''}))})}:{}),
    presentation:finalOutcome.type==='engine_failure'?'failure':committedNarrative?'story':'assistant',clarification,
-   ...(committedNarrative?{story:committedNarrative}:{}),
+   ...(committedNarrative?{story:committedNarrative,...(completeStoryTurns.length?{story_turns:completeStoryTurns}:{})}:{}),
    ...(awarenessStatus?{awareness_status:awarenessStatus}:{}),plan_id:plan.plan_id,plan,results,future_intents:futures,
    ui_actions:storyOnly?[]:oneNavigation(ui),canonical_changes:[...changes,...partialChanges],tool_calls:calls,time_advanced:delta,
    ...(stateReadable?{view:publicView(save)}:{})});

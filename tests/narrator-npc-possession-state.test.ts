@@ -1,0 +1,24 @@
+import {expect,it} from 'vitest';
+import {randomUUID} from 'node:crypto';
+import {narrativeWorldKinds,prepareNarrativeWorld} from './fixtures/narrative-worlds.js';
+import {executeAction} from '../src/core/runtime.js';
+import {validateResolvedNarrative} from '../src/core/narrative-firewall.js';
+const result=(narrative:string)=>({narrative,speaker:null,dialogue:null,choices:[],context_actions:[],patches:[],interaction:null,item_claims:[],stable_locations:[],mechanical_claims:[]});
+it.each(narrativeWorldKinds)('binds present item possession to the named NPC rather than the player in %s',async kind=>{
+ const {save}=await prepareNarrativeWorld(kind);
+ const held=executeAction(save,{type:'MOVE_ITEM',parameters:{item_id:'qa_paper',to:'held'}},randomUUID()).save;
+ const receipt=held.resolution_receipts!.at(-1)!;
+ expect(()=>validateResolvedNarrative(receipt,result('林舟仍然拿着纸片。'),false,undefined,held)).toThrow();
+ expect(()=>validateResolvedNarrative(receipt,result('纸片现在在林舟的手中。'),false,undefined,held)).toThrow();
+ expect(()=>validateResolvedNarrative(receipt,result('林舟没有拿着纸片。'),false,undefined,held)).not.toThrow();
+ expect(()=>validateResolvedNarrative(receipt,result('林舟准备拿着纸片。'),false,undefined,held)).not.toThrow();
+ const handed=executeAction(held,{type:'TRANSFER_ITEM',target_id:'npc_lin',parameters:{item_id:'qa_paper'}},randomUUID()).save;
+ const handover=handed.resolution_receipts!.at(-1)!;
+ expect(()=>validateResolvedNarrative(handover,result('林舟拿着纸片。'),false,undefined,handed)).not.toThrow();
+ expect(()=>validateResolvedNarrative(handover,result('林舟持有一张纸片。'),false,undefined,handed)).not.toThrow();
+ expect(()=>validateResolvedNarrative(handover,result('林舟持有两张纸片。'),false,undefined,handed)).toThrow();
+ expect(()=>validateResolvedNarrative(handover,result('林舟没有拿着纸片。'),false,undefined,handed)).toThrow();
+ const speech={...result('林舟说：“林舟仍然拿着纸片。”'),scene_beats:[{kind:'speech' as const,speaker_id:'npc_lin',utterance:'林舟仍然拿着纸片。'}]};
+ expect(()=>validateResolvedNarrative(receipt,speech,false,undefined,held)).not.toThrow();
+ expect(()=>validateResolvedNarrative(receipt,{...speech,narrative:speech.narrative+'林舟仍然拿着纸片。'},false,undefined,held)).toThrow();
+},30000);

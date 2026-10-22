@@ -1,3 +1,4 @@
+import {itemPossessionIssues,type ItemPossessionInventory} from '../narrative/item-possession.js';
 import {GameError,type SavePackage} from './schema.js';
 import type {z} from 'zod';
 import {narrativeResultSchema} from '../ai/contracts.js';
@@ -206,7 +207,7 @@ export function validateScenePresenceNarrative(save:SavePackage,prose:string,cla
 }
 
 /** Reject prose that asserts mechanical effects absent from the committed program receipt. */
-export function validateResolvedNarrative(receipt:Receipt,result:Narrative,hidden:boolean,compoundReceipts?:Receipt[],scene?:SavePackage,expressivePerception=false){
+export function validateResolvedNarrative(receipt:Receipt,result:Narrative,hidden:boolean,compoundReceipts?:Receipt[],scene?:SavePackage,expressivePerception=false,settledInventories:readonly ItemPossessionInventory[]=[]){
   if((result.item_claims??[]).length||(result.stable_locations??[]).length||result.patches.length)
     throw new GameError('开放行动的场景描写不能自行写入实体或状态',503);
   const allowed=new Set(receipt.effects);
@@ -242,12 +243,19 @@ export function validateResolvedNarrative(receipt:Receipt,result:Narrative,hidde
     const start=body.indexOf(beat.utterance,speechCursor);if(start<0)continue;
     const end=start+beat.utterance.length,open=body[start-1];speechCursor=end;
     if(open&&quotePairs[open]&&quotePairs[open]===body[end]){
-      body=body.slice(0,start-1)+' '.repeat(beat.utterance.length+2)+body.slice(end+1);
+      // Preserve the quote boundary so a following independent assertion
+      // cannot inherit the masked speaker's clause prefix. Length stays stable.
+      body=body.slice(0,start-1)+' '.repeat(beat.utterance.length+1)+'\n'+body.slice(end+1);
       speechCursor=end+1;
     }
   }
   const prose=[body,...(result.scene_beats??[]).filter(beat=>beat.kind==='narration').map(beat=>beat.text)].join('\n');
-  if(scene)validateItemConditionNarrative(scene,prose);
+  if(scene){
+    validateItemConditionNarrative(scene,prose);
+    const issue=itemPossessionIssues(scene,prose,settledInventories)[0];
+    if(issue)throw new NarrativePatternError('item_possession',issue.index,matchedSnippet(prose,issue.index,issue.text.length),
+      '旁白当前持有物与Core权威库存不一致，历史动作和归属不能代替当前持有状态');
+  }
   // The aggregate inherits its final child type; earlier physical results still
   // constrain injuries and event-time perception when the last child is TALK.
   const physicalCandidates=(compoundReceipts??[receipt]).filter(step=>step.physical_outcome);

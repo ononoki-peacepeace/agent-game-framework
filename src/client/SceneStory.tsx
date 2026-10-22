@@ -1,13 +1,16 @@
+import type {StoryTurn} from '../agent/contracts.js';
 import type {Entity,PublicView} from '../shared/contracts.js';
 import {Avatar,nameOf} from './panels.js';
 import {visibleStoryBeats,anchoredStoryBeats} from './story-beats.js';
 
 /** One ordered performance is the visible scene; legacy turns retain their existing layout. */
-type SceneStoryProps={view:PublicView;override:string|null;onSelectEntity:(entity:Entity)=>void};
+type SceneStoryProps={view:PublicView;override:string|null;turns?:StoryTurn[];onSelectEntity:(entity:Entity)=>void};
 export function SceneStory(props:SceneStoryProps){
   return <>{props.view.last_turn?.presentation?.status==='degraded'&&
     <p role="status" className="narration-notice">场景描写已降级为事实摘要，本轮世界结算结果以已保存状态为准。</p>}
-    <SceneStoryContent {...props}/></>;
+    {props.turns?.length?props.turns.map(snapshot=><SceneStoryContent key={snapshot.request_id}
+      view={{...props.view,last_turn:snapshot.turn,entities:[...snapshot.speakers,...props.view.entities.filter(entity=>!snapshot.speakers.some(speaker=>speaker.id===entity.id))]}}
+      override={null} onSelectEntity={props.onSelectEntity}/>):<SceneStoryContent {...props}/>}</>;
 }
 function SceneStoryContent({view,override,onSelectEntity}:SceneStoryProps){
   const turn=view.last_turn;
