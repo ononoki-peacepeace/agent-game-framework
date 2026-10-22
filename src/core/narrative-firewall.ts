@@ -1,3 +1,4 @@
+import {itemOperationNarrative} from '../narrative/item-operation.js';
 import {consumptionNarrativeIssue,consumptionEventNarrative} from '../narrative/item-consumption.js';
 import {itemPossessionIssues,type ItemPossessionInventory} from '../narrative/item-possession.js';
 import {GameError,type SavePackage} from './schema.js';
@@ -253,8 +254,12 @@ export function validateResolvedNarrative(receipt:Receipt,result:Narrative,hidde
   const prose=[body,...(result.scene_beats??[]).filter(beat=>beat.kind==='narration').map(beat=>beat.text)].join('\n');
   if(scene){
     validateItemConditionNarrative(scene,prose);
-    const consumptionIssue=consumptionNarrativeIssue(scene,prose,compoundReceipts??[receipt]);
-    if(consumptionIssue)throw new NarrativePatternError('item_consumption',prose.indexOf(consumptionIssue),consumptionIssue,'消耗描写与Core物品消耗凭据不一致');
+    // Body and structured narration are alternate presentation views. Validate
+    // each sequence independently rather than charging duplicate render anchors twice.
+    for(const source of [body,...(result.scene_beats??[]).filter(beat=>beat.kind==='narration').map(beat=>beat.text)]){
+      const consumptionIssue=consumptionNarrativeIssue(scene,source,compoundReceipts??[receipt]);
+      if(consumptionIssue)throw new NarrativePatternError('item_consumption',prose.indexOf(consumptionIssue),consumptionIssue,'消耗描写与Core物品消耗凭据不一致');
+    }
     const issue=itemPossessionIssues(scene,prose,settledInventories)[0];
     if(issue)throw new NarrativePatternError('item_possession',issue.index,matchedSnippet(prose,issue.index,issue.text.length),
       '旁白当前持有物与Core权威库存不一致，历史动作和归属不能代替当前持有状态');
@@ -520,7 +525,9 @@ export function canonicalCompoundNarrative(save:SavePackage,hidden:boolean,steps
     const name=String(save.entities.find(entity=>entity.id===step.target_id)?.components.identity?.name??'对方');
     // The aggregate inherits its last step's type; render the actual child
     // receipts before using generic facts so preceding speech is not lost.
-    const text=step.physical_outcome?physicalNarrativeFallback(save,step,hidden).narrative:
+    const itemEvent=!hidden?itemOperationNarrative(step):null;
+    const subject=step.actor_id===save.player_state.entity_id?'你':String(save.entities.find(e=>e.id===step.actor_id)?.components.identity?.name??'在场的人');
+    const text=itemEvent??(!hidden&&step.consumption?consumptionEventNarrative(step.consumption,subject):null)??(step.physical_outcome?physicalNarrativeFallback(save,step,hidden).narrative:
       step.movement_route?canonicalMovementNarrative(step,save):
       isSettledPerception(save,step)?canonicalPerceptionNarrative(save,step,hidden):
       step.semantic_action==='TALK'?`你向${name}开了口。`:
@@ -528,13 +535,14 @@ export function canonicalCompoundNarrative(save:SavePackage,hidden:boolean,steps
       step.semantic_action==='HOLD'?canonicalResolutionNarrative(step,hidden):
       itemActionTypes.has(step.semantic_action)?canonicalResolutionNarrative(step,hidden):
       activityActionNarrative(step,hidden)??
-      (facts.length?facts.join(' '):canonicalResolutionNarrative(step,hidden));
+      (facts.length?facts.join(' '):canonicalResolutionNarrative(step,hidden)));
     return presentation==='receipt_list'?`${index+1}、${text}`:text;
   });
   return lines.join(presentation==='receipt_list'?'\n':'\n\n');
 }
 
 export function canonicalResolutionNarrative(receipt:Receipt,hidden:boolean,perception=false){
+  if(!hidden){const itemEvent=itemOperationNarrative(receipt);if(itemEvent)return itemEvent;}
   if(!hidden&&receipt.consumption)return consumptionEventNarrative(receipt.consumption);
   if(receipt.environment&&!hidden)return receipt.canonical_facts.join(' ');
   if(receipt.semantic_action==='WAIT'&&!hidden&&receipt.kind==='DETERMINISTIC'&&receipt.outcome==='success')

@@ -10,20 +10,28 @@ export function consumptionNarrativeIssue(save:SavePackage,prose:string,receipts
  const names=[...new Set(save.entities.filter(e=>e.components.item).map(e=>String(e.components.identity?.name??'')).filter(Boolean))].sort((a,b)=>b.length-a.length);
  for(const actor of actors){
   const subject=actor.id===save.player_state.entity_id?'你|玩家':escape(String(actor.components.identity!.name));
-  const prefix=`^(?:${subject})(?:已经|刚刚|刚|又)?(吃|喝|用)(掉|完|下|了)(?:了)?(?:这|那)?`;
+  const prefix=`^(?:随后|然后|接着|之后|接下来)?(?:${subject})(?:已经|刚刚|刚|又)?(吃|喝|用)(掉|完|下|了)(?:了)?(?:这|那)?`;
   const amountPattern=String.raw`[零一二两三四五六七八九十\d]+`,unit='(?:份|个|块|张|瓶|枚|件|支)';
   const pattern=names.length?new RegExp(`${prefix}(?:(${amountPattern})${unit})?(${names.map(escape).join('|')})(?=$|\\s|的|后|并|再|随后|接着)`):null;
   // A numbered standalone inventory claim cannot invent an unregistered asset.
   // Generic untracked meal activities retain their existing activity semantics.
   const unknown=receipts.some(r=>r.consumption||!r.activity)?new RegExp(`${prefix}(${amountPattern})${unit}([^，,。；;！？!?]{1,80})$`):null;
+  const claimed=new Map<string,number>();
   for(const clause of prose.split(/[，,。；;！？!?\n]/)){
    const match=pattern?.exec(clause.trim())??unknown?.exec(clause.trim());if(!match)continue;
    const evidence=receipts.filter(r=>r.actor_id===actor.id&&r.consumption?.name===match[4]&&r.consumption.status==='completed');
    const method=({吃:'eat',喝:'drink',用:'use'} as Record<string,string>)[match[1]];
-   const total=evidence.reduce((sum,r)=>sum+(r.consumption?.method===method?r.consumption.consumed_quantity:0),0);
+   const key=JSON.stringify([match[4],method]),events=evidence.filter(r=>r.consumption!.method===method);
+   const start=claimed.get(key)??0,remaining=events.slice(start);
    const amount=match[3]?consumptionQuantity(match[3]):null;
-   const final=evidence.at(-1)?.consumption;
-   if(!total||amount!==null&&amount!==total||match[2]==='完'&&amount===null&&final?.after_quantity!==0)return match[0];
+   // A statement may describe one actual operation or a consecutive group.
+   // Never split one quantity-two operation into two invented quantity-one events.
+   const wanted=amount??remaining.reduce((sum,r)=>sum+r.consumption!.consumed_quantity,0);
+   let total=0,count=0;
+   while(count<remaining.length&&total<wanted){total+=remaining[count].consumption!.consumed_quantity;count++;}
+   const final=remaining[count-1]?.consumption;
+   if(!wanted||total!==wanted||match[2]==='完'&&amount===null&&final?.after_quantity!==0)return match[0];
+   claimed.set(key,start+count);
   }
  }
  return null;

@@ -1,3 +1,4 @@
+import {itemOperationNarrative} from './item-operation.js';
 import {consumptionEventNarrative} from './item-consumption.js';
 import type {SavePackage,Action} from '../core/schema.js';
 import type {Inventory} from '../modules/inventory.js';
@@ -5,6 +6,13 @@ type Receipt=NonNullable<SavePackage['resolution_receipts']>[number];
 
 /** Render an exact built-in operation, not a new item outcome or an NPC response. */
 export function canonicalItemFallback(save:SavePackage,action:Action,receipt:Receipt,hidden:boolean){
+  if(!hidden&&receipt.request_id===action.id&&receipt.actor_id===save.player_state.entity_id&&receipt.semantic_action===action.type){
+    const operation=receipt.item_operation,event=itemOperationNarrative(receipt);
+    const sameOperation=operation?.kind==='transfer'?action.target_id===operation.recipient_id:
+      operation?.kind==='move'&&action.parameters.to===operation.destination&&
+        (operation.container_id===null||action.parameters.container_id===operation.container_id);
+    if(event&&sameOperation&&operation!.item_id===action.parameters.item_id)return event;
+  }
   if(!hidden&&receipt.request_id===action.id&&receipt.actor_id===save.player_state.entity_id&&receipt.consumption){
     const record=receipt.consumption,actor=save.entities.find(e=>e.id===receipt.actor_id);
     const actual=Number((actor?.components.inventory as Inventory|undefined)?.items[record.item_id]??0);

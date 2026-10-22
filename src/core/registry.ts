@@ -1,3 +1,4 @@
+import type {ItemOperation} from './item-operation-contract.js';
 import { z } from 'zod';
 import type {ConsumptionReceipt} from './consumption-contract.js';
 import type { Entity, PanelMeta, ComponentData } from '../shared/contracts.js';
@@ -16,6 +17,7 @@ export interface ActionContext {
   emit(event: GameEvent): void; advance(minutes: number): void; facts: string[];
   result_entities:Record<string,string[]>;
   movement_route?:MovementRoute;
+  item_operation?:ItemOperation;
   consumption?:ConsumptionReceipt;
   outcome?:'partial_success';
   next_time_boundary?:()=>number|null;
