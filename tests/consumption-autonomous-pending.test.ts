@@ -33,6 +33,13 @@ it.each(narrativeWorldKinds.flatMap(kind=>[false,true].map(fallback=>({kind,fall
   expect(response).not.toHaveProperty('error');expect(quantity(after)).toBe(1);expect(quantity(after,'qa_other_bread','npc_lin')).toBe(1);
   if(fallback){expect(after.last_turn!.narrative).toContain('林舟吃掉了1份面包。');expect(after.last_turn!.presentation!.status).toBe('degraded');}else{expect(after.last_turn!.narrative).toBe(text);expect(after.last_turn!.presentation!.status).toBe('normal');}expect(decide).toHaveBeenCalledTimes(decisions);expect(execute).not.toHaveBeenCalled();
   expect(after.runtime.time.minute).toBe(before.runtime.time.minute+180);expect(after.state_revision).toBe(before.state_revision+1);
+  if(!fallback){
+   const projected=prompts.at(-1)!.resolution_receipt as {compound_steps:{actor_id:string;consumption?:Record<string,unknown>}[]};
+   const npcEvent=projected.compound_steps.find(step=>step.actor_id==='npc_lin'&&step.consumption)!.consumption!;
+   expect(npcEvent).toMatchObject({item_id:'qa_other_bread',consumed_quantity:1,status:'completed'});
+   for(const privateField of ['before_quantity','after_quantity','requested_quantity'])expect(npcEvent).not.toHaveProperty(privateField);
+   expect(projected.compound_steps.find(step=>step.actor_id==='player')!.consumption).toMatchObject({before_quantity:3,after_quantity:2,requested_quantity:1});
+  }
   const committed=await readFile(join(directory,'current.json')),calls=ai.metrics.requests;await new GameService(new JsonStore(directory),ai,save.definition).turn(body);
   expect(await readFile(join(directory,'current.json'))).toEqual(committed);expect(ai.metrics.requests).toBe(calls);
  }finally{await rm(directory,{recursive:true,force:true});}

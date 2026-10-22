@@ -51,3 +51,12 @@ export function visibleNpcConsumptions(save:SavePackage,receipts:Receipt[]){
   r.consumption?.location_id===here&&typeof here==='string'&&save.entities.some(e=>e.id===r.actor_id&&
    e.components.character&&e.components.discovery?.known_to_player!==false));
 }
+
+/** Visible consumption is public; a witness does not learn the NPC's private stock. */
+export function projectConsumptionForNarrator(save:SavePackage,receipt:Receipt){
+ const event=receipt.consumption;if(!event)return null;
+ if(receipt.actor_id===save.player_state.entity_id)return event;
+ if(!visibleNpcConsumptions(save,[receipt]).length)return null;
+ return {item_id:event.item_id,name:event.name,method:event.method,consumed_quantity:event.consumed_quantity,
+  status:event.status,location_id:event.location_id};
+}
