@@ -201,3 +201,16 @@ shell glob or all repository tests. On this cloud environment installation used
 `--offline --cache /workspace/.npm-cache`; no provider configuration was copied.
 The user-facing story samples and empty quality judgments are in the archive's
 `evidence/outcomes-review-supplement.md/json` and both `quality-program` runs.
+
+Final delivery: all checkpoints pushed to `codex/cloud-narrator-concrete-outcomes`.
+An actual `gh pr create --base main --head codex/cloud-narrator-concrete-outcomes`
+request returned `Post https://api.github.com/graphql: Forbidden`; no PR number is
+claimed. Create it at:
+https://github.com/ononoki-peacepeace/agent-game-framework/compare/main...codex/cloud-narrator-concrete-outcomes?expand=1
+
+Evidence ZIP: 13,739,062 bytes, SHA-256
+`d15e9207b71a84979b2474a06f8f37c5a240c30ad061bc4f9e6237707bc4a610`.
+CRC verified. Archive handoff snapshot precedes this final API-result note;
+its product/test evidence and source hashes are unchanged. Windows may integrate
+this independent PR after reviewing PR #3–#7, using the conflict notes above.
+No PR or main branch was merged here.
