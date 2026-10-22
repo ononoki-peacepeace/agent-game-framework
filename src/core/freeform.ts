@@ -1,3 +1,4 @@
+import {consumptionActionForInput,startsConsumptionCommand} from './consumption-intent.js';
 import {resolveActionEntities} from '../agent/entities.js';
 import { z } from 'zod';
 import { GameError, assert, id, providerEmptyArray, providerFalseBoolean, type SavePackage } from './schema.js';
@@ -258,6 +259,8 @@ export function environmentQueryForProposal(input:string,proposal:ReturnType<typ
   return validateEnvironmentQuery(input,proposal.environment_query);
 }
 export function executeFreeform(current: SavePackage, input: string, raw: unknown, requestId: string,rng:RNG=secureRng,perceptionAuthorized=false,binding?:{target_ids:readonly string[];physical_intent?:GoalSpec['physical_intent']},environmentAssessment?:EnvironmentAssessment) {
+  const consumption=consumptionActionForInput(current,input);
+  if(consumption)return executeAction(current,consumption,requestId,'ai',rng);
   const proposal=parseFreeformProposal(raw,input);
   const environmentQuery=environmentQueryForProposal(input,proposal,binding);
   if(environmentQuery)return executeEnvironmentQuery(current,input,environmentQuery,proposal.minutes,environmentAssessment,requestId);
@@ -357,7 +360,10 @@ function executeFreeformAttempt(current: SavePackage, input: string, raw: unknow
   const mentionedItem=named.find(entity=>entity.components.item&&entity.id===proposal.item_move?.item_id)
     ??named.find(entity=>entity.components.item&&entity.components.identity?.name&&input.includes(String(entity.components.identity.name)));
   if(view.entities.some(entity=>entity.components.item&&requestsNamedItemConsumption(input,String(entity.components.identity?.name??''))))
-    throw new WorldBlockedError('unavailable','当前世界尚无已登记物品的消耗结算能力；这次没有消耗物品，也没有完成该行动。');
+    throw new WorldBlockedError('unavailable','请把消耗目标与其他操作分开并明确绑定；这次没有消耗物品，也没有完成该行动。');
+  if(view.entities.some(entity=>entity.components.item&&input.includes(String(entity.components.identity?.name??entity.id)))&&
+    input.split(/[，,。；;！？!?]/).some(startsConsumptionCommand))
+    throw new WorldBlockedError('prerequisite','这次包含独立的物品消耗步骤，须按顺序分别结算；不能用普通活动替代。');
   const activityContract=activityRequirement(current,input);
   if(proposal.item_change&&(!mentionedItem||mentionedItem.id!==proposal.item_change.item_id||
     !input.includes(proposal.item_change.source_quote)||proposal.physical_action))

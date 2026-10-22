@@ -1,9 +1,21 @@
+import {consumptionEventNarrative} from './item-consumption.js';
 import type {SavePackage,Action} from '../core/schema.js';
 import type {Inventory} from '../modules/inventory.js';
 type Receipt=NonNullable<SavePackage['resolution_receipts']>[number];
 
 /** Render an exact built-in operation, not a new item outcome or an NPC response. */
 export function canonicalItemFallback(save:SavePackage,action:Action,receipt:Receipt,hidden:boolean){
+  if(!hidden&&receipt.request_id===action.id&&receipt.actor_id===save.player_state.entity_id&&receipt.consumption){
+    const record=receipt.consumption,actor=save.entities.find(e=>e.id===receipt.actor_id);
+    const actual=Number((actor?.components.inventory as Inventory|undefined)?.items[record.item_id]??0);
+    if(actual!==record.after_quantity||record.before_quantity-record.consumed_quantity!==actual)return null;
+    const remaining=save.entities.filter(e=>e.components.item&&e.components.identity?.name===record.name)
+      .reduce((total,e)=>total+Number((actor?.components.inventory as Inventory|undefined)?.items[e.id]??0),0);
+    const event=consumptionEventNarrative(record);
+    if(record.status==='interrupted'&&record.consumed_quantity===0)return event;
+    if(record.status==='completed'&&record.consumed_quantity>0&&receipt.effects.includes('inventory'))return `${event.slice(0,-1)}，还持有${remaining}份${record.name}。`;
+    return null;
+  }
   if(hidden||receipt.request_id!==action.id||receipt.actor_id!==save.player_state.entity_id||
     receipt.semantic_action!==action.type||receipt.kind!=='DETERMINISTIC'||receipt.outcome!=='success'||
     !receipt.effects.includes('inventory'))return null;

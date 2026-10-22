@@ -6,5 +6,6 @@ export const consumptionRuleSchema=z.strictObject({method:consumptionMethodSchem
  required_flags:z.array(z.strictObject({flag:ref,equals:z.boolean()})).max(12).optional()});
 export const consumptionReceiptSchema=z.strictObject({item_id:ref,name:z.string().min(1).max(120),method:consumptionMethodSchema,
  requested_quantity:z.number().int().min(1).max(1000000),before_quantity:z.number().int().nonnegative(),
- consumed_quantity:z.number().int().nonnegative(),after_quantity:z.number().int().nonnegative(),status:z.enum(['completed','interrupted'])});
+ consumed_quantity:z.number().int().nonnegative(),after_quantity:z.number().int().nonnegative(),status:z.enum(['completed','interrupted'])}).refine(record=>record.before_quantity-record.consumed_quantity===record.after_quantity&&
+ (record.status==='completed'?record.consumed_quantity===record.requested_quantity:record.consumed_quantity===0),'消耗凭据数量关系不一致');
 export type ConsumptionReceipt=z.infer<typeof consumptionReceiptSchema>;

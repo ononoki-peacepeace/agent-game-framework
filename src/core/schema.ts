@@ -66,6 +66,7 @@ export const eventSchema = z.strictObject({
 export const physicalIntentSchema=z.strictObject({forms:z.array(z.enum(['strike','push','restrain','other'])).min(1).max(4),source_quote:z.string().min(2).max(1000)});
 export const rulesSchema = z.strictObject({
   minutes_per_day: integer.min(60).max(10000), max_wait_minutes: integer.min(1).max(1440),
+  ordinary_item_consumption:z.array(z.strictObject({name:z.string().min(2).max(80),minutes:integer.min(1).max(240)})).max(24).optional(),
   talk_minutes: integer.min(1).max(120), trade_minutes: integer.min(1).max(120),
   default_check: z.string().max(30), currencies: dictionary(z.string().min(1).max(80)),
   capability_domains:dictionary(z.strictObject({attribute:id.nullable(),skills:z.array(id).max(8),

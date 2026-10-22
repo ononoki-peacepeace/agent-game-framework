@@ -219,6 +219,7 @@ function admit(save:SavePackage,query:EnvironmentQuery,assessment:EnvironmentAss
     assert(!save.entities.some(e=>e.id===entityId),'环境对象稳定标识发生冲突');
     save.entities.push({id:entityId,type:'item',components:{identity:{name:query.name,description:record.description,
       avatar_id:null,gender:null,age:null},location:{location_id:here},item:{weight:a.weight,stackable:false,
+      ...(save.definition.ruleset.ordinary_item_consumption?.find(rule=>rule.name===query.name)?{consumable:{method:'use',minutes:save.definition.ruleset.ordinary_item_consumption.find(rule=>rule.name===query.name)!.minutes}}:{}),
       container:false,...(containerId?{container_id:containerId}:{}),tags:['ordinary','gap_generated','non_tradeable',...(record.take_allowed?[]:['shared_fixture'])],tracking:'tracked'}}});
     record.entity_id=entityId;
   }

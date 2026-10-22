@@ -96,7 +96,7 @@ export function ensureOrdinaryItem(save:SavePackage,name:string,weight:number,co
 }
 export const inventoryModule: Module = {
   id: 'inventory', version: '0.1.0', requires: ['core'],
-  manifest: { api_version:'1', provides:['inventory.storage','item.definition'], state_ownership:['components.inventory','components.item'], state_schema_version:'inventory.v1', migration_version:1, supports_enable_disable:false, supports_remove:false },
+  manifest: { api_version:'1', provides:['inventory.storage','item.definition','inventory.consumption'], state_ownership:['components.inventory','components.item'], state_schema_version:'inventory.v1', migration_version:1, supports_enable_disable:false, supports_remove:false },
   components: {
     item: { schema: itemSchema, project: d => d },
     inventory: { schema: z.strictObject({ items: dictionary(integer), placements:dictionary(z.string().nullable()).optional() }), project: (d, e, s) => e.id === s.player_state.entity_id ? d : undefined },
@@ -153,7 +153,7 @@ export const inventoryModule: Module = {
         if((player.components.inventory as Inventory).items[itemId]!==1)assert(item.components.location?.location_id===player.components.location?.location_id,'物品不在当前场景');
         putItemInInventory(c.save,itemId,to==='container'?String(c.action.parameters.container_id??''):null,c.action.actor_id);
       }
-      c.advance(1);c.facts.push(`物品位置已更新：${String(c.save.entities.find(entity=>entity.id===itemId)?.components.identity?.name??'物品')}。`);
+      c.result_entities.items=[itemId];c.advance(1);c.facts.push(`物品位置已更新：${String(c.save.entities.find(entity=>entity.id===itemId)?.components.identity?.name??'物品')}。`);
     }},
   },
   panels: [{ id: 'inventory', label: '背包', module: 'inventory', order: 60, mobile_group: 'primary', presentation_type: 'panel' }],
