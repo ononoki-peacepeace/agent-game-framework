@@ -1,3 +1,4 @@
+import {narratorReceiptItems} from '../narrative/item-evidence.js';
 import {actionBindingContext,authoritativeItemContext,recentSettledActions} from './action-context.js';
 import {routinePlanSchema} from '../routine/schema.js';
 import {characterContext,continuityGuidance,dialogueContinuityPolicy,performanceContinuityPolicy,narrativeHealth,assertNotRefusal} from './narrative-health.js';
@@ -720,7 +721,7 @@ export class AIRuntime {
       public_state: narratorView,
       authoritative_inventory:authoritativeItemContext(view).filter(item=>item.placement!=='scene'),
       visible_scene_items:authoritativeItemContext(view).filter(item=>item.placement==='scene'),
-      inventory_instruction:'这些是当前结构化状态中真实存在且可见的物品。只能把 authoritative_inventory 中的物品写成玩家持有或使用；visible_scene_items 只能写成现场物品。正文首次让玩家持有、取出或放置物品时仍须在 item_claims 逐件列出，不能凭空新增。',
+      inventory_instruction:'这些是当前结构化状态中真实存在且可见的物品。只能把 authoritative_inventory 中的物品写成玩家持有或使用；visible_scene_items 只能写成现场物品。inside_container 不等于手持；container_access 为 sealed 或 unknown 时不能凭描写取出或使用内容物。owner_id 不代替当前持有。正文首次让玩家持有、取出或放置物品时仍须在 item_claims 逐件列出，不能凭空新增。',
       action, facts,narrative_focus_policy:narratorGoalFocusPolicy,
       ...(receipt?.movement_route?{executed_movement_route:{
         locations:receipt.movement_route.location_ids.map(id=>view.locations.find(location=>location.id===id)?.name??id),
@@ -751,9 +752,9 @@ export class AIRuntime {
         outcome:save.resolution_history?.find(entry=>entry.check_id===receipt.check_id)?.hidden?'unconfirmed':receipt.outcome,
         time_cost:receipt.time_cost,canonical_facts:receipt.canonical_facts,effects:receipt.effects,
         activity:receipt.activity??null,storage:receipt.storage??null,progress_changes:receipt.progress_changes??[],
-        environment:receipt.environment??null,
+        environment:receipt.environment??null,item_entities:narratorReceiptItems(save,receipt,view),
         ...(compoundReceipts?{compound_steps:compoundReceipts.map(step=>({semantic_action:step.semantic_action,time_cost:step.time_cost,
-          actor_id:step.actor_id,target_id:step.target_id,movement_route:step.movement_route??null,effects:step.effects,activity:step.activity??null,canonical_facts:step.canonical_facts}))}:{})},
+          actor_id:step.actor_id,target_id:step.target_id,item_entities:narratorReceiptItems(save,step,view),movement_route:step.movement_route??null,effects:step.effects,activity:step.activity??null,canonical_facts:step.canonical_facts}))}:{})},
         mechanical_claim_policy:'activity 只表示角色在 receipt.activity 指定地点、按记录时长进行了普通活动；复合行动也可引用 compound_steps 中对应的 activity。必须引用对应的“进行了活动” canonical_facts，不能表示完成具体页数、任务或其他持久变化。progress 只表示有 progress_changes 支持的持久进度，不能用 activity 代替。正文中的成功失败、物品、伤害、金钱、位置、秘密发现与随机结果，也只能改写 resolution_receipt 明确许可的事实；每条此类声明必须在 mechanical_claims 中给出对应 canonical_facts 的 fact_index。不得将普通观察扩写为额外的玩家操作；没有相应 action/receipt 时，不得声称玩家推开、敲击、拿取、移动或使用了别的对象。无法引用时只写动作尝试和感官环境，不要自行决定结果。'}:{}),
       character_context:{...narratorContext,recent_turns:sceneHistory},
       relationship_dimensions: save.definition.ruleset.relationship_dimensions,

@@ -1,0 +1,53 @@
+import {afterEach,expect,it,vi} from 'vitest';
+import {randomUUID} from 'node:crypto';
+import {mkdtemp,readFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {narrativeWorldKinds,prepareNarrativeWorld} from './fixtures/narrative-worlds.js';
+import {JsonStore} from '../src/storage/json-store.js';
+import {GameService} from '../src/server/service.js';
+import {AIRuntime} from '../src/ai/runtime.js';
+import {narratorReceiptItems} from '../src/narrative/item-evidence.js';
+import {publicView} from '../src/core/state.js';
+import {executeAction} from '../src/core/runtime.js';
+afterEach(()=>vi.restoreAllMocks());
+const narration=(narrative:string)=>({narrative,speaker:null,dialogue:null,choices:[],context_actions:[],patches:[],interaction:null,item_claims:[],stable_locations:[],mechanical_claims:[]});
+it.each(narrativeWorldKinds)('retains event-time inventory across an actual interrupted compound candidate in %s',async kind=>{
+ const {save}=await prepareNarrativeWorld(kind),directory=await mkdtemp(join(tmpdir(),'agf-item-compound-'));
+ try{
+  const store=new JsonStore(directory);await store.write(save);
+  const ai=new AIRuntime({name:'offline-item-recovery',generate:async()=>{throw Error('Unexpected generation');}});
+  const interpret=vi.spyOn(ai,'interpret').mockImplementation(async(_save,input)=>input==='拿起纸片'?{type:'MOVE_ITEM',parameters:{item_id:'qa_paper',to:'held'}}:{type:'TRANSFER_ITEM',target_id:'npc_lin',parameters:{item_id:'qa_paper'}});
+  const text='你拿着纸片，随后把纸片交给林舟。';
+  const narrate=vi.spyOn(ai,'narrate').mockRejectedValueOnce(Error('offline interruption after authoritative candidate'));
+  const service=new GameService(store,ai,save.definition),before=await service.current(),body={game_id:before.game_id,expected_revision:before.state_revision,request_id:randomUUID(),input:'拿起纸片，再交给林舟'},steps=['拿起纸片','交给林舟'];
+  const bytes=await readFile(join(directory,'current.json'));
+  await expect(service.turn(body,undefined,undefined,undefined,false,undefined,steps)).rejects.toThrow();
+  expect(await readFile(join(directory,'current.json'))).toEqual(bytes);expect(interpret).toHaveBeenCalledTimes(2);
+  const pending=await store.readPending(body.request_id);expect(pending?.narration_item_states).toHaveLength(2);
+  expect(pending?.narration_item_states?.map(state=>state.items?.qa_paper??0)).toEqual([1,0]);
+  narrate.mockResolvedValue(narration(text));
+  const restarted=new GameService(new JsonStore(directory),ai,save.definition);
+  await restarted.turn(body,undefined,undefined,undefined,false,undefined,steps);
+  const after=await restarted.current();expect(after.last_turn!.narrative).toBe(text);expect(after.last_turn!.presentation?.status).toBe('normal');
+  expect(after.state_revision).toBe(before.state_revision+1);expect(interpret).toHaveBeenCalledTimes(2);expect(narrate).toHaveBeenCalledTimes(2);
+  expect(after.entities.find(e=>e.id==='npc_lin')!.components.inventory!.items).toMatchObject({qa_paper:1});
+  expect((after.entities.find(e=>e.id==='player')!.components.inventory!.items as Record<string,number>).qa_paper??0).toBe(0);
+  const committed=await readFile(join(directory,'current.json'));await restarted.turn(body,undefined,undefined,undefined,false,undefined,steps);
+  expect(await readFile(join(directory,'current.json'))).toEqual(committed);expect(interpret).toHaveBeenCalledTimes(2);expect(narrate).toHaveBeenCalledTimes(2);
+ }finally{await rm(directory,{recursive:true,force:true});}
+},60000);
+it.each(narrativeWorldKinds)('projects only this player receipt item reference after it leaves public inventory in %s',async kind=>{
+ const {save}=await prepareNarrativeWorld(kind);
+ const held=executeAction(save,{type:'MOVE_ITEM',parameters:{item_id:'qa_paper',to:'held'}},randomUUID()).save;
+ const transferred=executeAction(held,{type:'TRANSFER_ITEM',target_id:'npc_lin',parameters:{item_id:'qa_paper'}},randomUUID()).save;
+ const receipt=transferred.resolution_receipts!.at(-1)!,view=publicView(transferred);
+ expect(view.entities.some(entity=>entity.id==='qa_paper')).toBe(false);
+ expect(narratorReceiptItems(transferred,receipt,view)).toEqual([{item_id:'qa_paper',name:'纸片',transfer_recipient_id:'npc_lin',current_holder_id:null,current_location_id:null,condition:null}]);
+ expect(narratorReceiptItems(transferred,{...receipt,actor_id:'npc_lin'},view)).toEqual([]);
+ expect(narratorReceiptItems(transferred,{...receipt,canonical_facts:[]},view)).toEqual([]);
+ expect(narratorReceiptItems(transferred,{...receipt,effects:['time']},view)).toEqual([]);
+ const changed=executeAction(transferred,{type:'DAMAGE_ITEM',target_id:'qa_paper',parameters:{extent:'damage'}},randomUUID(),'ai',()=>.99,undefined,true,'npc_lin').save;
+ expect(changed.entities.find(entity=>entity.id==='qa_paper')!.components.item!.condition).toBe('damaged');
+ expect(narratorReceiptItems(changed,receipt,publicView(changed))).toEqual(narratorReceiptItems(transferred,receipt,view));
+},30000);

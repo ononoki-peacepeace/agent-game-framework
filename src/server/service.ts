@@ -1,3 +1,4 @@
+import type {ItemPossessionInventory} from '../narrative/item-possession.js';
 import {CandidateValidationError,generationRepair,generationBudget,schemaIssues,type GenerationRepair} from '../ai/failures.js';
 import {failureReason,ProviderError,NarratorSchemaError} from '../ai/failures.js';
 import {sparseStep} from '../routine/scheduler.js';
@@ -234,7 +235,7 @@ export class GameService {
     const location=current.entities.find(entity=>entity.id===current.player_state.entity_id)?.components.location?.location_id;
     let candidate=current,last:ReturnType<typeof executeAction>|undefined;
     const receipts:NonNullable<SavePackage['resolution_receipts']>=[];
-    const facts:string[]=[];
+    const facts:string[]=[],itemStates:ItemPossessionInventory[]=[];
     for(const [index,step] of steps.entries()){
       assert(!candidate.foreground?.blocker,'局部复合行动中途出现需要玩家决定的事项；世界状态没有改变。');
       const stepId=compoundStepId(requestId,index);
@@ -291,6 +292,7 @@ export class GameService {
       assert(!turn.save.resolution_history?.find(entry=>entry.check_id===receipt.check_id)?.hidden,
         '行动结果尚未公开，不能继续局部复合行动。');
       candidate=turn.save;last=turn;receipts.push(receipt);facts.push(...turn.facts);
+      itemStates.push(structuredClone(candidate.entities.find(entity=>entity.id===candidate.player_state.entity_id)?.components.inventory??{}));
     }
     assert(last,'局部复合行动缺少程序结算');
     const allFacts=receipts.flatMap(receipt=>receipt.canonical_facts);
@@ -305,7 +307,7 @@ export class GameService {
       effects:[...new Set(receipts.flatMap(receipt=>receipt.effects))],activity:undefined,storage:undefined,
       progress_changes:receipts.flatMap(receipt=>receipt.progress_changes??[]),commit_status:'pending' as const};
     candidate.resolution_receipts=[...(candidate.resolution_receipts??[]),aggregate].slice(-200);
-    return {turn:{...last,save:candidate,action:{...last.action,id:requestId,time_cost:totalMinutes},facts},receipts};
+    return {turn:{...last,save:candidate,action:{...last.action,id:requestId,time_cost:totalMinutes},facts},receipts,itemStates};
   }
   async exclusive<T>(fn: () => Promise<T>,owner?:string): Promise<T> {
     if(this.routineLease && owner!==this.routineLease)throw new GameError('后台生活模式正在运行：查看与图片上传不受影响；需要修改世界的行动请先在生活模式面板请求安全暂停',409);
@@ -554,11 +556,12 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
       }
       const containerSurveyId=req.input?broadContainerObservation(actionBase,req.input):null;
       let generic:boolean,turn:ReturnType<typeof executeAction>;
+      let compoundItemStates:ItemPossessionInventory[]=[];
       let travelDecisionLines:{speaker_id:string;utterance:string}[]=[];
       let travelDecisionReceipt:{id:string;fingerprint:string}|null=null;
       if(pending){
         assert(pending.game_id===current.game_id&&pending.expected_revision===current.state_revision&&pending.fingerprint===fingerprint,'待完成判定与当前请求不一致');
-        generic=pending.generic;
+        generic=pending.generic;compoundItemStates=pending.narration_item_states??[];
         let candidate:SavePackage;
         try{
           candidate=validateSave(pending.candidate);
@@ -643,7 +646,10 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
             trace.warn('travel.decision.failed',{metadata:{reason:errorText(error).slice(0,200)}});
           }
         }
-        if(compoundSteps)turn=(await this.localCompoundCandidate(actionBase,req.request_id,compoundSteps)).turn;
+        if(compoundSteps){
+          const compound=await this.localCompoundCandidate(actionBase,req.request_id,compoundSteps);
+          turn=compound.turn;compoundItemStates=compound.itemStates;
+        }
         else if(req.input&&(isBroadSceneObservation(req.input)||containerSurveyId)){
           const here=actionBase.entities.find(e=>e.id===actionBase.player_state.entity_id)?.components.location?.location_id;
           const priorSurvey=actionBase.environment_state?.surveys?.filter(s=>s.location_id===here&&
@@ -724,7 +730,7 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
         }
         if(generic)assert(turn.save.resolution_receipts?.some(entry=>entry.request_id===req.request_id),'开放世界行动缺少程序判定凭据');
         if(!generic||turn.save.resolution_receipts?.some(entry=>entry.request_id===req.request_id)){
-          const staged:PendingTurn={game_id:current.game_id,request_id:req.request_id,fingerprint,expected_revision:current.state_revision,candidate:turn.save,action:turn.action,facts:turn.facts,generic};
+          const staged:PendingTurn={game_id:current.game_id,request_id:req.request_id,fingerprint,expected_revision:current.state_revision,candidate:turn.save,action:turn.action,facts:turn.facts,generic,...(compoundItemStates.length?{narration_item_states:compoundItemStates}:{})};
           await this.storage.writePending?.(staged);this.pendingTurns.set(req.request_id,structuredClone(staged));
         }
       }
@@ -908,14 +914,14 @@ save.definition.provenance=worldCreationProvenanceSchema.parse(normalizeProvenan
                 {...result,item_claims:[],stable_locations:[],patches:[]}:result;
               let ambiguousPattern:NarrativePatternError|null=null;
               try{validateResolvedNarrative(receipt,resolvedResult,Boolean(check?.hidden),
-                narrativeSteps as NonNullable<SavePackage['resolution_receipts']>|undefined,next);}
+                narrativeSteps as NonNullable<SavePackage['resolution_receipts']>|undefined,next,false,compoundItemStates);}
               catch(error){
                 // Only explicitly sensory constructions can reach the prose audit after a
                 // pattern rejection. A model's positive audit cannot authorize world effects.
                 if(perception&&error instanceof NarrativePatternError&&
                   ['inventory','position'].includes(error.patternKind)){
                   validateResolvedNarrative(receipt,resolvedResult,Boolean(check?.hidden),
-                    narrativeSteps as NonNullable<SavePackage['resolution_receipts']>|undefined,next,true);
+                    narrativeSteps as NonNullable<SavePackage['resolution_receipts']>|undefined,next,true,compoundItemStates);
                   ambiguousPattern=error;
                 }
                 else throw error;
