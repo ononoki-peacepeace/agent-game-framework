@@ -1,0 +1,740 @@
+{
+  "version": 1,
+  "kind": "windows_live_qa_supplement_not_new_acceptance_denominator",
+  "conditions": [
+    "N3.4",
+    "N5.3",
+    "N5.4",
+    "N6.3",
+    "N6.4",
+    "N7.3",
+    "N7.4",
+    "N8.2",
+    "N8.4",
+    "N9.1",
+    "N9.2",
+    "N9.3",
+    "N9.4"
+  ],
+  "worlds": [
+    {
+      "id": "commerce",
+      "required_structure": [
+        "真实交易库存/价格/钱包",
+        "至少两个可达地点及有耗时路线"
+      ],
+      "legacy_fixture": "tests/fixtures/narrative-worlds.ts:commerce"
+    },
+    {
+      "id": "relationships",
+      "required_structure": [
+        "人物知识与定向关系",
+        "无商店/钱包依赖；存在位置和对话焦点"
+      ],
+      "legacy_fixture": "tests/fixtures/narrative-worlds.ts:relationships"
+    },
+    {
+      "id": "autonomy",
+      "required_structure": [
+        "自主生活或计划",
+        "玩家缺席时会发生的背景事件、不同路线拓扑"
+      ],
+      "legacy_fixture": "tests/fixtures/narrative-worlds.ts:autonomy"
+    }
+  ],
+  "cases": [
+    {
+      "id": "P01",
+      "title": "同一情境的不同人物声线",
+      "conditions": [
+        "N5.3",
+        "N5.4",
+        "N9.2"
+      ],
+      "setup": [
+        "甲乙同场且有真实、不同的人格/表达资料；相同问题，不规定NPC回答台词。",
+        "固定前置快照，记录人格来源及双方对玩家关系；顺序轮换，不把顺序差当人格差。"
+      ],
+      "steps": [
+        {
+          "id": "P01-01",
+          "input": "我问{npc_a}：你今天想怎么安排接下来的时间？"
+        },
+        {
+          "id": "P01-02",
+          "input": "我转向{npc_b}，也问：你今天想怎么安排接下来的时间？"
+        }
+      ],
+      "required_observations": [
+        "甲乙各一份真实回答",
+        "同问题与可比前提",
+        "人格资料较长时声线/社交/情绪字段是否仍到达普通与修正请求"
+      ],
+      "review_checks": [
+        "能否从措辞、长度、态度辨认人物；不得仅复述人格形容词。",
+        "任何行为/承诺须有NPC决定或凭据；不能要求开朗者必定配合。"
+      ],
+      "reuses": [
+        "V-*-reserved",
+        "V-*-expansive",
+        "PR #10 persona selection"
+      ],
+      "worlds": [
+        "commerce",
+        "relationships",
+        "autonomy"
+      ]
+    },
+    {
+      "id": "P02",
+      "title": "同一人物关系与记忆对照",
+      "conditions": [
+        "N5.3",
+        "N5.4",
+        "N7.3"
+      ],
+      "setup": [
+        "使用经过Windows确认的四个独立QA前置状态：陌生、熟悉/朋友、敌意/不信任、已有共同经历。",
+        "关系和经历必须已有可追溯事件，不通过在输入中声称“你信任我”代替。各分支不混用后续存档。"
+      ],
+      "steps": [
+        {
+          "id": "P02-01",
+          "input": "我问{npc_a}：我想和你一起核对{public_notice}，你愿意吗？"
+        },
+        {
+          "id": "P02-02",
+          "input": "我继续问{npc_a}：你最在意这件事的哪一部分？"
+        }
+      ],
+      "required_observations": [
+        "陌生前提与输出",
+        "熟悉/朋友前提与输出",
+        "敌意/不信任前提与输出",
+        "共同经历前提与输出",
+        "NPC→玩家与玩家→NPC方向分别记录",
+        "接受/拒绝/犹豫均按实际决定保留"
+      ],
+      "review_checks": [
+        "态度变化须有来源且表达自然；不因关系值自动虚构同意或亲密。"
+      ],
+      "reuses": [
+        "V-*-trusted",
+        "V-*-remembered",
+        "PR #8 directional cognition"
+      ],
+      "worlds": [
+        "commerce",
+        "relationships",
+        "autonomy"
+      ]
+    },
+    {
+      "id": "P03",
+      "title": "长资料与修正链不抹平人物",
+      "conditions": [
+        "N5.3",
+        "N8.4"
+      ],
+      "setup": [
+        "选真实合法的长行为资料及短声线资料；保留literal样本不供模型照抄。",
+        "只在真实调用发生修正时评价修正链；若没有触发，标记该子项待验证，复用离线工程证据，不追加无限模型调用。"
+      ],
+      "steps": [
+        {
+          "id": "P03-01",
+          "input": "我问{npc_a}：刚才那件事，你现在最想先处理什么？"
+        },
+        {
+          "id": "P03-02",
+          "input": "我问{npc_a}：你可以直接说不想做的部分。"
+        }
+      ],
+      "required_observations": [
+        "原始候选→验证诊断→修正候选→最终文本完整链",
+        "修正前后人格/声线/关系上下文",
+        "未触发修正明确记not_observed"
+      ],
+      "review_checks": [
+        "修正不能变更NPC决定、发言归属或事实；风格不得退化成规则解释。"
+      ],
+      "reuses": [
+        "PR #10",
+        "tests/npc-dialogue-style.test.ts"
+      ],
+      "worlds": [
+        "commerce",
+        "relationships",
+        "autonomy"
+      ]
+    },
+    {
+      "id": "M01",
+      "title": "约定、更正与重要记忆",
+      "conditions": [
+        "N5.3",
+        "N7.3",
+        "N7.4"
+      ],
+      "setup": [
+        "通过已有事件形成真实约定或明确的提议，记录说话人/参与者/事件时间/是否接受。",
+        "后续更正必须实际发生；若NPC拒绝新约定，按拒绝分支继续，不能预写已答应。"
+      ],
+      "steps": [
+        {
+          "id": "M01-01",
+          "input": "我问{npc_a}：我们能否明天在{meeting_place}核对{public_notice}？"
+        },
+        {
+          "id": "M01-02",
+          "input": "我告诉{npc_a}：我刚才提议的时间不合适，请先取消那个安排，我们还没有确定新的时间。"
+        },
+        {
+          "id": "M01-03",
+          "input": "我和{npc_a}聊聊今天路上的见闻。"
+        },
+        {
+          "id": "M01-04",
+          "input": "我问{npc_a}：我们之前关于核对公告的安排，现在到底确定到哪一步了？"
+        }
+      ],
+      "required_observations": [
+        "旧提议/承诺",
+        "后续取消/更正",
+        "无关聊天之后回忆",
+        "超过200字记忆中末尾否定/条件的来源保留"
+      ],
+      "review_checks": [
+        "区分说过、相信、接受、取消和已经履约；不猜参与者集合中的说话人。"
+      ],
+      "reuses": [
+        "PR #9",
+        "L-*"
+      ],
+      "worlds": [
+        "commerce",
+        "relationships",
+        "autonomy"
+      ]
+    },
+    {
+      "id": "M02",
+      "title": "私有认知、误解与感知边界",
+      "conditions": [
+        "N7.3",
+        "N5.4"
+      ],
+      "setup": [
+        "只有甲知道的事件与甲仅听说的传闻分别带来源/置信度；乙当时缺席。",
+        "另一个对照明确记录感官限制；不得通过正文暗示未记录的失明等状态。"
+      ],
+      "steps": [
+        {
+          "id": "M02-01",
+          "input": "我问{npc_b}：你知道{public_notice}后来有什么变化吗？"
+        },
+        {
+          "id": "M02-02",
+          "input": "我问{npc_a}：你说的这件事，是亲眼见到的还是听别人说的？"
+        }
+      ],
+      "required_observations": [
+        "私有事件不泄漏给缺席者",
+        "传闻/推测不变世界真相",
+        "无视觉人物不声称看见"
+      ],
+      "review_checks": [
+        "允许人物不知道、误解或怀疑；必须与本人知识来源一致，不用全知旁白替其作答。"
+      ],
+      "reuses": [
+        "PR #8/#9",
+        "tests/narrator-character-cognition.test.ts"
+      ],
+      "worlds": [
+        "commerce",
+        "relationships",
+        "autonomy"
+      ]
+    },
+    {
+      "id": "D01",
+      "title": "多人同场与相同答复归属",
+      "conditions": [
+        "N5.4",
+        "N3.4",
+        "N9.2"
+      ],
+      "setup": [
+        "甲乙同场；问题涉及双方各自经历，不要求它们说同一句话。",
+        "若两人碰巧相同答复，检查是否只因另一人说过而额外重写；未出现该分支可复用PR #10工程反例，不能冒充真实命中。"
+      ],
+      "steps": [
+        {
+          "id": "D01-01",
+          "input": "我先问{npc_a}：你今天去过{other_place}吗？"
+        },
+        {
+          "id": "D01-02",
+          "input": "我再问{npc_b}：你今天去过{other_place}吗？"
+        },
+        {
+          "id": "D01-03",
+          "input": "我转回{npc_a}：我刚才问的是你自己的经历。"
+        }
+      ],
+      "required_observations": [
+        "每句说话人/听众与顺序",
+        "焦点切换",
+        "相同答复与同一人物循环分开"
+      ],
+      "review_checks": [
+        "不合并两人的话，不把谈论对象当听众；相同事实不必强行不同措辞。"
+      ],
+      "reuses": [
+        "PR #10 dialogue attribution",
+        "PR #3/#8 speech preservation"
+      ],
+      "worlds": [
+        "commerce",
+        "relationships",
+        "autonomy"
+      ]
+    },
+    {
+      "id": "D02",
+      "title": "长对话、目标与态度连续性",
+      "conditions": [
+        "N5.3",
+        "N7.3",
+        "N9.2"
+      ],
+      "setup": [
+        "保持真实连续会话，逐轮保存输入；10轮是一条固定语料，不等于完整长期验收。",
+        "已有NPC目标和当前状态；不得把人格倾向当成此刻情绪的权威事实。"
+      ],
+      "steps": [
+        {
+          "id": "D02-01",
+          "input": "我问{npc_a}：你现在在忙什么？"
+        },
+        {
+          "id": "D02-02",
+          "input": "我问{npc_a}：有什么已经确定的安排？"
+        },
+        {
+          "id": "D02-03",
+          "input": "我问{npc_a}：哪些还没有确定？"
+        },
+        {
+          "id": "D02-04",
+          "input": "我告诉{npc_a}：我只是了解情况，不是要求你同行。"
+        },
+        {
+          "id": "D02-05",
+          "input": "我问{npc_b}：你有不同的看法吗？"
+        },
+        {
+          "id": "D02-06",
+          "input": "我回头问{npc_a}：你愿意补充刚才还没有说清的部分吗？"
+        },
+        {
+          "id": "D02-07",
+          "input": "我对{npc_a}说：如果你现在不想继续，可以直接告诉我。"
+        },
+        {
+          "id": "D02-08",
+          "input": "我问{npc_b}：你接下来准备做什么？"
+        },
+        {
+          "id": "D02-09",
+          "input": "我问{npc_a}：我们刚才有没有真的定下什么？"
+        },
+        {
+          "id": "D02-10",
+          "input": "我向两人道别，表示先聊到这里。"
+        }
+      ],
+      "required_observations": [
+        "各轮完整输出与NPC实际目标/决定",
+        "已答问题不重复审问",
+        "拒绝/结束谈话后不被强迫继续",
+        "未经结算不增加关系"
+      ],
+      "review_checks": [
+        "语气和节奏随情境变化；不每轮停顿、凝视、总结原则；不凭问句就预设作出承诺。"
+      ],
+      "reuses": [
+        "V-*",
+        "PR #8/#10"
+      ],
+      "worlds": [
+        "commerce",
+        "relationships",
+        "autonomy"
+      ]
+    },
+    {
+      "id": "A01",
+      "title": "对抗动作的具体成功与失败",
+      "conditions": [
+        "N3.4",
+        "N8.2",
+        "N8.4"
+      ],
+      "setup": [
+        "仅用Windows授权的独立QA人物/场景；合法攻击/推搡及身体约束由实际世界规则决定。",
+        "收集实际结果；不修改Core概率，不反复重掷以隐藏失败。缺少目标结果时列缺失，后续预算由Windows决定。"
+      ],
+      "steps": [
+        {
+          "id": "A01-01",
+          "input": "我趁{npc_a}没有注意，伸手抓住对方的手腕。"
+        },
+        {
+          "id": "A01-02",
+          "input": "我试着推开{npc_a}，从旁边离开。"
+        }
+      ],
+      "required_observations": [
+        "接触成立",
+        "未接触",
+        "部分完成/中断",
+        "目标离场或无效前提",
+        "仅抽象失败时原因未知"
+      ],
+      "review_checks": [
+        "只有凭据记录躲避/阻挡/反击才能如此描写。命中不自动授权伤部、淤青或掉落物品。",
+        "标记“你尝试了行动但是失败了/未能建立接触”等原句；有具体事实却只剩状态码属于质量失败，原因未知时准确克制不自动算事实失败。"
+      ],
+      "reuses": [
+        "PR #8 physical presentation",
+        "R02/R03/R05/R06"
+      ],
+      "worlds": [
+        "commerce",
+        "relationships",
+        "autonomy"
+      ]
+    },
+    {
+      "id": "A02",
+      "title": "长复合行动与重复步骤",
+      "conditions": [
+        "N3.4",
+        "N8.2"
+      ],
+      "setup": [
+        "同场甲乙、桌上QA物品、可达地点均已登记；前置固定，不把失效步骤预先改成功。",
+        "为成功、依赖失败、部分完成、未执行尾部保留分支；已有Windows五阶段语料直接复用。"
+      ],
+      "steps": [
+        {
+          "id": "A02-01",
+          "input": "我先向{npc_a}打招呼，拿起桌上的{item}，再问{npc_b}是否见过{public_notice}，把{item}放回桌上，最后再向{npc_a}打一次招呼。"
+        },
+        {
+          "id": "A02-02",
+          "input": "我去{other_place}，找到{npc_a}后再向对方说明我刚才的来意；如果没有找到，就先留在那里观察。"
+        }
+      ],
+      "required_observations": [
+        "已结算前缀及早期NPC发言",
+        "重复动作两份不同凭据",
+        "失败/部分/未执行尾部",
+        "事件顺序与因果"
+      ],
+      "review_checks": [
+        "叙述应连贯而非编号工具列表；不能只写最后一步、合并重复动作或提前完成尾部。"
+      ],
+      "reuses": [
+        "PR #3/#8",
+        "docs/compound-three-world-prose.md"
+      ],
+      "worlds": [
+        "commerce",
+        "relationships",
+        "autonomy"
+      ]
+    },
+    {
+      "id": "I01",
+      "title": "容器、环境、临时物与消耗链",
+      "conditions": [
+        "N6.3",
+        "N6.4"
+      ],
+      "setup": [
+        "绑定合法可消耗堆叠物及数量、开放/封闭容器、只可观察环境物、合法生成的临时物。",
+        "仅在世界规则已支持相应操作时执行；不借旁白生成资源或推断恢复效果。"
+      ],
+      "steps": [
+        {
+          "id": "I01-00",
+          "input": "我不打开{container}，试着直接取出里面的一份{item}。"
+        },
+        {
+          "id": "I01-01",
+          "input": "我打开{container}，取出一份{item}，然后吃掉这一份。"
+        },
+        {
+          "id": "I01-02",
+          "input": "我尝试拿起{environment_object}并使用它。"
+        },
+        {
+          "id": "I01-03",
+          "input": "我拿起刚才合法生成的{temporary_item}，用完后把剩余部分放下。"
+        },
+        {
+          "id": "I01-04",
+          "input": "我把手里的另一份{item}交给{npc_a}，询问对方是否想使用它。"
+        }
+      ],
+      "required_observations": [
+        "开放容器",
+        "封闭容器拒绝及打开后再行动",
+        "可观察但不可用环境物",
+        "临时物合法存在来源",
+        "拾取与持有",
+        "放下后位置",
+        "转交后双方归属数量",
+        "玩家成功消耗",
+        "已有授权规则下NPC成功消耗",
+        "数量不足",
+        "不可消耗物",
+        "损坏物按世界规则处理",
+        "行动中断及未执行尾部"
+      ],
+      "review_checks": [
+        "每步实体ID、持有者、位置、数量与凭据逐项对应；不得描写未获得物品或仅说吃掉而库存不变。",
+        "NPC是否使用由其已有能力和真实决定确定；未执行明确保留。"
+      ],
+      "reuses": [
+        "PR #3–#7",
+        "D-*-*"
+      ],
+      "worlds": [
+        "commerce",
+        "relationships",
+        "autonomy"
+      ]
+    },
+    {
+      "id": "I02",
+      "title": "同名实体、归属与后续可用性",
+      "conditions": [
+        "N6.3",
+        "N6.4"
+      ],
+      "setup": [
+        "至少两件同名不同ID物品，分属玩家/NPC/容器；含共享堆叠数量对照。",
+        "固定成功后再行动、失败后合法重试；不得靠改名称消除原歧义。"
+      ],
+      "steps": [
+        {
+          "id": "I02-01",
+          "input": "我使用自己手里的{item}。"
+        },
+        {
+          "id": "I02-02",
+          "input": "我尝试再使用刚才那一份{item}。"
+        },
+        {
+          "id": "I02-03",
+          "input": "我拿起桌上那份{item}，再使用它。"
+        },
+        {
+          "id": "I02-04",
+          "input": "我想使用{item}。"
+        }
+      ],
+      "required_observations": [
+        "精确拥有者与数量",
+        "耗尽后拒绝",
+        "失败后取得再合法使用",
+        "真歧义不猜实体",
+        "同请求精确重放"
+      ],
+      "review_checks": [
+        "比较后续实际Core行动，而非仅文本关键词；保留虚构成功和合法操作误拒两个方向。"
+      ],
+      "reuses": [
+        "PR #4/#5/#6/#7"
+      ],
+      "worlds": [
+        "commerce",
+        "relationships",
+        "autonomy"
+      ]
+    },
+    {
+      "id": "F01",
+      "title": "普通生成、修正与真实降级对照",
+      "conditions": [
+        "N8.2",
+        "N8.4",
+        "N9.3"
+      ],
+      "setup": [
+        "Windows使用现有独立QA故障入口或隔离测试；不改正式Provider配置，不为诱发拒绝发送越界内容。",
+        "同一权威结算结果对应普通模型与实际降级文本；已提交动作不得再执行。无法取得相同凭据配对则标记不可比。"
+      ],
+      "steps": [
+        {
+          "id": "F01-01",
+          "input": "我观察{public_notice}，然后问{npc_a}是否愿意说明其中已经公开的内容。"
+        }
+      ],
+      "required_observations": [
+        "正常模型",
+        "实际refusal降级",
+        "实际timeout降级",
+        "实际schema失败降级",
+        "实际事实矛盾诊断与处理",
+        "修正候选链",
+        "最终降级及仍需展示的技术状态"
+      ],
+      "review_checks": [
+        "不隐藏系统错误，不把NPC正常拒绝当Provider拒绝，不将候选草稿当实际展示文本。",
+        "事实正确、具体性、连贯性、自然度分别判断；助手腔和工具摘要逐句举证。"
+      ],
+      "reuses": [
+        "PR #8",
+        "F01–F08",
+        "existing candidate/review tools"
+      ],
+      "worlds": [
+        "commerce",
+        "relationships",
+        "autonomy"
+      ]
+    },
+    {
+      "id": "F02",
+      "title": "恢复与提交边界的叙事一致性",
+      "conditions": [
+        "N6.4",
+        "N7.4",
+        "N8.2"
+      ],
+      "setup": [
+        "只复用Windows已有QA恢复工具与授权检查点；iMac不启动服务器、不触碰3100。",
+        "提交前失败、提交后响应丢失、服务/存储重建；同request_id和同payload精确重放。"
+      ],
+      "steps": [
+        {
+          "id": "F02-01",
+          "input": "我拿起一份{item}并使用它，然后告诉{npc_a}我已经完成的部分。"
+        }
+      ],
+      "required_observations": [
+        "提交前失败",
+        "提交后响应丢失",
+        "新服务/存储实例",
+        "请求与返回原始字节",
+        "后续新请求可用性"
+      ],
+      "review_checks": [
+        "回放不再次调用模型/扣物/推进时间，原故事不丢；技术失败不当作游戏动作成功。"
+      ],
+      "reuses": [
+        "PR #3/#5/#6/#7",
+        "PR #9/#10 replay evidence"
+      ],
+      "worlds": [
+        "commerce",
+        "relationships",
+        "autonomy"
+      ]
+    },
+    {
+      "id": "L01",
+      "title": "三世界72小时固定回看",
+      "conditions": [
+        "N7.3",
+        "N7.4",
+        "N5.4"
+      ],
+      "setup": [
+        "每结构连续72世界小时，0/24/48/72h固定回看，至少各回看点重建服务/存储并核对重放。",
+        "真实日常互动、移动、原承诺/更正、世界允许的资源变化和自主事件；不只是WAIT跳时。",
+        "由Windows现有QA流程推进；完整保留中间段落，不只摘漂亮回看句。"
+      ],
+      "steps": [
+        {
+          "id": "L01-01",
+          "input": "我问{npc_a}：我们上次说定了什么，还有哪些没有做到？"
+        },
+        {
+          "id": "L01-02",
+          "input": "我查看自己当前所在的位置和随身物品，再去核对{public_notice}。"
+        },
+        {
+          "id": "L01-03",
+          "input": "我问{npc_b}：在我离开的这段时间，你自己做了什么？"
+        }
+      ],
+      "required_observations": [
+        "0/24/48/72h",
+        "至少三次服务/存储重建",
+        "实际移动和每日交流",
+        "目标/记忆/关系变化来源",
+        "背景事件和缺席知识边界"
+      ],
+      "review_checks": [
+        "回忆、承诺、位置、物品、发言与角色可知事实一致；不能用短期单元测试或三句总结代替长期叙事。"
+      ],
+      "reuses": [
+        "L-*",
+        "PR #9/#10"
+      ],
+      "worlds": [
+        "commerce",
+        "relationships",
+        "autonomy"
+      ]
+    }
+  ],
+  "legacy_program": "docs/narrator-quality-program.v1.json",
+  "binding_keys": [
+    "npc_a",
+    "npc_b",
+    "meeting_place",
+    "other_place",
+    "public_notice",
+    "item",
+    "container",
+    "environment_object",
+    "temporary_item"
+  ],
+  "execution": "Manual inputs on the existing Windows QA webpage only after prerequisites and budget authorization. No execution by this catalog.",
+  "program_requirements": [
+    {
+      "condition": "N9.1",
+      "evidence": [
+        "固定三结构清单与原56案例映射",
+        "可复核评分表"
+      ]
+    },
+    {
+      "condition": "N9.2",
+      "evidence": [
+        "原五维覆盖与对照",
+        "N/A理由及缺失项"
+      ]
+    },
+    {
+      "condition": "N9.3",
+      "evidence": [
+        "当前集成源码完整基准执行记录",
+        "逐项失败/未执行/未评审结果"
+      ]
+    },
+    {
+      "condition": "N9.4",
+      "evidence": [
+        "真实独立/真人身份与授权引用",
+        "实际逐项评审及分歧处理"
+      ]
+    }
+  ]
+}
