@@ -50,3 +50,28 @@ and NPC-dialogue boundaries. The new optional `purpose="narration"` argument is
 used only by the Narrator context; default `decision` callers are unchanged.
 The 1000-character cap remains, literal dialogue samples remain excluded, and
 selection does not assert that every possible long field can always fit.
+
+## Stage 2: repetition belongs to a speaker
+
+Repetition health concatenated narration and dialogue without speaker identity.
+Three worlds reproduce an unnecessary second generation when Lin gives the same
+answer as Qiao; a short-answer control reproduces the same error through the
+`generic_without_context` path. Original baseline: 5 passed / 4 failed, no skips.
+The five positive controls already detect same-speaker loops and repeated prose.
+Original report/output snapshots are retained as `dialogue-attribution-baseline`
+and `dialogue-attribution-before/`.
+
+The quality heuristic now compares dialogue only within the same known voice.
+It still compares descriptive narration across speakers, retains two-unattributed-
+legacy behavior, and does not assign unattributed history to a known character.
+This changes an expression-retry trigger, not a fact validator, dialogue decision,
+refusal boundary or authoritative state. It does not guarantee that a same-speaker
+repeat is inappropriate in every conversational setting.
+
+The initial affected three-file run passes 41 tests. Expanded stage controls
+pass 23 tests, including two legacy-identity boundaries and six actual
+JsonStore/GameService commit/reconstruction/exact-replay cases across commerce,
+relationships and autonomy. The two NPCs retain separate authored profiles;
+normal authored and offline-refusal paths preserve canonical profiles/relationships,
+advance time/revision once and preserve exact save bytes on replay. No uncontrolled
+NPC decision, paid Provider or generated-quality rating is used.

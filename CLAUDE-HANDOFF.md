@@ -837,3 +837,11 @@ selection priority now retains those cues within the existing budget; NPC owner
 and scene/travel defaults stay unchanged. 11 targeted tests pass; original 3-case
 and expanded 6-case failed baselines retained. See
 `docs/cloud-narrator-persona-budget.md`. Final expanded regression/build follow.
+
+Second persona/continuity checkpoint: dialogue repetition is now attributed to
+its speaker, preventing unnecessary repair of another NPC's matching reply while
+retaining same-speaker/prose/legacy controls. Baseline 5 passed / 4 failed retained;
+41 adjacent tests and expanded 23 stage tests pass. Six real three-world
+commit/restart/replay cases preserve separate profiles, relationships, time,
+revision and exact saved bytes. Product files remain persona.ts and
+narrative-health.ts; no Core, NPC owner or frozen file modifications.
