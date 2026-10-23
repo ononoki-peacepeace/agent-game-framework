@@ -826,3 +826,39 @@ optional compound presentation argument and display-test changes before safe
 integration. Do not overwrite unmerged work or auto-merge; uniform scoring stays
 with Windows/user review. Resume from the source-hash-bound queue after actual
 authorization, retaining refusals, truncations, raw failures and low judgments.
+
+## iMac final Narrator QA preparation, 2026-10-23
+
+New independent branch `codex/cloud-narrator-final-qa`, based on remote main
+7cd0c8a. PR #8 dc18a72 / #9 39b60a7 / #10 b54c48a are preserved; Windows local
+integration and formal scoring are unknown here. No historical remote score is
+promoted to Windows' current score. No product source, frozen file, formal save,
+Provider config or service changed; no paid call or additional server.
+
+Start at `docs/narrator-final-qa/README.md`: all 13 Narrator conditions have explicit
+engineering/model/reviewer/integration paths; 14 manual case cards × three distinct
+world structures retain per-case missing observations. Reuse the original 56-case
+program and rubric, do not count this supplement as a new denominator. A local
+Node tool initializes bound inputs and empty records, renders manual text, seals
+referenced evidence and checks hashes/completeness. It never runs game requests
+or awards quality/conditions. Windows fills deployment evidence, actual QA game
+IDs, raw requests, Core/NPC facts, all model attempts/usage/cost and displayed text.
+
+Initial adjacent-only run passed 13 but omitted the new .mjs test under the
+repository's .test.ts include; its standalone syntax error is preserved. Corrected
+run 17 passed / 1 failed exposed missing batch-level N9.1/N9.4 mapping, then the
+mapping was explicitly added rather than treating one game turn as a reviewer.
+18 tests now pass; strict root/client/server build passes. Final source-bound
+verification and package details follow. No model-quality ratings exist.
+
+Resume only after Windows supplies authorized actual outputs and integration
+metadata. Retain missing results and independent review requirements; no new
+unfixed product counterexample was reproduced in this preparation phase.
+
+Final QA preparation source 27011f2: 3 files / 18 tests pass, no failed/skipped;
+strict root/client/server build passes; actual CLI refuses missing bindings and
+incomplete evidence. Branch pushed; portable ZIP/hash and failed preparation
+runs are documented in `docs/narrator-final-qa/verification.md`. No additional
+feature PR is necessary for this handoff. Stop here pending Windows' authorized
+real-output package; no new unresolved product counterexample or quality score
+is claimed. Windows formal progress remains its own authority.
