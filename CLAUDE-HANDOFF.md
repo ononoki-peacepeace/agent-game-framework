@@ -864,3 +864,52 @@ checkpoint: Windows compatibility integration, then actual model/independent
 text judgment under the frozen standards. Consumption remains on prior PRs and
 was not redeveloped here. No reproduced failure remains in the declared current
 offline suites; broader naturalness and arbitrary language remain unverified.
+
+## Narrator memory provenance continuation
+
+New branch `codex/cloud-narrator-memory-provenance`, explicitly based on PR #8
+head `dc18a72`; target that branch, not main, while PR #8 remains unintegrated.
+Only the Narrator cognition module changes product code: bounded relevant memory
+selection, chronological presentation and source/participant retention. Nine
+original three-world failures plus one imported-order failure are retained.
+Actual service/store/replay cases cover ordinary authored and refused narration.
+See `docs/cloud-narrator-memory-provenance.md`; frozen standards/score unchanged.
+
+Second memory checkpoint preserves the important player interaction alongside its
+latest greeting/clarification within the same three-record cap. Two additional
+failed baselines are retained; targeted three-file / 20-test regression passes.
+First checkpoint e5cde57 passed 13 files / 102 tests and strict build; the final
+expanded pinned run follows the second product checkpoint. No scoring changes.
+
+### Memory recovery and final verification, 2026-10-23 UTC
+
+Recovered the original clean worktree and both e5cde57 / 1f09f28 checkpoints.
+The previously unconfirmed jobs completed: 13 files / 104 passed, 0 failed or
+skipped; strict root/frontend/server build exit 0; 659 pinned inputs unchanged.
+Raw failures and exact save/replay evidence remain in the integrity-checked
+archive recorded in `docs/cloud-narrator-memory-provenance.md`. No acceptance
+points awarded. PR #8 remains the explicit base dependency; no main merge.
+
+Memory branch pushed; Draft PR creation returned GraphQL Forbidden. Use the
+base-qualified comparison link in the memory handoff and select Draft. No merge
+or scoring performed. Continue only demonstrated Narrator defects; current
+model/personality and independent quality judgments remain external gates.
+
+### Cognition statement integrity continuation
+
+After recovering/pushing the memory branch, nine valid three-world counterexamples
+showed 200-character prefix clipping deleting late conditions, cancellations and
+hearsay qualifiers. Complete canonical statements (schema maximum 500) now survive
+projection under the unchanged entry caps. 28 targeted tests pass, including
+ordinary/refined request capture. Original failures are retained. This changes
+only the same Narrator projection module; no Core/records or acceptance edits.
+Final expanded pinned regression/build follow this functional checkpoint.
+
+Final continued source 0e43d8b: 14 files / 116 passed, zero failed/skipped;
+separate unchanged request-budget suite 3 passed; strict root/client/server build
+exit 0; 660 unchanged input hashes. Both evidence archives and original failures
+are retained (paths/hashes in the memory handoff). Product conflict surface is
+still only character-cognition.ts. Same stacked delivery branch/base; Draft API
+Forbidden. Next: Windows integration review, then authorized current-model and
+independent quality review; selective context is not exhaustive recall. No points
+awarded and the long Goal is not declared complete.
