@@ -826,3 +826,14 @@ optional compound presentation argument and display-test changes before safe
 integration. Do not overwrite unmerged work or auto-merge; uniform scoring stays
 with Windows/user review. Resume from the source-hash-bound queue after actual
 authorization, retaining refusals, truncations, raw failures and low judgments.
+
+## Cloud Narrator persona selection continuation
+
+Independent main-based branch `codex/cloud-narrator-persona-budget` at
+`/workspace/narrator-persona/game`; base 7cd0c8a, no PR #8/#9 dependency. Fixed
+three-world counterexamples show verbose behavior fields displacing social,
+emotional and voice cues before expression repair. Narrator-only persona
+selection priority now retains those cues within the existing budget; NPC owner
+and scene/travel defaults stay unchanged. 11 targeted tests pass; original 3-case
+and expanded 6-case failed baselines retained. See
+`docs/cloud-narrator-persona-budget.md`. Final expanded regression/build follow.

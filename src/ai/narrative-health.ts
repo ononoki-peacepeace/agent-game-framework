@@ -14,7 +14,7 @@ export function characterContext(save:SavePackage,targetId?:string){
     scene:{time:view.time,location:player?.components.location??null,local_position:player?.components.scene_position??null},
     conversation_focus:view.interaction_context??null,
     characters:characters.map(e=>({id:e.id,name:e.components.identity?.name,
-      allowed_persona:composePersonaContext(save,e.id,1000,false)?.fields??{},
+      allowed_persona:composePersonaContext(save,e.id,1000,false,'narration')?.fields??{},
       public_description:String(e.components.identity?.description??'').slice(0,500),traits:e.components.traits??null,
       observable_condition:e.components.condition??null,relationship:relationshipSummary(view,e).text,
       knowledge_boundary:'只知道自身公开资料、现场可观察事实和以下与自己直接相关的互动；其余公开记录是叙述者上下文，不等同于该人物亲历。',
