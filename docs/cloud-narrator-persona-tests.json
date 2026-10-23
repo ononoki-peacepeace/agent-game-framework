@@ -1,0 +1,21 @@
+{
+  "scope": "Offline affected persona, attribution and continuity regression; no model-quality verdict",
+  "files": [
+    "tests/narrator-persona-priority.test.ts",
+    "tests/narrator-dialogue-attribution.test.ts",
+    "tests/narrator-persona-restart.test.ts",
+    "tests/npc-dialogue-style.test.ts",
+    "tests/character-card.test.ts",
+    "tests/narrator-character-cognition.test.ts",
+    "tests/narrator-refinement-history.test.ts",
+    "tests/narrator-program-contrasts.test.ts",
+    "tests/narrator-program-long-history.test.ts",
+    "tests/continuity.test.ts",
+    "tests/narrator-goal-focus.test.ts",
+    "tests/narrator-compound-prose.test.ts",
+    "tests/narrator-foreground-prose.test.ts",
+    "tests/request-budget.test.ts",
+    "tests/narrator-quality-review.test.ts",
+    "tests/narrator-candidate-queue.test.ts"
+  ]
+}

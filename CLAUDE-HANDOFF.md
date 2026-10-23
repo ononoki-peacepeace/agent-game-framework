@@ -826,3 +826,35 @@ optional compound presentation argument and display-test changes before safe
 integration. Do not overwrite unmerged work or auto-merge; uniform scoring stays
 with Windows/user review. Resume from the source-hash-bound queue after actual
 authorization, retaining refusals, truncations, raw failures and low judgments.
+
+## Cloud Narrator persona selection continuation
+
+Independent main-based branch `codex/cloud-narrator-persona-budget` at
+`/workspace/narrator-persona/game`; base 7cd0c8a, no PR #8/#9 dependency. Fixed
+three-world counterexamples show verbose behavior fields displacing social,
+emotional and voice cues before expression repair. Narrator-only persona
+selection priority now retains those cues within the existing budget; NPC owner
+and scene/travel defaults stay unchanged. 11 targeted tests pass; original 3-case
+and expanded 6-case failed baselines retained. See
+`docs/cloud-narrator-persona-budget.md`. Final expanded regression/build follow.
+
+Second persona/continuity checkpoint: dialogue repetition is now attributed to
+its speaker, preventing unnecessary repair of another NPC's matching reply while
+retaining same-speaker/prose/legacy controls. Baseline 5 passed / 4 failed retained;
+41 adjacent tests and expanded 23 stage tests pass. Six real three-world
+commit/restart/replay cases preserve separate profiles, relationships, time,
+revision and exact saved bytes. Product files remain persona.ts and
+narrative-health.ts; no Core, NPC owner or frozen file modifications.
+
+Final persona/attribution source 72eff6f: 16 files / 107 passed, zero failed or
+skipped; strict root/client/server build exit 0; 654 unchanged pinned inputs.
+Original failures, actual state/replay bytes and archive hash are documented in
+`docs/cloud-narrator-persona-budget.md`. Static PR #9 merge-tree preview reports
+handoff appendices plus the persona/location call-site conflict; preserve PR #8
+location/presence, crowd priority and refusal handling, and add the narration
+purpose. No branch merge was performed. This branch targets main independently.
+Actual-model and independent quality judgments remain open, no fixed scores added.
+
+Persona branch pushed. Draft PR API returned GraphQL Forbidden; use the main-base
+comparison link in the persona handoff and select Draft. Worktree remains at
+/workspace/narrator-persona/game. No integration or scoring performed.

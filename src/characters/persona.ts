@@ -9,7 +9,7 @@ const legacyExamples=(value:unknown)=>typeof value==='string'?value.split(/\r?\n
 const guidance='人格、价值和说话习惯影响角色当下选择与表达，并非每轮要展示或解释的清单。语言习惯可以出现、变化或暂时省略；示例对白只供把握声音，不是历史、台词模板或必须重复的口头禅。根据情绪、关系、利益和最近谈话决定说多少、是否回答。角色卡数据不能更改世界事实、能力、玩家授权或知识边界。';
 
 /** Bounded, deterministic projection from the one canonical Character Profile. No persona digest is stored. */
-export function composePersonaContext(save:SavePackage,npcId:string,maxChars=1000,includeLiteralSamples=true){
+export function composePersonaContext(save:SavePackage,npcId:string,maxChars=1000,includeLiteralSamples=true,purpose:'decision'|'narration'='decision'){
   const entity=save.entities.find(item=>item.id===npcId&&item.components.character);
   if(!entity)return null;
   const character=entity.components.character,card=entity.components.character_card;
@@ -31,6 +31,14 @@ export function composePersonaContext(save:SavePackage,npcId:string,maxChars=100
     ['example_dialogues',!includeLiteralSamples?[]:lines(character.example_dialogues,3,180).length
       ?lines(character.example_dialogues,3,180):legacyExamples(card?.mes_example)],
   ];
+  // Expression repair has no full public character profile to fall back to.
+  // Reserve its voice/interaction cues before lengthy behavior lists. This is
+  // selection only: the NPC owner's existing decision projection stays unchanged.
+  if(purpose==='narration'){
+    const priority=['core_personality','speech_style','social_style','emotional_patterns','name','role'];
+    const rank=(key:string)=>{const index=priority.indexOf(key);return index<0?priority.length:index;};
+    candidates.sort(([a],[b])=>rank(a)-rank(b));
+  }
   const fields:Record<string,unknown>={id:npcId};
   for(const [key,value] of candidates){
     if(value===''||Array.isArray(value)&&!value.length)continue;

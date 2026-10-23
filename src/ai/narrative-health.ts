@@ -14,7 +14,7 @@ export function characterContext(save:SavePackage,targetId?:string){
     scene:{time:view.time,location:player?.components.location??null,local_position:player?.components.scene_position??null},
     conversation_focus:view.interaction_context??null,
     characters:characters.map(e=>({id:e.id,name:e.components.identity?.name,
-      allowed_persona:composePersonaContext(save,e.id,1000,false)?.fields??{},
+      allowed_persona:composePersonaContext(save,e.id,1000,false,'narration')?.fields??{},
       public_description:String(e.components.identity?.description??'').slice(0,500),traits:e.components.traits??null,
       observable_condition:e.components.condition??null,relationship:relationshipSummary(view,e).text,
       knowledge_boundary:'只知道自身公开资料、现场可观察事实和以下与自己直接相关的互动；其余公开记录是叙述者上下文，不等同于该人物亲历。',
@@ -33,14 +33,21 @@ function similarity(a:string,b:string){
   const grams=(s:string)=>new Set(Array.from({length:Math.max(0,s.length-1)},(_,i)=>s.slice(i,i+2)));
   const x=grams(a),y=grams(b);return 2*[...x].filter(v=>y.has(v)).length/Math.max(1,x.size+y.size);
 }
-export function narrativeHealth(save:SavePackage,value:{narrative:string;dialogue?:string|null},facts:string[]){
+export function narrativeHealth(save:SavePackage,value:{narrative:string;dialogue?:string|null;speaker?:string|null},facts:string[]){
   const recent=(save.narrative_history??[]).slice(-3),text=value.narrative+' '+(value.dialogue??'');
-  const recent_similarity=Math.max(0,...recent.map(h=>similarity(text,h.narrative+' '+(h.dialogue??''))));
-  const repeated_dialogue=!!value.dialogue&&recent.filter(h=>h.dialogue&&similarity(value.dialogue!,h.dialogue)>.9).length>=2;
+  // A reply belongs to its speaker. Matching words from somebody else do not
+  // establish a dialogue loop; shared descriptive prose is still comparable.
+  // Two legacy unattributed records retain their former behavior, but an unknown
+  // speaker is not evidence that a known character has already said something.
+  const sameVoice=(entry:typeof recent[number])=>(entry.speaker??null)===(value.speaker??null);
+  const recent_similarity=Math.max(0,...recent.map(h=>sameVoice(h)
+    ?similarity(text,h.narrative+' '+(h.dialogue??'')):similarity(value.narrative,h.narrative)));
+  const voiceHistory=recent.filter(sameVoice);
+  const repeated_dialogue=!!value.dialogue&&voiceHistory.filter(h=>h.dialogue&&similarity(value.dialogue!,h.dialogue)>.9).length>=2;
   const generic=/^(你为什么这样|为什么要这样|我不知道|你想干什么|她愣住了|他愣住了)[。！？?！\s]*$/.test(text.trim());
   const factTokens=facts.flatMap(f=>f.match(/[\p{L}\p{N}]{2,}/gu)??[]).flatMap(t=>Array.from({length:Math.max(0,t.length-1)},(_,i)=>t.slice(i,i+2)));
   const context_coverage=factTokens.length?factTokens.filter(t=>text.includes(t)).length/factTokens.length:1;
   // Brevity alone is never a failure. An exact repeat needs history; silence with specific behavior is valid.
-  const reasons=[...(recent_similarity>.87?['recent_repetition']:[]),...(repeated_dialogue?['dialogue_loop']:[]),...(generic&&context_coverage===0&&recent.length>0?['generic_without_context']:[])];
+  const reasons=[...(recent_similarity>.87?['recent_repetition']:[]),...(repeated_dialogue?['dialogue_loop']:[]),...(generic&&context_coverage===0&&(value.dialogue?voiceHistory.length>0:recent.length>0)?['generic_without_context']:[])];
   return {detected:reasons.length>0,reason:reasons,repetition_score:recent_similarity,recent_similarity,context_coverage,generic_response_signal:generic};
 }
