@@ -854,3 +854,11 @@ verification and package details follow. No model-quality ratings exist.
 Resume only after Windows supplies authorized actual outputs and integration
 metadata. Retain missing results and independent review requirements; no new
 unfixed product counterexample was reproduced in this preparation phase.
+
+Final QA preparation source 27011f2: 3 files / 18 tests pass, no failed/skipped;
+strict root/client/server build passes; actual CLI refuses missing bindings and
+incomplete evidence. Branch pushed; portable ZIP/hash and failed preparation
+runs are documented in `docs/narrator-final-qa/verification.md`. No additional
+feature PR is necessary for this handoff. Stop here pending Windows' authorized
+real-output package; no new unresolved product counterexample or quality score
+is claimed. Windows formal progress remains its own authority.
