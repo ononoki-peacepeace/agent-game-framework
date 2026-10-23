@@ -132,3 +132,10 @@ not every overlong persona fits, and repeated dialogue can still be legitimate
 within one voice. No further reproduced failure remains in this declared suite.
 The long Goal and all unreviewed frozen quality conditions remain open; 109/160
 is unchanged. No production deployment, Release, paid call or main merge occurred.
+
+Delivery: `codex/cloud-narrator-persona-budget` pushed successfully (verification
+handoff b9bf78b). Draft creation with `gh pr create --draft --base main --head
+codex/cloud-narrator-persona-budget` returned GitHub GraphQL Forbidden. No PR
+creation is claimed. Correct main-base comparison, select Draft in the UI:
+https://github.com/ononoki-peacepeace/agent-game-framework/compare/main...codex/cloud-narrator-persona-budget?expand=1
+The existing PR #8/#9 branch heads are unchanged. Worktree retained for recovery.

@@ -854,3 +854,7 @@ handoff appendices plus the persona/location call-site conflict; preserve PR #8
 location/presence, crowd priority and refusal handling, and add the narration
 purpose. No branch merge was performed. This branch targets main independently.
 Actual-model and independent quality judgments remain open, no fixed scores added.
+
+Persona branch pushed. Draft PR API returned GraphQL Forbidden; use the main-base
+comparison link in the persona handoff and select Draft. Worktree remains at
+/workspace/narrator-persona/game. No integration or scoring performed.
