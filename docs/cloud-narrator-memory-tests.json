@@ -13,6 +13,7 @@
     "tests/narrator-program-contrasts.test.ts",
     "tests/npc-dialogue-style.test.ts",
     "tests/continuity.test.ts",
-    "tests/narrator-goal-focus.test.ts"
+    "tests/narrator-goal-focus.test.ts",
+    "tests/narrator-cognition-integrity.test.ts"
   ]
 }

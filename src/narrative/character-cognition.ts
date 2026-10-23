@@ -38,13 +38,15 @@ export function narratorCharacterCognition(save:SavePackage,ids:readonly string[
       own_active_goals:(mind?.goals??[]).filter(goal=>goal.status==='active')
         .sort((a,b)=>b.priority-a.priority).slice(0,3)
         .map(goal=>({description:goal.description,horizon:goal.horizon})),
-      own_knowledge:(mind?.knowledge??[]).slice(-5).map(item=>({proposition:item.proposition.slice(0,200),
+      // Canonical statements are already capped at 500 characters. Keep them whole:
+      // a prefix can erase a negation, condition or correction; bound entry counts instead.
+      own_knowledge:(mind?.knowledge??[]).slice(-5).map(item=>({proposition:item.proposition,
         source_type:item.source_type,source_ref:item.source_ref,confidence:item.confidence})),
-      own_beliefs:(mind?.beliefs??[]).slice(-3).map(item=>({proposition:item.proposition.slice(0,200),
+      own_beliefs:(mind?.beliefs??[]).slice(-3).map(item=>({proposition:item.proposition,
         stance:item.stance})),
       own_recent_experience:rememberedExperiences(mind?.memories??[],save.player_state.entity_id).map(item=>({kind:item.kind,
         event_ref:item.event_ref,participant_ids:[...item.participant_ids],historical:true,
-        summary:item.summary.slice(0,200),at:{...item.at}})),
+        summary:item.summary,at:{...item.at}})),
     }];
   });
 }

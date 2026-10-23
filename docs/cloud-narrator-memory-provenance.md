@@ -97,3 +97,24 @@ Delivery: branch pushed successfully at recovery checkpoint `1bd3783`.
 codex/cloud-narrator-memory-provenance` returned GraphQL Forbidden. No PR creation
 is claimed. Manual comparison (select Draft when creating):
 https://github.com/ononoki-peacepeace/agent-game-framework/compare/codex/cloud-narrator-concrete-outcomes...codex/cloud-narrator-memory-provenance?expand=1
+
+## Continued defect: statement suffixes lost at 200 characters
+
+A subsequent source inspection and nine fixed valid authored counterexamples
+(three structural worlds × memory/knowledge/belief) reproduce silent truncation
+of the trailing cancellation, hearsay qualification or unfulfilled condition.
+Canonical NPC statements already have a 500-character schema limit, but the
+Narrator projection sliced them to 200 without any indication of incompleteness.
+`cognition-integrity-baseline.json` records 0 passed / 9 failed; raw full states
+and clipped output remain in `cognition-integrity-before/`. These are regression
+counterexamples, not previously observed real-model output or quality ratings.
+
+The projection now retains complete canonical statements while keeping the same
+5 knowledge / 3 belief / 3 selected memory entry caps. The worst-case statement
+text budget rises from 2,200 to 5,500 characters per projected NPC (metadata
+excluded); no call count, output-token limit, retry limit, schema or canonical
+record changes. This explicit bounded input tradeoff avoids manufacturing a
+misleading prefix or asking another model to summarize away a condition. Existing
+source/confidence/stance and historical attribution remain. Ordinary generation
+and expression repair receive the same complete memory; authored response text
+only drives that path and is not scored as model quality.

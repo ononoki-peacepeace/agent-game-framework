@@ -894,3 +894,13 @@ Memory branch pushed; Draft PR creation returned GraphQL Forbidden. Use the
 base-qualified comparison link in the memory handoff and select Draft. No merge
 or scoring performed. Continue only demonstrated Narrator defects; current
 model/personality and independent quality judgments remain external gates.
+
+### Cognition statement integrity continuation
+
+After recovering/pushing the memory branch, nine valid three-world counterexamples
+showed 200-character prefix clipping deleting late conditions, cancellations and
+hearsay qualifiers. Complete canonical statements (schema maximum 500) now survive
+projection under the unchanged entry caps. 28 targeted tests pass, including
+ordinary/refined request capture. Original failures are retained. This changes
+only the same Narrator projection module; no Core/records or acceptance edits.
+Final expanded pinned regression/build follow this functional checkpoint.
