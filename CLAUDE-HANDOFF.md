@@ -889,3 +889,8 @@ skipped; strict root/frontend/server build exit 0; 659 pinned inputs unchanged.
 Raw failures and exact save/replay evidence remain in the integrity-checked
 archive recorded in `docs/cloud-narrator-memory-provenance.md`. No acceptance
 points awarded. PR #8 remains the explicit base dependency; no main merge.
+
+Memory branch pushed; Draft PR creation returned GraphQL Forbidden. Use the
+base-qualified comparison link in the memory handoff and select Draft. No merge
+or scoring performed. Continue only demonstrated Narrator defects; current
+model/personality and independent quality judgments remain external gates.

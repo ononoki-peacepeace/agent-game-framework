@@ -91,3 +91,9 @@ the tested checkpoint; this recovery addendum follows it.
 Remote main `7cd0c8a` and PR #8 head/base branch `dc18a72` remain unchanged.
 PR metadata read still returns GraphQL Forbidden; the observed head is not in
 main. The formal ledger check remains 109/160. Delivery targets PR #8's branch.
+
+Delivery: branch pushed successfully at recovery checkpoint `1bd3783`.
+`gh pr create --draft --base codex/cloud-narrator-concrete-outcomes --head
+codex/cloud-narrator-memory-provenance` returned GraphQL Forbidden. No PR creation
+is claimed. Manual comparison (select Draft when creating):
+https://github.com/ononoki-peacepeace/agent-game-framework/compare/codex/cloud-narrator-concrete-outcomes...codex/cloud-narrator-memory-provenance?expand=1
