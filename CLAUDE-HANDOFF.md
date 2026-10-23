@@ -880,3 +880,12 @@ latest greeting/clarification within the same three-record cap. Two additional
 failed baselines are retained; targeted three-file / 20-test regression passes.
 First checkpoint e5cde57 passed 13 files / 102 tests and strict build; the final
 expanded pinned run follows the second product checkpoint. No scoring changes.
+
+### Memory recovery and final verification, 2026-10-23 UTC
+
+Recovered the original clean worktree and both e5cde57 / 1f09f28 checkpoints.
+The previously unconfirmed jobs completed: 13 files / 104 passed, 0 failed or
+skipped; strict root/frontend/server build exit 0; 659 pinned inputs unchanged.
+Raw failures and exact save/replay evidence remain in the integrity-checked
+archive recorded in `docs/cloud-narrator-memory-provenance.md`. No acceptance
+points awarded. PR #8 remains the explicit base dependency; no main merge.

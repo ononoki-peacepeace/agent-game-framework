@@ -70,3 +70,24 @@ N5.3/N7.3 gain bounded input evidence; generated personality, recalling or revis
 promises in actual prose still needs the frozen quality review. N5.4/N7.4 and
 N9.3/N9.4 are not satisfied by these tests. N8/N3 prior results remain on PR #8;
 consumption remains on earlier independent branches. No condition is closed here.
+
+## Recovered final verification, 2026-10-23 UTC
+
+The original worktree, both checkpoints and ignored raw evidence survived the
+cloud disconnection. HEAD/source `1f09f2831b6658e1978b9c1a96b8313c4260306c` was
+clean on recovery. The interrupted client did not interrupt the jobs: retained
+final reports show 13 files / 104 passed / 0 failed / 0 skipped, and build exit 0
+(root strict TypeScript, Vite frontend and server TypeScript). All 659 pinned
+input hashes still match. No redundant rerun was required. Existing Rollup
+annotation/chunk-size warnings remain; no type or build failure occurred.
+
+Archive: `/workspace/scratch/narrator-memory-provenance-1f09f28.zip`, 2,865,337
+bytes; SHA-256 `5d483ca5a2bfb9f665fa6092177717cec507efc4bc59a339e22c02b4278fc6cc`.
+It contains original failures, repaired outputs, both stage reports, final source
+manifest, tested public source and delta patch. It contains synthetic fixtures,
+not formal saves or credentials. ZIP integrity checked. Archive handoff reflects
+the tested checkpoint; this recovery addendum follows it.
+
+Remote main `7cd0c8a` and PR #8 head/base branch `dc18a72` remain unchanged.
+PR metadata read still returns GraphQL Forbidden; the observed head is not in
+main. The formal ledger check remains 109/160. Delivery targets PR #8's branch.
