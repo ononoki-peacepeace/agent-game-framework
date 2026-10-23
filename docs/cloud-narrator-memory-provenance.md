@@ -118,3 +118,34 @@ misleading prefix or asking another model to summarize away a condition. Existin
 source/confidence/stance and historical attribution remain. Ordinary generation
 and expression repair receive the same complete memory; authored response text
 only drives that path and is not scored as model quality.
+
+### Final continued checkpoint and recovery instructions
+
+Tested product/source commit: `0e43d8bd2a60a0b27d14512845f495c2c4b4922d`.
+Expanded regression: 14 files / 116 passed / 0 failed / 0 skipped. Separate
+unchanged request-budget regression: 3 passed / 0 failed / 0 skipped. Strict
+TypeScript, Vite client and server build exit 0; 660 pinned input hashes match.
+No full-project or real-model quality result is implied by these scoped checks.
+
+Additional evidence archive:
+`/workspace/scratch/narrator-cognition-integrity-0e43d8b.zip` (3,200,463 bytes),
+SHA-256 `1d307e222da444f67ea9849b33f4b2229f050f4d7ff4be97c78e904a35ff388a`.
+ZIP integrity verified. Includes the nine original clipping failures, final raw
+contexts, normal/refinement captures, earlier memory evidence, pinned public
+source and the cumulative delta from PR #8. The earlier 1f09f28 archive remains
+unchanged. No credentials or formal game data are included.
+
+Windows integration order: first review/integrate PR #8; then review this branch's
+single product-file delta, including the explicit 500-character-per-statement
+input budget tradeoff. Preserve current integration edits instead of replacing
+that module wholesale. Run the inventory in `docs/cloud-narrator-memory-tests.json`
+through the isolated wrapper and strict build after resolving any overlap.
+The Draft PR API failure and base-qualified creation link above still apply.
+
+Next external checkpoint: actual current-model paired dialogue/recall samples
+and independent prose review on the integrated source. Fixed controlled samples
+verify context delivery, not NPC voice, fulfilled promises or generated naturalness.
+The projection remains selective (5/3/3 entries); it cannot promise exhaustive
+recall of every historical condition. No further reproduced failure remains in
+the declared offline suites, and no fixed condition is closed. The long Goal is
+still open; retain the existing unreviewed quality cells and formal 109/160 score.

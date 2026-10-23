@@ -904,3 +904,12 @@ projection under the unchanged entry caps. 28 targeted tests pass, including
 ordinary/refined request capture. Original failures are retained. This changes
 only the same Narrator projection module; no Core/records or acceptance edits.
 Final expanded pinned regression/build follow this functional checkpoint.
+
+Final continued source 0e43d8b: 14 files / 116 passed, zero failed/skipped;
+separate unchanged request-budget suite 3 passed; strict root/client/server build
+exit 0; 660 unchanged input hashes. Both evidence archives and original failures
+are retained (paths/hashes in the memory handoff). Product conflict surface is
+still only character-cognition.ts. Same stacked delivery branch/base; Draft API
+Forbidden. Next: Windows integration review, then authorized current-model and
+independent quality review; selective context is not exhaustive recall. No points
+awarded and the long Goal is not declared complete.
