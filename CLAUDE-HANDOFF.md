@@ -845,3 +845,12 @@ retaining same-speaker/prose/legacy controls. Baseline 5 passed / 4 failed retai
 commit/restart/replay cases preserve separate profiles, relationships, time,
 revision and exact saved bytes. Product files remain persona.ts and
 narrative-health.ts; no Core, NPC owner or frozen file modifications.
+
+Final persona/attribution source 72eff6f: 16 files / 107 passed, zero failed or
+skipped; strict root/client/server build exit 0; 654 unchanged pinned inputs.
+Original failures, actual state/replay bytes and archive hash are documented in
+`docs/cloud-narrator-persona-budget.md`. Static PR #9 merge-tree preview reports
+handoff appendices plus the persona/location call-site conflict; preserve PR #8
+location/presence, crowd priority and refusal handling, and add the narration
+purpose. No branch merge was performed. This branch targets main independently.
+Actual-model and independent quality judgments remain open, no fixed scores added.

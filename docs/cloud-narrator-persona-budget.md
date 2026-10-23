@@ -75,3 +75,60 @@ relationships and autonomy. The two NPCs retain separate authored profiles;
 normal authored and offline-refusal paths preserve canonical profiles/relationships,
 advance time/revision once and preserve exact save bytes on replay. No uncontrolled
 NPC decision, paid Provider or generated-quality rating is used.
+
+## Observed PR #9 compatibility preview
+
+A non-ref-updating `git merge-tree --write-tree 39b60a7 72eff6f` preview reports
+conflicts in `CLAUDE-HANDOFF.md` and `src/ai/narrative-health.ts`. No branch was
+merged or moved. Product conflict is confined to the adjacent persona call and
+PR #8's `location_id`/`present` addition. Resolve by retaining that complete
+location/presence line and using:
+
+```ts
+allowed_persona:composePersonaContext(save,e.id,1000,false,'narration')?.fields??{},
+```
+
+Retain PR #8's target-first crowd ordering and `assertNotRefusal` implementation;
+the speaker-aware `narrativeHealth` changes below them merge independently.
+Retain both handoff appendices. Preview output is preserved in
+`persona-pr9-merge-preview.txt`. This static preview is not a tested integration
+with Windows' current local edits; final combined regression remains required.
+
+## Final verification and delivery boundary
+
+Tested source: `72eff6fcdeb08addd5206536658866696f4b089e`.
+16 affected files / 107 tests passed, zero failed/skipped. Strict root TypeScript,
+Vite frontend and server TypeScript build exit 0. All 654 pinned source/config/
+fixture/criteria inputs unchanged. Existing bundler annotation/chunk-size warnings
+remain. This is scoped regression, not a full-project or complete current-model
+benchmark result.
+
+Evidence archive: `/workspace/scratch/narrator-persona-budget-72eff6f.zip`,
+3,303,770 bytes; SHA-256
+`69823116d0e3aaef57eb4258cbca9191c260f0ef13fd26905a0505d109e40c84`.
+ZIP integrity checked. It contains original failures, before/after states,
+requests/outputs, real save bytes from isolated fixtures, final source hashes,
+baseline product source, cumulative delta and merge-preview diagnostics. No
+credentials or formal game saves are included.
+
+Actual controlled output examples, identical across the three different structures:
+- Different-speaker answer: “那天我没有去车站，也没有看见公告上的变化。”
+  remains attributed to Lin; one generation instead of two. This is supplied
+  offline text, not a claim that a current model naturally said it.
+- Ordinary authored WAIT: “你等了一分钟。”
+- Actual offline fallback WAIT: “你等了1分钟。”
+  Both commit exactly one revision/minute; replay adds no generation or byte change.
+
+Fact/state assertions pass in these fixed cases. Specificity, coherence, voice,
+naturalness and long narrative quality remain unscored; no lexical assertion is
+substituted for those judgments. The existing 56-case rubric/review infrastructure
+is reused, not replaced by these controls. No new actual-model corpus or independent
+ratings were produced. Current-source full model/quality capture remains external.
+
+Next checkpoint: Windows reviews the documented shared-file conflict, runs
+combined regression with its integration, and uses authorized current-model paired
+voice/recall samples plus independent quality review. Selection remains bounded;
+not every overlong persona fits, and repeated dialogue can still be legitimate
+within one voice. No further reproduced failure remains in this declared suite.
+The long Goal and all unreviewed frozen quality conditions remain open; 109/160
+is unchanged. No production deployment, Release, paid call or main merge occurred.
