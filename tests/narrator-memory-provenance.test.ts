@@ -44,3 +44,19 @@ it('uses recorded time rather than import array order for latest relevant experi
  expect(output.own_recent_experience.map(m=>m.summary)).toEqual(items.map(m=>m.summary));
  expect(save).toEqual(before);
 },30000);
+
+it.each(['chat','clarification'])('keeps an important player memory beside later %s without exceeding three',async later=>{
+ const save=structuredClone((await prepareNarrativeWorld('relationships')).save);
+ const memories=[
+  {event_ref:'major',kind:'heard' as const,summary:'重要的本人往事',participant_ids:['npc_lin','npc_qiao'],at:{day:1,minute:0},importance:3},
+  {event_ref:'promise',kind:'heard' as const,summary:'与玩家约好明天核对公告',participant_ids:['npc_lin','player'],at:{day:1,minute:1},importance:2},
+  {event_ref:'latest',kind:'heard' as const,summary:later==='chat'?'刚才与玩家问了好':'后来告诉玩家今天不来了',participant_ids:['npc_lin','player'],at:{day:1,minute:2},importance:1},
+  {event_ref:'ordinary',kind:'heard' as const,summary:'和乔宁说了日常琐事',participant_ids:['npc_lin','npc_qiao'],at:{day:1,minute:3},importance:1}
+ ];
+ save.npc_agent_state??={};save.npc_agent_state.npc_lin={...emptyNpcAgentState(),memories};
+ validateSave(save);const before=structuredClone(save),output=narratorCharacterCognition(save,['npc_lin'])[0];
+ await mkdir('.agent-runtime/codex/memory-provenance',{recursive:true});
+ await writeFile(`.agent-runtime/codex/memory-provenance/priority-${later}.json`,JSON.stringify({before,output},null,2));
+ expect(output.own_recent_experience.map(m=>m.event_ref)).toEqual(['major','promise','latest']);
+ expect(output.own_recent_experience).toHaveLength(3);expect(save).toEqual(before);
+},30000);

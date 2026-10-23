@@ -22,9 +22,18 @@ unchanged world setup witnesses and full synthetic states are retained.
 A separate valid imported memory-array counterexample shows reversed event order;
 its focused baseline fails once (other tests intentionally filtered, not passed).
 
+The first checkpoint `e5cde57` passed 13 files / 102 tests and strict build.
+Further investigation exposed another real loss: a low-importance player greeting
+(or a later clarification) displaces an older important player promise when an
+unrelated event has the highest importance. Both fixed inputs fail before the
+second change: expected `major, promise, latest`, actual `major, latest, ordinary`.
+The two failed runs and original states remain in `memory-priority-baseline.json`
+and `memory-priority-before/`; ten other cases were filtered, not passed.
+
 Only `src/narrative/character-cognition.ts` changes product behavior:
-- Keep the most important event and latest canonical player-participation event,
-  then fill with recent other events, still at most three.
+- Keep the most important event overall, the most important player-participation
+  event and the latest player-participation event. Deduplicate, then fill remaining
+  slots with recent other events, still at most three.
 - Order by recorded day/minute on a copy, with stable insertion order for ties.
   Do not infer relevance from words or matching names in summaries.
 - Preserve event_ref, participant_ids and at, explicitly mark historical records.

@@ -33,6 +33,7 @@ it.each(narrativeWorldKinds.flatMap(kind=>[false,true].map(fallback=>({kind,fall
   const receipt=after.resolution_receipts!.find(r=>r.request_id===request.request_id)!;expect(receipt.commit_status).toBe('committed');
   const original=before.npc_agent_state!.npc_lin.memories;
   for(const m of original)expect(after.npc_agent_state!.npc_lin.memories).toContainEqual(m);
+  expect(payloads.length).toBeGreaterThan(0);
   for(const payload of payloads){const cognition=payload.character_context.character_cognition.find((p:{id:string})=>p.id==='npc_lin');
    expect(cognition.own_recent_experience).toContainEqual({kind:memories[1].kind,event_ref:memories[1].event_ref,summary:memories[1].summary,participant_ids:memories[1].participant_ids,at:memories[1].at,historical:true});
   }

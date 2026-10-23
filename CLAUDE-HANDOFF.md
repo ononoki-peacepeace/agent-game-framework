@@ -874,3 +874,9 @@ selection, chronological presentation and source/participant retention. Nine
 original three-world failures plus one imported-order failure are retained.
 Actual service/store/replay cases cover ordinary authored and refused narration.
 See `docs/cloud-narrator-memory-provenance.md`; frozen standards/score unchanged.
+
+Second memory checkpoint preserves the important player interaction alongside its
+latest greeting/clarification within the same three-record cap. Two additional
+failed baselines are retained; targeted three-file / 20-test regression passes.
+First checkpoint e5cde57 passed 13 files / 102 tests and strict build; the final
+expanded pinned run follows the second product checkpoint. No scoring changes.
